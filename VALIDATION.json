@@ -1,0 +1,29 @@
+{
+  "validated_on": "2026-10-21",
+  "runtime_test_platform": "darwin/arm64",
+  "go_toolchain": "go1.27.1",
+  "backend": "mock",
+  "provides_microvm_isolation": false,
+  "checks": {
+    "go_test_race_all": "passed",
+    "go_test_race_core_and_http_count_10": "passed",
+    "go_vet_all": "passed",
+    "daemon_unix_socket_and_cli_smoke": "passed",
+    "sigkill_restart_recovery": "passed",
+    "single_controller_state_lock": "passed",
+    "create_exec_destroy_cycles": 200,
+    "private_workspaces_after_cycles": 0,
+    "linux_amd64_cross_compilation": "passed (not executed on Linux)"
+  },
+  "unit_statement_coverage_percent": {
+    "lifecycle_and_driver": 83.9,
+    "http_api": 81.6
+  },
+  "not_validated": [
+    "Firecracker/KVM execution",
+    "real guest-agent/vsock",
+    "CPU/memory/network isolation",
+    "microVM startup or destroy latency",
+    "atomic session switching"
+  ]
+}
