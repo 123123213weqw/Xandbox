@@ -25,5 +25,18 @@
     "CPU/memory/network isolation",
     "microVM startup or destroy latency",
     "atomic session switching"
-  ]
+  ],
+  "github_ci": {
+    "validated_on": "2026-10-22",
+    "commit": "e3f4a954e13aef5f1c8ce79516cad5166c283b2c",
+    "url": "https://github.com/123123213weqw/Xandbox/actions/runs/39632748731",
+    "result": "success",
+    "jobs": [
+      "linux-build (amd64 + arm64)",
+      "ubuntu-24.04 / Go 1.25.x",
+      "ubuntu-24.04 / Go 1.27.x",
+      "macos-14 / Go 1.27.x"
+    ],
+    "scope": "Mock lifecycle, race/failure tests, process smoke tests and builds; NOT real KVM isolation"
+  }
 }

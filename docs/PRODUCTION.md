@@ -25,7 +25,7 @@
 - [x] 单节点生命周期、generation 栅栏、异步回收、TTL、故障重试。
 - [x] 本地进程级 SIGKILL/重启验收与重复生命周期验收。
 - [x] 固定仓库名 Xandbox、MIT、开发成熟度声明。
-- [ ] Public 仓库已发布；Linux/macOS CI 实际通过。
+- [x] Public 仓库已发布；Linux/macOS CI 实际通过。首轮证据：[CI #39632748731](https://github.com/123123213weqw/Xandbox/actions/runs/39632748731)。
 
 ### M1：控制面正确性
 

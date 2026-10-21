@@ -1,5 +1,9 @@
 # Xandbox
 
+[![CI](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml)
+
+Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
+
 **状态：生产化开发中，尚未生产就绪。**
 
 这是生命周期管理的可运行地基，不是已实现隔离的云沙箱。 当前只有 `mock` 后端，必须显式指定；它不会启动宿主机 shell、容器或虚拟机，也没有 CPU、内存和网络隔离。不要将它作为执行不可信原生代码的服务。
