@@ -109,3 +109,5 @@ python3 scripts/kvm_storage_faults.py \
 - 其余初始化/partial frame/READY写入窗口、预热池、开放到达公平性、唯一RAM归属、可靠审计/告警/升级回滚、独立操作员验收及生产SLO。
 
 这些仍是 [完整生产Goal门槛](PRODUCTION.md)，不因本次修改或PR合并而完成。
+
+后续 [整状态盘EIO/held-fsync专项](STATE_IO.md) 使用另一新原生daemon验证Save尚未返回时的主动lease EOF撤销；本页355源码/返回错误分支的历史数据原样保留，不能拿本页旧结果充当后续新代码证明。

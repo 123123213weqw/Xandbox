@@ -1011,5 +1011,24 @@
     "runner_exit_status": 0,
     "cleanup_confirmed": true,
     "scope": "Forced loss of owned L1 service-host VM with same-disk ordinary-daemon recovery and fresh L2 execution; NOT physical L0 media power failure, exhaustive fault windows, production SLO or complete M2."
+  },
+  "whole_state_io_stall_revocation": {
+    "production_ready": false,
+    "goal_complete": false,
+    "design": "docs/STATE_IO.md",
+    "provenance": "docs/validation/state-io-provenance-v2.json",
+    "new_report": "docs/validation/kvm-state-io-v2.json",
+    "failed_old_baseline": "docs/validation/kvm-state-io-v1.json",
+    "native_source": "c9b52ef21db3789234ff9488554a7918d175c0f3",
+    "new_daemon_sha256": "b8d2e5b9b5b312841c7287871ee073017d46044592b447736fdf6d39f139a8af",
+    "cases": [
+      "eio-busy",
+      "eio-idle",
+      "hang-busy",
+      "hang-idle"
+    ],
+    "all_four_new_guards_passed": true,
+    "new_full_regression_runner_exit_status": 0,
+    "not_production_slo_or_complete_m2": true
   }
 }

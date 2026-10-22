@@ -34,6 +34,10 @@ guardian 可能已经独立停止 VM，而暂停控制器的账本仍显示 READ
 
 公开启动仍需 root 配置与固定资产摘要，新版 warden 的摘要必须与配置一致。旧状态目录的资产绑定不会自动升级；当前没有在线 guardian/配置迁移流程。
 
+## 记录I/O卡住时的主动EOF撤销
+
+后续 [整状态盘专项](STATE_IO.md) 增加 `Driver.RevokeLease`：reconcile在record/op/worker锁之前，反复关闭准确Ref已经拥有的活pipe capability；TryLock争用稍后重试，覆盖Prepare迟到发布，不查询磁盘归属或收养未知资源。它避免健康进程因单个fsync卡住只能等待约5秒短租约。root warden/帧协议/硬TTL不变，EOF仍不等于已证明Stop、持久STOPPED或DESTROYED；新原生4场景与完整回归的角色、失败对照和限制见专项。控制器整体暂停时仍依赖独立timer，而不是这条主动路径。
+
 ## 验证方式与边界
 
 普通 CI 检查：绝对期限/不复活、重放和错 Ref、窗口/TTL/溢出校验、时钟不倒退、记录 I/O 不阻塞正常续租、续租失败触发恢复、civil-time 展示值不能左右运行截止、READY fsync 期间撤销不能重新发布可用实例。Linux CI 另实际使用 timerfd 测部分帧不抑制过期、连续合法续租不能突破硬截止，以及无人读取的 pipe 饱和时发送不阻塞。帧 fuzz 测试不能代替真实 VM 故障验收。

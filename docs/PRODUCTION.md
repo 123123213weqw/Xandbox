@@ -55,6 +55,8 @@
 - [x] [双层I/O预算有限验收](IO.md)：绑定operator策略、正确backing queue/委派、cold与PAUSED快照先设置并读回、真实operator direct IO与guest direct写/读及活跃写盘Stop/GC；新native默认矩阵通过。仅完成该子项，节点总预算/准备复制/IOPS饱和/物理quota与完整M2未完成。
 - [x] [独占L1虚拟宿主掉电有限验收](NESTED_HOST.md)：running/stopped/destroyed各一个检查点、四次实际KVM开机、原磁盘与普通daemon恢复/旧键拒绝/新L2执行销毁通过。L0未重启；不是物理介质掉电、所有在途fsync/Prepare窗口或完整宿主故障矩阵。
 
+- [x] [整状态盘EIO/held-fsync有限验收](STATE_IO.md)：原生新程序4例、原程序失败对照、普通daemon真实D-state fsync、独立lease EOF停止/快速intent拒绝、无虚假确认/容量保留及完整新native回归通过。不是VMM自身D-state、所有介质/Prepare窗口或完整M2。
+
 M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。完整宿主重启窗口/物理介质故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
 停止/GC 独立有界池、所有权 fsync 不持有全局锁及受控慢 I/O 下的恢复已有 [专项证据](LIFECYCLE.md)。[独立 guardian 租约](GUARDIAN.md) 已用真实暂停控制器测试；这只完成该部分基础设施，不替代持续负载、公平性、整机故障和最坏延迟验收。
