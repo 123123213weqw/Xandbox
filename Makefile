@@ -14,6 +14,8 @@ build:
 	go build -o "$(BIN_DIR)/sandboxctl" ./cmd/sandboxctl
 
 	go build -o "$(BIN_DIR)/xandbox-keygen" ./cmd/xandbox-keygen
+	go build -o "$(BIN_DIR)/xandbox-guestctl" ./cmd/xandbox-guestctl
+	@if [ "$$(go env GOOS)" = linux ]; then CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-agent" ./cmd/xandbox-agent; fi
 
 smoke: build
 	python3 scripts/smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl"

@@ -8,13 +8,13 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 这是生命周期管理的可运行地基，不是已实现隔离的云沙箱。 当前只有 `mock` 后端，必须显式指定；它不会启动宿主机 shell、容器或虚拟机，也没有 CPU、内存和网络隔离。不要将它作为执行不可信原生代码的服务。
 
-生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。
+生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。它仍尚未接入 sandboxd，不能因此把 mock 接口当作真实 VM 服务。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 
 ## 已实现
 
-- Go 标准库实现，无第三方模块依赖；要求 Go 1.25+，守护进程支持 macOS/Linux。
+- 控制面以 Go 标准库实现；实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。
 - HTTP over Unix socket，不监听 TCP；私有状态目录 `0700`、socket `0600`。
 - 状态目录单进程锁；账本按实例原子写入，写文件和父目录均执行 fsync。
 - `CREATING → READY → STOPPING → STOPPED → RECLAIMING → DESTROYED`。
@@ -26,6 +26,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 - 未回收实例仍占用容量；账本确认 `DESTROYED` 后才归还容量。
 - 重启后不复活旧实例：所有非终态实例被栅栏并回收。
 - 模拟工作区读写使用 `os.Root`，限制路径及符号链接越界。
+
+源码兼容最低 Go 1.25；涉及镜像/部署应使用已打补丁的受维护工具链，本轮安全扫描基线为 Go 1.27.3。旧版本兼容性 CI 不代表生产安全认证。
 
 ## 第一轮运行
 
@@ -117,7 +119,7 @@ python3 scripts/smoke.py \
 
 ## 为什么暂时用文件账本，而不是 SQLite
 
-为了先保持零外部依赖，当前使用一个实例一个 JSON 记录，采用 `fsync → rename → fsync(directory)`。它只允许一个控制器写入，不是多节点数据库。文件系统必须提供相应的本地文件系统语义，不应直接放在语义不明的网络挂载上。
+账本实现暂不引入数据库依赖，当前使用一个实例一个 JSON 记录，采用 `fsync → rename → fsync(directory)`。它只允许一个控制器写入，不是多节点数据库。文件系统必须提供相应的本地文件系统语义，不应直接放在语义不明的网络挂载上。
 
 销毁后的 tombstone 会保留，控制器也保留其元数据；当前没有元数据保留期/压缩任务。创建幂等 key 与归属会随账本保留，同 key 不会在销毁/重启后悄悄创建新实例，详见 [契约](docs/AUTH.md)。累计记录上限、保留期/压缩、账本版本升级及请求限流仍是上线前需要补齐的能力。
 
@@ -130,7 +132,7 @@ python3 scripts/smoke.py \
 3. **Stop**：终止实例所属执行单元和专属辅助进程，并确认退出；不能只发送信号后返回成功。驱动必须配合 context 的有界操作约定。
 4. **Cleanup**：幂等回收该 Ref 的私有资源，不能删除仍被其他实例使用的基础镜像、快照或全局共享服务。
 
-当前 **没有** Firecracker 驱动、guest-agent、cgroup 资源限额、网络策略、快照恢复、预热池、会话原子切换、多节点调度。先用真实 Linux/KVM 后端替换 mock 并通过同一套契约测试，再测冷启动、停止、回收三个阶段，最后加入快照与预热优化。
+当前 **没有集成到服务的** Firecracker 驱动、guest-agent/cgroup 策略、网络策略、快照恢复、预热池、会话原子切换、多节点调度。先用真实 Linux/KVM 后端替换 mock 并通过同一套契约测试，再测冷启动、停止、回收三个阶段，最后加入快照与预热优化。
 
 重启策略当前是“全部回收”，不是“自动恢复会话”。后端名不匹配时拒绝恢复。管理服务收到 SIGINT/SIGTERM 后停止接受请求并尝试回收；超时则非零退出，下次使用同一状态目录继续恢复。
 
@@ -140,6 +142,9 @@ python3 scripts/smoke.py \
 cmd/sandboxd          宿主机管理服务（本版本仅 mock）
 cmd/sandboxctl        Unix-socket 客户端
 cmd/xandbox-keygen    私有令牌与摘要配置生成器
+cmd/xandbox-agent     Linux guest 专用执行组件（未接入服务）
+cmd/xandbox-guestctl  Firecracker vsock 诊断客户端
+internal/guest*      guest 执行、受限协议与 bridge 传输
 internal/access      令牌摘要校验与服务端租户策略
 internal/sandbox     生命周期、账本、驱动接口、mock 与故障测试
 internal/httpapi     JSON 接口与契约测试

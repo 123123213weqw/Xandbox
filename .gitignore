@@ -23,3 +23,5 @@ jailer
 
 # Raw client credentials
 *.token
+*.cpio
+*.cpio.gz
