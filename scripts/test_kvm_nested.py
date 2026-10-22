@@ -7,10 +7,14 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_quota_format_uses_installed_e2fsprogs_extended_option_not_unknown_flag(self):
+        self.assertEqual(quota_format_options(False),[])
+        self.assertEqual(quota_format_options(True),['-O','project,quota','-E','quotatype=prjquota','-I','256','-b','4096'])
+
     def test_quota_profile_is_explicit_enforcing_and_mutually_exclusive(self):
         _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_probe=True)
         self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)

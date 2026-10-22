@@ -21,6 +21,12 @@ from kvm_snapshot_smoke import private_json, sync_dir
 DISK_BYTES = 2 << 30
 
 
+def quota_format_options(enabled):
+    # e2fsprogs 1.46.5 uses the extended quotatype option, NOT a -Q flag.
+    return ['-O','project,quota','-E','quotatype=prjquota','-I','256','-b','4096'] if enabled else []
+
+
+
 class JSONSocket:
     def __init__(self, path, timeout=90):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); self.sock.settimeout(timeout)
@@ -137,7 +143,7 @@ def main():
         private_json(staging/'config/backend.json',backend)
         disk=root/'disk.raw'
         with disk.open('xb') as f: os.posix_fallocate(f.fileno(),0,DISK_BYTES); os.fsync(f.fileno())
-        format_options = ['-O','project,quota','-Q','prjquota'] if args.quota_probe else []
+        format_options = quota_format_options(args.quota_probe)
         subprocess.run(['mkfs.ext4','-q','-F','-m','0','-E','root_owner=0:0',*format_options,'-d',str(staging),str(disk)],check=True,timeout=120)
         with disk.open('rb') as f: os.fsync(f.fileno())
         # Only QEMU's private inputs become accessible to its reserved UID.
