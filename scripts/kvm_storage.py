@@ -60,6 +60,21 @@ class BoundedExt4:
         assert (Path('/sys/dev/block') / self.device / 'loop/autoclear').read_text().strip() == '1'
         assert subprocess.check_output(['findmnt', '-n', '-o', 'FSTYPE', '-T', str(self.mount)], text=True).strip() == 'ext4'
         self._check()
+        if self.mount.name == 'ledger':
+            self._prepare_empty_ledger()
+
+    def _prepare_empty_ledger(self):
+        self._check()
+        # mkfs creates this empty directory. FileStore correctly rejects ANY
+        # non-record directory; do not weaken the production parser for a test.
+        (self.mount / 'lost+found').rmdir()
+        if any(self.mount.iterdir()):
+            raise RuntimeError('new ledger fault filesystem is not empty')
+        fd = os.open(self.mount, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
 
     def _check(self):
         if not self.mounted or self.device is None or not os.path.ismount(self.mount):

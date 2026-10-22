@@ -11,6 +11,24 @@ from kvm_storage_faults import validate_host_stop_guard
 
 
 class BoundedStorageTests(unittest.TestCase):
+    def test_only_fresh_empty_lost_found_is_removed_from_ledger_volume(self):
+        with tempfile.TemporaryDirectory() as root:
+            volume = BoundedExt4(root, 'ledger'); volume.mount.mkdir()
+            lost = volume.mount / 'lost+found'; lost.mkdir()
+            (lost / 'unexpected').touch()
+            with patch.object(volume, '_check'), self.assertRaises(OSError): volume._prepare_empty_ledger()
+            self.assertTrue((lost / 'unexpected').exists())
+            (lost / 'unexpected').unlink()
+            with patch.object(volume, '_check'): volume._prepare_empty_ledger()
+            self.assertEqual(list(volume.mount.iterdir()), [])
+
+    def test_unowned_ledger_cannot_remove_lost_found(self):
+        with tempfile.TemporaryDirectory() as root:
+            volume = BoundedExt4(root, 'ledger'); volume.mount.mkdir()
+            lost = volume.mount / 'lost+found'; lost.mkdir()
+            with self.assertRaises(RuntimeError): volume._prepare_empty_ledger()
+            self.assertTrue(lost.exists())
+
     def test_fault_mount_layout_is_not_an_arbitrary_path(self):
         self.assertEqual(BoundedExt4('/exclusive', 'ledger').mount, Path('/exclusive/ledger'))
         for name in ('/', '../ledger', 'firecracker', '/srv', ''):
