@@ -151,7 +151,12 @@ def main():
                     wait(lambda: call('GET', '/v1/sandboxes/' + binding['current']['id'], tenant=tenant)['state'] == 'DESTROYED', 'restart reclaimed core ownership')
                 call('POST', '/v1/sessions', {}, key='alpha-session', status=410)
                 call('POST', path(first) + '/switch', {'expected_revision': 3}, key='after-crash', status=410)
-                assert not list((state / 'instances').iterdir())
+                # Earlier retired generations may still be behind the current
+                # ones in the bounded recovery queues; wait for ALL authority,
+                # not just the last binding of each session.
+                for binding in (first, second):
+                    wait(lambda binding=binding: call('GET', '/v1/sandboxes/' + binding['current']['id'])['state'] == 'DESTROYED', 'retired generation durable recovery')
+                wait(lambda: not list((state / 'instances').iterdir()), 'all private mock workspaces reclaimed')
                 checks.append('actual controller SIGKILL restart closes old session routes, retains keys and reclaims all underlying generations')
                 process.terminate(); assert process.wait(timeout=15) == 0; process = None
             finally:

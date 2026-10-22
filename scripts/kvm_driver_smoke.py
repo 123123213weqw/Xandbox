@@ -575,7 +575,8 @@ def main():
                 assert recovered['phase'] == 'CLOSED' and not recovered['has_binding']
                 call('POST', session_path + '/exec', {'revision': 3, 'argv': ['true']}, expected=410)
                 call('POST', '/v1/sessions', session_req, key=session_key, expected=410)
-                destroyed(latest['current'])
+                for owned in (initial['current'], switched['current'], latest['current']):
+                    destroyed(owned)
                 process.terminate(); assert process.wait(timeout=15) == 0; process = None
                 assert not [p for p in cgroup.iterdir() if p.is_dir()]
                 assert not list((runtime / 'j/firecracker').iterdir())
