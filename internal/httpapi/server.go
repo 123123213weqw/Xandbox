@@ -10,17 +10,20 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
 
 type API struct {
-	manager *sandbox.Manager
-	auth    *access.Authenticator
+	manager  *sandbox.Manager
+	auth     *access.Authenticator
+	sessions *session.Broker
 }
 
 type Options struct {
 	Authenticator            *access.Authenticator
 	AllowUnauthenticatedMock bool
+	Sessions                 *session.Broker
 }
 
 type identityKey struct{}
@@ -41,10 +44,13 @@ func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error)
 	if opts.Authenticator == nil && (!opts.AllowUnauthenticatedMock || manager.Stats().Backend != "mock") {
 		return nil, errors.New("authentication required; unauthenticated access is mock-only and opt-in")
 	}
+	if opts.Sessions != nil && !opts.Sessions.Uses(manager) {
+		return nil, errors.New("session broker must use the configured lifecycle manager")
+	}
 	if opts.Authenticator != nil && opts.AllowUnauthenticatedMock {
 		return nil, errors.New("conflicting authentication modes")
 	}
-	a := &API{manager: manager, auth: opts.Authenticator}
+	a := &API{manager: manager, auth: opts.Authenticator, sessions: opts.Sessions}
 	node := manager.Stats()
 	localOwner := sandbox.Owner{TenantID: "local", MaxInstances: node.Capacity}
 	mux := http.NewServeMux()
@@ -70,6 +76,13 @@ func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error)
 	mux.HandleFunc("GET /v1/sandboxes/{id}/executions/{job}", a.job)
 	mux.HandleFunc("POST /v1/sandboxes/{id}/stop", a.stop)
 	mux.HandleFunc("DELETE /v1/sandboxes/{id}", a.destroy)
+	if a.sessions != nil {
+		mux.HandleFunc("POST /v1/sessions", a.openSession)
+		mux.HandleFunc("GET /v1/sessions/{id}", a.getSession)
+		mux.HandleFunc("POST /v1/sessions/{id}/switch", a.switchSession)
+		mux.HandleFunc("POST /v1/sessions/{id}/exec", a.execSession)
+		mux.HandleFunc("POST /v1/sessions/{id}/revoke", a.revokeSession)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/healthz" && r.Method == http.MethodGet {
 			mux.ServeHTTP(w, r)
@@ -248,6 +261,20 @@ func badJSON(w http.ResponseWriter, err error) {
 func failure(w http.ResponseWriter, err error) {
 	status, code, message := http.StatusInternalServerError, "INTERNAL", "internal operation failed"
 	switch {
+	case errors.Is(err, session.ErrStale):
+		status, code, message = 409, "STALE_SESSION", "stale session revision"
+	case errors.Is(err, session.ErrBusy):
+		status, code, message = 409, "SESSION_BUSY", "session mutation in progress"
+	case errors.Is(err, session.ErrGone):
+		status, code, message = 410, "SESSION_GONE", "session or attempt no longer usable"
+	case errors.Is(err, session.ErrHistory):
+		status, code, message = 429, "SESSION_HISTORY_LIMIT", "session mutation history exhausted"
+	case errors.Is(err, session.ErrTenantCapacity):
+		status, code, message = 429, "TENANT_SESSION_QUOTA", "tenant session record quota exhausted"
+	case errors.Is(err, session.ErrCapacity):
+		status, code, message = 503, "SESSION_CAPACITY", "session record capacity exhausted"
+	case errors.Is(err, session.ErrUnavailable):
+		status, code, message = 503, "SESSION_UNAVAILABLE", "session fenced; recovery required"
 	case errors.Is(err, sandbox.ErrNotFound):
 		status, code, message = 404, "NOT_FOUND", "not found"
 	case errors.Is(err, sandbox.ErrInvalid):

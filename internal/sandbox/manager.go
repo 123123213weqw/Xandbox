@@ -45,6 +45,7 @@ type instance struct {
 	leaseFailed   atomic.Bool
 	intent        atomic.Uint32 // 0 live, 1 stop, 2 delete; may be set before record I/O unlocks.
 	ref           Ref           // Immutable, even while the entire durable Record is replaced.
+	admission     *Admission    // Controller capability, immutable until durable cleanup; never exposed by HTTP.
 	record        Record
 	tenantID      string // Immutable after registration; safe under Manager.mu.
 	prepared      chan struct{}
@@ -268,6 +269,10 @@ func createHashes(key string, req CreateRequest) (string, string, error) {
 // CreateScoped reserves ownership, tenant quota, and idempotency atomically.
 // Completed tombstones retain keys: a retry never creates a fresh generation.
 func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req CreateRequest) (Record, error) {
+	return m.createScoped(ctx, owner, key, req, nil, nil)
+}
+
+func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref)) (Record, error) {
 	if !owner.Valid() {
 		return Record{}, ErrInvalid
 	}
@@ -281,6 +286,12 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	keyHash, specHash, err := createHashes(key, req)
 	if err != nil {
 		return Record{}, err
+	}
+	if admission != nil {
+		// NUL cannot occur in a public printable-ASCII key. A public create
+		// cannot preoccupy or replay this trusted managed-key namespace.
+		sum := sha256.Sum256([]byte("managed-v1\x00" + key))
+		keyHash = hex.EncodeToString(sum[:])
 	}
 	id, err := token()
 	if err != nil {
@@ -302,6 +313,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 		ExpiresAt: now.Add(time.Duration(req.TTLMS) * time.Millisecond),
 	})
 	i.expiresNS = nowNS + int64(time.Duration(req.TTLMS)*time.Millisecond)
+	i.admission = admission
 	i.prepared = make(chan struct{})
 	defer close(i.prepared)
 	if _, err := i.opMu.acquire(ctx, nil); err != nil {
@@ -328,7 +340,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 			if r.CreateSpecHash != specHash {
 				return Record{}, ErrIdempotencyConflict
 			}
-			if r.State != Ready || r.DeleteRequested || existing.intent.Load() != 0 || existing.expired() {
+			if existing.admission != admission || !existing.usable() {
 				return Record{}, ErrIdempotencyGone
 			}
 			return r, nil
@@ -366,6 +378,9 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 		m.createKeys[index] = i
 	}
 	m.mu.Unlock()
+	if reserved != nil {
+		reserved(i.ref)
+	}
 	// Ownership is durable BEFORE the driver can allocate any resource.
 	i.mu.Lock()
 	ref := i.record.Ref
@@ -449,6 +464,10 @@ func (m *Manager) Get(id string) (Record, error) {
 }
 
 func (m *Manager) Exec(id string, req ExecRequest) (Job, error) {
+	return m.exec(id, req, nil)
+}
+
+func (m *Manager) exec(id string, req ExecRequest, admission *Admission) (Job, error) {
 	if len(req.Argv) == 0 || len(req.Argv) > 128 || req.Argv[0] == "" {
 		return Job{}, fmt.Errorf("%w: argv must contain 1..128 arguments", ErrInvalid)
 	}
@@ -481,7 +500,7 @@ func (m *Manager) Exec(id string, req ExecRequest) (Job, error) {
 	if req.Generation != i.record.Generation {
 		return Job{}, ErrStale
 	}
-	if i.record.State != Ready || i.record.DeleteRequested || i.intent.Load() != 0 || i.expired() {
+	if !i.usable() || i.admission != admission || (admission != nil && !admission.allow(i.ref)) {
 		return Job{}, ErrNotReady
 	}
 	if len(i.jobs) >= i.record.Limits.MaxJobs {
@@ -715,7 +734,8 @@ func (m *Manager) cleanupLocked(i *instance) error {
 	next.State, next.DestroyedAt, next.LastError = Destroyed, time.Now().UTC(), ""
 	err = m.saveLocked(i, next)
 	if err == nil {
-		i.jobs = nil // Drop output history after reclamation; retain the tombstone.
+		i.jobs = nil      // Drop output history after reclamation; retain the tombstone.
+		i.admission = nil // Release routing closures, never re-admit a destroyed generation.
 	}
 	i.mu.Unlock()
 	if err == nil {

@@ -20,6 +20,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
 )
 
 // Keep the exclusive state lock reachable until process exit if a worker is
@@ -55,8 +56,11 @@ func run() (retErr error) {
 	cleanupWorkers := flag.Int("cleanup-workers", 0, "cleanup workers; 0 = min(2, instance capacity)")
 	workQueueSize := flag.Int("work-queue-size", 0, "queue slots PER pool; 0 = min(32, instance capacity)")
 	insecureMock := flag.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
+	maxSessions := flag.Int("max-sessions", 1000, "maximum retained session records, including closed tombstones")
+	maxTenantSessions := flag.Int("max-tenant-sessions", 0, "retained sessions per tenant; 0 = min(100,max-sessions)")
+	sessionHistory := flag.Int("session-history", 64, "maximum retained attempts per session, including initial create; 1..64")
 	flag.Parse()
-	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || flag.NArg() != 0 {
+	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || *maxSessions < 1 || *maxSessions > session.MaxRecords || *maxTenantSessions < 0 || *maxTenantSessions > *maxSessions || *sessionHistory < 1 || *sessionHistory > session.MaxHistory || flag.NArg() != 0 {
 		return fmt.Errorf("usage: sandboxd -backend mock|firecracker -state-dir DIR [-max-instances 32]; mock provides NO isolation")
 	}
 	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "") {
@@ -145,6 +149,23 @@ func run() (retErr error) {
 			retErr = errors.Join(retErr, fmt.Errorf("cleanup unfinished: %w", err))
 		}
 	}()
+	sessionStore, err := session.NewFileStore(filepath.Join(absDir, "sessions"))
+	if err != nil {
+		return err
+	}
+	sessions, err := session.New(manager, sessionStore, session.Options{MaxSessions: *maxSessions, MaxTenantSessions: *maxTenantSessions, MaxAttempts: *sessionHistory})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := sessions.Close(ctx); err != nil {
+			unfinishedCleanup = true
+			retErr = errors.Join(retErr, err)
+			slog.Error("session mutations unfinished; retain state ownership until process exit", "error", err)
+		}
+	}()
 	socket := filepath.Join(absDir, "api.sock")
 	if info, err := os.Lstat(socket); err == nil {
 		if info.Mode()&os.ModeSocket == 0 {
@@ -165,7 +186,7 @@ func run() (retErr error) {
 	if err := os.Chmod(socket, 0600); err != nil {
 		return err
 	}
-	handler, err := httpapi.NewConfigured(manager, httpapi.Options{Authenticator: authenticator, AllowUnauthenticatedMock: *insecureMock})
+	handler, err := httpapi.NewConfigured(manager, httpapi.Options{Authenticator: authenticator, AllowUnauthenticatedMock: *insecureMock, Sessions: sessions})
 	if err != nil {
 		return err
 	}
