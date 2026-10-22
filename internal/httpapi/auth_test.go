@@ -180,3 +180,28 @@ func TestPublicErrorsDoNotExposeOperatorDetails(t *testing.T) {
 		t.Fatal("authentication silently disabled")
 	}
 }
+
+func TestMetadataCapacityErrorProjection(t *testing.T) {
+	for _, tc := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{sandbox.ErrMetadataCapacity, 503, "METADATA_CAPACITY"},
+		{sandbox.ErrTenantMetadataCapacity, 429, "TENANT_METADATA_QUOTA"},
+	} {
+		w := httptest.NewRecorder()
+		failure(w, fmt.Errorf("%w: private-host-diagnostic", tc.err))
+		var body struct {
+			Error struct {
+				Code string `json:"code"`
+			}
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != tc.status || body.Error.Code != tc.code || bytes.Contains(w.Body.Bytes(), []byte("private-host-diagnostic")) {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+}

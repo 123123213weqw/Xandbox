@@ -18,6 +18,8 @@ import (
 )
 
 type Options struct {
+	MaxRecords       int
+	MaxTenantRecords int
 	MaxInstances     int
 	OperationTimeout time.Duration
 	PrepareTimeout   time.Duration
@@ -63,6 +65,7 @@ type Manager struct {
 	records        map[string]*instance
 	createKeys     map[string]*instance
 	active         map[string]*instance // Capacity is returned only after durable cleanup.
+	tenantRecords  map[string]int       // Includes permanent tombstones and uncertain writes.
 	closing        bool
 	driver         Driver
 	store          Store
@@ -80,6 +83,15 @@ type Manager struct {
 }
 
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
+	if opts.MaxRecords == 0 {
+		opts.MaxRecords = 10_000
+	}
+	if opts.MaxTenantRecords == 0 {
+		opts.MaxTenantRecords = min(1000, opts.MaxRecords)
+	}
+	if opts.MaxRecords < 1 || opts.MaxRecords > MaxLedgerRecords || opts.MaxTenantRecords < 1 || opts.MaxTenantRecords > opts.MaxRecords {
+		return nil, errors.New("invalid ledger admission bounds")
+	}
 	if opts.MaxInstances <= 0 {
 		opts.MaxInstances = 32
 	}
@@ -120,11 +132,15 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(records) > MaxLedgerRecords {
+		return nil, errors.New("ledger exceeds hard record limit")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{
 		records: make(map[string]*instance), active: make(map[string]*instance),
-		createKeys: make(map[string]*instance),
-		driver:     driver, store: store, opts: opts, ctx: ctx, cancel: cancel,
+		createKeys:    make(map[string]*instance),
+		tenantRecords: make(map[string]int),
+		driver:        driver, store: store, opts: opts, ctx: ctx, cancel: cancel,
 		wake: make(chan struct{}, 1), workerDone: make(chan struct{}),
 		stopQueue: make(chan *instance, opts.WorkQueueSize), cleanupQueue: make(chan *instance, opts.WorkQueueSize),
 	}
@@ -153,6 +169,7 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 			m.createKeys[key] = i
 		}
 		m.records[r.ID] = i
+		m.tenantRecords[r.TenantID]++
 		if r.State == Destroyed {
 			continue
 		}
@@ -317,6 +334,14 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 			return r, nil
 		}
 	}
+	if len(m.records) >= m.opts.MaxRecords {
+		m.mu.Unlock()
+		return Record{}, ErrMetadataCapacity
+	}
+	if m.tenantRecords[owner.TenantID] >= m.opts.MaxTenantRecords {
+		m.mu.Unlock()
+		return Record{}, ErrTenantMetadataCapacity
+	}
 	if len(m.active) >= m.opts.MaxInstances {
 		m.mu.Unlock()
 		return Record{}, ErrCapacity
@@ -336,6 +361,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 		return Record{}, errors.New("random identity collision")
 	}
 	m.records[id], m.active[id] = i, i
+	m.tenantRecords[owner.TenantID]++
 	if keyHash != "" {
 		m.createKeys[index] = i
 	}
@@ -701,6 +727,7 @@ func (m *Manager) cleanupLocked(i *instance) error {
 }
 
 func (m *Manager) saveLocked(i *instance, next Record) error {
+	next.LastError = boundedLedgerError(next.LastError)
 	next.UpdatedAt = time.Now().UTC()
 	if err := m.store.Save(next); err != nil {
 		return err
@@ -711,6 +738,7 @@ func (m *Manager) saveLocked(i *instance, next Record) error {
 }
 
 func (m *Manager) fenceLocked(i *instance, next Record) error {
+	next.LastError = boundedLedgerError(next.LastError)
 	next.UpdatedAt = time.Now().UTC()
 	i.record = next // Persistence failure must never reopen execution admission.
 	i.publish()
@@ -745,6 +773,10 @@ func (m *Manager) notify() {
 func (m *Manager) Stats() Stats {
 	items := m.activeInstances()
 	s := Stats{Backend: m.driver.Name(), Active: len(items), Capacity: m.opts.MaxInstances}
+	m.mu.Lock()
+	s.Records = len(m.records)
+	m.mu.Unlock()
+	s.RecordCapacity, s.TenantRecordCapacity = m.opts.MaxRecords, m.opts.MaxTenantRecords
 	for _, i := range items {
 		if i.recovering.Load() {
 			s.Recovering++

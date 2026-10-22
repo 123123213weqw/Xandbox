@@ -19,16 +19,19 @@ const (
 )
 
 var (
-	ErrNotFound            = errors.New("not found")
-	ErrStale               = errors.New("stale generation")
-	ErrNotReady            = errors.New("sandbox is not ready")
-	ErrClosing             = errors.New("manager is closing")
-	ErrCapacity            = errors.New("capacity exhausted; unreclaimed instances still count")
-	ErrJobLimit            = errors.New("execution history limit reached; create a new sandbox")
-	ErrInvalid             = errors.New("invalid request")
-	ErrTenantCapacity      = errors.New("tenant instance quota exhausted")
-	ErrIdempotencyConflict = errors.New("idempotency key was used with a different request")
-	ErrIdempotencyGone     = errors.New("idempotent creation is no longer usable; use a new key")
+	ErrNotFound                = errors.New("not found")
+	ErrStale                   = errors.New("stale generation")
+	ErrNotReady                = errors.New("sandbox is not ready")
+	ErrClosing                 = errors.New("manager is closing")
+	ErrCapacity                = errors.New("capacity exhausted; unreclaimed instances still count")
+	ErrJobLimit                = errors.New("execution history limit reached; create a new sandbox")
+	ErrInvalid                 = errors.New("invalid request")
+	ErrTenantCapacity          = errors.New("tenant instance quota exhausted")
+	ErrMetadataCapacity        = errors.New("ledger record capacity exhausted")
+	ErrTenantMetadataCapacity  = errors.New("tenant ledger record capacity exhausted")
+	ErrLedgerMigrationRequired = errors.New("legacy ledger requires offline migration")
+	ErrIdempotencyConflict     = errors.New("idempotency key was used with a different request")
+	ErrIdempotencyGone         = errors.New("idempotent creation is no longer usable; use a new key")
 	// ErrBackendFenced requires admission fencing and recovery. It does NOT
 	// certify stopped execution; Driver.Stop still has to prove that separately.
 	ErrBackendFenced = errors.New("backend execution domain fenced; recovery required")
@@ -137,15 +140,18 @@ type Store interface {
 }
 
 type Stats struct {
-	Backend        string `json:"backend"`
-	Active         int    `json:"active"`
-	Capacity       int    `json:"capacity"`
-	Recovering     int    `json:"recovering"`
-	StopQueued     int    `json:"stop_queued"`
-	CleanupQueued  int    `json:"cleanup_queued"`
-	StopRunning    int    `json:"stop_running"`
-	CleanupRunning int    `json:"cleanup_running"`
-	StopWorkers    int    `json:"stop_workers"`
-	CleanupWorkers int    `json:"cleanup_workers"`
-	QueueCapacity  int    `json:"queue_capacity_per_pool"`
+	Records              int    `json:"records"`
+	RecordCapacity       int    `json:"record_capacity"`
+	TenantRecordCapacity int    `json:"tenant_record_capacity"`
+	Backend              string `json:"backend"`
+	Active               int    `json:"active"`
+	Capacity             int    `json:"capacity"`
+	Recovering           int    `json:"recovering"`
+	StopQueued           int    `json:"stop_queued"`
+	CleanupQueued        int    `json:"cleanup_queued"`
+	StopRunning          int    `json:"stop_running"`
+	CleanupRunning       int    `json:"cleanup_running"`
+	StopWorkers          int    `json:"stop_workers"`
+	CleanupWorkers       int    `json:"cleanup_workers"`
+	QueueCapacity        int    `json:"queue_capacity_per_pool"`
 }

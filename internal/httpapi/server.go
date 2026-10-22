@@ -264,6 +264,10 @@ func failure(w http.ResponseWriter, err error) {
 		status, code, message = 429, "JOB_LIMIT", "execution history limit reached"
 	case errors.Is(err, sandbox.ErrTenantCapacity):
 		status, code, message = 429, "TENANT_QUOTA", "tenant instance quota exhausted"
+	case errors.Is(err, sandbox.ErrMetadataCapacity):
+		status, code, message = 503, "METADATA_CAPACITY", "ledger record capacity exhausted"
+	case errors.Is(err, sandbox.ErrTenantMetadataCapacity):
+		status, code, message = 429, "TENANT_METADATA_QUOTA", "tenant ledger record quota exhausted"
 	case errors.Is(err, sandbox.ErrCapacity), errors.Is(err, sandbox.ErrClosing):
 		status, code, message = 503, "UNAVAILABLE", "service unavailable"
 	}
