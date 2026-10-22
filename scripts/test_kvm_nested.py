@@ -7,10 +7,24 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_quota_format_uses_installed_e2fsprogs_extended_option_not_unknown_flag(self):
+        self.assertEqual(quota_format_options(False),[])
+        self.assertEqual(quota_format_options(True),['-O','project,quota','-E','quotatype=prjquota','-I','256','-b','4096'])
+
+    def test_quota_profile_is_explicit_enforcing_and_mutually_exclusive(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_probe=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota >/dev/console 2>&1\n'))
+        self.assertLess(service.index('insmod /lib/fixture/quota_tree.ko'),service.index('insmod /lib/fixture/quota_v2.ko'))
+        _,ordinary=init_scripts([])
+        self.assertNotIn('prjquota',ordinary)
+        self.assertNotIn('quota-drop',ordinary)
+        with self.assertRaises(ValueError):init_scripts([],state_io=True,quota_probe=True)
+
     def test_state_io_profile_cannot_mount_backing_disk_bypassing_l1_mapper(self):
         bootstrap,service=init_scripts([],state_io=True)
         self.assertIn('switch_root',bootstrap)
@@ -46,6 +60,9 @@ class NestedFixtureTests(unittest.TestCase):
             bad=copy.deepcopy(good);bad[key]=value;variants.append(bad)
         bad=copy.deepcopy(good);bad['modules_sha256']['/etc/shadow']='a'*64;variants.append(bad)
         bad=copy.deepcopy(good);bad['modules_sha256']=dict(reversed(list(bad['modules_sha256'].items())));variants.append(bad)
+        for key,value in (('/etc/shadow','a'*64),('kernel/fs/quota/quota_v2.ko','not-a-digest')):
+            bad=copy.deepcopy(good);bad['quota_modules_sha256'][key]=value;variants.append(bad)
+        bad=copy.deepcopy(good);bad['quota_modules_sha256']=dict(reversed(list(bad['quota_modules_sha256'].items())));variants.append(bad)
         for bad in variants:
             with self.assertRaises(ValueError):validate_manifest(bad)
 

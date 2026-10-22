@@ -26,11 +26,16 @@ def validate_manifest(manifest):
         raise ValueError('kernel release is not a canonical generic build')
     if tuple(manifest.get('modules_sha256', {})) != modules:
         raise ValueError('only the fixed ordered KVM/rng module set is supported')
-    for value in [manifest.get('l1_kernel_sha256', ''), manifest.get('qemu_sha256', ''), *manifest['modules_sha256'].values()]:
+    quota_modules = ('kernel/fs/quota/quota_tree.ko', 'kernel/fs/quota/quota_v2.ko')
+    if tuple(manifest.get('quota_modules_sha256', {})) != quota_modules:
+        raise ValueError('only the fixed ordered quota module set is supported')
+    for value in [manifest.get('l1_kernel_sha256', ''), manifest.get('qemu_sha256', ''),
+                  *manifest['modules_sha256'].values(), *manifest['quota_modules_sha256'].values()]:
         if not re.fullmatch('[0-9a-f]{64}', value): raise ValueError('explicit artifact digest required')
 
 
-def init_scripts(modules, state_io=False):
+def init_scripts(modules, state_io=False, quota_probe=False):
+    if state_io and quota_probe: raise ValueError('mutually exclusive L1 image profiles')
     # Linux 6.8 cannot pivot_root from its special initramfs rootfs. Move to
     # a bounded, ordinary tmpfs mount BEFORE starting the unmodified jailer.
     # Both scripts execute only as PID1 inside the owned L1, never on L0.
@@ -45,13 +50,16 @@ def init_scripts(modules, state_io=False):
     service += 'i=0\nwhile [ ! -b /dev/vda ]; do i=$((i+1)); [ "$i" -lt 100 ]; sleep 0.1; done\n'
     if state_io:
         service += 'exec /usr/bin/xandbox-host-fixture -mode node-io >/dev/console 2>&1\n'
+    elif quota_probe:
+        service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-quota >/dev/console 2>&1\n'
     else:
         service += 'mount -t ext4 -o rw,nosuid /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node >/dev/console 2>&1\n'
     return bootstrap, service
 
 
-def build_initrd(*, alpine, fixture, manifest, output, state_io=False):
+def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_probe=False):
     validate_manifest(manifest)
+    if state_io and quota_probe: raise ValueError('mutually exclusive L1 image profiles')
     assert os.geteuid() == 0 and not output.exists()
     assert digest(alpine) == ALPINE_SHA256
     static_elf(fixture.read_bytes())
@@ -72,12 +80,14 @@ def build_initrd(*, alpine, fixture, manifest, output, state_io=False):
         (root / 'etc/xandbox-host-fixture').write_text('Xandbox nested host fixture v1\n')
         (root / 'etc/xandbox-host-fixture').chmod(0o600)
         modules = []
-        for name, wanted in manifest['modules_sha256'].items():
+        selected_modules = dict(manifest['modules_sha256'])
+        if quota_probe: selected_modules.update(manifest['quota_modules_sha256'])
+        for name, wanted in selected_modules.items():
             source = Path('/lib/modules', release, name)
             assert source.is_file() and not source.is_symlink() and source.stat().st_size <= 8<<20 and digest(source) == wanted
             target = root / 'lib/fixture' / source.name
             shutil.copyfile(source, target); target.chmod(0o444); modules.append(target.name)
-        bootstrap, service = init_scripts(modules, state_io)
+        bootstrap, service = init_scripts(modules, state_io, quota_probe)
         (root / 'init').write_text(bootstrap); (root / 'init').chmod(0o755)
         (root / 'sbin/xandbox-host-init').write_text(service); (root / 'sbin/xandbox-host-init').chmod(0o755)
         for name, major, minor in (('console', 5, 1), ('null', 1, 3), ('tty', 5, 0)):

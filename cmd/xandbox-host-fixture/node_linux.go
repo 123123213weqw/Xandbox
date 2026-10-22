@@ -49,7 +49,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover":
+	case "probe", "recover", "quota-probe":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -448,7 +448,12 @@ func requireNode() error {
 
 func runNode() error { return runNodeProfile(false) }
 
-func runNodeProfile(stateIO bool) error {
+func runNodeProfile(stateIO bool) error { return runNodeOptions(stateIO, false) }
+
+func runNodeOptions(stateIO, quotaProbe bool) error {
+	if stateIO && quotaProbe {
+		return errors.New("exclusive L1 image profile required")
+	}
 	if e := requireNode(); e != nil {
 		return e
 	}
@@ -513,10 +518,27 @@ func runNodeProfile(stateIO bool) error {
 				} else {
 					result, e = n.ioFault(ctx, mapper, q.Phase)
 				}
+			case "quota-probe":
+				if !quotaProbe {
+					e = errors.New("isolated quota-prerequisite profile required")
+				} else {
+					result, e = n.quotaProbe(ctx)
+				}
 			case "recover":
-				e = kvmAvailable()
+				var quotaResult map[string]any
+				if quotaProbe {
+					quotaResult, e = recoverQuotaProbe()
+				}
+				if e == nil {
+					e = kvmAvailable()
+				}
 				if e == nil {
 					result, e = n.recover(ctx)
+					if e == nil {
+						for k, v := range quotaResult {
+							result[k] = v
+						}
+					}
 				}
 			}
 			cancel()

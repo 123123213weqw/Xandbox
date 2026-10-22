@@ -1030,5 +1030,27 @@
     "all_four_new_guards_passed": true,
     "new_full_regression_runner_exit_status": 0,
     "not_production_slo_or_complete_m2": true
+  },
+  "ext4_project_quota_prerequisites": {
+    "production_ready": false,
+    "goal_complete": false,
+    "production_driver_quota": false,
+    "design": "docs/PROJECT_QUOTA.md",
+    "report": "docs/validation/kvm-quota-v2.json",
+    "failed_preboot_report": "docs/validation/kvm-quota-v1.json",
+    "provenance": "docs/validation/project-quota-provenance-v2.json",
+    "harness_source": "7db7b3561f3c6c6c394629a205c1264766296dbf",
+    "go_source": "ca8cfa6995fef3e6360ba6e917082d872d3e1689",
+    "native_toolchain": "go1.27.3 linux/amd64",
+    "ordinary_daemon_unchanged": true,
+    "quota_probe_cases": 1,
+    "quota_probe_l1_boots": 2,
+    "scope": "Kernel prerequisites only: actual root bypass, capability-limited root block/inode EDQUOT, cross-project hardlink/reseal and same-disk coldboot persistence. NOT ordinary-driver quota, durable project allocator, node preparation budgets or complete M2.",
+    "runner_exit_status": 0,
+    "cleanup_confirmed": true,
+    "independent_cleanup_scopes": 4,
+    "independent_absent_execution_generations": 11,
+    "healthy_power_regression_cases": 3,
+    "state_io_regression_cases": 4
   }
 }

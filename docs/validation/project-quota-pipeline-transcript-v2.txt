@@ -1,0 +1,23 @@
+work/quota-source-v2.tar.gz: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/tagrace10/tagvet/rootPython39
+.......................................
+----------------------------------------------------------------------
+Ran 39 tests in 0.022s
+
+OK
+bin/sandboxd-quota-v2: 成功
+bin/quota-fixture-v2: 成功
+b8d2e5b9b5b312841c7287871ee073017d46044592b447736fdf6d39f139a8af  bin/sandboxd-quota-v2
+6c2f78e07b6836b1227cc0d8ce6c08c0cb3361ba31a1827115231cfbfca2c7e5  bin/quota-fixture-v2
+stage: actual owned L1 ext4 quota prerequisites + same-disk coldboot real KVM
+45754 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: unchanged healthy power-cut profile3 regression
+45624 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: unchanged EIO/held-fsync profile4 regression
+45624 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+all quota prerequisite and default fixture regression stages passed
