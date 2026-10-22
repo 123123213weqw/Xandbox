@@ -87,5 +87,31 @@
       "lifecycle_and_driver": 85.8,
       "strict_json": 91.7
     }
+  },
+  "guest_component": {
+    "validated_on": "2026-10-22",
+    "integrated_into_sandboxd": false,
+    "production_ready": false,
+    "standalone_jailed_kvm": "passed",
+    "report": "docs/validation/kvm-guest-2026-10-22.json",
+    "local_toolchain": "go1.27.3 darwin/arm64",
+    "agent_toolchain": "go1.27.3 linux/amd64 (cross-compiled, executed in real KVM guests)",
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "guest_race_repeat_10": "passed",
+      "go_vet": "passed",
+      "go_mod_verify": "passed",
+      "bounded_frame_fuzz_seconds": 5,
+      "linux_image_safety_tests": 3,
+      "govulncheck_linux_target": "0 reachable vulnerabilities; 6 uncalled required-module findings remain",
+      "govulncheck_tool": "v1.8.0"
+    },
+    "not_validated": [
+      "sandboxd Firecracker driver and durable resource ownership",
+      "controller crash recovery with real VMMs",
+      "production image supply chain and reserved UID allocation",
+      "guest cgroup cleanup-failure whole-VM fencing",
+      "service API load, percentiles, snapshot or atomic switching"
+    ]
   }
 }

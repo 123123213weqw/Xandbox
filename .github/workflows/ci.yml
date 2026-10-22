@@ -39,10 +39,14 @@ jobs:
         run: test -z "$(gofmt -l cmd internal)"
       - name: Vet
         run: go vet ./...
+      - name: Verify dependency checksums
+        run: go mod verify
       - name: Race and failure tests
         run: go test -race -count=3 ./...
       - name: Build and process smoke test
         run: make smoke
+      - name: Guest image extraction safety
+        run: python3 -m unittest discover -s scripts -p test_guest_image.py
 
   linux-build:
     runs-on: ubuntu-24.04
@@ -61,4 +65,20 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxd-$arch" ./cmd/sandboxd
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxctl-$arch" ./cmd/sandboxctl
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-keygen-$arch" ./cmd/xandbox-keygen
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-agent-$arch" ./cmd/xandbox-agent
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-guestctl-$arch" ./cmd/xandbox-guestctl
+
+  vulnerability-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.3
+          cache: false
+      - name: Scan reachable Go vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
           done

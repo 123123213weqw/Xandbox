@@ -1,0 +1,27 @@
+{
+  "test_only": true,
+  "architecture": "x86_64",
+  "firecracker_version": "1.17.0",
+  "artifacts": {
+    "firecracker-v1.17.0-x86_64.tgz": {
+      "url": "https://github.com/firecracker-microvm/firecracker/releases/download/v1.17.0/firecracker-v1.17.0-x86_64.tgz",
+      "sha256": "06094a1108ae9e82aa4c23a775aa92758f53f1175d422270d9d6162cb9ade558"
+    },
+    "vmlinux-6.1.188": {
+      "url": "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261021-1e5fcc27b59f-0/x86_64/vmlinux-6.1.188",
+      "sha256": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3"
+    },
+    "vmlinux-6.1.188.config": {
+      "url": "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261021-1e5fcc27b59f-0/x86_64/vmlinux-6.1.188.config",
+      "sha256": "32f1d98d81e63d86b7f90c42ab7495ebd234f0999a24682843c2f9e46f6f2704"
+    },
+    "alpine-minirootfs-3.24.3-x86_64.tar.gz": {
+      "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-minirootfs-3.24.3-x86_64.tar.gz",
+      "sha256": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407"
+    }
+  },
+  "release_binary_sha256": {
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f"
+  }
+}
