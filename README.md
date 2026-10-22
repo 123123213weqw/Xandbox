@@ -12,7 +12,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。真实后端的归属、监督与使用限制见 [Firecracker 驱动](docs/FIRECRACKER.md)。独立组件报告不是服务级生产认证，mock 接口始终不提供 VM 隔离。
 
-[最新真实后端验收](docs/validation/kvm-guardian-2026-10-22.json) 已通过 21 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效及独立受控 fsync 阻塞用例。阻塞用例的 [9 项详细断言](docs/validation/kvm-guardian-fsync-2026-10-22.json) 是其中一项的展开，不是额外 9 个场景。尚未覆盖完整生产故障矩阵或切换性能。
+[最新真实后端验收](docs/validation/kvm-ledger-2026-10-22.json) 已通过 22 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效、真实旧 VM 的账本升级恢复及独立受控 fsync 阻塞用例。阻塞用例的 [9 项详细断言](docs/validation/kvm-ledger-fsync-2026-10-22.json) 是其中一项的展开，不是额外 9 个场景。尚未覆盖完整生产故障矩阵或切换性能。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 

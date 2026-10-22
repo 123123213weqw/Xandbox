@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0, M1, guest_component, firecracker_driver and lifecycle_scheduler entries are historical snapshots. Current integration status is in current_status and guardian_leases; historical reports are not rewritten.",
+  "validation_history_note": "Top-level mock/M0, M1, guest_component, firecracker_driver, lifecycle_scheduler and guardian_leases entries are historical snapshots. Latest integration/upgrade status is in current_status and ledger_governance; historical reports are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -124,7 +124,7 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "guardian_leases"
+    "latest_runtime_validation": "ledger_governance"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -261,6 +261,58 @@
       "malicious guest normal-completion authenticity; no per-command security boundary promised",
       "sustained load, fairness, RSS/resource curves and full audit/metrics",
       "snapshot/prewarm/atomic switching and latency percentiles/SLO"
+    ]
+  },
+  "ledger_governance": {
+    "validated_on": "2026-10-22",
+    "source_revision": "cb66d784ab90553a5d888b0146787748d27471e7",
+    "production_ready": false,
+    "format_version": 1,
+    "legacy_source_revision": "97196a59aa508348d9293e9f44c5fa5f2f3e0891",
+    "service_report": "docs/validation/kvm-ledger-2026-10-22.json",
+    "controlled_fsync_report": "docs/validation/kvm-ledger-fsync-2026-10-22.json",
+    "process_report": "docs/validation/ledger-process-2026-10-22.json",
+    "service_checks": 22,
+    "service_scope": "16 baseline + 4 guardian + 1 actual old-KVM upgrade + 1 controlled fsync case; its 9 detailed assertions are not additional independent cases",
+    "process_checks": 7,
+    "process_scope": "Darwin/arm64 Go1.27.3; 6 default process scenarios plus actual pre-upgrade daemon SIGKILL/upgrade/reclaim",
+    "admission_defaults": {
+      "max_records": 10000,
+      "max_records_per_tenant": 1000
+    },
+    "hard_bounds": {
+      "records": 100000,
+      "directory_entries": 201024,
+      "record_bytes": 65536,
+      "private_error_bytes": 4096
+    },
+    "retention_policy": "Permanent terminal identities/key hashes with explicit admission backpressure. No silent expiration, LRU eviction, archival or automatic namespace rotation.",
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "ledger_and_metadata_targeted_race_repeat_10": "passed",
+      "go_vet": "passed",
+      "go_mod_verify": "passed",
+      "mock_auth_metadata_process_smoke": "passed",
+      "strict_ledger_decoder_fuzz_seconds": 5,
+      "actual_sigkill_during_migration_records": 2048,
+      "linux_govulncheck": "0 reachable/0 imported-package; 6 uncalled required-module findings remain (v1.8.0 Go1.27.3)",
+      "real_kvm_old_binary_migration": "passed, preserves READY until normal host reclaim; same key 410 and new key 503 at capacity",
+      "owned_fixture_residue": "none"
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39757343251",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39757199135"
+    ],
+    "sample_scope": "KVM create array has 8 new-daemon samples plus a final old-daemon sample from migration. Not percentiles, sustained load, RSS, switch latency or physical disk-failure evidence.",
+    "not_validated": [
+      "long-term metadata compaction/archive/namespace rotation and resource curves",
+      "independent operator upgrade/backup/rollback rehearsal",
+      "physical power loss, host reboot or whole-node disk failure",
+      "controller/guardian double failure or kernel starvation upper bounds",
+      "physical disk quota and cryptographic/physical erasure",
+      "production image/config/asset migration",
+      "full structured audit/metrics/alerts and sustained load",
+      "snapshot/prewarm/atomic switching and latency SLO"
     ]
   }
 }

@@ -61,4 +61,17 @@ PR #5 及以前的平铺 JSON 是 v0。正常启动遇到它会失败，不会�
 
 `make smoke` 新增 `scripts/metadata_smoke.py`：节点/租户容量、同 key 重试、降低预算恢复、SIGKILL、拒绝未知格式、迁移锁、2048 条记录迁移中真实 SIGKILL 和继续迁移。默认旧格式来自显式测试副本，不冒充旧 binary 验收。可额外传 `--legacy-daemon /private/path/to/old/sandboxd` 验证实际旧进程创建/崩溃后的升级。
 
-真实 KVM harness 另支持 `--legacy-daemon` 和 `--legacy-source-revision`，检查旧 VM 运行、控制器死亡后宿主停止、未迁移拒绝启动、离线升级不虚构回收，以及新控制器在累计容量满时回收旧 VM/保持 key 为 410。普通 CI 与 mock 仍不能替代它。当前分支的新版本真实报告发布前，历史 [guardian 证据](GUARDIAN.md) 不能当作该升级路径已经通过。
+真实 KVM harness 另支持 `--legacy-daemon` 和 `--legacy-source-revision`，检查旧 VM 运行、控制器死亡后宿主停止、未迁移拒绝启动、离线升级不虚构回收，以及新控制器在累计容量满时回收旧 VM/保持 key 为 410。普通 CI 与 mock 仍不能替代它。新证据如下；历史 [guardian 证据](GUARDIAN.md) 保留不变，不冒充本次升级路径验收。
+
+
+## 2026-10-22 实测证据
+
+源码 `cb66d784ab90553a5d888b0146787748d27471e7`、Go 1.27.3：
+
+- [真实进程报告](validation/ledger-process-2026-10-22.json)：Darwin/arm64 的 7 项检查，含从真实旧版本 `97196a5` 构建的控制器创建/崩溃后升级恢复；默认 CI 的 6 项不包含额外旧 binary。2048 条记录迁移中途定点 SIGKILL，确实留下混合目录，正常启动拒绝，继续迁移后全部身份保留且孤立 temp 清理。
+- [真实 KVM 服务报告](validation/kvm-ledger-2026-10-22.json)：22 项为基础 16 + guardian 4 + 旧 VM 账本升级 1 + 受控 fsync 集成 1。后者 [9 项断言](validation/kvm-ledger-fsync-2026-10-22.json) 是一项的展开，不合并宣传为额外 9 个独立场景。
+- Linux/amd64 新控制器 SHA-256 `c763533eaf1184ee8d6ca713488c2a646f3aa88d85067d0fd56569c9bb2e4eb1`；旧控制器 `6405f59fbd7a8e65793ba2bc8bb3b543ffe135add527e10a336ed0246239a783`，与旧主分支重建一致。精确 warden/test/image 摘要在原始报告内。
+- 真实旧 VM 已启动 guest 任务再杀控制器。迁移前新版启动不改动旧账本；离线升级保留 READY 和 key（不虚构已回收）；新版随后用 host 停止证明、私有清理和持久 DESTROYED 回收，在累计容量 1 已满时仍保持原 key 410，新 key 503。最终无本次 VMM/cgroup/jail/UID manifest 残留。
+- full race×3、重点账本/配额 race×10、vet、依赖校验和 mock/auth/metadata smoke 通过；decoder fuzz5秒约 47 万次。源码 [CI #39757343251](https://github.com/123123213weqw/Xandbox/actions/runs/39757343251) 与 [#39757199135](https://github.com/123123213weqw/Xandbox/actions/runs/39757199135) 全绿，包含 Linux 旧/新 Go 兼容测试和真实内核 timerfd 测试。Linux 目标 govulncheck 仍有 6 项未调用 required-module findings，0 reachable/0 imported-package，不是依赖完全无漏洞。
+
+同一 KVM 节点的硬件/VM 规格与 [guardian 报告](GUARDIAN.md) 相同。新控制器的 8 次 READY 样本约 1.41–1.56 秒；原始数组第 9 次约 1.43 秒是迁移场景的**旧 binary**，不能混入新版性能统计。运行态 DELETE 两次观测停止约 33.7–49.3 ms，持久回收约 147.5–168.1 ms；单次受控 fsync 阻塞中的别代 TTL 到 STOPPED 约 42.3 ms（测试 reconcile10ms，非默认100ms）。只作小样本正确性证据，不是 RSS/持续负载、生产百分位、物理故障、擦除或切换 SLO。

@@ -100,3 +100,6 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 [首次 patched-toolchain 服务报告](validation/kvm-driver-2026-10-22.json) 保留不变。其后补强了 UID 区间加法溢出的拒绝检查，并将 CI 中依赖 30 ms 创建 TTL 的旧测试改为 READY 后确定性过期（原失败是创建按预期拒绝了已过期实例，不是延长生产 TTL）。该回归测试 race 重复 100 次通过，数值校验补强后的真实 KVM 全部 16 项已再次通过。
 
 停止与 GC 已拆成独立有界池；配置、背压与关闭期限边界见 [LIFECYCLE.md](LIFECYCLE.md)。后续 guardian 源码 `2f7ac5d` 的 [21 项服务报告](validation/kvm-guardian-2026-10-22.json) 补充了控制器暂停、硬 TTL、guardian SIGKILL 和受控 fsync；观测点与限制见 [GUARDIAN.md](GUARDIAN.md)。历史 16 项报告不覆盖这些新增场景，均保留不改。
+
+
+账本 v1 的后续 [22 项服务报告](validation/kvm-ledger-2026-10-22.json) 来自源码 `cb66d78`，在上述 guardian/队列回归之外，实际验证旧 binary 创建的运行态 VM 经控制器死亡、显式离线迁移后由新版完成回收。格式升级不替代后端资产绑定迁移，也不恢复旧会话；操作方式、累计容量和样本中旧/新 binary 的区分见 [LEDGER.md](LEDGER.md)。
