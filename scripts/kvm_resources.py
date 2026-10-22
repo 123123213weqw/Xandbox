@@ -57,6 +57,15 @@ def _regular(path, expected_size=None):
     return info
 
 
+def workspace_observation(path):
+    # Prepare copies directly to an exclusive final filename. A concurrent
+    # observer must include partial allocation, not reject or silently drop it.
+    info = _regular(path)
+    if info.st_size > 128 << 20 or info.st_nlink != 1:
+        raise ValueError('private workspace oversized or unexpectedly shared')
+    return info, int(info.st_size < 128 << 20)
+
+
 def file_resident_bytes(path, expected_size):
     """PROT_NONE mapping + mincore: inspect page-cache residency without reading.
 
@@ -137,7 +146,8 @@ class ResourceSampler:
                'owned_cgroup_memory_current_bytes': 0, 'owned_cgroup_count': 0,
                'template_mapping_rss_sum_bytes': 0, 'template_mapping_pss_sum_bytes': 0,
                'template_mapping_anonymous_sum_bytes': 0,
-               'private_workspace_allocated_bytes': 0, 'private_workspace_logical_bytes': 0}
+               'private_workspace_allocated_bytes': 0, 'private_workspace_logical_bytes': 0,
+               'private_workspace_preparing_files': 0}
         seen = set()
         for group in list(self.cgroup.iterdir()):
             if not group.is_dir():
@@ -170,13 +180,14 @@ class ResourceSampler:
                 if not REF_NAME.fullmatch(jail.name) or not jail.is_dir():
                     raise ValueError('unknown jail namespace')
                 try:
-                    value = _regular(jail / 'root/workspace.ext4', 128 << 20)
+                    value, preparing = workspace_observation(jail / 'root/workspace.ext4')
                 except FileNotFoundError:
                     continue
                 identity = (value.st_dev, value.st_ino)
                 if identity in workspaces or value.st_nlink != 1:
                     raise ValueError('private workspace unexpectedly shared')
                 workspaces.add(identity)
+                row['private_workspace_preparing_files'] += preparing
                 row['private_workspace_allocated_bytes'] += value.st_blocks * 512
                 row['private_workspace_logical_bytes'] += value.st_size
         memory = _regular(self.memory, 512 << 20)

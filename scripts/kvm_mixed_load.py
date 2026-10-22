@@ -8,6 +8,7 @@ import math
 import secrets
 import threading
 import time
+import traceback
 
 from kvm_resources import ResourceSampler
 
@@ -95,8 +96,11 @@ def run_mixed(*, cycles, min_seconds, call, finish, destroyed, group, empty, wai
     observer_errors = []
 
     def sample():
-        return {'elapsed_ms': round((time.perf_counter() - began) * 1000, 3),
-                **sampler.sample(), **{'metric_' + k: v for k, v in gauges(metrics()).items()}}
+        started = time.perf_counter()
+        value = {'elapsed_ms': round((started - began) * 1000, 3),
+                 **sampler.sample(), **{'metric_' + k: v for k, v in gauges(metrics()).items()}}
+        value['observation_duration_ms'] = round((time.perf_counter() - started) * 1000, 3)
+        return value
 
     # Initial sample failure must be synchronous; do not label missing data zero.
     result['resources'].append(sample())
@@ -106,6 +110,7 @@ def run_mixed(*, cycles, min_seconds, call, finish, destroyed, group, empty, wai
             while not stop_observer.wait(0.5):
                 result['resources'].append(sample())
         except BaseException as error:
+            traceback.print_exc()  # Private console only; report keeps the bounded error type.
             observer_errors.append(type(error).__name__)
             abort.set()
 
