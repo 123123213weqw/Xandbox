@@ -15,7 +15,7 @@
 ```text
 未分配模板 WAITING（仅901）
     → 首个 initialize 原子认领 CLAIMED（不是 READY）
-    → /run/xandbox-init/claimed 独占创建，进程重启也不能重开闸门
+    → /run/xandbox-init/claimed 独占创建，标记存在后进程重启不能重开闸门
     → 注入64字节宿主CSPRNG种子，RNDADDENTROPY + RNDRESEEDCRNG 显式完成
     → 设置 guest CLOCK_REALTIME、只读 proc boot_id 视图和 machine-id
     → root-only receipt：Ref + bootID + 请求哈希，不含种子/nonce
@@ -33,6 +33,7 @@
 - 只信任经过校验、从未接收租户输入的模板和宿主操作员；ACK摘要不是远程证明，也不防恶意宿主root或已入侵guest内核。
 - 宿主 cgroup 与 BOOTTIME guardian 租约仍独立约束每个恢复实例；guest修改时钟不影响宿主TTL。初始化不能绕过这些资源归属。
 - guest `claimed` 是RAM内的进程重启栅栏，不是持久化宿主归属或跨VM全局去重。回到原始快照仍为未分配状态，宿主必须签发全新Ref/种子。
+- `CLAIMED` ACK先于文件标记创建，ACK本身只代表进程内认领。若agent恰好在两者之间死亡，尚无特权初始化副作用，但新进程可能再次显示WAITING；这绝不能证明该候选可重新分配。宿主一旦发出初始化，只能确认原请求的精确正常健康响应，否则必须停止候选并以新Ref重建，不能因WAITING而换种子重试。跨该窗口的硬件故障验收和服务端不可逆尝试记录尚未实现。
 - `/proc/.../boot_id` 是guest中的只读文件视图，未重启内核，也不宣称重新生成所有可能的内核/应用标识。文件系统UUID等仍来自模板；生产镜像需要完整的服务、缓存与身份清单。
 - 新agent通过exec清除自身继承的运行时缓存；模板中BusyBox init仍存在。生产模板禁止额外的随机状态缓存服务，需独立审计。
 - 种子在回调后尽量清零且不写入回执/报告；Go/JSON中间副本、宿主RAM、崩溃转储与存储介质擦除不因此得到安全擦除保证。不得将完整请求写日志或公开内存快照。
