@@ -105,7 +105,7 @@ python3 scripts/kvm_storage_faults.py \
 ## 仍未覆盖的边界
 
 - Save卡住而尚未返回、Stop队列/同代gate或全部worker阻塞、不可中断内核I/O/饥饿、不合约driver、双监督失效：仍没有新生产上界，guardian仍必要。
-- 介质EIO/只读/掉电/整机重启、完整snapshot多文件系统矩阵、宿主quota/IO预算、物理擦除与长期元数据归档。
+- 介质EIO/完整只读/掉电/整机重启、完整snapshot多文件系统矩阵、宿主quota/IO预算、物理擦除与长期元数据归档。后续仅 [ledger单独只读EROFS](READONLY.md) 已有busy/idle有限实测，不能代替这些完整故障门槛。
 - 其余初始化/partial frame/READY写入窗口、预热池、开放到达公平性、唯一RAM归属、可靠审计/告警/升级回滚、独立操作员验收及生产SLO。
 
 这些仍是 [完整生产Goal门槛](PRODUCTION.md)，不因本次修改或PR合并而完成。

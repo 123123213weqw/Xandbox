@@ -1,0 +1,15 @@
+work/readonly-source-v3.tar.gz: 成功
+bin/sandboxd-emergency-v1: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: root Linux Python tests; Go runtime unchanged, no new build claim
+............................
+----------------------------------------------------------------------
+Ran 28 tests in 0.019s
+
+OK
+stage: own-loop ledger-only EROFS, busy+idle and guest workspace bound
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: existing all-state block/inode ENOSPC five-case harness regression
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+all readonly and ENOSPC stages passed
