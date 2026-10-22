@@ -269,3 +269,53 @@ func FuzzLedgerDecoder(f *testing.F) {
 		}
 	})
 }
+
+func TestLedgerDuplicateKeyAndDirectoryBoundsFailBeforeMutation(t *testing.T) {
+	t.Run("duplicate-key", func(t *testing.T) {
+		s := ledgerStore(t)
+		before := map[string][]byte{}
+		for n := 1; n <= 2; n++ {
+			r := ledgerFixture(n)
+			r.CreateKeyHash = strings.Repeat("b", 64)
+			r.CreateSpecHash = strings.Repeat("c", 64)
+			data := legacyBytes(t, r)
+			writeLedger(t, s, r, data)
+			before[r.ID+".json"] = data
+		}
+		if _, e := s.Migrate(context.Background()); e == nil {
+			t.Fatal("duplicate tenant key migrated")
+		}
+		for name, data := range before {
+			got, e := os.ReadFile(filepath.Join(s.dir, name))
+			if e != nil || !bytes.Equal(got, data) {
+				t.Fatal("failed preflight changed records", e)
+			}
+		}
+	})
+	t.Run("directory-entries", func(t *testing.T) {
+		s := ledgerStore(t)
+		s.maxRecords = 1
+		for n := 0; n < 2*s.maxRecords+1025; n++ {
+			if e := os.WriteFile(filepath.Join(s.dir, fmt.Sprintf(".record-%d", n)), []byte("orphan"), 0600); e != nil {
+				t.Fatal(e)
+			}
+		}
+		if _, e := s.Load(); e == nil {
+			t.Fatal("directory entry bound not enforced")
+		}
+		entries, e := os.ReadDir(s.dir)
+		if e != nil || len(entries) != 2*s.maxRecords+1025 {
+			t.Fatal("failed preflight pruned files", e)
+		}
+	})
+}
+
+func TestLedgerDirectoryMustBePrivate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ledger")
+	if e := os.Mkdir(path, 0755); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := NewFileStore(path); e == nil {
+		t.Fatal("public ledger directory accepted")
+	}
+}
