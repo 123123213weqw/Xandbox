@@ -506,6 +506,7 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 			defer req.WipeEntropy()
 			done := make(chan struct{})
 			var handlers sync.WaitGroup
+			var initialized atomic.Bool
 			boot, hash := req.BootID, req.Digest()
 			go func() {
 				defer close(done)
@@ -531,15 +532,21 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 								return
 							}
 							defer in.WipeEntropy()
-							response := guestinit.Response{Version: 1, Phase: guestinit.Claimed, Digest: in.Digest()}
-							if in.Operation == "state" {
-								response = guestinit.Response{Version: 1, Phase: guestinit.Waiting}
+							if in.Operation == "initialize" {
+								initialized.Store(true)
+							}
+							response := guestinit.Response{Version: 1, Phase: guestinit.Waiting}
+							if initialized.Load() {
+								response = guestinit.Response{Version: 1, Phase: guestinit.Claimed, Digest: hash}
 							}
 							_ = guestwire.Write(c, guestinit.MaxResponse, response)
 							return
 						}
 						var in guestwire.Request
 						if guestwire.Read(r, guestwire.MaxRequest, &in) != nil {
+							return
+						}
+						if !initialized.Load() {
 							return
 						}
 						groups := 0
