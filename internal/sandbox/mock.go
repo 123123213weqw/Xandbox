@@ -145,3 +145,5 @@ func (d *MockDriver) Cleanup(ctx context.Context, ref Ref) error {
 }
 
 func (d *MockDriver) RefreshLease(ref Ref) error { return nil }
+
+func (d *MockDriver) RevokeLease(ref Ref) error { return nil }

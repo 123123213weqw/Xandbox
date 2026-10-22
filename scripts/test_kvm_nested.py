@@ -11,6 +11,11 @@ from kvm_nested_host import JSONSocket, replace_private_json
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_state_io_profile_cannot_mount_backing_disk_bypassing_l1_mapper(self):
+        bootstrap,service=init_scripts([],state_io=True)
+        self.assertIn('switch_root',bootstrap)
+        self.assertNotIn('mount -t ext4',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-io >/dev/console 2>&1\n'))
     def test_root_private_receipt_and_policy_can_be_replaced_for_next_incarnation(self):
         with tempfile.TemporaryDirectory() as temporary:
             p=Path(temporary)/'policy.json'

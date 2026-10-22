@@ -74,3 +74,7 @@ Go 1.27.3、真实 KVM/VMM/guest-agent；使用一个 Stop worker、一个 Clean
 这是受控故障证据，**不是磁盘性能、百分位、持续吞吐或生产最坏延迟承诺**。CI 常规编译/skip 不能代替这次手动实机运行，且两个 VM 不是多租户大规模压测。
 
 guardian 版本源码 `2f7ac5d` 已重跑同一 [服务回归](validation/kvm-guardian-2026-10-22.json) 和 [受控 fsync 断言](validation/kvm-guardian-fsync-2026-10-22.json)：B 的 TTL 到 STOPPED 单样本约 50.7 ms。本次改用实际 BOOTTIME 截止计算样本并拒绝提前停止；仍不是生产延迟承诺。前一组历史报告原样保留。
+
+## 整状态盘卡住的后续专项
+
+[STATE_IO.md](STATE_IO.md) 在停止/清理池之外增加有界 `RevokeLease`，先按原子intent关闭已经拥有的活pipe，不等待record I/O、代际gate或worker。原子intent对应的新Exec也不再排在该record mutex之后才返回409。普通Stop/调用drain、持久STOPPED、Cleanup及DESTROYED仍必须完成，物理停止不释放配额；本轮四场景不证明所有worker/监督者失效或内核不可中断I/O的上界。

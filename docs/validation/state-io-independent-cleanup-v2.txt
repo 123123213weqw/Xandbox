@@ -1,0 +1,13 @@
+L1 kvm-state-io-private-v1 all_owned_paths_absent True execution_generations 5
+L1 kvm-state-io-private-v2 all_owned_paths_absent True execution_generations 5
+L1 kvm-stall-power-private-v2 all_owned_paths_absent True execution_generations 4
+storage kvm-stall-cold-private-v2 own_root_cgroup_absent_own_loop_binding_absent_parent_mount_absent True
+storage kvm-stall-io-readonly-private-v2 own_root_cgroup_absent_own_loop_binding_absent_parent_mount_absent True
+storage kvm-stall-default-readonly-private-v2 own_root_cgroup_absent_own_loop_binding_absent_parent_mount_absent True
+snapshot_or_init kvm-stall-snapshot-private-v2 exact_owned_log_root_and_cgroup_absent True
+snapshot_or_init kvm-stall-default-snapshot-private-v2 exact_owned_log_root_and_cgroup_absent True
+snapshot_or_init kvm-stall-default-initialization-private-v2 exact_owned_log_root_and_cgroup_absent True
+snapshot_or_init kvm-stall-default-machine-id-private-v2 exact_owned_log_root_and_cgroup_absent True
+snapshot_or_init kvm-stall-default-before-marker-private-v2 exact_owned_log_root_and_cgroup_absent True
+cold exact_owned_root_absent True runtime_cgroup_proven_by_strict_finally_parent0_not_independent_path_recheck True
+ALL12 fixture scopes independently rechecked; 3 own loop bindings absent; no cleanup actions performed

@@ -1,0 +1,39 @@
+work/state-io-source-v2.tar.gz: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: new native full race3/vet/process5/tagrace10/rootPython37
+.....................................
+----------------------------------------------------------------------
+Ran 37 tests in 0.022s
+
+OK
+bin/sandboxd-state-io-v2: 成功
+bin/xandbox-template-state-io-v2: 成功
+bin/state-io-fixture-v2: 成功
+b8d2e5b9b5b312841c7287871ee073017d46044592b447736fdf6d39f139a8af  bin/sandboxd-state-io-v2
+634d71c8d711ef6d5a1ad195536c51b911cd49030312841859bbc8c8cc92566a  bin/xandbox-template-state-io-v2
+0b54a2df3cb8d744ca85ad5c196575d877fbc3b4c21ee0fb926590d5c6aa264d  bin/state-io-fixture-v2
+98a8d67ab2132276c51a079c9734f79887f8c25c5709839506361de7291ee098  bin/firecracker-state-io-v2.test
+6c752a40296dc5183e196a4e9cda509e92824e9fbd85a5d538ee905949540edd  bin/session-state-io-v2.test
+stage: NEW actual daemon whole-state EIO + held fsync x busy/idle, strict guards
+45461 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+stage: NEW native healthy L1 power-cut checkpoints regression
+45462 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: opt-in IO cold + ENOSPC7,8MiB/s4096ops
+{"passed": true, "cases": 7, "cleanup_confirmed": true}
+stage: opt-in IO paused-snapshot pressure + catalog12
+{"passed": true, "checks": 12, "cleanup_confirmed": true}
+stage: new native IO-budget + readonly5 cross-check
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+stage: default IO-nil ledgerRO3 and full snapshot/mixed regression
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+{"passed": true, "checks": 10, "cleanup_confirmed": true}
+stage: default IO-nil initialization6 + pinned TEST fixtures1each
+{"passed": true, "cases": 6, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: default IO-nil cold30/load5/queue9/binding9; legacy setup022 only
+{"passed": 30, "production_ready": false, "samples": {"create_api_ready_ms": [1461.554, 1616.203, 1463.666, 1521.756, 1594.338, 1558.88, 1610.22, 1488.64, 1430.282], "controller_sigkill_to_empty_cgroup_ms": 48.226, "restart_to_durable_reclaim_ms": 775.374, "stop_api_confirmed_ms": 48.513, "delete_phases": [{"from_state": "STOPPED", "accepted_ms": 2.159, "observed_stopped_ms": 2.72, "durable_destroyed_ms": 70.978}, {"from_state": "READY", "accepted_ms": 2.273, "observed_stopped_ms": 40.141, "durable_destroyed_ms": 140.227}, {"from_state": "READY", "accepted_ms": 2.949, "observed_stopped_ms": 50.765, "durable_destroyed_ms": 148.202}]}}
+all new IO runtime stages passed

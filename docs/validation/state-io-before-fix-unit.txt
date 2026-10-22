@@ -1,0 +1,7 @@
+--- FAIL: TestStalledStopSaveCannotSuppressIndependentLeaseRevocation (0.33s)
+    stalled_stop_test.go:88: held Save suppressed independent lease revocation
+--- FAIL: TestRevokedExecAndStaleGenerationNeverWaitForRecordIO (0.31s)
+    stalled_stop_test.go:136: revoked execution queued behind held record I/O
+FAIL
+FAIL	github.com/123123213weqw/Xandbox/internal/sandbox	1.320s
+FAIL

@@ -4,6 +4,7 @@ package firecracker
 
 import (
 	"errors"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -63,5 +64,81 @@ func TestLeasePipeSaturationNeverBlocksControllerProgress(t *testing.T) {
 	}
 	if e := p.refreshLease(); !errors.Is(e, sandbox.ErrBackendFenced) {
 		t.Fatal("closed lease revived")
+	}
+}
+
+func TestRevokeLeaseIsCapabilityOnlyBoundedAndCannotRevive(t *testing.T) {
+	ref := sandbox.Ref{ID: strings.Repeat("1", 32), Generation: strings.Repeat("2", 32)}
+	r, w, e := os.Pipe()
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer r.Close()
+	defer w.Close()
+	now, e := hostclock.NowNS()
+	if e != nil {
+		t.Fatal(e)
+	}
+	p, e := newProcess(w, ref.ID+ref.Generation, now+int64(time.Minute))
+	if e != nil {
+		t.Fatal(e)
+	}
+	// No registry, config, cgroup or disk exists in this test. A revocation
+	// must rely exclusively on the live pipe capability, not discover/adopt one.
+	d := &driver{procs: map[string]*process{}}
+	if e = d.RevokeLease(ref); e != nil {
+		t.Fatal(e)
+	}
+	d.mu.Lock()
+	d.procs[ref.ID+ref.Generation] = p
+	d.mu.Unlock() // Late Prepare publication.
+	other := ref
+	other.Generation = strings.Repeat("3", 32)
+	if e = d.RevokeLease(other); e != nil {
+		t.Fatal(e)
+	}
+	if e = p.refreshLease(); e != nil {
+		t.Fatal("wrong Ref revoked a live capability", e)
+	}
+	bounded := func() {
+		t.Helper()
+		done := make(chan error, 1)
+		go func() { done <- d.RevokeLease(ref) }()
+		select {
+		case e := <-done:
+			if e != nil {
+				t.Fatal(e)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Fatal("revocation waited for a contended lock")
+		}
+	}
+	d.mu.Lock()
+	bounded()
+	d.mu.Unlock()
+	p.leaseMu.Lock()
+	bounded()
+	p.leaseMu.Unlock()
+	if e = d.RevokeLease(ref); e != nil {
+		t.Fatal(e)
+	}
+	finished := make(chan []byte, 1)
+	go func() { b, _ := io.ReadAll(r); finished <- b }()
+	select {
+	case b := <-finished:
+		if len(b) < lease.FrameSize || len(b)%lease.FrameSize != 0 {
+			t.Fatal("initial frame/EOF mismatch", len(b))
+		}
+	case <-time.After(time.Second):
+		t.Fatal("owned guardian reader did not receive EOF")
+	}
+	if e = p.refreshLease(); !errors.Is(e, sandbox.ErrBackendFenced) {
+		t.Fatal("revoked lease revived", e)
+	}
+	if e = d.RevokeLease(ref); e != nil {
+		t.Fatal("repeat revocation not idempotent", e)
+	}
+	if e = d.RevokeLease(sandbox.Ref{ID: "invalid", Generation: "invalid"}); !errors.Is(e, sandbox.ErrInvalid) {
+		t.Fatal("invalid Ref accepted", e)
 	}
 }

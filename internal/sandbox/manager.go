@@ -505,6 +505,15 @@ func (m *Manager) exec(id string, req ExecRequest, admission *Admission) (Job, e
 	if err != nil {
 		return Job{}, err
 	}
+	// Ref and intent are independent of ledger I/O. A revoked request must
+	// not queue behind a stalled fsync merely to learn that admission is shut.
+	// Keep the same checks under the mutex to close a concurrent revocation.
+	if req.Generation != i.ref.Generation {
+		return Job{}, ErrStale
+	}
+	if i.intent.Load() != 0 {
+		return Job{}, ErrNotReady
+	}
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if req.Generation != i.record.Generation {

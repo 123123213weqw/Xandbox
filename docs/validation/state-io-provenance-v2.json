@@ -1,0 +1,179 @@
+{
+  "test": "whole_state_io_stall_independent_lease_revocation",
+  "production_ready": false,
+  "goal_complete": false,
+  "baseline_harness_source": "a19168698dfac2683e1149d1d4afe50ebabf3d94",
+  "baseline_runtime_original_source": "3fed5766b0d8ae0513e5ad19b0ecaf748ab5ba88",
+  "baseline_daemon_sha256": "9670b1886acb3a08ca5652d58b1fc546e4f72f7d37bf1832e91625e62579bbe8",
+  "baseline_runner_exit_status": 1,
+  "baseline_passed": false,
+  "baseline_all_four_cases_completed_and_cleaned": true,
+  "baseline_failed_guard_cases": [
+    "hang-busy",
+    "hang-idle"
+  ],
+  "new_runtime_original_implementation_source": "b1eff8521fe57a68697b37c5dae08cfe32bb2091",
+  "new_native_build_and_all_harness_source": "c9b52ef21db3789234ff9488554a7918d175c0f3",
+  "production_go_unchanged_after_original_implementation": true,
+  "native_toolchain": "go1.27.3 linux/amd64 CGO0 trimpath buildvcs=false",
+  "native_race_repeat": 3,
+  "native_vet_passed": true,
+  "fixture_native_race_repeat": 10,
+  "fixture_native_vet_passed": true,
+  "native_process_smoke_suites": 5,
+  "root_python_tests": 37,
+  "darwin_race_repeat": 3,
+  "darwin_vet_passed": true,
+  "darwin_python_tests": 37,
+  "darwin_linux_only_skips": 4,
+  "native_artifacts_sha256": {
+    "daemon": "b8d2e5b9b5b312841c7287871ee073017d46044592b447736fdf6d39f139a8af",
+    "admin": "634d71c8d711ef6d5a1ad195536c51b911cd49030312841859bbc8c8cc92566a",
+    "fixture": "0b54a2df3cb8d744ca85ad5c196575d877fbc3b4c21ee0fb926590d5c6aa264d",
+    "firecracker_test": "98a8d67ab2132276c51a079c9734f79887f8c25c5709839506361de7291ee098",
+    "session_test": "6c752a40296dc5183e196a4e9cda509e92824e9fbd85a5d538ee905949540edd"
+  },
+  "daemon_admin_fixture_independent_mac_to_linux_builds_byte_identical": true,
+  "new_full_runner_exit_status": 0,
+  "runners_did_not_overlap": true,
+  "original_root_warden_sha256": "b810afc53abd7a32c98c8a2845039e6397ab07779f2674d83a04a51b7a7a4be1",
+  "guest_assets_unchanged": "Original pinned v10 initrd/agent and never-assigned original export. Initialization regressions additionally use explicitly historical TEST images; make-smoke guest ELF was NOT deployed. Before-marker compiler overlay is not unmodified production ELF crash attestation.",
+  "new_state_io_cases": 4,
+  "samples_each": 1,
+  "new_state_io_l1_boots": 5,
+  "new_healthy_l1_power_checkpoints": 3,
+  "new_healthy_l1_power_boots": 4,
+  "experimental_guards_ms": {
+    "physical_domain_empty_max": 1500,
+    "new_exec_refusal_max": 500
+  },
+  "guards_not_production_slo": true,
+  "baseline_busy_exec_latency_is_fixture_held_interval_sample_not_autonomous_recovery_bound": true,
+  "fault_scope": "Entire owned L1 persistent /srv (ledger/owner/runtime/assets/preopened FD). Fixed linear/error mapper or suspend; actual direct pread EIO/blocked and ordinary daemon D-state state-FD fsync/fdatasync. Not physical L0 media failure, silent corruption, VMM D-state, every storage window or all API availability.",
+  "state_io_policy_is_nil_not_supported_dm_io_budget_claim": true,
+  "mapper_restored_before_subsequent_l1_powercut_and_recovery": true,
+  "full_new_runtime_regressions": {
+    "io_cold_enospc_groups": 7,
+    "io_snapshot_catalog_groups": 12,
+    "io_ledger_readonly_groups": 5,
+    "default_ledger_readonly_groups": 3,
+    "default_snapshot_catalog_groups": 10,
+    "mixed_cycles_each_tenant": 120,
+    "mixed_duration_seconds": 249.602,
+    "mixed_resource_samples": 408,
+    "mixed_overlapping_switch_interval_pairs": 94,
+    "initialization_cases": 6,
+    "historical_guest_test_cases": 2,
+    "cold_checks": 30,
+    "queue_details": 9,
+    "binding_details": 9,
+    "details_are_expansions_not_extra_independent_cases": true
+  },
+  "independent_cleanup": {
+    "fixture_scopes": 12,
+    "l1_fixtures_with_all_owned_generations_absent": 3,
+    "l1_execution_generation_counts": [
+      5,
+      5,
+      4
+    ],
+    "storage_private_loop_bindings_absent": 3,
+    "storage_parent_mounts_not_propagated": true,
+    "snapshot_or_initialization_exact_owned_root_cgroup_absence_checks": 5,
+    "cold_exact_root_absent": true,
+    "cold_cgroup_runtime_proof": "Successful strict finally and parent0, not an independent exact-path recheck.",
+    "original_unassigned_template_and_test_assets_retained_outside_fixture": true
+  },
+  "before_fix_local_units": "Old production Go from a191 with the two new regressions later committed in b1: both genuinely failed before production edits. Raw expected-failure stdout retained; not KVM or production SLO evidence.",
+  "private_native_make_smoke_log_not_published": "Raw build log includes private absolute paths and remains private; stage transcript/exit0 and public source CI cover process-smoke execution. Not relabeled as a sanitized original.",
+  "source_ci": {
+    "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39860023515",
+    "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39860029927",
+    "all_ten_actual_jobs_and_steps_completed_success": true,
+    "attempt_each": 1
+  },
+  "artifact_files": {
+    "kvm-state-io-v1.json": {
+      "sha256": "844b36106b1c2cd0c63500374eb6c3f22bdcce12d31f62e69487acd847d94efd",
+      "bytes": 9548
+    },
+    "kvm-state-io-v2.json": {
+      "sha256": "c660530965062c419eb2b47626ee06c028c3420b5dff5d4b26845b80be2c5a0b",
+      "bytes": 9522
+    },
+    "kvm-stall-power-v2.json": {
+      "sha256": "bd737419ef239b535b39b2e7b2db60cda1a9666ef47786e037aabf1f5779817f",
+      "bytes": 4825
+    },
+    "kvm-stall-cold-v2.json": {
+      "sha256": "257e46bbb7576ddccb5e734a2b7c88fa983d3510942f170e50979f40c1571459",
+      "bytes": 8246
+    },
+    "kvm-stall-snapshot-v2.json": {
+      "sha256": "c3734956cc24c0f72408ba3b27f9e9419abb9d59f65360aea2a9e85e12fcf846",
+      "bytes": 6905
+    },
+    "kvm-stall-io-readonly-v2.json": {
+      "sha256": "30aa4071d4bfd95bbdfad45c6c9bfe6bfe6bc4a08cd9e4dc8faf6788d3f914a5",
+      "bytes": 6480
+    },
+    "kvm-stall-default-readonly-v2.json": {
+      "sha256": "e8ab5d742ccc5ecf0fed960a636c4c466722a8d01a2ede19d7a2b8b2111b8c03",
+      "bytes": 4823
+    },
+    "kvm-stall-default-snapshot-v2.json": {
+      "sha256": "3d5fee2b0b245d2de9120c7db63f3e521d7cf2e6aa1d592a5f32e1ee92c7c9fe",
+      "bytes": 523828
+    },
+    "kvm-stall-default-initialization-v2.json": {
+      "sha256": "da5dc4e0b2bf64120292d636372648c14e3e1c9b0f121c56c5fa0b1d08e0bda3",
+      "bytes": 5785
+    },
+    "kvm-stall-default-machine-id-v2.json": {
+      "sha256": "94455560cf48a74739796fdad6aaef08c4f906599c58e6b304e34fea110e52d4",
+      "bytes": 2927
+    },
+    "kvm-stall-default-before-marker-v2.json": {
+      "sha256": "1def42414621b2a96e2abd0c57473765c721b524d1ce89a23bd4bd2124b6b586",
+      "bytes": 2927
+    },
+    "kvm-stall-default-cold-v2.json": {
+      "sha256": "23f8f5b6c0e10efdd05187a3c12e22e965db98791601f9123cbee5f33ca5e1be",
+      "bytes": 13108
+    },
+    "kvm-stall-default-cold-v2-queue.json": {
+      "sha256": "cd5b53cf779ebc414edcd15016e8af69de04adc3bb7f0951069f041ae6904429",
+      "bytes": 1079
+    },
+    "kvm-stall-default-cold-v2-session.json": {
+      "sha256": "f44cc25667a7afd82cd6da1e750d8a35c5eb3b3b305a7696b2fb319d422f006e",
+      "bytes": 1112
+    },
+    "state-io-native-race-v2.txt": {
+      "sha256": "1dec27b34e546bb665a5f125349f5581452284c23d5a04ad29dfdb16e752f5d6",
+      "bytes": 1639
+    },
+    "state-io-fixture-native-race-v2.txt": {
+      "sha256": "8e3536d92aba08a0b1c28f190120b3c8de2a2846e884b553edd08cd4f2fa52a5",
+      "bytes": 70
+    },
+    "state-io-pipeline-transcript-v2.txt": {
+      "sha256": "2447930a2efd66f88f299916833cd49ce1d1725cd0fe00c75091cb3e8adc6e9a",
+      "bytes": 2640
+    },
+    "state-io-before-fix-unit.txt": {
+      "sha256": "f84d1a3f3b470c553b0dc17ca16dd5995e33f0012b1590ca76620a1b2f0d7f6b",
+      "bytes": 379
+    },
+    "state-io-independent-cleanup-v2.txt": {
+      "sha256": "ba2bde684e4463feab0d8bd7e5017f8092987c6bc465bbc5c09f515a4acffa54",
+      "bytes": 1296
+    }
+  },
+  "not_validated": [
+    "VMM or kernel uninterruptible IO, both supervisors lost or CPU starvation guarantees",
+    "physical media failure/flush loss/erase, all partial-write/preparation windows and snapshot multi-volume combinations",
+    "node aggregate preparation budgets/project quota or complete IO/RAM billing",
+    "sustained open-loop fairness, archival/audit/alerts/backup/rollback/independent operator and full M1-M4 production gates"
+  ]
+}
