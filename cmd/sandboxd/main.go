@@ -20,6 +20,19 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
 
+// Keep the exclusive state lock reachable until process exit if a worker is
+// still in uninterruptible cleanup I/O. Releasing it on run's return would let a
+// second controller race that still-live worker against the same ledger.
+var retainedStateLock func()
+
+func releaseStateLock(unlock func(), unfinished bool) {
+	if unfinished {
+		retainedStateLock = unlock
+		return
+	}
+	unlock()
+}
+
 func main() {
 	if err := run(); err != nil {
 		slog.Error("sandboxd failed", "error", err)
@@ -33,6 +46,9 @@ func run() (retErr error) {
 	firecrackerConfig := flag.String("firecracker-config", "", "private pinned-asset Firecracker configuration")
 	maxInstances := flag.Int("max-instances", 32, "maximum allocated, including unreclaimed instances")
 	authFile := flag.String("auth-file", "", "private digest-only authentication configuration")
+	stopWorkers := flag.Int("stop-workers", 0, "background stop workers; 0 = min(4, instance capacity)")
+	cleanupWorkers := flag.Int("cleanup-workers", 0, "cleanup workers; 0 = min(2, instance capacity)")
+	workQueueSize := flag.Int("work-queue-size", 0, "queue slots PER pool; 0 = min(32, instance capacity)")
 	insecureMock := flag.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
 	flag.Parse()
 	if *stateDir == "" || (*backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || flag.NArg() != 0 {
@@ -70,13 +86,14 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
-	defer unlock()
+	unfinishedCleanup := false
+	defer func() { releaseStateLock(unlock, unfinishedCleanup) }()
 	store, err := sandbox.NewFileStore(filepath.Join(absDir, "ledger"))
 	if err != nil {
 		return err
 	}
 	var driver sandbox.Driver
-	opts := sandbox.Options{MaxInstances: *maxInstances}
+	opts := sandbox.Options{MaxInstances: *maxInstances, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
 	writeTimeout := 10 * time.Second
 	if *backend == "mock" {
 		driver, err = sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
@@ -100,6 +117,7 @@ func run() (retErr error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := manager.Close(ctx); err != nil {
+			unfinishedCleanup = true
 			slog.Error("cleanup unfinished; restart with the same state directory to recover", "error", err)
 			retErr = errors.Join(retErr, fmt.Errorf("cleanup unfinished: %w", err))
 		}

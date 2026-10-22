@@ -83,7 +83,7 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
   --report work/kvm-driver-report.json --log-dir work/kvm-driver-logs
 ```
 
-普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、只停不 GC 的优先队列、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。DESTROYED 目前表示逻辑资源回收，不代表物理介质安全擦除；加密擦除/存储擦除策略尚未验收。生命周期管道检测控制器死亡，不检测仍保留写端的控制器死锁；独立租约/看门狗仍是开放门槛。
+普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、持续负载下停止/GC 分池验证、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。DESTROYED 目前表示逻辑资源回收，不代表物理介质安全擦除；加密擦除/存储擦除策略尚未验收。生命周期管道检测控制器死亡，不检测仍保留写端的控制器死锁；独立租约/看门狗仍是开放门槛。
 
 参考：[jailer v1.17.0 已存在 cgroup 的精确行为](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/docs/jailer.md)、[cgroup v2 内核契约](https://docs.kernel.org/admin-guide/cgroup-v2.html)。
 
@@ -96,3 +96,5 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 初始化期间真实遇到 `/run` noexec 的失败，已增加前置拒绝并改用专属 `/srv` 目录，没有改变宿主挂载策略。另修复验收脚本把 Job 的字符串 error 当成 HTTP error 对象的断言错误；失败运行没有被计为通过。控制器及监督二进制摘要、镜像摘要均在报告中，重建修复脚本后的提交得到完全相同的控制器摘要。
 
 [首次 patched-toolchain 服务报告](validation/kvm-driver-2026-10-22.json) 保留不变。其后补强了 UID 区间加法溢出的拒绝检查，并将 CI 中依赖 30 ms 创建 TTL 的旧测试改为 READY 后确定性过期（原失败是创建按预期拒绝了已过期实例，不是延长生产 TTL）。该回归测试 race 重复 100 次通过，数值校验补强后的真实 KVM 全部 16 项已再次通过。
+
+停止与 GC 已拆成独立有界池；配置、背压与关闭期限边界见 [LIFECYCLE.md](LIFECYCLE.md)。这不表示独立看门狗或所有 I/O 故障路径已完成。

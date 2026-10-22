@@ -8,6 +8,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
+停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)。
+
 生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。真实后端的归属、监督与使用限制见 [Firecracker 驱动](docs/FIRECRACKER.md)。独立组件报告不是服务级生产认证，mock 接口始终不提供 VM 隔离。
 
 [真实后端服务验收](docs/validation/kvm-driver-hardened-2026-10-22.json) 已通过 16 项 KVM 检查（含控制器 SIGKILL 与重启回收），但尚未覆盖完整生产故障矩阵或切换性能。

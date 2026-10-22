@@ -150,15 +150,12 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, limits sandbox.Li
 		return err
 	}
 	group, jail := d.paths(k)
-	d.mu.Lock()
 	for _, p := range []string{group, jail} {
 		if _, err := os.Lstat(p); !os.IsNotExist(err) {
-			d.mu.Unlock()
 			return errors.New("generation resource already exists")
 		}
 	}
 	owner, err := d.registry.reserve(ref)
-	d.mu.Unlock()
 	if err != nil {
 		return err
 	}
@@ -361,9 +358,7 @@ func (d *driver) owned(ref sandbox.Ref) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	d.mu.Lock()
-	_, exists := d.registry.owners[k]
-	d.mu.Unlock()
+	exists := d.registry.owns(k)
 	if !exists {
 		group, jail := d.paths(k)
 		for _, path := range []string{group, jail} {
@@ -426,12 +421,12 @@ func (d *driver) Cleanup(ctx context.Context, ref sandbox.Ref) error {
 	if err := os.Remove(group); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	d.mu.Lock()
-	defer d.mu.Unlock()
 	if err := d.registry.release(k); err != nil {
 		return err
 	}
+	d.mu.Lock()
 	delete(d.procs, k)
+	d.mu.Unlock()
 	return nil
 }
 

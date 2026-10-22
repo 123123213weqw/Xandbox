@@ -56,11 +56,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
+    parser.add_argument('--queue-test', help='optional Linux Go test binary for controlled fsync queue acceptance')
     parser.add_argument('--source-revision', default='uncommitted')
     args = parser.parse_args()
     if os.geteuid() != 0 or os.uname().sysname != 'Linux':
         parser.error('requires root on an isolated Linux/KVM test node')
     inputs = {name: Path(getattr(args, name)).resolve() for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd')}
+    if args.queue_test:
+        inputs['queue_test'] = Path(args.queue_test).resolve()
     report = Path(args.report).resolve()
     assert not report.exists(), 'refusing to overwrite report'
     logs = Path(args.log_dir).resolve()
@@ -89,7 +92,7 @@ def main():
         for name, path in inputs.items():
             target = assets / name
             shutil.copyfile(path, target)
-            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker') else 0o444)
+            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test') else 0o444)
             assert digest(target) == result['artifacts_sha256'][name]
             copied[name] = target
         workspace = assets / 'empty.ext4'
@@ -332,6 +335,23 @@ def main():
             assert not list((runtime / 'j/firecracker').iterdir())
             assert [p.name for p in (state / 'firecracker').iterdir() if not p.name.startswith('.')] == ['config.json']
             result['checks'].append('no owned VMM/cgroup/jail/UID manifest residue')
+            if args.queue_test:
+                queue_report = report.with_name(report.stem + '-queue.json')
+                fixture = root / 'queue-fixture.json'
+                fixture.write_text(json.dumps({'state_dir': str(root / 'queue-state'), 'config_path': str(cfg),
+                                               'report_path': str(queue_report), 'source_revision': args.source_revision}))
+                fixture.chmod(0o600)
+                check = subprocess.run([str(copied['queue_test']), '-test.run', '^TestKVMQueueIsolation$',
+                                        '-test.timeout', '120s', '-test.v'], stdout=log, stderr=log, timeout=140,
+                                       env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'XANDBOX_KVM_QUEUE_ACCEPTANCE': '1',
+                                            'XANDBOX_KVM_QUEUE_FIXTURE': str(fixture)})
+                assert check.returncode == 0, 'controlled-fsync KVM test failed; inspect private controller log'
+                queue_result = json.loads(queue_report.read_text())
+                assert queue_result['production_ready'] is False and queue_result['toolchain'] == 'go1.27.3'
+                assert len(queue_result['checks']) == 9 and queue_result['source_revision'] == args.source_revision
+                result['queue_acceptance_report'] = queue_report.name
+                result['checks'].append('separate real KVM controlled-fsync queue/recovery acceptance passed')
+
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': len(result['checks']), 'production_ready': False, 'samples': result['samples']}))

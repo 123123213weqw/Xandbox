@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
@@ -19,12 +20,17 @@ type ownership struct {
 	UID     int         `json:"uid"`
 }
 
-// registry is serialized by driver.mu (and the daemon's exclusive state lock).
-// An ownership entry is durable BEFORE any per-generation resource is created.
+// Registry memory locks never cover persistence. The manager serializes lifecycle
+// operations for the SAME Ref; different generations may persist concurrently.
+// Reservations remain visible until ownership deletion is durable, so Stop can
+// read ownership without waiting for another generation's fsync.
 type registry struct {
-	dir    string
-	cfg    Config
-	owners map[string]ownership
+	mu            sync.RWMutex
+	persist       func(string, any) error
+	syncDirectory func(string) error
+	dir           string
+	cfg           Config
+	owners        map[string]ownership
 }
 
 func newRegistry(dir string, cfg Config, records []sandbox.Record) (*registry, error) {
@@ -57,7 +63,7 @@ func newRegistry(dir string, cfg Config, records []sandbox.Record) (*registry, e
 			return nil, errors.New("backend binding changed; explicit offline migration is required")
 		}
 	}
-	r := &registry{dir: dir, cfg: cfg, owners: make(map[string]ownership)}
+	r := &registry{dir: dir, cfg: cfg, owners: make(map[string]ownership), persist: durableJSON, syncDirectory: syncDir}
 	live := make(map[string]bool)
 	for _, record := range records {
 		k, err := key(record.Ref)
@@ -102,7 +108,9 @@ func (r *registry) reserve(ref sandbox.Ref) (ownership, error) {
 	if err != nil {
 		return ownership{}, err
 	}
+	r.mu.Lock()
 	if _, exists := r.owners[k]; exists {
+		r.mu.Unlock()
 		return ownership{}, errors.New("generation already has ownership; cannot prepare again")
 	}
 	used := make(map[int]bool)
@@ -116,11 +124,13 @@ func (r *registry) reserve(ref sandbox.Ref) (ownership, error) {
 		owner := ownership{Version: 1, Ref: ref, UID: uid}
 		// Keep the reservation even if fsync reports failure after rename.
 		r.owners[k] = owner
-		if err := durableJSON(filepath.Join(r.dir, k+".json"), owner); err != nil {
+		r.mu.Unlock()
+		if err := r.persist(filepath.Join(r.dir, k+".json"), owner); err != nil {
 			return owner, fmt.Errorf("persist generation ownership: %w", err)
 		}
 		return owner, nil
 	}
+	r.mu.Unlock()
 	return ownership{}, sandbox.ErrCapacity
 }
 
@@ -128,11 +138,20 @@ func (r *registry) release(k string) error {
 	if err := os.Remove(filepath.Join(r.dir, k+".json")); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err := syncDir(r.dir); err != nil {
+	if err := r.syncDirectory(r.dir); err != nil {
 		return err
 	}
+	r.mu.Lock()
 	delete(r.owners, k)
+	r.mu.Unlock()
 	return nil
+}
+
+func (r *registry) owns(k string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, exists := r.owners[k]
+	return exists
 }
 
 func durableJSON(path string, value any) error {

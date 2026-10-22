@@ -118,14 +118,23 @@ type Driver interface {
 
 // Store.Save must atomically replace the previous ledger entry. Implementations
 // may report a durability error after the replacement has already happened.
+// Saves for distinct records may run concurrently. Manager serializes saves
+// for one record; Load is used before concurrent lifecycle work starts.
 type Store interface {
 	Load() ([]Record, error)
 	Save(Record) error
 }
 
 type Stats struct {
-	Backend    string `json:"backend"`
-	Active     int    `json:"active"`
-	Capacity   int    `json:"capacity"`
-	Recovering int    `json:"recovering"`
+	Backend        string `json:"backend"`
+	Active         int    `json:"active"`
+	Capacity       int    `json:"capacity"`
+	Recovering     int    `json:"recovering"`
+	StopQueued     int    `json:"stop_queued"`
+	CleanupQueued  int    `json:"cleanup_queued"`
+	StopRunning    int    `json:"stop_running"`
+	CleanupRunning int    `json:"cleanup_running"`
+	StopWorkers    int    `json:"stop_workers"`
+	CleanupWorkers int    `json:"cleanup_workers"`
+	QueueCapacity  int    `json:"queue_capacity_per_pool"`
 }
