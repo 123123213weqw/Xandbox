@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"errors"
+	"regexp"
 	"time"
 )
 
@@ -18,14 +19,29 @@ const (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
-	ErrStale    = errors.New("stale generation")
-	ErrNotReady = errors.New("sandbox is not ready")
-	ErrClosing  = errors.New("manager is closing")
-	ErrCapacity = errors.New("capacity exhausted; unreclaimed instances still count")
-	ErrJobLimit = errors.New("execution history limit reached; create a new sandbox")
-	ErrInvalid  = errors.New("invalid request")
+	ErrNotFound            = errors.New("not found")
+	ErrStale               = errors.New("stale generation")
+	ErrNotReady            = errors.New("sandbox is not ready")
+	ErrClosing             = errors.New("manager is closing")
+	ErrCapacity            = errors.New("capacity exhausted; unreclaimed instances still count")
+	ErrJobLimit            = errors.New("execution history limit reached; create a new sandbox")
+	ErrInvalid             = errors.New("invalid request")
+	ErrTenantCapacity      = errors.New("tenant instance quota exhausted")
+	ErrIdempotencyConflict = errors.New("idempotency key was used with a different request")
+	ErrIdempotencyGone     = errors.New("idempotent creation is no longer usable; use a new key")
 )
+
+var tenantPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`)
+
+// Owner is authoritative controller policy, never a field supplied by a tenant.
+type Owner struct {
+	TenantID     string
+	MaxInstances int
+}
+
+func (o Owner) Valid() bool {
+	return tenantPattern.MatchString(o.TenantID) && o.MaxInstances >= 1 && o.MaxInstances <= 10_000
+}
 
 // Ref identifies one execution generation, not an authorization credential.
 type Ref struct {
@@ -48,6 +64,9 @@ type CreateRequest struct {
 type Record struct {
 	Ref
 	Backend         string    `json:"backend"`
+	TenantID        string    `json:"tenant_id"`
+	CreateKeyHash   string    `json:"create_key_hash,omitempty"`
+	CreateSpecHash  string    `json:"create_spec_hash,omitempty"`
 	State           State     `json:"state"`
 	DeleteRequested bool      `json:"delete_requested"`
 	Limits          Limits    `json:"limits"`

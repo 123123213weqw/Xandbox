@@ -13,5 +13,8 @@ build:
 	go build -o "$(BIN_DIR)/sandboxd" ./cmd/sandboxd
 	go build -o "$(BIN_DIR)/sandboxctl" ./cmd/sandboxctl
 
+	go build -o "$(BIN_DIR)/xandbox-keygen" ./cmd/xandbox-keygen
+
 smoke: build
 	python3 scripts/smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl"
+	python3 scripts/auth_smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl" --keygen "$(BIN_DIR)/xandbox-keygen"

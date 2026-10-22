@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
@@ -29,9 +30,22 @@ func run() (retErr error) {
 	stateDir := flag.String("state-dir", "", "required private state directory")
 	backend := flag.String("backend", "", "required: mock (simulation only)")
 	maxInstances := flag.Int("max-instances", 32, "maximum allocated, including unreclaimed instances")
+	authFile := flag.String("auth-file", "", "private digest-only authentication configuration")
+	insecureMock := flag.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
 	flag.Parse()
-	if *stateDir == "" || *backend != "mock" || *maxInstances < 1 || flag.NArg() != 0 {
+	if *stateDir == "" || *backend != "mock" || *maxInstances < 1 || *maxInstances > 10_000 || flag.NArg() != 0 {
 		return fmt.Errorf("usage: sandboxd -backend mock -state-dir DIR [-max-instances 32]; mock provides NO isolation")
+	}
+	if (*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock) {
+		return fmt.Errorf("choose exactly one of -auth-file PATH or -insecure-mock")
+	}
+	var authenticator *access.Authenticator
+	if *authFile != "" {
+		var err error
+		authenticator, err = access.Load(*authFile)
+		if err != nil {
+			return fmt.Errorf("load authentication configuration: %w", err)
+		}
 	}
 	absDir, err := filepath.Abs(*stateDir)
 	if err != nil {
@@ -92,8 +106,12 @@ func run() (retErr error) {
 	if err := os.Chmod(socket, 0600); err != nil {
 		return err
 	}
+	handler, err := httpapi.NewConfigured(manager, httpapi.Options{Authenticator: authenticator, AllowUnauthenticatedMock: *insecureMock})
+	if err != nil {
+		return err
+	}
 	server := &http.Server{
-		Handler: httpapi.New(manager), ReadHeaderTimeout: 2 * time.Second,
+		Handler: handler, ReadHeaderTimeout: 2 * time.Second,
 		ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second,
 		IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192,
 	}

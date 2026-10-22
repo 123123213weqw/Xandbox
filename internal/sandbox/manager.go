@@ -3,9 +3,12 @@ package sandbox
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -23,18 +26,21 @@ type execution struct {
 }
 
 type instance struct {
-	opMu    sync.Mutex // Serializes preparation, stop, and cleanup, not execution.
-	mu      sync.Mutex
-	record  Record
-	jobs    map[string]*execution
-	running int
-	idle    chan struct{}
-	retryAt time.Time
+	opMu     sync.Mutex // Serializes preparation, stop, and cleanup, not execution.
+	mu       sync.Mutex
+	record   Record
+	tenantID string // Immutable after registration; safe under Manager.mu.
+	prepared chan struct{}
+	jobs     map[string]*execution
+	running  int
+	idle     chan struct{}
+	retryAt  time.Time
 }
 
 type Manager struct {
 	mu         sync.Mutex
 	records    map[string]*instance
+	createKeys map[string]*instance
 	active     map[string]*instance // Capacity is returned only after durable cleanup.
 	closing    bool
 	driver     Driver
@@ -49,6 +55,9 @@ type Manager struct {
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	if opts.MaxInstances <= 0 {
 		opts.MaxInstances = 32
+	}
+	if opts.MaxInstances > 10_000 {
+		return nil, fmt.Errorf("maximum instances exceeds 10000")
 	}
 	if opts.OperationTimeout <= 0 {
 		opts.OperationTimeout = 2 * time.Second
@@ -66,7 +75,8 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{
 		records: make(map[string]*instance), active: make(map[string]*instance),
-		driver: driver, store: store, opts: opts, ctx: ctx, cancel: cancel,
+		createKeys: make(map[string]*instance),
+		driver:     driver, store: store, opts: opts, ctx: ctx, cancel: cancel,
 		wake: make(chan struct{}, 1), workerDone: make(chan struct{}),
 	}
 	for _, r := range records {
@@ -74,7 +84,25 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 			cancel()
 			return nil, fmt.Errorf("duplicate ledger identity %s", r.ID)
 		}
+		// Legacy v0 records were owned only by the local controller.
+		if r.TenantID == "" {
+			r.TenantID = "local"
+		}
+		if !tenantPattern.MatchString(r.TenantID) ||
+			(r.CreateKeyHash == "") != (r.CreateSpecHash == "") ||
+			(r.CreateKeyHash != "" && (!hashPattern.MatchString(r.CreateKeyHash) || !hashPattern.MatchString(r.CreateSpecHash))) {
+			cancel()
+			return nil, errors.New("invalid ledger ownership or idempotency metadata")
+		}
 		i := newInstance(r)
+		if r.CreateKeyHash != "" {
+			key := r.TenantID + "\x00" + r.CreateKeyHash
+			if m.createKeys[key] != nil {
+				cancel()
+				return nil, errors.New("duplicate ledger idempotency key")
+			}
+			m.createKeys[key] = i
+		}
 		m.records[r.ID] = i
 		if r.State == Destroyed {
 			continue
@@ -103,7 +131,9 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 func newInstance(r Record) *instance {
 	idle := make(chan struct{})
 	close(idle)
-	return &instance{record: r, jobs: make(map[string]*execution), idle: idle}
+	prepared := make(chan struct{})
+	close(prepared)
+	return &instance{record: r, tenantID: r.TenantID, prepared: prepared, jobs: make(map[string]*execution), idle: idle}
 }
 
 func token() (string, error) {
@@ -136,11 +166,47 @@ func normalizeCreate(req CreateRequest) (CreateRequest, error) {
 	return req, nil
 }
 
+// Create is a trusted local-controller entry point. HTTP uses CreateScoped.
 func (m *Manager) Create(ctx context.Context, req CreateRequest) (Record, error) {
+	return m.CreateScoped(ctx, Owner{TenantID: "local", MaxInstances: m.opts.MaxInstances}, "", req)
+}
+
+var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+func createHashes(key string, req CreateRequest) (string, string, error) {
+	if key == "" {
+		return "", "", nil
+	}
+	if len(key) > 128 {
+		return "", "", ErrInvalid
+	}
+	for _, c := range []byte(key) {
+		if c < 33 || c > 126 {
+			return "", "", ErrInvalid
+		}
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		return "", "", err
+	}
+	keySum, specSum := sha256.Sum256([]byte(key)), sha256.Sum256(data)
+	return hex.EncodeToString(keySum[:]), hex.EncodeToString(specSum[:]), nil
+}
+
+// CreateScoped reserves ownership, tenant quota, and idempotency atomically.
+// Completed tombstones retain keys: a retry never creates a fresh generation.
+func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req CreateRequest) (Record, error) {
+	if !owner.Valid() {
+		return Record{}, ErrInvalid
+	}
 	if err := ctx.Err(); err != nil {
 		return Record{}, err
 	}
 	req, err := normalizeCreate(req)
+	if err != nil {
+		return Record{}, err
+	}
+	keyHash, specHash, err := createHashes(key, req)
 	if err != nil {
 		return Record{}, err
 	}
@@ -155,9 +221,12 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (Record, error)
 	now := time.Now().UTC()
 	i := newInstance(Record{
 		Ref: Ref{ID: id, Generation: generation}, Backend: m.driver.Name(),
+		TenantID: owner.TenantID, CreateKeyHash: keyHash, CreateSpecHash: specHash,
 		State: Creating, Limits: req.Limits, CreatedAt: now, UpdatedAt: now,
 		ExpiresAt: now.Add(time.Duration(req.TTLMS) * time.Millisecond),
 	})
+	i.prepared = make(chan struct{})
+	defer close(i.prepared)
 	i.opMu.Lock()
 	defer i.opMu.Unlock()
 	m.mu.Lock()
@@ -165,11 +234,49 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (Record, error)
 		m.mu.Unlock()
 		return Record{}, ErrClosing
 	}
+	index := owner.TenantID + "\x00" + keyHash
+	if keyHash != "" {
+		if existing := m.createKeys[index]; existing != nil {
+			m.mu.Unlock()
+			select {
+			case <-ctx.Done():
+				return Record{}, ctx.Err()
+			case <-existing.prepared:
+			}
+			existing.mu.Lock()
+			defer existing.mu.Unlock()
+			r := existing.record
+			if r.CreateSpecHash != specHash {
+				return Record{}, ErrIdempotencyConflict
+			}
+			if r.State != Ready || r.DeleteRequested || !time.Now().Before(r.ExpiresAt) {
+				return Record{}, ErrIdempotencyGone
+			}
+			return r, nil
+		}
+	}
 	if len(m.active) >= m.opts.MaxInstances {
 		m.mu.Unlock()
 		return Record{}, ErrCapacity
 	}
+	tenantActive := 0
+	for _, active := range m.active {
+		if active.tenantID == owner.TenantID {
+			tenantActive++
+		}
+	}
+	if tenantActive >= owner.MaxInstances {
+		m.mu.Unlock()
+		return Record{}, ErrTenantCapacity
+	}
+	if m.records[id] != nil {
+		m.mu.Unlock()
+		return Record{}, errors.New("random identity collision")
+	}
 	m.records[id], m.active[id] = i, i
+	if keyHash != "" {
+		m.createKeys[index] = i
+	}
 	m.mu.Unlock()
 	// Ownership is durable BEFORE the driver can allocate any resource.
 	i.mu.Lock()
@@ -177,10 +284,14 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (Record, error)
 	err = m.store.Save(i.record)
 	i.mu.Unlock()
 	if err != nil {
-		m.mu.Lock()
-		delete(m.records, id)
-		delete(m.active, id)
-		m.mu.Unlock()
+		// Save may have committed before reporting a durability error. Keep the
+		// reservation and key fenced until idempotent cleanup is confirmed.
+		i.mu.Lock()
+		next := i.record
+		next.State, next.DeleteRequested, next.LastError = Stopping, true, "ownership persistence failed"
+		m.fenceLocked(i, next)
+		i.mu.Unlock()
+		m.notify()
 		return Record{}, fmt.Errorf("persist ownership before prepare: %w", err)
 	}
 	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.OperationTimeout)

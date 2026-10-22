@@ -61,7 +61,7 @@ def main():
                 raise AssertionError(f"timed out: {description}")
 
             def start():
-                proc = subprocess.Popen([daemon, "-backend", "mock", "-state-dir", str(state)], stdout=log, stderr=log)
+                proc = subprocess.Popen([daemon, "-backend", "mock", "-insecure-mock", "-state-dir", str(state)], stdout=log, stderr=log)
                 try:
                     def ready():
                         if proc.poll() is not None:
@@ -98,7 +98,7 @@ def main():
                 process = start()
                 checks.append("Unix-socket health explicitly reports mock / no isolation")
 
-                second = subprocess.run([daemon, "-backend", "mock", "-state-dir", str(state)], capture_output=True, text=True, timeout=5)
+                second = subprocess.run([daemon, "-backend", "mock", "-insecure-mock", "-state-dir", str(state)], capture_output=True, text=True, timeout=5)
                 assert second.returncode != 0 and "already locked" in second.stderr
                 checks.append("second controller cannot acquire the same state directory")
 

@@ -38,5 +38,54 @@
       "macos-14 / Go 1.27.x"
     ],
     "scope": "Mock lifecycle, race/failure tests, process smoke tests and builds; NOT real KVM isolation"
+  },
+  "control_plane": {
+    "validated_on": "2026-10-22",
+    "backend": "mock",
+    "production_ready": false,
+    "local": {
+      "platform": "darwin/arm64",
+      "toolchain": "go1.27.1",
+      "race_repeat_10": "passed",
+      "vet": "passed",
+      "strict_json_fuzz_seconds": 10,
+      "lifecycle_cycles": 50,
+      "authenticated_process_smoke": "passed"
+    },
+    "remote": {
+      "platform": "linux/amd64",
+      "toolchain": "go1.26.4",
+      "race_repeat_3": "passed",
+      "vet": "passed",
+      "lifecycle_cycles": 50,
+      "authenticated_process_smoke": "passed"
+    },
+    "checks": [
+      "digest-only token configuration and private key generation",
+      "tenant authorization on all instance and execution endpoints",
+      "atomic tenant and node instance quota, including reclamation",
+      "64 concurrent same-key creates invoke Prepare once",
+      "creation conflict and terminal-key rejection",
+      "SIGKILL/restart retains ownership and creation tombstones",
+      "ambiguous ownership commit never prepares resources or forgets the key",
+      "strict JSON duplicate keys, Unicode folding and nesting bound",
+      "API errors do not expose driver/ledger details",
+      "client does not follow token-bearing redirects"
+    ],
+    "not_validated": [
+      "Firecracker/KVM execution",
+      "guest-agent/vsock",
+      "CPU/memory/disk/network resource enforcement",
+      "bounded metadata retention and schema upgrades",
+      "public ingress or production load"
+    ],
+    "unit_statement_coverage_percent": {
+      "access": 100.0,
+      "client": 84.4,
+      "http_api": 91.2,
+      "private_file": 80.0,
+      "lifecycle_and_driver": 85.8,
+      "strict_json": 91.7
+    }
   }
 }

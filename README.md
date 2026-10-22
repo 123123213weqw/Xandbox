@@ -20,6 +20,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 - `CREATING → READY → STOPPING → STOPPED → RECLAIMING → DESTROYED`。
 - `generation` 栅栏；销毁接受后拒绝新执行。generation **不是用户认证凭证**。
 - 异步执行、超时、总输出字节上限、执行历史数量上限、实例 TTL。
+- 令牌摘要鉴权、服务端租户归属、节点与租户实例配额；见 [身份与幂等契约](docs/AUTH.md)。
+- 创建幂等 key：并发重试共享同一实例，冲突参数拒绝，重启后保留 tombstone。
 - 删除幂等、部分创建失败回滚、清理失败退避重试。
 - 未回收实例仍占用容量；账本确认 `DESTROYED` 后才归还容量。
 - 重启后不复活旧实例：所有非终态实例被栅栏并回收。
@@ -34,8 +36,10 @@ make build
 
 # 使用独立的临时目录，不要放入宿主机秘密或已有业务数据。
 STATE_DIR="$(mktemp -d)"
-./bin/sandboxd -backend mock -state-dir "$STATE_DIR"
+./bin/sandboxd -backend mock -insecure-mock -state-dir "$STATE_DIR"
 ```
+
+上面的 `-insecure-mock` 是显式的无鉴权本地模拟模式。带令牌的启动方式见 [鉴权指南](docs/AUTH.md)，默认不指定鉴权模式会拒绝启动。
 
 在另一个终端操作（将路径替换成刚才的 STATE_DIR）：
 
@@ -92,6 +96,8 @@ mock 仅实现 `echo`、`sleep <Go duration>`、`write <相对文件路径> <内
 }
 ```
 
+鉴权模式下创建必须带 `Idempotency-Key`，其他接口均按令牌对应租户授权，跨租户资源返回 404。参数和状态契约见 [AUTH.md](docs/AUTH.md)。
+
 单次请求体最大 64 KiB，argv 总大小最大 32 KiB；执行历史达到上限后拒绝新增，避免无限增长。`max_output_bytes` 是 stdout 与 stderr 合计的字节上限。执行错误、超时等也占用一条历史。
 
 `sandboxctl` 默认输出 JSON。未加 `-wait` 的执行只表示任务被接受；执行是否成功请检查最终 `status` 和 `output.exit_code`，不能把 HTTP 202 当成执行成功。
@@ -107,13 +113,13 @@ python3 scripts/smoke.py \
   --work-dir /absolute/path/to/work --cycles 200
 ```
 
-测试会启动真实守护进程、通过 Unix socket 调用接口，并测试：第二个控制器抢锁失败、超时、旧 generation 拒绝、命令停止、重复销毁、SIGKILL 后重启清理，以及重复创建/执行/销毁后的私有工作区回收。**所有这些仍是 mock 测试，不是 microVM 性能测试。**
+测试会启动真实守护进程、通过 Unix socket 调用接口，并测试：第二个控制器抢锁失败、超时、旧 generation 拒绝、命令停止、重复销毁、SIGKILL 后重启清理，以及重复创建/执行/销毁后的私有工作区回收；还会以真实进程验收令牌鉴权、租户隔离、配额和重启后的创建幂等性。**所有这些仍是 mock 测试，不是 microVM 性能测试。**
 
 ## 为什么暂时用文件账本，而不是 SQLite
 
 为了先保持零外部依赖，当前使用一个实例一个 JSON 记录，采用 `fsync → rename → fsync(directory)`。它只允许一个控制器写入，不是多节点数据库。文件系统必须提供相应的本地文件系统语义，不应直接放在语义不明的网络挂载上。
 
-销毁后的 tombstone 会保留，控制器也保留其元数据；当前没有元数据保留期/压缩任务。单次创建无业务级幂等 key，若客户端丢失创建响应，不能假定重试不会创建新实例；TTL 和重启清理只能防止它永久占用资源。这些是上线前需要补齐的能力。
+销毁后的 tombstone 会保留，控制器也保留其元数据；当前没有元数据保留期/压缩任务。创建幂等 key 与归属会随账本保留，同 key 不会在销毁/重启后悄悄创建新实例，详见 [契约](docs/AUTH.md)。累计记录上限、保留期/压缩、账本版本升级及请求限流仍是上线前需要补齐的能力。
 
 ## 接入真实 Firecracker 的边界
 
@@ -124,7 +130,7 @@ python3 scripts/smoke.py \
 3. **Stop**：终止实例所属执行单元和专属辅助进程，并确认退出；不能只发送信号后返回成功。驱动必须配合 context 的有界操作约定。
 4. **Cleanup**：幂等回收该 Ref 的私有资源，不能删除仍被其他实例使用的基础镜像、快照或全局共享服务。
 
-当前 **没有** Firecracker 驱动、guest-agent、cgroup/配额、网络策略、用户认证、快照恢复、预热池、会话原子切换、多节点调度。先用真实 Linux/KVM 后端替换 mock 并通过同一套契约测试，再测冷启动、停止、回收三个阶段，最后加入快照与预热优化。
+当前 **没有** Firecracker 驱动、guest-agent、cgroup 资源限额、网络策略、快照恢复、预热池、会话原子切换、多节点调度。先用真实 Linux/KVM 后端替换 mock 并通过同一套契约测试，再测冷启动、停止、回收三个阶段，最后加入快照与预热优化。
 
 重启策略当前是“全部回收”，不是“自动恢复会话”。后端名不匹配时拒绝恢复。管理服务收到 SIGINT/SIGTERM 后停止接受请求并尝试回收；超时则非零退出，下次使用同一状态目录继续恢复。
 
@@ -133,6 +139,8 @@ python3 scripts/smoke.py \
 ```text
 cmd/sandboxd          宿主机管理服务（本版本仅 mock）
 cmd/sandboxctl        Unix-socket 客户端
+cmd/xandbox-keygen    私有令牌与摘要配置生成器
+internal/access      令牌摘要校验与服务端租户策略
 internal/sandbox     生命周期、账本、驱动接口、mock 与故障测试
 internal/httpapi     JSON 接口与契约测试
 internal/client      Unix-socket HTTP 传输
