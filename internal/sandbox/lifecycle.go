@@ -107,7 +107,15 @@ func (m *Manager) reaper() {
 		closing := m.closing
 		m.mu.Unlock()
 		for _, i := range items {
-			if !closing && i.intent.Load() == 0 && i.leaseEligible.Load() {
+			if closing || i.intent.Load() != 0 || i.leaseFailed.Load() {
+				// Revocation does not wait for a stalled Save, a generation gate,
+				// catalog lock or a lifecycle worker. Repeat even if Prepare has
+				// not yet published its live process: a later fork must lose its
+				// lease on the next reconciliation, never be adopted or renewed.
+				if err := m.driver.RevokeLease(i.ref); err != nil {
+					i.leaseFailed.Store(true)
+				}
+			} else if i.leaseEligible.Load() {
 				if err := m.driver.RefreshLease(i.ref); err != nil {
 					i.leaseFailed.Store(true)
 				}

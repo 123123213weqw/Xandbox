@@ -125,6 +125,11 @@ type Driver interface {
 	// RefreshLease must be bounded/nonblocking; no disk or RPC waits. Failure
 	// must fence the execution domain independently of reconciliation progress.
 	RefreshLease(Ref) error
+	// RevokeLease must also be bounded/nonblocking and free of disk/RPC I/O.
+	// It may revoke only a live capability already owned by this exact Ref.
+	// Reconciliation retries it independently of record/operation locks; it is
+	// NOT proof of stopped execution, durability, cleanup or capacity release.
+	RevokeLease(Ref) error
 	Exec(context.Context, Ref, ExecRequest, int) (Output, error)
 	Stop(context.Context, Ref) error
 	Cleanup(context.Context, Ref) error

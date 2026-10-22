@@ -44,6 +44,29 @@ func (d *driver) RefreshLease(ref sandbox.Ref) error {
 	return p.refreshLease()
 }
 
+// RevokeLease closes ONLY an already-owned live pipe capability. It never
+// touches ownership/catalog files, cgroup paths, PIDs or a lifecycle gate.
+// Missing processes and bounded-lock contention are retried by reconciliation
+// (including a process published by a racing Prepare). Guardian EOF is an
+// independent stop request, not an acknowledgement of Stop or durable state.
+func (d *driver) RevokeLease(ref sandbox.Ref) error {
+	k, err := key(ref)
+	if err != nil {
+		return err
+	}
+	if !d.mu.TryLock() {
+		return nil
+	}
+	p := d.procs[k]
+	d.mu.Unlock()
+	if p == nil || !p.leaseMu.TryLock() {
+		return nil
+	}
+	defer p.leaseMu.Unlock()
+	p.closeLeaseLocked()
+	return nil
+}
+
 func (p *process) refreshLease() error {
 	if !p.leaseMu.TryLock() {
 		return nil
