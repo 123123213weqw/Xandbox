@@ -12,7 +12,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。真实后端的归属、监督与使用限制见 [Firecracker 驱动](docs/FIRECRACKER.md)。独立组件报告不是服务级生产认证，mock 接口始终不提供 VM 隔离。
 
-[最新真实后端验收](docs/validation/kvm-guardian-2026-10-22.json) 已通过 21 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效及独立受控 fsync 阻塞用例。阻塞用例的 [9 项详细断言](docs/validation/kvm-guardian-fsync-2026-10-22.json) 是其中一项的展开，不是额外 9 个场景。尚未覆盖完整生产故障矩阵或切换性能。
+[最新真实后端验收](docs/validation/kvm-ledger-hardened-2026-10-22.json) 已通过 23 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效、真实旧 VM 的账本升级恢复、root 创建前路径/归属拒绝及独立受控 fsync 阻塞用例。阻塞用例的 [9 项详细断言](docs/validation/kvm-ledger-hardened-fsync-2026-10-22.json) 是其中一项的展开，不是额外 9 个场景。尚未覆盖完整生产故障矩阵或切换性能。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 
@@ -126,7 +126,7 @@ python3 scripts/smoke.py \
 
 账本实现暂不引入数据库依赖，当前使用一个实例一个 JSON 记录，采用 `fsync → rename → fsync(directory)`。它只允许一个控制器写入，不是多节点数据库。文件系统必须提供相应的本地文件系统语义，不应直接放在语义不明的网络挂载上。
 
-销毁后的 tombstone 会保留，控制器也保留其元数据；当前没有元数据保留期/压缩任务。创建幂等 key 与归属会随账本保留，同 key 不会在销毁/重启后悄悄创建新实例，详见 [契约](docs/AUTH.md)。累计记录上限、保留期/压缩、账本版本升级及请求限流仍是上线前需要补齐的能力。
+销毁后的 tombstone 永久保留；当前有节点/租户累计记录准入预算、严格版本化读取和离线迁移，但没有自动归档/过期删除。创建幂等 key 与归属会随账本保留，同 key 不会在销毁/重启后悄悄创建新实例，详见 [契约](docs/AUTH.md)。容量参数、v0 升级和保留政策见 [账本治理](docs/LEDGER.md)。长期归档/轮换、持续负载容量证据及请求限流仍未完成。
 
 ## 接入真实 Firecracker 的边界
 

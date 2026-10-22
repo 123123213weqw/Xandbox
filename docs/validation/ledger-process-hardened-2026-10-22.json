@@ -1,0 +1,19 @@
+{
+  "backend": "mock",
+  "production_ready": false,
+  "source_revision": "dc864660d74b25e1fa26d8aad70b768314b1202a",
+  "test": "ledger_metadata_process_acceptance",
+  "migration_fault_records": 2048,
+  "actual_old_binary": true,
+  "checks": [
+    "tenant metadata saturation preserves live replay, tombstone and exclusive migration lock",
+    "node metadata cap survives restart and does not recycle destroyed keys",
+    "SIGKILL restart below old record budget reclaims every old generation without resurrection",
+    "legacy fixture requires explicit offline upgrade; rerun is idempotent and preserves key rejection",
+    "unknown schema rejects migration and service startup without modifying valid records",
+    "actual SIGKILL during 2048-record migration leaves mixed schema; resume preserves all identities and cleans orphan temps",
+    "actual pre-upgrade daemon SIGKILL ownership migrates and is reclaimed without key reuse"
+  ],
+  "daemon_sha256": "5591cfdb31822c7f9929f6aeae11ea2a940eb28cd87e986230700b988a6bb8a5",
+  "legacy_daemon_sha256": "1712bbf688d7876c0886d720a17c04055a4ee7092f4dd930bd823292cc9b19da"
+}

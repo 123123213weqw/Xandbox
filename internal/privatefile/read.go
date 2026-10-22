@@ -12,8 +12,8 @@ func Read(path string, limit int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !before.Mode().IsRegular() || before.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("private file must be a regular, non-symlink file with no group/other permissions")
+	if !before.Mode().IsRegular() || before.Mode().Perm()&0077 != 0 || !ownedByCaller(before) {
+		return nil, errors.New("private file must be caller-owned, regular, non-symlink and have no group/other permissions")
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -24,7 +24,7 @@ func Read(path string, limit int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !os.SameFile(before, after) || !after.Mode().IsRegular() || after.Mode().Perm()&0077 != 0 {
+	if !os.SameFile(before, after) || !after.Mode().IsRegular() || after.Mode().Perm()&0077 != 0 || !ownedByCaller(after) {
 		return nil, errors.New("private file changed while opening")
 	}
 	data, err := io.ReadAll(io.LimitReader(f, limit+1))

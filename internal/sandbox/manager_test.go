@@ -450,7 +450,7 @@ func TestInvalidRequests(t *testing.T) {
 }
 
 func TestFileStoreRejectsCorruptionAndUnsafeIdentity(t *testing.T) {
-	store, err := NewFileStore(t.TempDir())
+	store, err := NewFileStore(filepath.Join(t.TempDir(), "ledger"))
 	if err != nil {
 		t.Fatal(err)
 	}

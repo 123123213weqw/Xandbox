@@ -57,6 +57,8 @@ def main():
     for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--queue-test', help='optional Linux Go test binary for controlled fsync queue acceptance')
+    parser.add_argument('--legacy-daemon', help='optional trusted pre-ledger-v1 binary for actual KVM crash/upgrade acceptance')
+    parser.add_argument('--legacy-source-revision')
     parser.add_argument('--source-revision', default='uncommitted')
     args = parser.parse_args()
     if os.geteuid() != 0 or os.uname().sysname != 'Linux':
@@ -64,6 +66,9 @@ def main():
     inputs = {name: Path(getattr(args, name)).resolve() for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd')}
     if args.queue_test:
         inputs['queue_test'] = Path(args.queue_test).resolve()
+    if args.legacy_daemon:
+        assert args.legacy_source_revision, 'legacy source revision is required'
+        inputs['legacy_daemon'] = Path(args.legacy_daemon).resolve()
     report = Path(args.report).resolve()
     assert not report.exists(), 'refusing to overwrite report'
     logs = Path(args.log_dir).resolve()
@@ -92,7 +97,7 @@ def main():
         for name, path in inputs.items():
             target = assets / name
             shutil.copyfile(path, target)
-            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test') else 0o444)
+            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test', 'legacy_daemon') else 0o444)
             assert digest(target) == result['artifacts_sha256'][name]
             copied[name] = target
         workspace = assets / 'empty.ext4'
@@ -129,7 +134,8 @@ def main():
                 while not watch_stop.wait(0.001):
                     for item in (state / 'ledger').glob('*.json'):
                         try:
-                            value = json.loads(item.read_text()).get('last_error', '')
+                            raw = json.loads(item.read_text())
+                            value = (raw['record'] if 'version' in raw else raw).get('last_error', '')
                         except (OSError, ValueError):
                             continue
                         if value and value not in seen:
@@ -157,8 +163,8 @@ def main():
                 finally:
                     conn.close()
 
-            def start():
-                proc = subprocess.Popen(base, stdout=log, stderr=log)
+            def start(command=None):
+                proc = subprocess.Popen(base if command is None else command, stdout=log, stderr=log)
                 def health():
                     if proc.poll() is not None:
                         raise AssertionError('controller exited; inspect private log')
@@ -166,16 +172,22 @@ def main():
                         return call('GET', '/healthz', authenticated=False)
                     except (OSError, http.client.HTTPException):
                         return None
-                h = wait(health, 'controller start')
-                assert h['backend'] == 'firecracker' and h['isolation'] and not h['production_ready'] and 'stats' not in h
-                return proc
+                try:
+                    h = wait(health, 'controller start')
+                    assert h['backend'] == 'firecracker' and h['isolation'] and not h['production_ready'] and 'stats' not in h
+                    return proc
+                except BaseException:
+                    if proc.poll() is None:
+                        proc.kill()
+                    proc.wait(timeout=5)
+                    raise
 
-            def create(ttl_ms=0, max_exec_ms=0):
+            def create(ttl_ms=0, max_exec_ms=0, key=None):
                 before = time.perf_counter()
                 body = {}
                 if ttl_ms: body['ttl_ms'] = ttl_ms
                 if max_exec_ms: body['limits'] = {'max_exec_ms': max_exec_ms}
-                record = call('POST', '/v1/sandboxes', body, expected=201, key=secrets.token_hex(16))
+                record = call('POST', '/v1/sandboxes', body, expected=201, key=key or secrets.token_hex(16))
                 assert record['state'] == 'READY'
                 result['samples'].setdefault('create_api_ready_ms', []).append(round((time.perf_counter() - before) * 1000, 3))
                 return record
@@ -220,6 +232,33 @@ def main():
                     'from_state': from_state, 'accepted_ms': round(accepted_ms, 3),
                     'observed_stopped_ms': round(stopped_ms, 3),
                     'durable_destroyed_ms': round((time.perf_counter() - before) * 1000, 3)})
+
+            # Real root process tests: reject before creating a child/lock or
+            # consuming another UID's private auth policy. All paths belong to
+            # this disposable root-owned fixture, never another user's tree.
+            for mode in ('writable-parent', 'foreign-parent', 'foreign-auth', 'foreign-migration'):
+                parent = root / mode; parent.mkdir(mode=0o700)
+                target = parent / 'would-create'
+                denied_base = list(base)
+                denied_base[denied_base.index('-state-dir') + 1] = str(target)
+                if mode == 'writable-parent':
+                    parent.chmod(0o777)
+                elif mode == 'foreign-parent':
+                    os.chown(parent, 65534, 65534)
+                elif mode == 'foreign-auth':
+                    foreign_auth = parent / 'auth.json'; shutil.copyfile(auth, foreign_auth)
+                    foreign_auth.chmod(0o600); os.chown(foreign_auth, 65534, 65534)
+                    denied_base[denied_base.index('-auth-file') + 1] = str(foreign_auth)
+                else:
+                    target.mkdir(mode=0o700); (target / 'ledger').mkdir(mode=0o700)
+                    os.chown(target, 65534, 65534)
+                    denied_base = [str(copied['daemon']), '-state-dir', str(target), '-migrate-ledger']
+                assert subprocess.run(denied_base, stdout=log, stderr=log, timeout=10).returncode != 0
+                if mode == 'foreign-migration':
+                    assert not (target / 'controller.lock').exists() and not list((target / 'ledger').iterdir())
+                else:
+                    assert not target.exists(), 'created state before path/owner rejection'
+            result['checks'].append('real root rejects writable/foreign state ancestry and foreign private auth before state creation; offline migration cannot bypass ownership')
 
             if os.statvfs('/run').f_flag & os.ST_NOEXEC:
                 bad = dict(config); bad['runtime_root'] = str(noexec_runtime)
@@ -283,7 +322,7 @@ def main():
             cfg.write_text(json.dumps(changed))
             refused = subprocess.run(base, stdout=log, stderr=log, timeout=10)
             assert refused.returncode != 0
-            assert json.loads((state / 'ledger' / (first['id'] + '.json')).read_text())['state'] != 'DESTROYED'
+            assert json.loads((state / 'ledger' / (first['id'] + '.json')).read_text())['record']['state'] != 'DESTROYED'
             cfg.write_text(json.dumps(config))
             began = time.perf_counter()
             process = start(); destroyed(first)
@@ -384,7 +423,7 @@ def main():
                         assert now_boot >= hard, 'VM died early instead of reaching hard TTL'
                         sample['hard_deadline_to_empty_observed_ms'] = round((now_boot - hard) / 1e6, 3)
                     if paused:
-                        persisted = json.loads((state / 'ledger' / (guarded['id'] + '.json')).read_text())
+                        persisted = json.loads((state / 'ledger' / (guarded['id'] + '.json')).read_text())['record']
                         assert persisted['state'] == 'READY', 'controller performed stop instead of independent guardian'
                         assert list((state / 'firecracker').glob(guarded['id'] + '*.json')), 'ownership vanished while controller paused'
                     result['guardian_samples'].append(sample)
@@ -399,6 +438,47 @@ def main():
             assert not list((runtime / 'j/firecracker').iterdir())
             assert [p.name for p in (state / 'firecracker').iterdir() if not p.name.startswith('.')] == ['config.json']
             result['checks'].append('no owned VMM/cgroup/jail/UID manifest residue')
+            if args.legacy_daemon:
+                # A separate private state directory, same now-empty fixture
+                # roots. Never rewrite a live ledger or run two controllers.
+                state = root / 'legacy-state'; state.mkdir(mode=0o700)
+                sock = state / 'api.sock'
+                base = [str(copied['daemon']), '-backend', 'firecracker', '-state-dir', str(state),
+                        '-auth-file', str(auth), '-firecracker-config', str(cfg), '-max-instances', '2']
+                old_base = list(base); old_base[0] = str(copied['legacy_daemon'])
+                process = start(old_base)
+                legacy_key = secrets.token_hex(16)
+                legacy_vm = create(ttl_ms=60000, max_exec_ms=60000, key=legacy_key)
+                legacy_job = job(legacy_vm, ['sh', '-c', 'echo started > upgrade-started; sleep 55'], timeout=60000)
+                wait(lambda: execute(legacy_vm, ['test', '-e', 'upgrade-started'])['exit_code'] == 0, 'legacy VM running')
+                ledger_path = state / 'ledger' / (legacy_vm['id'] + '.json')
+                raw_legacy = json.loads(ledger_path.read_text())
+                assert 'version' not in raw_legacy and raw_legacy['state'] == 'READY'
+                process.kill(); process.wait(timeout=5); process = None
+                wait(lambda: stopped(group(legacy_vm)), 'old controller EOF stopped old KVM', seconds=5)
+                before = ledger_path.read_bytes()
+                assert subprocess.run(base, stdout=log, stderr=log, timeout=10).returncode != 0
+                assert ledger_path.read_bytes() == before, 'new startup rewrote legacy ownership without migration'
+                migration = subprocess.run([str(copied['daemon']), '-state-dir', str(state), '-migrate-ledger'],
+                                           stdout=subprocess.PIPE, stderr=log, timeout=30)
+                assert migration.returncode == 0 and json.loads(migration.stdout)['upgraded'] == 1
+                upgraded = json.loads(ledger_path.read_text())
+                assert upgraded['version'] == 1 and upgraded['record']['id'] == legacy_vm['id']
+                assert upgraded['record']['create_key_hash'] == raw_legacy['create_key_hash']
+                assert upgraded['record']['state'] == 'READY', 'offline migration falsely claimed resource reclamation'
+                base += ['-max-records', '1', '-max-tenant-records', '1']
+                process = start(); destroyed(legacy_vm)
+                assert call('POST', '/v1/sandboxes', {'ttl_ms': 60000, 'limits': {'max_exec_ms': 60000}},
+                            expected=410, key=legacy_key)['error']['code'] == 'IDEMPOTENCY_GONE'
+                assert call('POST', '/v1/sandboxes', {}, expected=503, key=secrets.token_hex(16))['error']['code'] == 'METADATA_CAPACITY'
+                process.terminate(); assert process.wait(timeout=15) == 0; process = None
+                assert not [p for p in cgroup.iterdir() if p.is_dir()]
+                assert not list((runtime / 'j/firecracker').iterdir())
+                assert [p.name for p in (state / 'firecracker').iterdir() if not p.name.startswith('.')] == ['config.json']
+                result['legacy_migration'] = {'source_revision': args.legacy_source_revision,
+                                             'new_api_admission_at_capacity': 'rejected; ownership/key retained',
+                                             'old_kvm_recovered': True}
+                result['checks'].append('actual old-daemon KVM SIGKILL ownership explicitly migrated then durably reclaimed at metadata capacity without key reuse')
             if args.queue_test:
                 queue_report = report.with_name(report.stem + '-queue.json')
                 fixture = root / 'queue-fixture.json'

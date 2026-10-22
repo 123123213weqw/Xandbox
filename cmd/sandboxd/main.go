@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
+	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
 
@@ -45,16 +47,22 @@ func run() (retErr error) {
 	backend := flag.String("backend", "", "required: mock or firecracker (experimental Linux/KVM)")
 	firecrackerConfig := flag.String("firecracker-config", "", "private pinned-asset Firecracker configuration")
 	maxInstances := flag.Int("max-instances", 32, "maximum allocated, including unreclaimed instances")
+	maxRecords := flag.Int("max-records", 10_000, "maximum retained records, including tombstones; lowering does not block recovery")
+	maxTenantRecords := flag.Int("max-tenant-records", 0, "retained records per tenant; 0 = min(1000, max-records)")
+	migrateLedger := flag.Bool("migrate-ledger", false, "offline: validate and upgrade existing legacy ledger, then exit; no driver or API")
 	authFile := flag.String("auth-file", "", "private digest-only authentication configuration")
 	stopWorkers := flag.Int("stop-workers", 0, "background stop workers; 0 = min(4, instance capacity)")
 	cleanupWorkers := flag.Int("cleanup-workers", 0, "cleanup workers; 0 = min(2, instance capacity)")
 	workQueueSize := flag.Int("work-queue-size", 0, "queue slots PER pool; 0 = min(32, instance capacity)")
 	insecureMock := flag.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
 	flag.Parse()
-	if *stateDir == "" || (*backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || flag.NArg() != 0 {
+	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || flag.NArg() != 0 {
 		return fmt.Errorf("usage: sandboxd -backend mock|firecracker -state-dir DIR [-max-instances 32]; mock provides NO isolation")
 	}
-	if (*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock) {
+	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "") {
+		return errors.New("offline migration cannot be combined with backend or authentication options")
+	}
+	if !*migrateLedger && ((*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock)) {
 		return fmt.Errorf("choose exactly one of -auth-file PATH or -insecure-mock")
 	}
 	if (*backend == "mock" && *firecrackerConfig != "") || (*backend == "firecracker" && (*firecrackerConfig == "" || *insecureMock)) {
@@ -72,10 +80,16 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(absDir, 0700); err != nil {
+	if *migrateLedger {
+		if _, err := os.Lstat(filepath.Join(absDir, "ledger")); err != nil {
+			return fmt.Errorf("offline migration requires an existing ledger: %w", err)
+		}
+	}
+	absDir, err = privatefile.EnsureDirectory(absDir)
+	if err != nil {
 		return err
 	}
-	info, err := os.Stat(absDir)
+	info, err := os.Lstat(absDir)
 	if err != nil {
 		return err
 	}
@@ -92,8 +106,17 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
+	if *migrateLedger {
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer cancel()
+		report, err := store.Migrate(ctx)
+		if err != nil {
+			return fmt.Errorf("offline ledger migration unfinished; rerun after resolving the cause: %w", err)
+		}
+		return json.NewEncoder(os.Stdout).Encode(report)
+	}
 	var driver sandbox.Driver
-	opts := sandbox.Options{MaxInstances: *maxInstances, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
+	opts := sandbox.Options{MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxTenantRecords: *maxTenantRecords, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
 	writeTimeout := 10 * time.Second
 	if *backend == "mock" {
 		driver, err = sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
