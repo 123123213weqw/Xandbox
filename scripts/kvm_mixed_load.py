@@ -94,6 +94,7 @@ def run_mixed(*, cycles, min_seconds, call, finish, destroyed, group, empty, wai
     stop_observer, abort = threading.Event(), threading.Event()
     barrier = threading.Barrier(2, timeout=40)
     observer_errors = []
+    result['worker_errors'] = []
 
     def sample():
         started = time.perf_counter()
@@ -182,7 +183,9 @@ def run_mixed(*, cycles, min_seconds, call, finish, destroyed, group, empty, wai
     def guarded_worker(tenant):
         try:
             worker(tenant)
-        except BaseException:
+        except BaseException as error:
+            traceback.print_exc()  # Preserve the originating error, not just its peer's abort assertion.
+            result['worker_errors'].append({'tenant': tenant, 'error_type': type(error).__name__})
             abort.set()
             barrier.abort()
             raise

@@ -1,13 +1,28 @@
 import importlib.util
+import errno
 import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('resources',Path(__file__).with_name('kvm_resources.py'))
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 
 class ResourceObservationTests(unittest.TestCase):
+    def test_removed_cgroup_fd_enodev_is_not_live_stop_proof(self):
+        with tempfile.TemporaryDirectory() as root:
+            group=Path(root)/'group';group.mkdir()
+            for number in (errno.ENODEV,errno.ENOENT):
+                with patch.object(Path,'read_text',side_effect=OSError(number,'injected')):
+                    self.assertFalse(module.cgroup_empty(group))
+                    self.assertTrue(module.cgroup_empty(group/'already-removed'))
+            with patch.object(Path,'read_text',side_effect=PermissionError(errno.EACCES,'injected')):
+                with self.assertRaises(PermissionError):module.cgroup_empty(group)
+            (group/'cgroup.events').write_text('populated 0\nfrozen 0\n')
+            self.assertTrue(module.cgroup_empty(group))
+            (group/'cgroup.events').write_text('populated 1\nfrozen 0\n')
+            self.assertFalse(module.cgroup_empty(group))
     def test_kb_counters_and_units(self):
         self.assertEqual(module.parse_kb('Rss: 12 kB\nPss: 7 kB\nVmFlags: rd wr\n'),{'Rss':12288,'Pss':7168})
         for text in ['Pss: -1 kB','Rss: 1 MB','Anonymous: not-a-number kB']:
