@@ -1,0 +1,119 @@
+{
+  "test": "dual_frontend_and_kernel_io_budget",
+  "production_ready": false,
+  "goal_complete": false,
+  "host_runtime_original_source": "3fed5766b0d8ae0513e5ad19b0ecaf748ab5ba88",
+  "baseline_harness_source": "3fed5766b0d8ae0513e5ad19b0ecaf748ab5ba88",
+  "target_harness_source": "345b991f91b981e3ccfdd6eefc8268c1a48e9df5",
+  "go_mod_sum_and_all_go_sources_unchanged_after_original_runtime_build": true,
+  "baseline_runner_exit_status": 0,
+  "target_runner_exit_status": 0,
+  "runners_did_not_overlap": true,
+  "native_toolchain": "go1.27.3 linux/amd64 CGO0 trimpath buildvcs=false",
+  "native_race_repeat": 3,
+  "native_vet_passed": true,
+  "native_process_smoke_suites": 5,
+  "baseline_root_python_tests": 31,
+  "target_root_python_tests": 32,
+  "darwin_python_tests": 32,
+  "darwin_linux_only_skips": 4,
+  "mac_to_linux_daemon_admin_exact_reproduction": true,
+  "native_artifacts_sha256": {
+    "daemon": "9670b1886acb3a08ca5652d58b1fc546e4f72f7d37bf1832e91625e62579bbe8",
+    "admin": "4e663c367905905252ccb3958fce75a19d16e8dd58883237b9009bd4b50770ee",
+    "firecracker_test": "70e8ba824a87195a966950a3d53039783e8a51e2043a054c65db4097996e0677",
+    "session_test": "8fd77f9f07e3bfda47d8a1c993a8e0133b0bfd49100782d05e9f70e653e5d486"
+  },
+  "guest_policy": "Pinned original v10 initrd/agent and never-assigned original snapshot export; default fault regressions also retain explicitly historical TEST images. No new guest image deployed; make smoke agent ELF is not KVM deployment. Before-marker TEST overlay is not unmodified production-ELF attestation.",
+  "historical_test_image_provenance": "guest-fault-image-provenance-v4.json",
+  "io_policy": {
+    "bytes_per_second": 8388608,
+    "operations_per_second": 4096,
+    "frontend_read_write_combined": true,
+    "kernel_limits_per_direction": true,
+    "steady_refill_ms": 1000,
+    "extra_one_time_burst_bytes": 0,
+    "node_aggregate_or_controller_copy_budget": false,
+    "actual_iops_saturation_not_proven": true
+  },
+  "final_target_report_check_groups": {
+    "cold_and_enospc": 7,
+    "paused_snapshot_catalog": 12,
+    "cold_and_ledger_readonly": 5
+  },
+  "final_policy_rejection_details_per_suite": 3,
+  "rejection_details_are_not_additional_independent_pressure_samples": true,
+  "pressure_runs_before_metadata_fault_injection_on_healthy_ledger": true,
+  "busy_stop_requires_actual_owned_vmm_wchar_advance_bytes": 4194304,
+  "wchar_is_syscall_accounting_not_media_durability": true,
+  "operator_direct_io_probe": {
+    "bytes": 33554432,
+    "fixed_zero_data": true,
+    "own_inherited_descriptors_only": true,
+    "not_tenant_host_execution_or_vm_birth_protocol": true
+  },
+  "guest_direct_transfers_each_bytes": 67108864,
+  "guest_observed_own_io_stat_must_not_be_treated_as_complete_charge": true,
+  "finite_experimental_guards_ms": {
+    "operator_direct_32mib_min": 2000,
+    "guest_direct_64mib_min": 5000,
+    "storage_fault_host_stop_max": 1500
+  },
+  "guards_are_not_production_rate_or_latency_slo": true,
+  "default_new_runtime_regressions": {
+    "ledger_readonly": 3,
+    "snapshot_catalog_groups": 10,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_duration_seconds": 244.427,
+    "mixed_resource_samples": 403,
+    "mixed_overlapping_switch_pairs": 97,
+    "initialization_faults": 6,
+    "historical_guest_test_cases": 2,
+    "cold_checks": 30,
+    "cold_queue_and_session_details_each": 9,
+    "details_not_extra_fault_cases": true
+  },
+  "independent_cleanup": {
+    "receipt_or_owned_log_namespace_root_cgroup_rechecks": 10,
+    "own_loop_bindings_absent": 4,
+    "own_private_mounts_not_propagated_to_parent": true,
+    "cold_root_absence_rechecked": true,
+    "cold_cgroup_runtime_finally_proven_by_successful_strict_finally_and_parent_exit_not_independent_path_recheck": true,
+    "original_export_and_test_assets_intentionally_retained_outside_fixture": true
+  },
+  "guest_workspace_written_bytes": {
+    "kvm-io-cold-v2.json": 99549184,
+    "kvm-io-readonly-v2.json": 99553280,
+    "kvm-io-default-readonly-v1.json": 99553280
+  },
+  "guest_workspace_image_bytes_unchanged": 134217728,
+  "no_fixed_usable_payload_capacity_claim": true,
+  "artifact_files_sha256": {
+    "kvm-io-cold-v2.json": "c0c766c2495514e7a329f1873658f431cbbbaf47aba1ad3d2f0d60e58a032856",
+    "kvm-io-snapshot-v2.json": "455760228e526c841ff20268ead117d767e1af839718491621fd5a82aa6a9a39",
+    "kvm-io-readonly-v2.json": "1f8a96c109baac087b980e68045f016bad418ee993978b170600d572b719f3de",
+    "kvm-io-default-readonly-v1.json": "db01da0b207c187a995773ae4b7012f8a37e3a13f9a812f5fd8d83611087130a",
+    "kvm-io-default-snapshot-v1.json": "c1a0a11182d307207a7759b9c62eabb31217e93c4172897fa025b4bcc7ddf5ab",
+    "kvm-io-default-initialization-v1.json": "8053876d003868d60d84c8e99fccf648c0a611d8392b15e6b7024871ddc0f4b5",
+    "kvm-io-default-machine-id-v1.json": "69366a9c9e18b7426323fd1f9315c1ea5bbde8d94fd87853ccdd7ce0ef773064",
+    "kvm-io-default-before-marker-v1.json": "85e819d0dc65a9ae173f0b0541902fc13d96a548f86ff3f9abce0f3244b8f819",
+    "kvm-io-default-cold-v1.json": "b6d92029c2f62f98540959510347307ab2b8177b196d5f0d817dde2be67725f1",
+    "kvm-io-default-cold-v1-queue.json": "159125b48691f1b6c23bbb01972660f59b4b3df7f4663fa8d8711827380d1f75",
+    "kvm-io-default-cold-v1-session.json": "0c94e3ee9fd85269592cc15c59f40580ed82c38cec1dc7a73e899c4f0710184a",
+    "io-baseline-pipeline-transcript-v1.txt": "bdc4745c3f2f5c953477e4e6a5e1f9d54653ffda122367a794c24f1cadf367a4",
+    "io-target-pipeline-transcript-v2.txt": "b2014a2a94f22e5086fbbbdff9ecdb7ea6cbd7bc455ce5b062c5eaed5cd7e1d2",
+    "io-native-race-v1.txt": "5a5e81bb71f6aa6ba734f0d40b89ad16d04aae3536e0a45f02ff524efb79243d"
+  },
+  "source_ci": {
+    "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39847708777",
+    "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39847714728",
+    "all_ten_actual_jobs_and_steps_completed_success": true
+  },
+  "not_validated": [
+    "controller preparation copy/node aggregate IO budgets or project quota",
+    "complete unique RAM/cache/writeback charge attribution or billing",
+    "physical-media durability/erase, EIO/power/whole-host or dual-supervisor failure",
+    "IOPS saturation, sustained malicious/open-loop fairness or production tails/SLO",
+    "remaining initialization windows/prewarm, metadata archival, audit/alerts/rollback and independent operator acceptance"
+  ]
+}

@@ -1,0 +1,18 @@
+work/io-source-v2.tar.gz: 成功
+bin/sandboxd-io-v1: 成功
+bin/xandbox-template-io-v1: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: strengthened harness root Python32, unchanged native Go source3fed
+................................
+----------------------------------------------------------------------
+Ran 32 tests in 0.020s
+
+OK
+stage: strengthened IO cold + ENOSPC7: actual startup rejection, >=4MiB VMM writes BEFORE busy Stop
+{"passed": true, "cases": 7, "cleanup_confirmed": true}
+stage: strengthened IO PAUSED snapshot + catalog12
+{"passed": true, "checks": 12, "cleanup_confirmed": true}
+stage: strengthened IO + ledgerRO5 cross-check
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+all strengthened IO stages passed; source3fed full baseline was terminal0 first

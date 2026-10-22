@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "actual real-driver guest UID and managed capability enforcement",
+    "two real KVM generations live after candidate READY while old session remains executable",
+    "unpublished candidate rejects plain per-VM execution",
+    "old host execution stops while final session binding fsync is blocked",
+    "Close deadline does not claim journal writer termination",
+    "candidate host execution stops independently of blocked binding journal",
+    "exclusive state lock retained until old writer and mutations quiesce",
+    "late fsync never republishes a closed session binding",
+    "fresh controller/driver/broker recovers all owned resources without reviving sessions"
+  ],
+  "cleanup_workers": 1,
+  "commit_barrier_to_old_stopped_observed_ms": 48.299359,
+  "fault_model": "test-only blocked session binding Save; not an actual broken disk or production RPC/flag",
+  "production_ready": false,
+  "queue_capacity_per_pool": 1,
+  "source_revision": "3fed5766b0d8ae0513e5ad19b0ecaf748ab5ba88",
+  "stop_workers": 1,
+  "test": "real_kvm_session_commit_fsync_stall",
+  "toolchain": "go1.27.3"
+}
