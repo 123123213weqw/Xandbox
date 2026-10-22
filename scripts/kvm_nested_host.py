@@ -16,7 +16,7 @@ import traceback
 from build_nested_host import build_initrd, digest, validate_manifest
 from kvm_resources import cgroup_empty
 from kvm_driver_smoke import wait
-from kvm_snapshot_smoke import private_json
+from kvm_snapshot_smoke import private_json, sync_dir
 
 DISK_BYTES = 2 << 30
 
@@ -56,6 +56,16 @@ def private_group_counters(group):
         try: values[name] = (group/name).read_text()[:4096]
         except OSError: values[name] = 'unavailable'
     return values
+
+
+def replace_private_json(path, value):
+    temporary = path.with_name(path.name + '.new-' + secrets.token_hex(8))
+    try:
+        private_json(temporary, value)
+        os.replace(temporary, path)
+        sync_dir(path.parent)
+    finally:
+        if temporary.exists(): temporary.unlink()
 
 
 def main():
@@ -135,11 +145,11 @@ def main():
             # binding. Reuse ONLY the private disk, never a killed domain.
             if boot_number: group=parent_group/secrets.token_hex(32)
             group.mkdir(mode=0o700);owned_groups.append(group)
-            private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),
+            replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),
                 'cgroup_parent':str(parent_group),'cgroup':str(group),'all_cgroups':[str(p) for p in owned_groups]})
             for name,value in {'memory.max':str(3<<30),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'128','cpu.max':'400000 100000'}.items():
                 (group/name).write_text(value); assert (group/name).read_text().strip()==value
-            launch_policy['cgroup']=str(group);private_json(cfg,launch_policy)
+            launch_policy['cgroup']=str(group);replace_private_json(cfg,launch_policy)
             boot_number+=1
             for name in ('control.sock','qmp.sock','console.log'):
                 p=root/name
@@ -185,9 +195,9 @@ def main():
             assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
             assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
             result['cases'].append({'phase':phase,'passed':True,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
-        result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True;result['passed']=True
         assert len(owned_groups)==4 and len(set(owned_groups))==4
         result['distinct_l0_execution_generations']=len(owned_groups)
+        result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True;result['passed']=True
     finally:
         if group.exists():
             private_json(logs/'final-private-cgroup.json',private_group_counters(group))

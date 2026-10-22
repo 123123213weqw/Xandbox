@@ -1,14 +1,27 @@
 import copy
 import io
 import json
+import stat
+import tempfile
 from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket
+from kvm_nested_host import JSONSocket, replace_private_json
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_root_private_receipt_and_policy_can_be_replaced_for_next_incarnation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            p=Path(temporary)/'policy.json'
+            replace_private_json(p,{'generation':1})
+            first=p.stat().st_ino
+            replace_private_json(p,{'generation':2})
+            self.assertEqual(json.loads(p.read_text()),{'generation':2})
+            self.assertEqual(stat.S_IMODE(p.stat().st_mode),0o600)
+            self.assertNotEqual(first,p.stat().st_ino)
+            self.assertEqual(list(Path(temporary).iterdir()),[p])
+
     def test_l1_switches_off_special_rootfs_before_mounting_or_launching_services(self):
         bootstrap,service=init_scripts(['kvm.ko'])
         self.assertIn('size=256m',bootstrap)
