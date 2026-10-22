@@ -73,6 +73,7 @@ def main():
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
                  'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
+    parser.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
     args = parser.parse_args(); os.umask(0o077)
     assert os.geteuid() == 0 and os.uname().sysname == 'Linux' and os.uname().machine == 'x86_64'
     assert len(bytes.fromhex(args.source_revision)) == 20
@@ -90,7 +91,9 @@ def main():
     parent_group = Path('/sys/fs/cgroup/xandbox-nested-proof-' + suffix); group = parent_group / secrets.token_hex(32)
     assert not any(p.exists() for p in (root, control, parent_group))
     sources = {n: Path(getattr(args,n)).resolve() for n in ('fixture','daemon','warden','firecracker','jailer','kernel','initrd','workspace','alpine')}
-    result = {'test':'owned_l1_host_power_cut_real_l2_kvm','production_ready':False,'passed':False,
+    phases = ('eio-busy','eio-idle','hang-busy','hang-idle') if args.state_io else ('running','stopped','destroyed')
+    result = {'test':'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+        'production_ready':False,'passed':False,'state_io_profile':args.state_io,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -117,7 +120,7 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz')
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io)
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
@@ -187,17 +190,20 @@ def main():
             assert Path('/proc/sys/kernel/random/boot_id').read_bytes()==l0_boot
             return elapsed
         boot()
-        for phase in ('running','stopped','destroyed'):
-            checkpoint=request('checkpoint',phase); assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
+        for phase in phases:
+            checkpoint=request('io-fault' if args.state_io else 'checkpoint',phase)
+            assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
             boot(); recovered=request('recover')
             assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
             assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
-            result['cases'].append({'phase':phase,'passed':True,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
-        assert len(owned_groups)==4 and len(set(owned_groups))==4
+            guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if args.state_io else True
+            result['cases'].append({'phase':phase,'passed':guard,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
+        assert len(owned_groups)==len(phases)+1 and len(set(owned_groups))==len(phases)+1
         result['distinct_l0_execution_generations']=len(owned_groups)
-        result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True;result['passed']=True
+        result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True
+        result['passed']=all(case['passed'] for case in result['cases'])
     finally:
         if group.exists():
             private_json(logs/'final-private-cgroup.json',private_group_counters(group))

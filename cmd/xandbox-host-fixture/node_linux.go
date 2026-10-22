@@ -57,6 +57,10 @@ func (q nodeRequest) validate() error {
 		if q.Phase != "running" && q.Phase != "stopped" && q.Phase != "destroyed" {
 			return errors.New("invalid checkpoint phase")
 		}
+	case "io-fault":
+		if q.Phase != "eio-busy" && q.Phase != "eio-idle" && q.Phase != "hang-busy" && q.Phase != "hang-idle" {
+			return errors.New("invalid fixed I/O fault case")
+		}
 	default:
 		return errors.New("unknown fixed fixture operation")
 	}
@@ -434,10 +438,31 @@ func (n *node) recover(ctx context.Context) (map[string]any, error) {
 	return map[string]any{"phase": old.Phase, "l1_boot_changed": true, "old_durable_destroyed": true, "old_resources_absent": true, "old_key_refused_410": true, "fresh_real_kvm_exec_destroy": true, "fresh_guest_boot_changed": true, "daemon_start_to_old_reclaimed_ms": recoveryMS}, nil
 }
 
-func runNode() error {
+func requireNode() error {
 	marker, e := os.ReadFile("/etc/xandbox-host-fixture")
 	if e != nil || string(marker) != fixtureMarker || os.Geteuid() != 0 || os.Getpid() != 1 {
 		return errors.New("isolated L1 PID1 fixture marker required")
+	}
+	return nil
+}
+
+func runNode() error { return runNodeProfile(false) }
+
+func runNodeProfile(stateIO bool) error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	var mapper *stateMapper
+	if stateIO {
+		var e error
+		mapper, e = setupStateMapper()
+		if e != nil {
+			return e
+		}
+		defer mapper.close()
+		if e = unix.Mount(stateDevice, "/srv", "ext4", unix.MS_NOSUID, "errors=remount-ro"); e != nil {
+			return e
+		}
 	}
 	serial, e := os.OpenFile("/dev/ttyS1", os.O_RDWR|unix.O_NOCTTY, 0)
 	if e != nil {
@@ -482,6 +507,12 @@ func runNode() error {
 				}
 			case "checkpoint":
 				result, e = n.checkpoint(ctx, q.Phase)
+			case "io-fault":
+				if mapper == nil {
+					e = errors.New("isolated state-I/O image profile required")
+				} else {
+					result, e = n.ioFault(ctx, mapper, q.Phase)
+				}
 			case "recover":
 				e = kvmAvailable()
 				if e == nil {

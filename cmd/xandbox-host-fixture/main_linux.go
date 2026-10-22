@@ -22,6 +22,8 @@ func main() {
 		err = qemuChild(*config)
 	case "node":
 		err = runNode()
+	case "node-io":
+		err = runNodeProfile(true)
 	default:
 		err = fmt.Errorf("invalid fixture mode")
 	}
