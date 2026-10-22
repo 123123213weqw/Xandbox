@@ -33,6 +33,7 @@ type Config struct {
 	Initrd           Asset           `json:"initrd"`
 	Workspace        Asset           `json:"workspace"`
 	Snapshot         *SnapshotPolicy `json:"snapshot,omitempty"`
+	IO               *IOPolicy       `json:"io,omitempty"`
 }
 
 const diskBytes = 128 << 20
@@ -75,6 +76,9 @@ func (c Config) validate() error {
 	}
 	if filepath.Base(c.Firecracker.Path) != "firecracker" {
 		return errors.New("Firecracker executable basename must be firecracker")
+	}
+	if c.IO != nil {
+		return c.IO.validate()
 	}
 	return nil
 }

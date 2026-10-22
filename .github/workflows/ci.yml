@@ -54,6 +54,7 @@ jobs:
           python3 -m unittest discover -s scripts -p test_guest_fault_fixture.py
           python3 -m py_compile scripts/kvm_mixed_load.py scripts/kvm_resources.py
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
+          python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:

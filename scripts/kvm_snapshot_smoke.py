@@ -46,6 +46,7 @@ def main():
                  'export-dir', 'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--mixed-cycles', type=int, default=0, help='optional 1..256 fresh-VM switches PER tenant, two workers')
+    parser.add_argument('--io-budget', action='store_true', help='opt-in fixed8MiB/s +4096ops/s dual-layer IO proof after paused snapshot restore')
     parser.add_argument('--mixed-min-seconds', type=float, default=0, help='0..240 seconds of explicit closed-loop pacing')
     args = parser.parse_args()
     if (args.mixed_cycles != 0 and not 1 <= args.mixed_cycles <= 256) or not 0 <= args.mixed_min_seconds <= 240:
@@ -132,6 +133,11 @@ def main():
                 assert config[name]['sha256'] == manifest[name + '_sha256']
         config['workspace'] = {'path': str(workspace), 'sha256': digest(workspace)}
         cfg, auth = root / 'config.json', root / 'auth.json'
+        if args.io_budget:
+            from kvm_io_probe import fixture_io_policy
+            config['io'] = fixture_io_policy(root, cgroup)
+            result['io_policy'] = config['io']
+            result['io_harness_sha256'] = digest(Path(__file__).with_name('kvm_io_probe.py'))
         private_json(cfg, config)
         tokens = {name: secrets.token_hex(32) for name in ('alpha', 'beta')}
         private_json(auth, {'version': 1, 'keys': [{'tenant_id': n, 'max_instances': 3 if args.mixed_cycles else 8,
@@ -241,6 +247,17 @@ def main():
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
         result['checks'].append('empty schema2 catalog refuses Create without cold or host fallback and leaves no owner')
         template = admin('publish')['template_id']; admin('activate', template)
+        if args.io_budget:
+            from kvm_io_probe import run_io_probe
+            probe = create()
+            def io_submit(argv, timeout):
+                return call('POST', path(probe) + '/exec', {'generation': probe['generation'], 'argv': argv, 'timeout_ms': timeout}, expected=202)
+            result['io_pressure'] = {}
+            result['io_pressure'] = run_io_probe(root=root, group=group(probe), api=jail(probe) / 'api.sock', policy=config['io'],
+                submit=io_submit, status=lambda accepted: call('GET', path(probe) + '/executions/' + accepted['id']),
+                delete=lambda: call('DELETE', path(probe), {'generation': probe['generation']}, expected=202),
+                destroyed=lambda: destroyed(probe), result=result['io_pressure'])
+            result['checks'].append('paused snapshot receives and verifies dual IO policy; operator direct IO and guest direct read/write pressure, busy Stop and durable GC are independently observed')
         if args.mixed_cycles:
             from kvm_mixed_load import run_mixed
             def metrics():
