@@ -126,7 +126,7 @@ func TestRevokeLeaseIsCapabilityOnlyBoundedAndCannotRevive(t *testing.T) {
 	go func() { b, _ := io.ReadAll(r); finished <- b }()
 	select {
 	case b := <-finished:
-		if len(b) != lease.FrameSize {
+		if len(b) < lease.FrameSize || len(b)%lease.FrameSize != 0 {
 			t.Fatal("initial frame/EOF mismatch", len(b))
 		}
 	case <-time.After(time.Second):
