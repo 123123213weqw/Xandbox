@@ -224,6 +224,7 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 	if e = strictjson.Decode(b, &old); e != nil {
 		return nil, e
 	}
+	result := map[string]any{"quota_limits_and_ownership_survived_cold_boot": true, "quota_accounting_matches_recovered_namespace": true}
 	if old.Phase == "destroyed" {
 		if e = driverQuotaAllClear(); e != nil {
 			return nil, e
@@ -240,6 +241,13 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 		if e = validateDriverQuotaAccounting(old, r, blocks, inodes, entries); e != nil {
 			fmt.Fprintf(os.Stderr, "private quota coldboot comparison failed: before=%+v after=%+v; named-after blocks=%d inodes=%d\n", old.Record, r, blocks, inodes)
 			return nil, e
+		}
+		result["quota_charge_before_cold_boot_bytes"] = old.Record.Space
+		result["quota_charge_after_cold_boot_bytes"] = r.Space
+		if before, ok := old.Entries["root/firecracker.pid"]; ok {
+			after := entries["root/firecracker.pid"]
+			result["non_authoritative_pid_file_not_used_for_recovery"] = true
+			result["pid_file_was_empty_after_cold_boot"] = before.Size > 0 && after.Size == 0
 		}
 		// A live VM may change backing allocation after the checkpoint. Limits
 		// must be immutable; recovered charge must match independent inode stats.
@@ -263,7 +271,7 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 			}
 		}
 	}
-	return map[string]any{"quota_limits_and_ownership_survived_cold_boot": true, "quota_accounting_matches_recovered_namespace": true}, nil
+	return result, nil
 }
 
 func driverQuotaTree(jail string) (uint64, uint64, map[string]driverQuotaEntry, error) {
@@ -318,6 +326,15 @@ func validateDriverQuotaAccounting(old driverQuotaReceipt, actual quotaRecord, b
 			return errors.New("persistent jail entry lost")
 		}
 		before.Blocks, after.Blocks = 0, 0
+		// The pinned jailer writes this diagnostic PID file without fsync.
+		// Its bytes are NOT ownership or kill authority. Empty content after
+		// power loss is valid; never make recovery depend on a saved PID.
+		if path == "root/firecracker.pid" {
+			if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Size < 0 || before.Size > 20 || after.Size < 0 || after.Size > 20 {
+				return errors.New("unexpected non-authoritative PID file metadata")
+			}
+			before.Size, after.Size = 0, 0
+		}
 		if !reflect.DeepEqual(before, after) {
 			return errors.New("persistent inode logical metadata changed")
 		}
@@ -390,6 +407,8 @@ func driverQuotaDiagnostic() (map[string]any, error) {
 				class = "initrd"
 			case "root/firecracker":
 				class = "vmm_binary"
+			case "root/firecracker.pid":
+				class = "non_authoritative_pid_file"
 			case "root/dev":
 				class = "device_directory"
 			case "root/dev/net":

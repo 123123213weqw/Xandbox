@@ -115,3 +115,30 @@ func TestDriverQuotaColdBootChecksPolicyAndIndependentChargeNotFrozenLiveBlocks(
 		t.Fatal("lost name accepted")
 	}
 }
+
+func TestColdBootNeverDependsOnNonDurableJailerPIDFileContents(t *testing.T) {
+	workspace := driverQuotaEntry{Inode: 1, Links: 1, Mode: 0100600, UID: 400000, GID: 400000, Size: 128 << 20, Blocks: 128 << 20}
+	pid := driverQuotaEntry{Inode: 2, Links: 1, Mode: 0100600, Size: 3, Blocks: 4096}
+	old := driverQuotaReceipt{Record: quotaRecord{BHard: 192 << 10, IHard: 128, Space: (128 << 20) + 4096, Inodes: 2, Valid: 63}, Entries: map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/firecracker.pid": pid}}
+	after := old.Record
+	after.Space = 128 << 20
+	pid.Size = 0
+	pid.Blocks = 0
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 2, map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/firecracker.pid": pid}); e != nil {
+		t.Fatal("empty diagnostic PID file prevents safe ownership-based recovery", e)
+	}
+	pid.Inode++
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 2, map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/firecracker.pid": pid}); e == nil {
+		t.Fatal("replaced PID inode accepted")
+	}
+	pid.Inode--
+	pid.Size = 21
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 2, map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/firecracker.pid": pid}); e == nil {
+		t.Fatal("unexpected PID file accepted")
+	}
+	workspace.Size--
+	pid.Size = 0
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 2, map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/firecracker.pid": pid}); e == nil {
+		t.Fatal("lost mutable backing size accepted")
+	}
+}
