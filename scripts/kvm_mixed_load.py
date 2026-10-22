@@ -203,8 +203,15 @@ def run_mixed(*, cycles, min_seconds, call, finish, destroyed, group, empty, wai
         result['duration_seconds'] = round(time.perf_counter() - began, 3)
         result['observer_errors'] = observer_errors
     assert not observer.is_alive() and not observer_errors, 'resource observation failed'
+    # DESTROYED persistence can precede a worker's deferred running-gauge
+    # decrement. Wait for the independent queue view rather than racing it.
+    wait(lambda: all(value == 0 for value in gauges(metrics()).values()), 'mixed final metric drain')
     final = sample()
     result['resources'].append(final)
+    intervals = [result['resources'][i]['elapsed_ms'] - result['resources'][i - 1]['elapsed_ms']
+                 for i in range(1, len(result['resources']))]
+    result['resource_observation_interval_ms'] = {'min': min(intervals), 'max': max(intervals),
+                                                'mean': round(sum(intervals) / len(intervals), 3)}
     assert final['owned_cgroup_count'] == final['durable_owner_files'] == final['private_workspace_logical_bytes'] == 0
     assert all(final['metric_' + name] == 0 for name in GAUGES)
     result['resource_peaks'] = {key: max(row[key] for row in result['resources']) for key in final if key != 'elapsed_ms'}
