@@ -143,7 +143,7 @@ def main():
         def group(ref): return cgroup / name(ref)
         def owner(ref): return state / 'firecracker' / (name(ref) + '.json')
         def jail(ref): return runtime / 'j/firecracker' / name(ref)
-        request = {'ttl_ms': 300000, 'limits': {'max_exec_ms': 120000, 'max_output_bytes': 8192}}
+        request = {'ttl_ms': 300000, 'limits': {'max_exec_ms': 60000, 'max_output_bytes': 8192}}
 
         def create(key):
             ref = call('POST', '/v1/sandboxes', request, expected=201, key=key)
@@ -193,7 +193,7 @@ def main():
             key = secrets.token_hex(16)
             ref = create(key)
             execute(ref, ['true'])
-            busy = job(ref, ['sh', '-c', 'sleep 120 & sleep 120 & echo ready > storage-busy-ready; wait'], timeout=120000)
+            busy = job(ref, ['sh', '-c', 'sleep 120 & sleep 120 & echo ready > storage-busy-ready; wait'], timeout=60000)
             assert execute(ref, ['sh', '-c', 'while [ ! -f storage-busy-ready ]; do sleep 0.01; done; cat storage-busy-ready'])['stdout'].strip() == 'ready'
             assert call('GET', path(ref) + '/executions/' + busy['id'])['status'] == 'RUNNING'
             ledger = state / 'ledger' / (ref['id'] + '.json')
