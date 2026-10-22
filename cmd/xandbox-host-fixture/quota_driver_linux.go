@@ -212,6 +212,7 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 			return nil, e
 		}
 		if r != old.Record {
+			fmt.Fprintf(os.Stderr, "private quota coldboot numeric diagnostic: before=%+v after=%+v\n", old.Record, r)
 			return nil, fmt.Errorf("ordinary driver quota record changed across coldboot")
 		}
 	}
