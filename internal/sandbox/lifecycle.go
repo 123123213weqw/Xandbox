@@ -21,7 +21,7 @@ func stoppedState(s State) bool { return s == Stopped || s == Reclaiming || s ==
 // acknowledgement and its snapshot are immutable once published, so a Stop
 // waiter need not queue behind a subsequent slow Cleanup on the same instance.
 func (i *instance) publish() {
-	i.leaseEligible.Store(i.record.State == Creating || i.record.State == Ready)
+	i.leaseEligible.Store((i.record.State == Creating || i.record.State == Ready) && i.intent.Load() == 0)
 	i.recovering.Store(i.record.DeleteRequested || i.record.State == Stopping || i.record.State == Reclaiming)
 	if stoppedState(i.record.State) {
 		i.stopOnce.Do(func() { i.stoppedRecord = i.record; close(i.stopped) })
@@ -46,7 +46,8 @@ func (i *instance) fenceIntent(deleteResources bool) {
 	if i.record.State == Destroyed {
 		return
 	}
-	i.record.DeleteRequested = i.record.DeleteRequested || deleteResources
+	i.requestIntent(deleteResources)
+	i.record.DeleteRequested = i.record.DeleteRequested || deleteResources || i.intent.Load() == 2
 	if !stoppedState(i.record.State) {
 		i.record.State = Stopping
 	}
@@ -105,7 +106,7 @@ func (m *Manager) reaper() {
 		closing := m.closing
 		m.mu.Unlock()
 		for _, i := range items {
-			if !closing && i.leaseEligible.Load() {
+			if !closing && i.intent.Load() == 0 && i.leaseEligible.Load() {
 				if err := m.driver.RefreshLease(i.ref); err != nil {
 					i.leaseFailed.Store(true)
 				}
@@ -123,6 +124,8 @@ func (m *Manager) reaper() {
 				}
 				if !i.record.DeleteRequested && (closing || i.expired() || (i.leaseFailed.Load() && i.leaseEligible.Load())) {
 					i.fenceIntent(true)
+				} else if i.intent.Load() != 0 && (!stoppedState(i.record.State) || i.intent.Load() == 2) {
+					i.fenceIntent(i.intent.Load() == 2)
 				}
 				needed := i.neededWork()
 				i.mu.Unlock()
@@ -215,4 +218,19 @@ func (m *Manager) perform(i *instance, stage workStage) {
 func (i *instance) expired() bool {
 	now, err := hostclock.NowNS()
 	return err != nil || i.expiresNS <= 0 || now >= i.expiresNS
+}
+
+// Immutable Ref validation must precede this atomic revocation. Publication of
+// READY after delayed I/O cannot re-enable renewal or execution admission.
+func (i *instance) requestIntent(deleteResources bool) {
+	target := uint32(1)
+	if deleteResources {
+		target = 2
+	}
+	for old := i.intent.Load(); old < target; old = i.intent.Load() {
+		if i.intent.CompareAndSwap(old, target) {
+			break
+		}
+	}
+	i.leaseEligible.Store(false)
 }

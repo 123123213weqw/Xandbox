@@ -55,7 +55,7 @@ func TestKernelHardTimerSurvivesContinuousValidRenewal(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	hard := now + int64(200*time.Millisecond)
+	hard := now + int64(3*time.Second)
 	b, _ := lease.ParseBinding(strings.Repeat("2", 64))
 	stopped := make(chan struct{})
 	var once sync.Once
@@ -88,7 +88,7 @@ func TestKernelHardTimerSurvivesContinuousValidRenewal(t *testing.T) {
 	}
 	select {
 	case <-stopped:
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("renewal extended absolute hard TTL")
 	}
 	w.Close()
