@@ -30,6 +30,23 @@ def validate_manifest(manifest):
         if not re.fullmatch('[0-9a-f]{64}', value): raise ValueError('explicit artifact digest required')
 
 
+def init_scripts(modules):
+    # Linux 6.8 cannot pivot_root from its special initramfs rootfs. Move to
+    # a bounded, ordinary tmpfs mount BEFORE starting the unmodified jailer.
+    # Both scripts execute only as PID1 inside the owned L1, never on L0.
+    bootstrap = '#!/bin/sh\nset -eu\nexport PATH=/usr/sbin:/usr/bin:/sbin:/bin\n'
+    bootstrap += 'mkdir /newroot\nmount -t tmpfs -o mode=755,size=256m tmpfs /newroot\n'
+    bootstrap += 'for entry in /*; do\n[ "$entry" = /newroot ] || cp -a "$entry" /newroot/\ndone\n'
+    bootstrap += 'exec switch_root -c /dev/console /newroot /sbin/xandbox-host-init\n'
+    service = '#!/bin/sh\nset -eu\nexport PATH=/usr/sbin:/usr/bin:/sbin:/bin\n'
+    service += 'mount -t devtmpfs devtmpfs /dev\nmount -t proc proc /proc\nmount -t sysfs sysfs /sys\n'
+    service += 'mkdir -p /run /tmp /srv /sys/fs/cgroup\nmount -t tmpfs -o mode=755,size=32m tmpfs /run\nmount -t cgroup2 cgroup2 /sys/fs/cgroup\n'
+    service += ''.join('insmod /lib/fixture/' + name + '\n' for name in modules)
+    service += 'i=0\nwhile [ ! -b /dev/vda ]; do i=$((i+1)); [ "$i" -lt 100 ]; sleep 0.1; done\n'
+    service += 'mount -t ext4 -o rw,nosuid /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node >/dev/console 2>&1\n'
+    return bootstrap, service
+
+
 def build_initrd(*, alpine, fixture, manifest, output):
     validate_manifest(manifest)
     assert os.geteuid() == 0 and not output.exists()
@@ -57,14 +74,9 @@ def build_initrd(*, alpine, fixture, manifest, output):
             assert source.is_file() and not source.is_symlink() and source.stat().st_size <= 8<<20 and digest(source) == wanted
             target = root / 'lib/fixture' / source.name
             shutil.copyfile(source, target); target.chmod(0o444); modules.append(target.name)
-        # insmod below executes ONLY on L1 after QEMU boot, never on L0.
-        init = '#!/bin/sh\nset -eu\nexport PATH=/usr/sbin:/usr/bin:/sbin:/bin\n'
-        init += 'mount -t devtmpfs devtmpfs /dev\nmount -t proc proc /proc\nmount -t sysfs sysfs /sys\n'
-        init += 'mkdir -p /run /tmp /srv /sys/fs/cgroup\nmount -t tmpfs -o mode=755,size=32m tmpfs /run\nmount -t cgroup2 cgroup2 /sys/fs/cgroup\n'
-        init += ''.join('insmod /lib/fixture/' + name + '\n' for name in modules)
-        init += 'i=0\nwhile [ ! -b /dev/vda ]; do i=$((i+1)); [ "$i" -lt 100 ]; sleep 0.1; done\n'
-        init += 'mount -t ext4 -o rw,nosuid /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node >/dev/console 2>&1\n'
-        (root / 'init').write_text(init); (root / 'init').chmod(0o755)
+        bootstrap, service = init_scripts(modules)
+        (root / 'init').write_text(bootstrap); (root / 'init').chmod(0o755)
+        (root / 'sbin/xandbox-host-init').write_text(service); (root / 'sbin/xandbox-host-init').chmod(0o755)
         for name, major, minor in (('console', 5, 1), ('null', 1, 3), ('tty', 5, 0)):
             target = root / 'dev' / name
             if not target.exists(): os.mknod(target, stat.S_IFCHR | 0o600, os.makedev(major, minor))
