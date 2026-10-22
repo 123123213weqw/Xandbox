@@ -403,9 +403,8 @@ func TestKVMInitializationFault(t *testing.T) {
 	}
 }
 
-// Guard against accidentally moving the injection ahead of the durable owner
-// write or making it a production option. The hardware case additionally checks
-// the real owner, ledger, KVM fd and recovery from an ordinary sandboxd binary.
+// The private fixture contains only orchestration fields, never initialization
+// entropy. Durability/order evidence comes from the opt-in hardware case above.
 func TestInitializationFaultFixtureJSONIsPrivateOnly(t *testing.T) {
 	f := initializationFixture{Mode: "before_initialize", CreateKey: strings.Repeat("a", 32)}
 	b, e := json.Marshal(f)
@@ -442,6 +441,8 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 			}
 			defer req.WipeEntropy()
 			done := make(chan struct{})
+			var handlers sync.WaitGroup
+			boot, hash := req.BootID, req.Digest()
 			go func() {
 				defer close(done)
 				for {
@@ -449,7 +450,9 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 					if e != nil {
 						return
 					}
+					handlers.Add(1)
 					go func() {
+						defer handlers.Done()
 						defer c.Close()
 						_ = c.SetDeadline(time.Now().Add(time.Second))
 						r := bufio.NewReader(c)
@@ -472,10 +475,11 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 							return
 						}
 						groups := 0
-						_ = guestwire.Write(c, guestwire.MaxResponse, guestwire.Response{Version: 1, Ref: in.Ref, Status: "READY", BootID: req.BootID, InitializationHash: req.Digest(), ActiveGroups: &groups})
+						_ = guestwire.Write(c, guestwire.MaxResponse, guestwire.Response{Version: 1, Ref: in.Ref, Status: "READY", BootID: boot, InitializationHash: hash, ActiveGroups: &groups})
 					}()
 				}
 			}()
+			defer func() { l.Close(); <-done; handlers.Wait() }()
 			proxy, e := newInitializationFaultBridge(socket, mode, filepath.Join(root, "barrier.json"), req.Ref)
 			if e != nil {
 				t.Fatal(e)
@@ -500,9 +504,6 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 					t.Fatal("post-sealed barrier missing")
 				}
 			}
-			proxy.close()
-			l.Close()
-			<-done
 		})
 	}
 }
