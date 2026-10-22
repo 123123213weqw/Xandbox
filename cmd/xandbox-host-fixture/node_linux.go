@@ -584,6 +584,11 @@ func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
 				}
 				_ = log.Close()
 			}
+			if quotaDriver && q.Operation == "recover" {
+				if diag, diagErr := driverQuotaDiagnostic(); diagErr == nil {
+					out["quota_diagnostic"] = diag
+				}
+			}
 			out["error"] = "FIXTURE_STEP_FAILED"
 		}
 		if e = json.NewEncoder(serial).Encode(out); e != nil {

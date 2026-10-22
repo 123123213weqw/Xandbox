@@ -324,3 +324,90 @@ func validateDriverQuotaAccounting(old driverQuotaReceipt, actual quotaRecord, b
 	}
 	return nil
 }
+
+// Only bounded enums and allocation numbers leave this PRIVATE fixture RPC.
+// No raw PID, UID, project, inode number, generation or filesystem path is sent.
+func driverQuotaDiagnostic() (map[string]any, error) {
+	if e := requireNode(); e != nil {
+		return nil, e
+	}
+	b, e := os.ReadFile("/srv/fixture/driver-quota-receipt.json")
+	if e != nil {
+		return nil, e
+	}
+	var old driverQuotaReceipt
+	if e = strictjson.Decode(b, &old); e != nil {
+		return nil, e
+	}
+	actual, e := driverQuotaRead(old.Project)
+	if e != nil {
+		return nil, e
+	}
+	blocks, inodes, entries, e := driverQuotaTree(old.Jail)
+	if e != nil {
+		return nil, e
+	}
+	changes := []map[string]any{}
+	for path, before := range old.Entries {
+		after, ok := entries[path]
+		fields := []string{}
+		if !ok {
+			fields = append(fields, "missing")
+		}
+		if before.Inode != after.Inode {
+			fields = append(fields, "inode_changed")
+		}
+		if before.Links != after.Links {
+			fields = append(fields, "links_changed")
+		}
+		if before.Device != after.Device {
+			fields = append(fields, "device_changed")
+		}
+		if before.Mode != after.Mode {
+			fields = append(fields, "mode_changed")
+		}
+		if before.UID != after.UID {
+			fields = append(fields, "owner_changed")
+		}
+		if before.GID != after.GID {
+			fields = append(fields, "group_changed")
+		}
+		if before.Size != after.Size {
+			fields = append(fields, "size_changed")
+		}
+		if len(fields) > 0 {
+			class := "other"
+			switch path {
+			case ".":
+				class = "jail"
+			case "root":
+				class = "root_directory"
+			case "root/workspace.ext4":
+				class = "workspace"
+			case "root/kernel":
+				class = "kernel"
+			case "root/initrd":
+				class = "initrd"
+			case "root/firecracker":
+				class = "vmm_binary"
+			case "root/dev":
+				class = "device_directory"
+			case "root/dev/net":
+				class = "network_device_directory"
+			case "root/dev/kvm":
+				class = "kvm_device"
+			case "root/api.sock":
+				class = "api_socket"
+			case "root/v.sock":
+				class = "vsock_socket"
+			}
+			row := map[string]any{"entry_class": class, "changed_fields": fields}
+			if before.Size != after.Size {
+				row["size_before"] = before.Size
+				row["size_after"] = after.Size
+			}
+			changes = append(changes, row)
+		}
+	}
+	return map[string]any{"space_before": old.Record.Space, "space_after": actual.Space, "named_blocks_before": old.NamespaceBlocks, "named_blocks_after": blocks, "inodes_before": old.Record.Inodes, "inodes_after": actual.Inodes, "named_inodes_after": inodes, "block_hard_before": old.Record.BHard, "block_hard_after": actual.BHard, "inode_hard_before": old.Record.IHard, "inode_hard_after": actual.IHard, "changes": changes}, nil
+}

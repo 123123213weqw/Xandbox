@@ -195,7 +195,10 @@ def main():
         def request(operation,phase=None):
             value={'version':1,'operation':operation}
             if phase:value['phase']=phase
-            channel.send(value); out=channel.read(); assert out['ok'],'L1 fixed operation failed; inspect private console';return out['result']
+            channel.send(value); out=channel.read()
+            if not out['ok'] and args.quota_driver and operation=='recover' and 'quota_diagnostic' in out:
+                result['quota_coldboot_failure_diagnostic']=out['quota_diagnostic']
+            assert out['ok'],'L1 fixed operation failed; inspect private console';return out['result']
         def power_cut():
             nonlocal process,lifetime,channel,launcher_log
             qmp_probe(root/'qmp.sock'); began=time.perf_counter(); (group/'cgroup.kill').write_text('1')
