@@ -4,11 +4,13 @@ package warden
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 
 	"golang.org/x/sys/unix"
@@ -86,6 +88,17 @@ func TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation(t *testing.T) {
 func TestQuotaMutationFilterIsInheritedAcrossExec(t *testing.T) {
 	if runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64" {
 		t.Skip("64-bit filter only")
+	}
+	// race/cgo binaries cannot synchronize prctl on arbitrary C-created
+	// threads. The production CGO0 warden must not silently fall back. The
+	// actual inherited kernel proof is also run separately with CGO_ENABLED=0.
+	if _, _, errno := syscall.AllThreadsSyscall(unix.SYS_GETPID, 0, 0, 0); errno == unix.ENOTSUP {
+		if e := installQuotaMutationFilter(); !errors.Is(e, unix.ENOTSUP) {
+			t.Fatalf("cgo must fail closed before filter installation: %v", e)
+		}
+		t.Skip("all-thread synchronization unsupported in cgo/race; separate CGO0 kernel test required")
+	} else if errno != 0 {
+		t.Fatal(errno)
 	}
 	if mode := os.Getenv("XANDBOX_QUOTA_FILTER_TEST"); mode != "" {
 		if mode == "install" {

@@ -4,6 +4,7 @@ package warden
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -53,7 +54,7 @@ func installQuotaMutationFilter() error {
 	// A single-thread prctl is insufficient: os/exec can fork on another Go
 	// thread. All existing threads and all future descendants must inherit NNP.
 	if _, _, errno := syscall.AllThreadsSyscall(unix.SYS_PRCTL, unix.PR_SET_NO_NEW_PRIVS, 1, 0); errno != 0 {
-		return errors.New("cannot set all-thread quota no-new-privileges")
+		return fmt.Errorf("cannot set all-thread quota no-new-privileges: %w", errno)
 	}
 	program := unix.SockFprog{Len: uint16(len(p)), Filter: &p[0]}
 	tid, _, errno := unix.Syscall(unix.SYS_SECCOMP, unix.SECCOMP_SET_MODE_FILTER, unix.SECCOMP_FILTER_FLAG_TSYNC, uintptr(unsafe.Pointer(&program)))
