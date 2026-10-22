@@ -30,6 +30,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 ## 已实现
 
+新增 [真实ext4 ENOSPC恢复验收](docs/STORAGE.md)：guest写满128MiB工作盘，以及小卷数据块/inode耗尽×忙碌/空闲VM共5场景通过。小卷只在独占mount namespace内填充，未填满共享宿主盘；持久删除失败不假称成功、不提前还容量，释放空间后同state恢复并拒绝旧key。空闲VM在故障下约4.3–5.0秒才确认host停止，不是毫秒级承诺；EIO、掉电、宿主配额和完整M2仍未完成。
+
 - HTTP 控制面使用 Go 标准库；Linux 宿主时钟/guardian 和实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。
 - HTTP over Unix socket，不监听 TCP；私有状态目录 `0700`、socket `0600`。
 - 状态目录单进程锁；账本按实例原子写入，写文件和父目录均执行 fsync。
