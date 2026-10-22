@@ -8,17 +8,17 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
-停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)。
+停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。
 
 生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。真实后端的归属、监督与使用限制见 [Firecracker 驱动](docs/FIRECRACKER.md)。独立组件报告不是服务级生产认证，mock 接口始终不提供 VM 隔离。
 
-[真实后端服务验收](docs/validation/kvm-driver-hardened-2026-10-22.json) 已通过 16 项 KVM 检查（含控制器 SIGKILL 与重启回收），但尚未覆盖完整生产故障矩阵或切换性能。
+[最新真实后端验收](docs/validation/kvm-guardian-2026-10-22.json) 已通过 21 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效及独立受控 fsync 阻塞用例。阻塞用例的 [9 项详细断言](docs/validation/kvm-guardian-fsync-2026-10-22.json) 是其中一项的展开，不是额外 9 个场景。尚未覆盖完整生产故障矩阵或切换性能。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 
 ## 已实现
 
-- 控制面以 Go 标准库实现；实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。
+- HTTP 控制面使用 Go 标准库；Linux 宿主时钟/guardian 和实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。
 - HTTP over Unix socket，不监听 TCP；私有状态目录 `0700`、socket `0600`。
 - 状态目录单进程锁；账本按实例原子写入，写文件和父目录均执行 fsync。
 - `CREATING → READY → STOPPING → STOPPED → RECLAIMING → DESTROYED`。
@@ -29,6 +29,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 - 删除幂等、部分创建失败回滚、清理失败退避重试。
 - 未回收实例仍占用容量；账本确认 `DESTROYED` 后才归还容量。
 - 重启后不复活旧实例：所有非终态实例被栅栏并回收。
+- Linux guardian 独立监控 Ref-bound 5 秒短租约与不可延长的 BOOTTIME 硬截止；UTC 到期时间仅供展示。
 - 模拟工作区读写使用 `os.Root`，限制路径及符号链接越界。
 
 源码兼容最低 Go 1.25；涉及镜像/部署应使用已打补丁的受维护工具链，本轮安全扫描基线为 Go 1.27.3。旧版本兼容性 CI 不代表生产安全认证。
@@ -136,7 +137,7 @@ python3 scripts/smoke.py \
 3. **Stop**：终止实例所属执行单元和专属辅助进程，并确认退出；不能只发送信号后返回成功。驱动必须配合 context 的有界操作约定。
 4. **Cleanup**：幂等回收该 Ref 的私有资源，不能删除仍被其他实例使用的基础镜像、快照或全局共享服务。
 
-实验性 Firecracker 驱动已经接入鉴权与生命周期，采用持久归属、出生即入 cgroup 的 warden、EOF 整组停止和私有复制工作盘。仍缺少完整故障/重启/负载验收、业务网络策略、快照恢复、预热池、会话原子切换与多节点调度；详见生产门槛和驱动限制。
+实验性 Firecracker 驱动已经接入鉴权与生命周期，采用持久归属、出生即入 cgroup 的 warden、EOF/短租约/硬截止整组停止和私有复制工作盘。仍缺少完整故障/重启/负载验收、业务网络策略、快照恢复、预热池、会话原子切换与多节点调度；详见生产门槛和驱动限制。
 
 重启策略当前是“全部回收”，不是“自动恢复会话”。后端名不匹配时拒绝恢复。管理服务收到 SIGINT/SIGTERM 后停止接受请求并尝试回收；超时则非零退出，下次使用同一状态目录继续恢复。
 
@@ -148,7 +149,9 @@ cmd/sandboxctl        Unix-socket 客户端
 cmd/xandbox-keygen    私有令牌与摘要配置生成器
 cmd/xandbox-agent     Linux guest 专用执行组件
 cmd/xandbox-guestctl  Firecracker vsock 诊断客户端
-cmd/xandbox-warden    Linux 可信生命周期管道监督进程
+cmd/xandbox-warden    Linux 可信租约/硬截止监督进程
+internal/hostclock    Linux BOOTTIME / 非 Linux mock 时钟
+internal/lease        私有 Ref-bound 续租协议
 internal/firecracker 实验性真实驱动、持久归属与 UID 租约
 internal/guest*      guest 执行、受限协议与 bridge 传输
 internal/access      令牌摘要校验与服务端租户策略

@@ -8,12 +8,14 @@
 2. Driver 在独立的 root 私有目录持久化后端配置绑定和每代 `{Ref, UID}` 归属；fsync 成功前不创建该代 cgroup、磁盘或进程。写后 fsync 出错也保留 UID 预留，等待安全回收。
 3. 配置并读回 host cgroup 限额；私有复制校验过的 kernel、initrd 和空白 ext4 模板。没有共享可写硬链接。
 4. 用 `clone3(CLONE_INTO_CGROUP)` 启动可信 Go warden，**出生即在该代的资源组内**，同时进入新的 host 网络 namespace。clone3 不支持时失败，不以“先 fork 后移动 PID”降级。
-5. warden 启动 jailer。jailer 使用相同已存在的 cgroup、chroot、专用 UID/GID 和默认 seccomp；不配置 virtio-net。特权控制 socket 不放到 guest 工作盘。
+5. warden 收到首个有效 Ref-bound 租约并启动独立 BOOTTIME timer 后才启动 jailer。jailer 使用相同已存在的 cgroup、chroot、专用 UID/GID 和默认 seccomp；不配置 virtio-net。特权控制 socket 不放到 guest 工作盘。
 6. Firecracker API 配置完成并收到 Ref/boot ID 正确的 guest READY 后，Manager 还要持久化 READY 才返回 201。
 7. Stop 先拒绝新任务、取消在途调用，再 `cgroup.kill`、等待 kernel `populated 0`，并回收控制器的直接子进程；完成后才持久化 STOPPED。恢复不依赖旧 PID，也不按 UID 批量杀进程。
 8. Cleanup 仅在停止证明之后删除该代 jail/cgroup/归属文件；确认归属文件删除已持久化才释放 UID，最后 Manager 持久化 DESTROYED 才返还实例配额。
 
 可信 warden 只接收 root 控制器传入的固定启动策略和两个继承 FD，没有租户 RPC。fd 3 是生命周期管道的读端，fd 4 是该代 cgroup.kill。**写端只在控制器内保留，不传给 warden/VMM**；控制器退出或 SIGKILL 后，EOF 触发整个 cgroup 的 kill（包括 warden 自身）。监督进程意外退出时，仍存活的控制器也会 kill 同一 cgroup。单纯依赖 jailer 的 `Pdeathsig` 不成立：[Linux 凭证变更会清除该信号设定](https://man7.org/linux/man-pages/man2/PR_SET_PDEATHSIG.2const.html)，本实现不把它当作保障。
+
+对“控制器仍持有写端但停止推进”的情况，现另有 5 秒短租约与创建前采样的不可延长硬截止。绝对期限由宿主 CLOCK_BOOTTIME 表达，不能以序列化 UTC 值延长；部分帧不能阻塞独立 timer。协议、原子撤权、升级限制及真实 SIGSTOP/guardian 失效结果见 [GUARDIAN.md](GUARDIAN.md)。停止与资源回收仍不是同一个事件。
 
 已存在但无法对应持久归属/账本的资源导致启动失败，不能“看到新目录为空就宣称旧 VM 已销毁”。runtime/cgroup 根、UID 范围或任一资产摘要与状态目录绑定不同，也会拒绝启动。当前尚无在线配置迁移/升级流程，即使资源已空也不自动重绑；不要删除账本或绑定文件来绕过恢复。
 
@@ -83,13 +85,13 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
   --report work/kvm-driver-report.json --log-dir work/kvm-driver-logs
 ```
 
-普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、持续负载下停止/GC 分池验证、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。DESTROYED 目前表示逻辑资源回收，不代表物理介质安全擦除；加密擦除/存储擦除策略尚未验收。生命周期管道检测控制器死亡，不检测仍保留写端的控制器死锁；独立租约/看门狗仍是开放门槛。
+普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、持续负载下停止/GC 分池验证、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。DESTROYED 目前表示逻辑资源回收，不代表物理介质安全擦除；加密擦除/存储擦除策略尚未验收。独立租约覆盖控制器暂停，但不覆盖 warden/控制器同时失效或宿主内核停滞，也没有生产最坏停止延迟承诺。
 
 参考：[jailer v1.17.0 已存在 cgroup 的精确行为](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/docs/jailer.md)、[cgroup v2 内核契约](https://docs.kernel.org/admin-guide/cgroup-v2.html)。
 
 ## 2026-10-22 服务实测
 
-[最新脱敏报告](validation/kvm-driver-hardened-2026-10-22.json) 来自源码 `254b269`，控制器/warden 均用 Go 1.27.3 构建并在真实 Linux/KVM 节点运行，16 项通过。机器为 Xeon Silver 4216、64 逻辑 CPU、约 251.5 GiB 系统内存，runtime 使用 ext4；只顺序测试单 VM，三个已接受任务在两个执行 slot 上排队。
+[早期服务脱敏报告](validation/kvm-driver-hardened-2026-10-22.json) 来自源码 `254b269`，控制器/warden 均用 Go 1.27.3 构建并在真实 Linux/KVM 节点运行，16 项通过。机器为 Xeon Silver 4216、64 逻辑 CPU、约 251.5 GiB 系统内存，runtime 使用 ext4；只顺序测试单 VM，三个已接受任务在两个执行 slot 上排队。
 
 本轮创建 READY 的 4 次样本约 1.50–1.67 秒。单次运行态 DELETE：接受约 2.7 ms、观测执行停止约 39.3 ms、持久 DESTROYED 约 133.2 ms；显式 Stop 的一个样本约 56.3 ms。控制器 SIGKILL 到 kernel cgroup 归零约 37.9 ms，重启到持久回收约 772 ms。这些是**顺序小样本验收，绝不是 P50/P95/P99、快照切换时间或 SLO**。缓存/负载未控制，驻留内存未测，磁盘仅写少量文件，未压满 128 MiB；具体观测点与原始精度见报告。
 
@@ -97,4 +99,4 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 
 [首次 patched-toolchain 服务报告](validation/kvm-driver-2026-10-22.json) 保留不变。其后补强了 UID 区间加法溢出的拒绝检查，并将 CI 中依赖 30 ms 创建 TTL 的旧测试改为 READY 后确定性过期（原失败是创建按预期拒绝了已过期实例，不是延长生产 TTL）。该回归测试 race 重复 100 次通过，数值校验补强后的真实 KVM 全部 16 项已再次通过。
 
-停止与 GC 已拆成独立有界池；配置、背压与关闭期限边界见 [LIFECYCLE.md](LIFECYCLE.md)。这不表示独立看门狗或所有 I/O 故障路径已完成。
+停止与 GC 已拆成独立有界池；配置、背压与关闭期限边界见 [LIFECYCLE.md](LIFECYCLE.md)。后续 guardian 源码 `2f7ac5d` 的 [21 项服务报告](validation/kvm-guardian-2026-10-22.json) 补充了控制器暂停、硬 TTL、guardian SIGKILL 和受控 fsync；观测点与限制见 [GUARDIAN.md](GUARDIAN.md)。历史 16 项报告不覆盖这些新增场景，均保留不改。

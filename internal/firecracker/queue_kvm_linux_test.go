@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -124,8 +125,15 @@ func TestKVMQueueIsolation(t *testing.T) {
 		r, err := manager.Get(b.ID)
 		return err == nil && r.State == sandbox.Stopped && r.DeleteRequested
 	})
-	afterExpiryMS := float64(time.Now().Sub(b.ExpiresAt)) / float64(time.Millisecond)
 	bkey, _ := key(b.Ref)
+	real.mu.Lock()
+	hard := real.procs[bkey].hardDeadline
+	real.mu.Unlock()
+	nowBoot, clockErr := hostclock.NowNS()
+	if clockErr != nil || nowBoot < hard {
+		t.Fatal("TTL execution domain stopped early instead of remaining renewed", clockErr)
+	}
+	afterExpiryMS := float64(nowBoot-hard) / float64(time.Millisecond)
 	group, _ := real.paths(bkey)
 	if err := emptyGroup(group); err != nil {
 		t.Fatal("VM still executing: ", err)

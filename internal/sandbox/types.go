@@ -104,13 +104,24 @@ type Job struct {
 	Error      string    `json:"error,omitempty"`
 }
 
+// Preparation contains trusted runtime policy. DeadlineNS is in the host clock
+// domain, captured before ownership persistence; ExpiresAt is only a wall-clock
+// API projection. Recovery never resurrects a deadline from a previous boot.
+type Preparation struct {
+	Limits     Limits
+	DeadlineNS int64
+}
+
 // Driver owns instance-specific resources. Stop must be idempotent and fence any
 // execution outside Manager's tracked calls before reporting success. Cleanup
 // must be idempotent and must never delete resources shared with another Ref.
 // A mock driver is NOT an isolation boundary.
 type Driver interface {
 	Name() string
-	Prepare(context.Context, Ref, Limits) error
+	Prepare(context.Context, Ref, Preparation) error
+	// RefreshLease must be bounded/nonblocking; no disk or RPC waits. Failure
+	// must fence the execution domain independently of reconciliation progress.
+	RefreshLease(Ref) error
 	Exec(context.Context, Ref, ExecRequest, int) (Output, error)
 	Stop(context.Context, Ref) error
 	Cleanup(context.Context, Ref) error

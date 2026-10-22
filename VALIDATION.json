@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0, M1 and guest_component entries are historical snapshots. Current integration status is in current_status and firecracker_driver; historical reports are not rewritten.",
+  "validation_history_note": "Top-level mock/M0, M1, guest_component, firecracker_driver and lifecycle_scheduler entries are historical snapshots. Current integration status is in current_status and guardian_leases; historical reports are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -123,7 +123,8 @@
       "experimental firecracker-linux-kvm"
     ],
     "production_ready": false,
-    "goal_complete": false
+    "goal_complete": false,
+    "latest_runtime_validation": "guardian_leases"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -211,6 +212,55 @@
       "independent monotonic controller lease/watchdog",
       "metadata retention/capacity and full audit/metrics",
       "snapshot/prewarm/atomic switch and latency SLO"
+    ]
+  },
+  "guardian_leases": {
+    "validated_on": "2026-10-22",
+    "production_ready": false,
+    "source_revision": "2f7ac5d4354531dbb37692e218cfdeadb8bb4582",
+    "service_report": "docs/validation/kvm-guardian-2026-10-22.json",
+    "controlled_fsync_report": "docs/validation/kvm-guardian-fsync-2026-10-22.json",
+    "service_checks": 21,
+    "service_scope": "16 baseline KVM service checks plus 4 guardian cases plus 1 separate controlled-fsync acceptance; the 9 fsync assertions expand that one case, not 9 additional scenarios",
+    "controlled_fsync_assertions": 9,
+    "toolchain": "go1.27.3 linux/amd64, cross-compiled on darwin/arm64; CGO_ENABLED=0 -trimpath -buildvcs=false; exact daemon, warden and test-binary SHA-256 verified on Linux before execution",
+    "policy": {
+      "clock": "CLOCK_BOOTTIME",
+      "lease_window_ms": 5000,
+      "renew_interval_ms": 1000,
+      "wire_version": "XBL1",
+      "maximum_lifetime_hours": 24
+    },
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "go_vet": "passed",
+      "mock_auth_process_smoke": "passed (50 mock lifecycle cycles)",
+      "lease_policy_repeat_50": "passed",
+      "controller_renewal_revocation_clock_and_ready_fsync_repeat_30": "passed",
+      "frame_fuzz_seconds": 5,
+      "linux_timerfd_partial_frame_and_hard_cap": "passed in Linux CI using actual kernel timerfd, not mocked clock",
+      "linux_saturated_nonblocking_pipe": "passed in Linux CI",
+      "real_kvm_controller_sigstop_and_hard_ttl": "passed; pipe remains open and paused controller ledger still READY after host execution stopped",
+      "real_kvm_guardian_sigkill": "passed; healthy controller monitor fenced entire generation",
+      "real_kvm_controlled_fsync_and_recovery": "passed; actual BOOTTIME expiry checked and premature stop rejected",
+      "owned_fixture_residue": "no VMM, cgroup, jail or UID manifest residue",
+      "govulncheck_linux_target": "0 reachable vulnerabilities; 0 imported-package findings; 6 uncalled required-module findings remain (v1.8.0, Go 1.27.3)"
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39750100799",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39749512357"
+    ],
+    "host_context": "Same hardware and fixed VM specification as firecracker_driver.host_context; queue test uses 2 VMs, 1 stop worker, 1 cleanup worker, 1 queued per pool and a 10 ms test-only reconciliation interval. No production load, controlled cache or RSS measurement.",
+    "not_validated": [
+      "whole-host suspend or wall clock manipulation (not performed on shared node)",
+      "host reboot and whole-node disk failure",
+      "controller and guardian simultaneous failure or paused guardian; kernel starvation and worst-case scheduling bounds",
+      "metadata schema migration, capacity and tombstone retention",
+      "host disk project quota and physical/cryptographic erasure",
+      "production image, fixed-asset/config migration and deployment upgrades",
+      "malicious guest normal-completion authenticity; no per-command security boundary promised",
+      "sustained load, fairness, RSS/resource curves and full audit/metrics",
+      "snapshot/prewarm/atomic switching and latency percentiles/SLO"
     ]
   }
 }
