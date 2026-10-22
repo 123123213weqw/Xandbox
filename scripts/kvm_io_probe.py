@@ -8,12 +8,80 @@ import sys
 import time
 
 from kvm_driver_smoke import UnixHTTP, wait
-from kvm_resources import cgroup_empty
+from kvm_resources import cgroup_empty, start_ticks
 
 BPS = 8 << 20
 OPS = 4096
 HOST_BYTES = 32 << 20
 GUEST_BYTES = 64 << 20
+
+
+def parse_wchar(raw):
+    values = [line.split(':', 1)[1].strip() for line in raw.splitlines() if line.startswith('wchar:')]
+    assert len(values) == 1 and values[0].isdigit(), 'invalid private proc IO observation'
+    return int(values[0])
+
+
+def own_vmm_counter(group):
+    wanted = '0::/' + str(group.relative_to('/sys/fs/cgroup'))
+    found = []
+    for pid in (group / 'cgroup.procs').read_text().split():
+        assert pid.isdigit()
+        proc = Path('/proc', pid)
+        before = start_ticks((proc / 'stat').read_text())
+        assert wanted in (proc / 'cgroup').read_text().splitlines()
+        vm = False
+        for fd in (proc / 'fd').iterdir():
+            try: vm = vm or 'kvm-vm' in os.readlink(fd)
+            except FileNotFoundError: pass  # Unrelated RPC fd can close while scanning.
+        assert start_ticks((proc / 'stat').read_text()) == before
+        if vm: found.append((proc, before))
+    assert len(found) == 1, 'exactly one VMM required in own generation'
+    proc, identity = found[0]
+    def observe():
+        assert start_ticks((proc / 'stat').read_text()) == identity
+        assert wanted in (proc / 'cgroup').read_text().splitlines()
+        value = parse_wchar((proc / 'io').read_text())
+        assert start_ticks((proc / 'stat').read_text()) == identity
+        return value
+    return observe
+
+
+def startup_rejections(*, root, config, daemon, auth, logs, private_json):
+    cgroup = Path(config['cgroup_root'])
+    assert cgroup.parent == Path('/sys/fs/cgroup') and cgroup.name.startswith('xandbox-')
+    assert not (cgroup / 'cgroup.procs').read_text().strip() and not any(p.is_dir() for p in cgroup.iterdir())
+    cases = []
+    for mode, error in (('wrong-backing-queue', b'IO policy must name the exact runtime backing queue'),
+                        ('missing-io-delegation', b'configured IO policy requires delegated io controller')):
+        policy = json.loads(json.dumps(config))
+        if mode == 'wrong-backing-queue': policy['io']['device'] = '4095:1048575'
+        cfg = root / (mode + '-config.json'); private_json(cfg, policy)
+        if mode == 'missing-io-delegation': (cgroup / 'cgroup.subtree_control').write_text('-io')
+        try:
+            p = subprocess.run([str(daemon), '-backend', 'firecracker', '-state-dir', str(root / (mode + '-state')),
+                '-auth-file', str(auth), '-firecracker-config', str(cfg)], env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'},
+                capture_output=True, timeout=20)
+            (logs / (mode + '.log')).write_bytes(p.stdout + p.stderr)
+            assert p.returncode != 0 and error in p.stderr
+            assert not any(p.is_dir() for p in cgroup.iterdir())
+            cases.append({'case': mode, 'startup_refused': True, 'no_vm_child_cgroup': True})
+        finally:
+            if mode == 'missing-io-delegation': (cgroup / 'cgroup.subtree_control').write_text('+io')
+    return cases
+
+
+def bound_policy_rejection(*, root, config, base, logs, private_json):
+    cgroup = Path(config['cgroup_root'])
+    assert not any(p.is_dir() for p in cgroup.iterdir())
+    changed = json.loads(json.dumps(config)); del changed['io']
+    cfg = root / 'removed-io-config.json'; private_json(cfg, changed)
+    command = list(base); command[command.index('-firecracker-config') + 1] = str(cfg)
+    p = subprocess.run(command, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'}, capture_output=True, timeout=20)
+    (logs / 'removed-io-policy.log').write_bytes(p.stdout + p.stderr)
+    assert p.returncode != 0 and b'backend binding changed' in p.stderr
+    assert not any(p.is_dir() for p in cgroup.iterdir())
+    return {'case': 'remove-bound-io-policy', 'startup_refused': True, 'no_vm_child_cgroup': True}
 
 
 def fixture_io_policy(root, cgroup):
@@ -98,6 +166,7 @@ def run_io_probe(*, root, group, api, policy, submit, status, delete, destroyed,
         child = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--direct-child', str(cgfd), str(fd)],
                                pass_fds=(cgfd, fd), capture_output=True, timeout=30, check=True)
         direct = json.loads(child.stdout)
+        result['operator_direct_io'] = direct
         assert direct['written_bytes'] == HOST_BYTES and direct['elapsed_ms'] >= 2000
         after = sample()
         direct['own_cgroup_io_stat_delta'] = {key: after[key] - before[key] for key in before}
@@ -116,14 +185,20 @@ def run_io_probe(*, root, group, api, policy, submit, status, delete, destroyed,
         ('read', ['dd', 'if=io-pressure', 'of=/dev/null', 'bs=1048576', 'iflag=direct'])):
         began = time.perf_counter(); complete(argv)
         ms = round((time.perf_counter() - began) * 1000, 3)
-        assert ms >= 5000, '64MiB transfer bypassed finite frontend observation guard'
         result['guest_direct_' + mode] = {'payload_bytes': GUEST_BYTES, 'elapsed_ms': ms}
+        assert ms >= 5000, '64MiB transfer bypassed finite frontend observation guard'
     after = sample()
     result['guest_phase_own_io_stat_delta'] = {key: after[key] - before[key] for key in before}
     # Do not assert all buffered guest IO is charged here: staged inode/page
     # ownership can remain in the controller, and cache reads do not hit media.
+    vmm_wchar = own_vmm_counter(group)
+    old_wchar = vmm_wchar()
     busy = submit(['sh', '-c', 'echo ready > io-pressure-ready; while :; do dd if=/dev/zero of=io-pressure bs=1048576 count=64 oflag=direct 2>/dev/null || exit; done'], 60000)
     complete(['sh', '-c', 'while [ ! -f io-pressure-ready ]; do sleep 0.01; done'])
+    # wchar counts VMM write syscalls, including buffered backing writes, not
+    # media durability. A 4MiB advance cannot be the bounded tiny RPC replies.
+    wait(lambda: vmm_wchar() - old_wchar >= 4 << 20, 'VMM actually issues busy backing IO before stop', seconds=20)
+    result['busy_vmm_write_syscall_bytes_advanced'] = vmm_wchar() - old_wchar
     assert status(busy)['status'] == 'RUNNING' and not cgroup_empty(group)
     began = time.perf_counter(); delete()
     wait(lambda: cgroup_empty(group), 'owned IO busy host stop', seconds=15)

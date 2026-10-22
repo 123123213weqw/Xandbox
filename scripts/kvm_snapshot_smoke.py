@@ -241,6 +241,9 @@ def main():
             owner = json.loads(owner_path(ref).read_text())
             assert owner['version'] == 2 and owner['initialization_attempted'] and owner['template_id'] == template
 
+        if args.io_budget:
+            from kvm_io_probe import startup_rejections
+            result['io_policy_rejections'] = startup_rejections(root=root, config=config, daemon=copied['daemon'], auth=auth, logs=logs, private_json=private_json)
         process = start()
         create(expected=(500, 503))
         assert not any(g.is_dir() for g in cgroup.iterdir())
@@ -393,6 +396,12 @@ def main():
         result['checks'].append('wrong host ABI, wrong pinned agent and assigned declarations are refused by real root publisher')
         assert all(empty(g) for g in cgroup.iterdir() if g.is_dir())
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
+        if args.io_budget:
+            from kvm_io_probe import bound_policy_rejection
+            process.kill(); process.wait(timeout=10); process = None
+            result['io_policy_rejections'].append(bound_policy_rejection(root=root, config=config, base=base, logs=logs, private_json=private_json))
+            process = start()
+            result['checks'].append('ordinary snapshot daemon rejects wrong IO queue, missing own delegation and removal of immutable bound policy without creating a VM')
         result['passed'] = True
     finally:
         if restored_owner is not None:

@@ -225,6 +225,9 @@ def main():
             call('DELETE', path(ref), {'generation': ref['generation']}, expected=202)
             destroyed(ref)
 
+        if args.io_budget:
+            from kvm_io_probe import startup_rejections
+            result['io_policy_rejections'] = startup_rejections(root=root, config=config, daemon=copied['daemon'], auth=auth, logs=logs, private_json=private_json)
         process = start()
         if args.io_budget:
             from kvm_io_probe import run_io_probe
@@ -315,6 +318,12 @@ def main():
                 ' refuses durable acknowledgement/admission and capacity reuse, independently stops host, refuses still-faulted restart, then reclaims on same-state recovery')
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
         assert not [p for p in cgroup.iterdir() if p.is_dir()]
+        if args.io_budget:
+            from kvm_io_probe import bound_policy_rejection
+            process.kill(); process.wait(timeout=10); process = None
+            result['io_policy_rejections'].append(bound_policy_rejection(root=root, config=config, base=base, logs=logs, private_json=private_json))
+            process = start()
+            result['checks'].append('actual ordinary daemon rejects wrong IO queue, missing own delegation and removal of bound IO policy before any new VM')
         result['passed'] = True
     finally:
         safe = True

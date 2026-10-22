@@ -1,8 +1,12 @@
 import unittest
-from kvm_io_probe import parse_io_stat
+from kvm_io_probe import parse_io_stat, parse_wchar
 
 
 class IOStatTests(unittest.TestCase):
+    def test_private_vmm_write_counter_must_be_explicit_unique_and_numeric(self):
+        self.assertEqual(parse_wchar('rchar: 99\nwchar: 4194304\n'), 4194304)
+        for raw in ('', 'rchar: 99', 'wchar: -1', 'wchar: 1\nwchar: 2'):
+            with self.assertRaises(AssertionError): parse_wchar(raw)
     def test_no_activity_is_zero_not_borrowed_from_other_device(self):
         self.assertEqual(parse_io_stat('8:1 wbytes=32\n', '8:0'), dict.fromkeys(('rbytes', 'wbytes', 'rios', 'wios'), 0))
 
