@@ -8,6 +8,7 @@ import argparse
 import datetime
 import hashlib
 import http.client
+import itertools
 import json
 import os
 from pathlib import Path
@@ -203,14 +204,20 @@ def main():
                                          'host_image_size_unchanged': True, 'exec_after_freeing_space_passed': True}
         result['checks'].append('unprivileged real guest reaches workspace ENOSPC without growing host image; freeing guest file restores execution and clean deletion')
 
-        for mode in ('blocks', 'inodes'):
-            case = {'mode': mode, 'passed': False}; result['modes'].append(case)
+        for mode, workload in itertools.product(('blocks', 'inodes'), ('busy', 'idle')):
+            case = {'mode': mode, 'workload': workload, 'passed': False}; result['modes'].append(case)
             key = secrets.token_hex(16)
             ref = create(key)
             execute(ref, ['true'])
-            busy = job(ref, ['sh', '-c', 'sleep 120 & sleep 120 & echo ready > storage-busy-ready; wait'], timeout=60000)
-            assert execute(ref, ['sh', '-c', 'while [ ! -f storage-busy-ready ]; do sleep 0.01; done; cat storage-busy-ready'])['stdout'].strip() == 'ready'
-            assert call('GET', path(ref) + '/executions/' + busy['id'])['status'] == 'RUNNING'
+            busy = None
+            if workload == 'busy':
+                busy = job(ref, ['sh', '-c', 'sleep 120 & sleep 120 & echo ready > storage-busy-ready; wait'], timeout=60000)
+                assert execute(ref, ['sh', '-c', 'while [ ! -f storage-busy-ready ]; do sleep 0.01; done; cat storage-busy-ready'])['stdout'].strip() == 'ready'
+                assert call('GET', path(ref) + '/executions/' + busy['id'])['status'] == 'RUNNING'
+            else:
+                # The only preceding job completed. Do not let Exec's ambiguous
+                # cancellation fence conceal the independent idle-VM stop path.
+                case['no_pending_guest_execution'] = True
             ledger = state / 'ledger' / (ref['id'] + '.json')
             before = ledger.read_bytes()
             case['fault'] = volume.fill(mode)
@@ -220,8 +227,9 @@ def main():
             call('POST', path(ref) + '/exec', {'generation': ref['generation'], 'argv': ['true']}, expected=409)
             wait(lambda: cgroup_empty(group(ref)), 'host stop despite ENOSPC', seconds=15)
             case['request_to_host_cgroup_empty_observed_ms'] = round((time.perf_counter() - began) * 1000, 3)
-            terminal = finish(ref, busy)
-            case['accepted_guest_job_terminal_status'] = terminal['status']
+            if busy is not None:
+                terminal = finish(ref, busy)
+                case['accepted_guest_job_terminal_status'] = terminal['status']
             assert ledger.read_bytes() == before and owner(ref).exists() and jail(ref).exists()
             assert call('GET', path(ref))['state'] != 'DESTROYED'
             # The node-capacity check precedes the tenant quota in this fixture
@@ -234,7 +242,7 @@ def main():
             case['no_false_durable_ack_or_capacity_release'] = True
             process.kill(); process.wait(timeout=10); process = None
             failed = subprocess.run(base, env=env, capture_output=True, timeout=15)
-            (logs / (mode + '-full-restart.log')).write_bytes(failed.stdout + failed.stderr)
+            (logs / (mode + '-' + workload + '-full-restart.log')).write_bytes(failed.stdout + failed.stderr)
             assert failed.returncode != 0 and b'no space left on device' in failed.stderr.lower()
             case['restart_while_full_refused_with_enospc'] = True
             assert owner(ref).exists() and jail(ref).exists() and cgroup_empty(group(ref))
@@ -246,7 +254,7 @@ def main():
             case['same_state_restart_reclaims_old_and_rejects_old_key'] = True
             case['fresh_real_vm_create_exec_destroy_after_recovery'] = True
             case['passed'] = True
-            result['checks'].append(mode + ' ENOSPC refuses durable acknowledgement/admission and capacity reuse, independently stops host, refuses full-disk restart, then reclaims on same-state recovery')
+            result['checks'].append(mode + '/' + workload + ' ENOSPC refuses durable acknowledgement/admission and capacity reuse, independently stops host, refuses full-disk restart, then reclaims on same-state recovery')
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
         assert not [p for p in cgroup.iterdir() if p.is_dir()]
         result['passed'] = True
