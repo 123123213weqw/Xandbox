@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"net"
@@ -179,5 +180,76 @@ func TestDriverExecutionRequiresSealedSnapshotEpoch(t *testing.T) {
 				t.Fatal("wrong epoch did not stop host execution domain")
 			}
 		})
+	}
+}
+
+func TestPristineReadinessRetriesOnlyReadOnlyStateAndRejectsConsumedGate(t *testing.T) {
+	for _, phase := range []string{guestinit.Waiting, guestinit.Claimed, guestinit.Failed} {
+		t.Run(phase, func(t *testing.T) {
+			dir, e := os.MkdirTemp("/tmp", "xb-ready-")
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer os.RemoveAll(dir)
+			socket := filepath.Join(dir, "v.sock")
+			l, e := net.Listen("unix", socket)
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer l.Close()
+			served := make(chan struct{})
+			go func() {
+				defer close(served)
+				// First connection is deliberately lost before acknowledgement. It is
+				// safe to repeat state, never initialize with a replacement seed.
+				c, err := l.Accept()
+				if err != nil {
+					return
+				}
+				c.Close()
+				c, err = l.Accept()
+				if err != nil {
+					return
+				}
+				defer c.Close()
+				reader := bufio.NewReader(c)
+				line, err := reader.ReadString('\n')
+				if err != nil || line != "CONNECT 901\n" {
+					t.Error("wrong readiness port")
+					return
+				}
+				fmt.Fprint(c, "OK 1234\n")
+				var request guestinit.Request
+				if err = guestwire.Read(reader, guestinit.MaxRequest, &request); err != nil {
+					t.Error(err)
+					return
+				}
+				if request.Operation != "state" || len(request.Entropy) != 0 || request.Nonce != "" || request.Ref != (sandbox.Ref{}) {
+					t.Error("readiness probe consumed initialization")
+				}
+				response := guestinit.Response{Version: 1, Phase: phase}
+				if phase != guestinit.Waiting {
+					response.Digest = strings.Repeat("a", 64)
+				}
+				if phase == guestinit.Failed {
+					response.Error = "initialization failed"
+				}
+				if err = guestwire.Write(c, guestinit.MaxResponse, response); err != nil {
+					t.Error(err)
+				}
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			e = waitPristine(ctx, nil, socket)
+			if (phase == guestinit.Waiting) != (e == nil) {
+				t.Fatal("wrong pristine readiness outcome", phase, e)
+			}
+			<-served
+		})
+	}
+	done := make(chan struct{})
+	close(done)
+	if e := waitPristine(context.Background(), done, "unused"); e == nil {
+		t.Fatal("readiness survived exited supervisor")
 	}
 }

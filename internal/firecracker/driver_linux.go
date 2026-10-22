@@ -323,6 +323,12 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		if err := apiRequest(ctx, apiSocket, "PATCH", "/vm", map[string]any{"state": "Resumed"}); err != nil {
 			return err
 		}
+		// Restored listeners survive, but guest transport/event handling still
+		// needs to resume. Retry ONLY the read-only state probe; the subsequent
+		// irreversible initialize request must never receive fresh-seed retries.
+		if err := waitPristine(ctx, p.done, filepath.Join(root, "v.sock")); err != nil {
+			return err
+		}
 		if err := d.registry.markInitialization(ctx, k); err != nil {
 			return err
 		}
@@ -690,4 +696,24 @@ func hasWords(s string, words ...string) bool {
 		}
 	}
 	return true
+}
+
+func waitPristine(ctx context.Context, done <-chan struct{}, socket string) error {
+	phase := ""
+	if err := retry(ctx, done, func() error {
+		probe, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		defer cancel()
+		response, err := guestbridge.Bootstrap(probe, socket, guestinit.Request{Version: guestinit.Version, Operation: "state"})
+		if response.Phase != "" {
+			phase = response.Phase
+			return nil
+		} // FAILED is valid protocol, not usable capacity.
+		return err
+	}); err != nil {
+		return err
+	}
+	if phase != guestinit.Waiting {
+		return errors.New("restored template is not unassigned; initialization retry is forbidden")
+	}
+	return nil
 }
