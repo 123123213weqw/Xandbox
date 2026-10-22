@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -495,6 +496,19 @@ func runNode() error {
 		}
 		if e != nil {
 			fmt.Fprintln(os.Stderr, "private node step failure:", e)
+			// Root fixture diagnostics ONLY on the private L1 console. Never
+			// add these fields to a tenant API or sanitized acceptance report.
+			if log, openErr := os.Open("/srv/fixture/controller.log"); openErr == nil {
+				if info, statErr := log.Stat(); statErr == nil {
+					offset := info.Size() - 16384
+					if offset < 0 {
+						offset = 0
+					}
+					_, _ = log.Seek(offset, 0)
+					_, _ = io.CopyN(os.Stderr, log, 16384)
+				}
+				_ = log.Close()
+			}
 			out["error"] = "FIXTURE_STEP_FAILED"
 		}
 		if e = json.NewEncoder(serial).Encode(out); e != nil {
