@@ -551,9 +551,11 @@ def main():
                         response = conn.getresponse(); return response.status, json.loads(response.read())
                     finally:
                         conn.close()
+                before_cas_records = len(list((state / 'ledger').glob('*.json')))
                 with ThreadPoolExecutor(max_workers=2) as contenders:
                     outcomes = list(contenders.map(competing_session_switch, [secrets.token_hex(16), secrets.token_hex(16)]))
                 assert sorted(status for status, _ in outcomes) == [200, 409]
+                assert len(list((state / 'ledger').glob('*.json'))) == before_cas_records + 1, 'CAS loser allocated a second candidate'
                 latest = next(value for status, value in outcomes if status == 200)
                 assert latest['revision'] == 3
                 public = call('GET', session_path)

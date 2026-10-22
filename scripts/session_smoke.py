@@ -129,9 +129,11 @@ def main():
                         r = conn.getresponse(); return r.status, json.loads(r.read())
                     finally:
                         conn.close()
+                before_cas_records = len(list((state / 'ledger').glob('*.json')))
                 with ThreadPoolExecutor(max_workers=2) as pool:
                     races = list(pool.map(competing, ['cas-a', 'cas-b']))
                 assert sorted(code for code, _ in races) == [200, 409]
+                assert len(list((state / 'ledger').glob('*.json'))) == before_cas_records + 1, 'CAS loser allocated another candidate'
                 third = next(value for code, value in races if code == 200)
                 assert third['revision'] == 3
                 public = call('GET', path(first))
