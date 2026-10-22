@@ -41,8 +41,10 @@ jobs:
         run: go vet ./...
       - name: Verify dependency checksums
         run: go mod verify
-      - name: Race and failure tests
-        run: go test -race -count=3 ./...
+      - name: Race and failure tests under private umask
+        run: |
+          umask 077
+          go test -race -count=3 ./...
       - name: Build and process smoke test
         run: make smoke
       - name: Python harness syntax and guest image extraction safety
