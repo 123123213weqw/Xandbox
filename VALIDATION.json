@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest current-source service validation is current_status.latest_runtime_validation (pristine_cold_service_regression); snapshot bootstrap has a separate component pointer and is not a service capability. Historical reports, including the forty-switch observability sample, are not rewritten.",
+  "validation_history_note": "All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -126,7 +126,8 @@
     "goal_complete": false,
     "latest_runtime_validation": "pristine_cold_service_regression",
     "latest_component_validation": "pristine_bootstrap_component",
-    "snapshot_execution_enabled_in_service": false
+    "snapshot_execution_enabled_in_verified_baseline": false,
+    "snapshot_execution_enabled_by_default": false
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -683,5 +684,16 @@
       "real-KVM partial guest initialization crash matrix",
       "production sustained mixed-load fairness, resource stability and tail/SLO"
     ]
+  },
+  "snapshot_catalog_development": {
+    "production_ready": false,
+    "goal_complete": false,
+    "implemented_in_development_branch": true,
+    "enabled_by_default": false,
+    "actual_snapshot_service_runtime_validation": "not performed on new path",
+    "historical_report_scope": "Prior pristine component and cold-service reports validate only their named source revisions, not this development path.",
+    "documentation": "docs/CATALOG.md",
+    "metadata_tests": "synthetic 1MiB files and test-only child SIGKILL/flock; production policy still fixes512MiB/2vCPU; not KVM isolation/load proof",
+    "current_source_real_kvm_validation": "not yet performed for either the changed cold code or new snapshot mode"
   }
 }

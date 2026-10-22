@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
 	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
@@ -36,6 +37,7 @@ import (
 
 type fixture struct {
 	Root, Cgroup, Firecracker, Jailer, Warden, Kernel, Initrd, Report, SourceRevision string
+	ExportDirectory                                                                   string
 	UIDStart                                                                          int
 	SHA256                                                                            map[string]string
 }
@@ -534,6 +536,67 @@ func TestKVMPristineBootstrapSnapshot(t *testing.T) {
 		t.Fatal(e)
 	}
 	checks = append(checks, "read-only shared memory inode unchanged; removing one stopped clone cannot break another live clone", "cross-clone Ref rejected; host cgroup execution stopped before private file removal")
+	// Optional PRIVATE export is only for the next real-service fixture. Never
+	// export an assigned clone: these sources belong to the stopped, unassigned
+	// creator and hashes were checked after both clones finished independently.
+	if f.ExportDirectory != "" {
+		seedDigest, decodeErr := hex.DecodeString(f.SHA256["agent"])
+		if !filepath.IsAbs(f.ExportDirectory) || filepath.Clean(f.ExportDirectory) != f.ExportDirectory || decodeErr != nil || len(seedDigest) != 32 {
+			t.Fatal("invalid private export fixture")
+		}
+		rel, err := filepath.Rel(root, f.ExportDirectory)
+		if err != nil || (rel != ".." && !strings.HasPrefix(rel, "../")) {
+			t.Fatal("export must be outside removable runtime")
+		}
+		if err = os.Mkdir(f.ExportDirectory, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = privatefile.EnsureDirectory(f.ExportDirectory); err != nil {
+			t.Fatal(err)
+		}
+		for source, name := range map[string]string{mem: "memory", state: "state", backing: "workspace.ext4"} {
+			if err = copyFile(source, filepath.Join(f.ExportDirectory, name), 0444); err != nil {
+				t.Fatal(err)
+			}
+		}
+		abi, err := firecracker.SnapshotHostABI()
+		if err != nil {
+			t.Fatal(err)
+		}
+		stateInfo, err := os.Stat(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manifest := firecracker.SnapshotManifest{Version: 1, Format: "firecracker-v1.17.0-full", SourceRevision: f.SourceRevision, CreatedAt: time.Now().UTC(), Assignment: "UNASSIGNED", BootArgs: "console=ttyS0 reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.pristine=1", BootstrapProtocol: guestinit.Version, AgentSHA256: f.SHA256["agent"], FirecrackerSHA256: f.SHA256["firecracker"], JailerSHA256: f.SHA256["jailer"], KernelSHA256: f.SHA256["kernel"], InitrdSHA256: f.SHA256["initrd"], WorkspaceSHA256: diskHash, HostABI: abi, MemoryMiB: 512, VCPUs: 2, MemorySHA256: memHash, StateSHA256: hash(state), StateBytes: stateInfo.Size()}
+		raw, err := json.Marshal(manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := os.OpenFile(filepath.Join(f.ExportDirectory, "manifest.json"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = out.Write(append(raw, '\n')); err != nil {
+			out.Close()
+			t.Fatal(err)
+		}
+		if err = out.Sync(); err != nil {
+			out.Close()
+			t.Fatal(err)
+		}
+		if err = out.Close(); err != nil {
+			t.Fatal(err)
+		}
+		directory, err := os.Open(f.ExportDirectory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = directory.Sync()
+		directory.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	report := map[string]any{"test": "experimental_pristine_bootstrap_snapshot_component", "source_revision": f.SourceRevision, "production_ready": false, "sandboxd_driver_integrated": false, "snapshot_catalog_implemented": false, "snapshot_performance_benchmark": false, "toolchain": runtime.Version(), "architecture": runtime.GOARCH, "guest_memory_mib": 512, "vcpus": 2, "workspace_bytes": 128 << 20, "guest_network_interfaces": 0, "artifacts_sha256": f.SHA256, "snapshot_memory_sha256": memHash, "pristine_disk_sha256": diskHash, "checks": checks, "samples": samples, "notes": "Two same-host restores of an unassigned template; private workspace copies and read-only memory hardlinks. Not a production catalog, shared-reference crash recovery, prewarm pool, load test or SLO. Samples include unoptimized staging/diagnostic commands; no latency claim."}
 	out, e := json.MarshalIndent(report, "", "  ")
 	if e != nil {

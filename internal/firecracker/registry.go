@@ -2,6 +2,7 @@ package firecracker
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,9 +16,11 @@ import (
 )
 
 type ownership struct {
-	Version int         `json:"version"`
-	Ref     sandbox.Ref `json:"ref"`
-	UID     int         `json:"uid"`
+	Version                 int         `json:"version"`
+	Ref                     sandbox.Ref `json:"ref"`
+	UID                     int         `json:"uid"`
+	TemplateID              string      `json:"template_id,omitempty"`
+	InitializationAttempted bool        `json:"initialization_attempted,omitempty"`
 }
 
 // Registry memory locks never cover persistence. The manager serializes lifecycle
@@ -30,6 +33,8 @@ type registry struct {
 	syncDirectory func(string) error
 	dir           string
 	cfg           Config
+	catalog       *catalog
+	hostABI       string
 	owners        map[string]ownership
 }
 
@@ -80,6 +85,12 @@ func newRegistry(dir string, cfg Config, records []sandbox.Record) (*registry, e
 	}
 	uids := make(map[int]bool)
 	for _, entry := range entries {
+		if entry.Name() == "catalog" && cfg.Snapshot != nil {
+			if !entry.IsDir() {
+				return nil, errors.New("invalid catalog directory")
+			}
+			continue
+		}
 		if entry.Name() == "config.json" || len(entry.Name()) > 0 && entry.Name()[0] == '.' {
 			continue // Atomic-write leftovers allocated no external resources.
 		}
@@ -95,15 +106,35 @@ func newRegistry(dir string, cfg Config, records []sandbox.Record) (*registry, e
 			return nil, err
 		}
 		k, err := key(owner.Ref)
-		if err != nil || owner.Version != 1 || entry.Name() != k+".json" || owner.UID < cfg.UIDStart || owner.UID >= cfg.UIDStart+cfg.UIDCount || uids[owner.UID] || !live[k] {
+		if err != nil || !validOwnership(owner, cfg) || entry.Name() != k+".json" || owner.UID < cfg.UIDStart || owner.UID >= cfg.UIDStart+cfg.UIDCount || uids[owner.UID] || !live[k] {
 			return nil, errors.New("ownership does not match live ledger or reserved UID policy")
 		}
 		uids[owner.UID], r.owners[k] = true, owner
+	}
+	if cfg.Snapshot != nil {
+		r.catalog, err = openCatalog(dir, cfg, len(r.owners) == 0)
+		if err != nil {
+			return nil, err
+		}
+		if err = r.catalog.validatePins(context.Background()); err != nil {
+			return nil, err
+		}
 	}
 	return r, nil
 }
 
 func (r *registry) reserve(ref sandbox.Ref) (ownership, error) {
+	return r.reserveContext(context.Background(), ref)
+}
+func (r *registry) reserveContext(ctx context.Context, ref sandbox.Ref) (ownership, error) {
+	if r.catalog == nil {
+		return r.reserveOwner(ref, "")
+	}
+	var owner ownership
+	_, err := r.catalog.acquire(ctx, r.hostABI, func(id string) error { var err error; owner, err = r.reserveOwner(ref, id); return err })
+	return owner, err
+}
+func (r *registry) reserveOwner(ref sandbox.Ref, template string) (ownership, error) {
 	k, err := key(ref)
 	if err != nil {
 		return ownership{}, err
@@ -122,6 +153,10 @@ func (r *registry) reserve(ref sandbox.Ref) (ownership, error) {
 			continue
 		}
 		owner := ownership{Version: 1, Ref: ref, UID: uid}
+		if template != "" {
+			owner.Version = 2
+			owner.TemplateID = template
+		}
 		// Keep the reservation even if fsync reports failure after rename.
 		r.owners[k] = owner
 		r.mu.Unlock()
@@ -134,7 +169,14 @@ func (r *registry) reserve(ref sandbox.Ref) (ownership, error) {
 	return ownership{}, sandbox.ErrCapacity
 }
 
-func (r *registry) release(k string) error {
+func (r *registry) release(k string) error { return r.releaseContext(context.Background(), k) }
+func (r *registry) releaseContext(ctx context.Context, k string) error {
+	if r.catalog == nil {
+		return r.releaseOwner(k)
+	}
+	return r.catalog.withLock(ctx, func() error { return r.releaseOwner(k) })
+}
+func (r *registry) releaseOwner(k string) error {
 	if err := os.Remove(filepath.Join(r.dir, k+".json")); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -187,4 +229,31 @@ func syncDir(path string) error {
 	}
 	defer f.Close()
 	return f.Sync()
+}
+
+func validOwnership(o ownership, cfg Config) bool {
+	if cfg.Snapshot == nil {
+		return o.Version == 1 && o.TemplateID == "" && !o.InitializationAttempted
+	}
+	return o.Version == 2 && hex64.MatchString(o.TemplateID)
+}
+
+// This durable attempt fence is written before any entropy/identity request.
+// After controller death recovery only stops/reclaims; WAITING is not reusable.
+func (r *registry) markInitialization(ctx context.Context, k string) error {
+	if r.catalog == nil {
+		return errors.New("snapshot ownership required")
+	}
+	return r.catalog.withLock(ctx, func() error {
+		r.mu.Lock()
+		o, ok := r.owners[k]
+		if !ok || o.Version != 2 || o.InitializationAttempted {
+			r.mu.Unlock()
+			return errors.New("initialization attempt already consumed or unowned")
+		}
+		o.InitializationAttempted = true
+		r.owners[k] = o
+		r.mu.Unlock()
+		return r.persist(filepath.Join(r.dir, k+".json"), o)
+	})
 }

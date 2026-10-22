@@ -49,7 +49,7 @@
 - [ ] 控制器崩溃、驱动错误、部分准备失败、宿主重启后的资源清理经过真实验收。
 - [x] 未使用 mock 或宿主 shell 绕过实际验收。
 
-M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [当前源码真实 KVM 冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。宿主重启/磁盘故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
+M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。宿主重启/磁盘故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
 停止/GC 独立有界池、所有权 fsync 不持有全局锁及受控慢 I/O 下的恢复已有 [专项证据](LIFECYCLE.md)。[独立 guardian 租约](GUARDIAN.md) 已用真实暂停控制器测试；这只完成该部分基础设施，不替代持续负载、公平性、整机故障和最坏延迟验收。
 
@@ -63,7 +63,7 @@ M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FI
 
 会话冷切换与独立版本准入已有实际 KVM/故障证据，设计、预算和边界见 [SESSIONS.md](SESSIONS.md)。这不是快照或预热；这些机制、共享引用管理、持续负载及切换百分位仍未验收，不能把两个已验证子项当成整个 M3 完成。
 
-[干净模板初始化闸门组件](PRISTINE.md) 已有真实KVM双克隆9条断言及新agent冷启动组件回归，但服务端快照恢复、不可变catalog、共享引用崩溃恢复和预热池仍未接入；组件通过不能勾选M3的完整快照门槛。
+[干净模板初始化闸门组件](PRISTINE.md) 已有真实KVM双克隆9条断言及新agent冷启动组件回归，后续新增 [catalog/schema2服务接入代码](CATALOG.md)，但该新路径、共享引用恢复和故障矩阵尚未通过真实服务验收，无预热池；组件通过不能勾选M3的完整快照门槛。
 
 ### M4：生产试运行验收
 

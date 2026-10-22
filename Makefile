@@ -15,6 +15,7 @@ build:
 
 	go build -o "$(BIN_DIR)/xandbox-keygen" ./cmd/xandbox-keygen
 	go build -o "$(BIN_DIR)/xandbox-guestctl" ./cmd/xandbox-guestctl
+	go build -o "$(BIN_DIR)/xandbox-template" ./cmd/xandbox-template
 	@if [ "$$(go env GOOS)" = linux ]; then CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-agent" ./cmd/xandbox-agent; fi
 	@if [ "$$(go env GOOS)" = linux ]; then CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-warden" ./cmd/xandbox-warden; fi
 

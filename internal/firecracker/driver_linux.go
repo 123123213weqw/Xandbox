@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
+	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
 	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"github.com/123123213weqw/Xandbox/internal/lease"
@@ -33,17 +34,18 @@ import (
 )
 
 type process struct {
-	leaseMu      sync.Mutex
-	leaseFD      int
-	leaseClosed  bool
-	binding      lease.Binding
-	hardDeadline int64
-	nextRenew    int64
-	sequence     uint64
-	life         *os.File // Only the controller owns a write end; never inherited by VMM.
-	done         chan struct{}
-	bootID       string
-	slots        chan struct{} // Match the guest executor's two simultaneous groups.
+	leaseMu            sync.Mutex
+	leaseFD            int
+	leaseClosed        bool
+	binding            lease.Binding
+	hardDeadline       int64
+	nextRenew          int64
+	sequence           uint64
+	life               *os.File // Only the controller owns a write end; never inherited by VMM.
+	done               chan struct{}
+	bootID             string
+	initializationHash string
+	slots              chan struct{} // Match the guest executor's two simultaneous groups.
 }
 
 type driver struct {
@@ -132,9 +134,28 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 		}
 		for _, e := range entries {
 			isJailRoot := parent != cfg.CgroupRoot
-			if (isJailRoot && !e.IsDir()) || ((isJailRoot || e.IsDir()) && r.owners[e.Name()].Version != 1) {
+			if (isJailRoot && !e.IsDir()) || ((isJailRoot || e.IsDir()) && !validOwnership(r.owners[e.Name()], cfg)) {
 				return nil, errors.New("unowned backend resources require operator reconciliation")
 			}
+		}
+	}
+	if cfg.Snapshot != nil {
+		r.hostABI, err = SnapshotHostABI()
+		if err != nil {
+			return nil, err
+		}
+		a, e := os.Stat(cfg.RuntimeRoot)
+		if e != nil {
+			return nil, e
+		}
+		b, e := os.Stat(r.catalog.root)
+		if e != nil {
+			return nil, e
+		}
+		sa, oka := a.Sys().(*syscall.Stat_t)
+		sb, okb := b.Sys().(*syscall.Stat_t)
+		if !oka || !okb || sa.Dev != sb.Dev {
+			return nil, errors.New("snapshot catalog and runtime require the same filesystem")
 		}
 	}
 	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process)}, nil
@@ -168,7 +189,7 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 			return errors.New("generation resource already exists")
 		}
 	}
-	owner, err := d.registry.reserve(ref)
+	owner, err := d.registry.reserveContext(ctx, ref)
 	if err != nil {
 		return err
 	}
@@ -208,8 +229,18 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return err
 	}
-	for name, asset := range map[string]Asset{"kernel": d.cfg.Kernel, "initrd": d.cfg.Initrd, "workspace.ext4": d.cfg.Workspace} {
+	assets := map[string]Asset{"workspace.ext4": d.cfg.Workspace}
+	if d.cfg.Snapshot == nil {
+		assets["kernel"] = d.cfg.Kernel
+		assets["initrd"] = d.cfg.Initrd
+	}
+	for name, asset := range assets {
 		if err := copyAsset(ctx, asset, filepath.Join(root, name)); err != nil {
+			return err
+		}
+	}
+	if d.registry.catalog != nil {
+		if err := d.registry.catalog.linkOwned(ctx, owner, root); err != nil {
 			return err
 		}
 	}
@@ -283,36 +314,60 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	}); err != nil {
 		return fmt.Errorf("VM API startup: %w; initialization stderr: %s", err, diagnostic.text())
 	}
-	bootArgs := "console=ttyS0 reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.id=" + ref.ID + " xandbox.generation=" + ref.Generation
-	for _, put := range []struct {
-		path string
-		body any
-	}{
-		{"/machine-config", map[string]any{"vcpu_count": 2, "mem_size_mib": 512, "smt": false}},
-		{"/boot-source", map[string]any{"kernel_image_path": "/kernel", "initrd_path": "/initrd", "boot_args": bootArgs}},
-		{"/drives/workspace", map[string]any{"drive_id": "workspace", "path_on_host": "/workspace.ext4", "is_root_device": false, "is_read_only": false}},
-		{"/vsock", map[string]any{"guest_cid": 3, "uds_path": "/v.sock"}},
-		{"/actions", map[string]any{"action_type": "InstanceStart"}},
-	} {
-		if err := apiPut(ctx, apiSocket, put.path, put.body); err != nil {
+	var health guestwire.Response
+	initializationHash := ""
+	if d.cfg.Snapshot != nil {
+		if err := apiPut(ctx, apiSocket, "/snapshot/load", map[string]any{"snapshot_path": "/template.state", "mem_backend": map[string]any{"backend_path": "/template.mem", "backend_type": "File"}, "resume_vm": false}); err != nil {
 			return err
 		}
-	}
-	var health guestwire.Response
-	if err := retry(ctx, p.done, func() error {
-		callCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
-		defer cancel()
-		var err error
-		health, err = guestbridge.Call(callCtx, filepath.Join(root, "v.sock"), guestwire.Request{Version: guestwire.Version, Operation: "health", Ref: ref})
-		return err
-	}); err != nil {
-		return err
+		if err := apiRequest(ctx, apiSocket, "PATCH", "/vm", map[string]any{"state": "Resumed"}); err != nil {
+			return err
+		}
+		if err := d.registry.markInitialization(ctx, k); err != nil {
+			return err
+		}
+		request, err := guestinit.NewRequest(ref)
+		if err != nil {
+			return err
+		}
+		defer request.WipeEntropy()
+		health, err = guestbridge.Initialize(ctx, filepath.Join(root, "v.sock"), request)
+		if err != nil {
+			return err
+		}
+		initializationHash = health.InitializationHash
+	} else {
+		bootArgs := "console=ttyS0 reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.id=" + ref.ID + " xandbox.generation=" + ref.Generation
+		for _, put := range []struct {
+			path string
+			body any
+		}{
+			{"/machine-config", map[string]any{"vcpu_count": 2, "mem_size_mib": 512, "smt": false}},
+			{"/boot-source", map[string]any{"kernel_image_path": "/kernel", "initrd_path": "/initrd", "boot_args": bootArgs}},
+			{"/drives/workspace", map[string]any{"drive_id": "workspace", "path_on_host": "/workspace.ext4", "is_root_device": false, "is_read_only": false}},
+			{"/vsock", map[string]any{"guest_cid": 3, "uds_path": "/v.sock"}},
+			{"/actions", map[string]any{"action_type": "InstanceStart"}},
+		} {
+			if err := apiPut(ctx, apiSocket, put.path, put.body); err != nil {
+				return err
+			}
+		}
+		if err := retry(ctx, p.done, func() error {
+			callCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+			defer cancel()
+			var err error
+			health, err = guestbridge.Call(callCtx, filepath.Join(root, "v.sock"), guestwire.Request{Version: guestwire.Version, Operation: "health", Ref: ref})
+			return err
+		}); err != nil {
+			return err
+		}
 	}
 	if health.ActiveGroups == nil || *health.ActiveGroups != 0 {
 		return errors.New("new guest has unaccounted execution groups")
 	}
 	d.mu.Lock()
 	p.bootID = health.BootID
+	p.initializationHash = initializationHash
 	d.mu.Unlock()
 	return nil
 }
@@ -332,9 +387,9 @@ func (d *driver) Exec(ctx context.Context, ref sandbox.Ref, req sandbox.ExecRequ
 	}
 	d.mu.Lock()
 	p := d.procs[k]
-	bootID := ""
+	bootID, initializationHash := "", ""
 	if p != nil {
-		bootID = p.bootID
+		bootID, initializationHash = p.bootID, p.initializationHash
 	}
 	d.mu.Unlock()
 	if bootID == "" {
@@ -353,7 +408,7 @@ func (d *driver) Exec(ctx context.Context, ref sandbox.Ref, req sandbox.ExecRequ
 	}
 	_, jail := d.paths(k)
 	response, callErr := guestbridge.Call(ctx, filepath.Join(jail, "root/v.sock"), request)
-	if callErr == nil && response.Status == "EXITED" && response.BootID == bootID && ctx.Err() == nil {
+	if callErr == nil && response.Status == "EXITED" && response.BootID == bootID && response.InitializationHash == initializationHash && ctx.Err() == nil {
 		return response.Output, nil
 	}
 	// The guest is not trusted to prove timeout/cancellation. Any ambiguous
@@ -437,7 +492,7 @@ func (d *driver) Cleanup(ctx context.Context, ref sandbox.Ref) error {
 	if err := os.Remove(group); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err := d.registry.release(k); err != nil {
+	if err := d.registry.releaseContext(ctx, k); err != nil {
 		return err
 	}
 	d.mu.Lock()
@@ -498,6 +553,9 @@ func retry(ctx context.Context, done <-chan struct{}, call func() error) error {
 }
 
 func apiPut(ctx context.Context, socket, path string, value any) error {
+	return apiRequest(ctx, socket, "PUT", path, value)
+}
+func apiRequest(ctx context.Context, socket, method, path string, value any) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -506,7 +564,7 @@ func apiPut(ctx context.Context, socket, path string, value any) error {
 		return (&net.Dialer{}).DialContext(ctx, "unix", socket)
 	}}
 	defer transport.CloseIdleConnections()
-	request, err := http.NewRequestWithContext(ctx, "PUT", "http://localhost"+path, strings.NewReader(string(data)))
+	request, err := http.NewRequestWithContext(ctx, method, "http://localhost"+path, strings.NewReader(string(data)))
 	if err != nil {
 		return err
 	}

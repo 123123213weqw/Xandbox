@@ -108,4 +108,4 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 
 ## 新agent冷路径兼容回归
 
-加入 [干净模板初始化组件](PRISTINE.md) 后，源码 `ec4e56ef417c300d5a302ba245839de5093e7806` 使用新guest镜像再次通过 [30项真实服务冷路径回归](validation/kvm-pristine-cold-service-2026-10-22.json)。闭环5次仅为兼容性烟测，不替代此前40次有限负载报告；两个各9条的队列/绑定断言展开既有用例，不是额外18场景。driver仍只执行冷启动，无快照模式、catalog或预热池；快照双克隆报告是独立组件，不能作为服务加速验收。
+加入 [干净模板初始化组件](PRISTINE.md) 后，源码 `ec4e56ef417c300d5a302ba245839de5093e7806` 使用新guest镜像再次通过 [30项真实服务冷路径回归](validation/kvm-pristine-cold-service-2026-10-22.json)。闭环5次仅为兼容性烟测，不替代此前40次有限负载报告；两个各9条的队列/绑定断言展开既有用例，不是额外18场景。该报告对应driver仍只执行冷启动；后续新增的 [schema2 catalog/服务路径](CATALOG.md) 尚未真实KVM验收，无预热池。快照双克隆报告是独立组件，不能作为服务加速验收。
