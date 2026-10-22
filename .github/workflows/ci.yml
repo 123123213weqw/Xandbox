@@ -47,7 +47,7 @@ jobs:
         run: make smoke
       - name: Python harness syntax and guest image extraction safety
         run: |
-          python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_driver_smoke.py
+          python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py
           python3 -m unittest discover -s scripts -p test_guest_image.py
 
   linux-build:
