@@ -24,7 +24,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 实验性 [干净模板初始化闸门](docs/PRISTINE.md) 将未分配模板与正常执行端口分离，恢复后必须重新注入身份/熵并完成封存健康检查。已通过真实KVM双克隆组件验证及新agent冷启动15项回归；该报告不覆盖新schema2 catalog/服务接入；新服务路径的有限同机验收见下文，仍无预热池，默认schema1仍为冷启动，不构成生产验收。
 
-开发分支新增 [schema2快照catalog/服务接入](docs/CATALOG.md)，[真实服务报告](docs/validation/kvm-catalog-service-v6.json) 已通过10条有限检查，含5次实际恢复切换、锁下Stop/阻塞GC、活引用退役、SIGKILL恢复与丢失ownership拒删。新首命令成功666–755ms、旧执行停止682–772ms、旧代持久销毁733–845ms，仅为这5次同机观测，不是百分位、加速比或SLO；独立Create的3个样本为615–2544ms，不应只挑暖路径。默认schema1仍冷启动，[新源码冷路径](docs/validation/kvm-catalog-cold-v4.json) 另通过30项回归；另有[初始化故障实机报告](docs/validation/kvm-catalog-initialization-v2.json)：两个精确宿主崩溃屏障及三类ACK/epoch故障通过，均验证普通daemon恢复、旧创建键拒绝和完整私有回收。guest内部认领到标记/部分特权初始化故障、共享内存记账与持续负载仍未完成。
+开发分支新增 [schema2快照catalog/服务接入](docs/CATALOG.md)，[私有umask修正后真实服务报告](docs/validation/kvm-umask-service-v1.json) 已通过10条有限检查，含5次实际恢复切换、锁下Stop/阻塞GC、活引用退役、SIGKILL恢复与丢失ownership拒删。新首命令成功626–742ms、旧执行停止648–761ms、旧代持久销毁725–812ms，仅为这5次同机观测，不是百分位、加速比或SLO；独立Create的3个样本为662–2579ms，不应只挑暖路径。默认schema1仍冷启动，[修正后新源码冷路径](docs/validation/kvm-umask-cold-v1.json) 另通过30项回归；另有[修正后初始化故障实机报告](docs/validation/kvm-umask-initialization-v1.json)：两个精确宿主崩溃屏障及三类ACK/epoch故障通过，均验证普通daemon恢复、旧创建键拒绝和完整私有回收。guest内部认领到标记/部分特权初始化故障、共享内存记账与持续负载仍未完成。
 
 ## 已实现
 

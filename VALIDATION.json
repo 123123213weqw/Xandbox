@@ -743,5 +743,30 @@
       "sustained mixed load, memory accounting, host/storage/power failures and production SLO"
     ],
     "creation_controller": "root Go test child uses real Manager/CreateScoped/Driver with12s PrepareTimeout; ordinary unmodified sandboxd handles restart and HTTP idempotency replay"
+  },
+  "snapshot_private_umask_regression": {
+    "source_revision": "547cd79a9c48f49b2410197db065419dcfff6bdf",
+    "production_ready": false,
+    "goal_complete": false,
+    "observed_failure": "Linux full race under077 exposed creation0444 filteredto0400; strict backing checks failed. A subsequent negative ledger fixture was actually0700 dueumask, not an implementation policy failure.",
+    "fix": "create0600; explicitly chmodsameFD0444 beforecatalogfsync/publication, and readonlycoldassetsafterdigest. Keepstrict0444checks. Explicit0755negativefixture. CIraceentiresuite077.",
+    "toolchain": "go1.27.3 linux/amd64 native",
+    "linux_race_repeat_3": "passed under077",
+    "linux_vet": "passed",
+    "runner_exit_status": 0,
+    "service_checks": 10,
+    "snapshot_switches": 5,
+    "initialization_fault_cases": 5,
+    "cold_service_checks": 30,
+    "service_report": "docs/validation/kvm-umask-service-v1.json",
+    "initialization_report": "docs/validation/kvm-umask-initialization-v1.json",
+    "cold_report": "docs/validation/kvm-umask-cold-v1.json",
+    "queue_report": "docs/validation/kvm-umask-cold-v1-queue.json",
+    "binding_report": "docs/validation/kvm-umask-cold-v1-session.json",
+    "current_controller_umask": "0077",
+    "historical_legacy_setup_umask": "0022; current recovery0077",
+    "runtime_daemon_sha256": "c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1",
+    "unassigned_builder_export_still_retained_private": true,
+    "scope": "Replaces prior runtime evidence for the changed production paths; not guest-internal marker/partial-privileged-init faults, sustainedload, RAMaccounting or productionSLO."
   }
 }

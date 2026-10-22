@@ -2,7 +2,7 @@
 
 **已通过有限同机真实 KVM 服务检查，仍不可按生产服务部署。** 本分支已连接 schema2 → catalog → Driver.Prepare → snapshot/load → 一次性初始化，并新增独立的模板导出、服务与冷路径报告（见下文）。PR #9 的历史报告不覆盖这些新代码；本轮也不是完整初始化故障矩阵、预热池、性能认证或生产认证。默认schema1仍冷启动。
 
-**后续发现并修正了umask077会把0444创建模式过滤为0400的问题。该最新权限修正当前仅有本地子进程回归，尚待新的Linux/KVM复验；下文旧报告只覆盖其固定源码。**
+**后续umask077权限修正已完成独立Linux/KVM复验（源码547cd79），见下文最新报告。更早的c7d559e/f9f47ec报告仍只覆盖其固定源码，不能代替修正后证据。**
 
 ## 权威与顺序
 
@@ -98,6 +98,22 @@ manifest为root私有0600文件；源文件/祖先必须root所有、无symlink�
 每个用例独立发布新的可信未分配声明，结束后均由**普通sandboxd**重启验证旧代DESTROYED、旧创建键410（不会再Initialize）、pin为0，才删除RETIRING来源并保留RETIRED tombstone。整个专属运行目录/cgroup清理成功。两个SIGKILL到宿主空cgroup的时长只为本用例观测，包含父进程回收与轮询开销，不是延迟上界或SLO。
 
 普通Linux CI另用合成UDS测试转发器自身；该单测和本轮KVM报告不能相互替代。合成服务器现在会在清零请求前join所有处理协程，避免测试自身的熵清零/读取竞态；修正后的完整5例已再次在KVM运行（本报告），不是仅沿用旧测试二进制。
+
+### 私有umask修正后的完整复验
+
+独立原生Linux Go1.27.3 race×3在`umask077`下发现了真实可用性问题：`OpenFile(...,0444)`实际创建`0400`，catalog严格校验失败；冷路径同样会使降权VMM不能读取kernel/initrd。普通0022的CI没有覆盖这个条件。修正不是接受0400或降低校验，而是：私有0600创建、复制/摘要校验后对**同一FD显式Chmod0444**；catalog在fsync与发布AVAILABLE之前完成封存。冷workspace随后仍单独限制0600并chown保留UID。
+
+额外修正一处负向测试fixture：Mkdir0755也受umask过滤，旧fixture实际是0700，NewFileStore正确接受了它；现在显式Chmod0755后再验证拒绝。没有放宽账本权限策略。umask回归只在独立测试子进程改全局掩码；CI整个race步骤也改为0077，防止再次漏掉这些条件。
+
+源码`547cd79a9c48f49b2410197db065419dcfff6bdf`已在原KVM节点用签名校验的Go1.27.3 Linux工具链重新构建（CGO0、trimpath、buildvcs=false），**全套Linux race×3、vet及以下实机脚本均退出0**：
+
+- [快照服务](validation/kvm-umask-service-v1.json)：10条断言组、5次实际恢复切换，`passed/cleanup_confirmed=true`。
+- [初始化故障](validation/kvm-umask-initialization-v1.json)：完整5例再次通过，包含两个精确宿主崩溃屏障、丢CLAIMED/正常健康ACK及错误epoch；全部旧键拒绝、私有回收、退役来源删除。
+- [独立冷路径](validation/kvm-umask-cold-v1.json)：30项及5次冷切换烟测通过；[队列](validation/kvm-umask-cold-v1-queue.json)与[绑定fsync](validation/kvm-umask-cold-v1-session.json)各9条仍为已有场景展开，不额外加18。所有**当前/恢复controller均显式0077**；唯一历史旧版本setup用0022（旧不可变二进制尚无此修正），当前恢复仍0077。报告明确记录这个边界，不声称历史程序支持0077。
+
+新原生daemon SHA256为`c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1`；admin与两类测试程序摘要保存在报告。旧87e6799c不是本轮运行程序。guest-agent、initrd、Firecracker/jailer及从未分配export未变，publisher重新验证其实际摘要/ABI；不沿用旧controller验收。
+
+本轮5次切换的观测范围为：新首命令626–742ms、旧执行停止648–761ms、旧代持久销毁725–812ms；单独Create为2578.527、661.655、2555.702ms。仍只是有限同机样本，不能挑选暖路径、计算跨报告加速比或宣称百分位/SLO。物理擦除、共享RAM完整记账等限制不变。没有通过手改正在被真实VM引用的memory/state权限来掩盖问题；权限修正仅作用于新stage。
 
 ### 复现服务用例
 
