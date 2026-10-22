@@ -49,8 +49,9 @@ jobs:
         run: make smoke
       - name: Python harness syntax and guest image extraction safety
         run: |
-          python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py
+          python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py
+          python3 -m unittest discover -s scripts -p test_guest_fault_fixture.py
 
   linux-build:
     runs-on: ubuntu-24.04
@@ -63,6 +64,8 @@ jobs:
         with:
           go-version: 1.27.x
           cache: false
+      - name: Compile opt-in test-only guest observer
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_guest_fixture -trimpath -o /tmp/xandbox-fixture-observer ./cmd/xandbox-fixture-observer
       - name: Build Linux amd64 and arm64
         run: |
           for arch in amd64 arm64; do

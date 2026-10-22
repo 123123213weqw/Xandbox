@@ -27,6 +27,7 @@ def main():
     for name in ('test-binary', 'daemon', 'admin', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd',
                  'export-dir', 'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
+    parser.add_argument('--guest-fault', choices=('machine-id-directory','crash-before-marker'), help='requires separately pinned TEST-ONLY fixture image/export; never a production image')
     args = parser.parse_args()
     os.umask(0o077)  # Explicitly exercise production-private creation policy, including child CLIs.
     if os.geteuid() != 0 or os.uname().sysname != 'Linux' or os.uname().machine != 'x86_64':
@@ -54,9 +55,9 @@ def main():
               'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
               'artifacts_sha256': {name: digest(p) for name, p in inputs.items()},
               'builder_source_revision': manifest['source_revision'], 'cases': [],
-              'fault_model': 'Test-only registry.persist wrapper completes the real file/directory fsync, then holds a pre-send barrier or renames the real Firecracker vsock listener and relays its framed traffic with selected ACK/epoch faults. No production fault flags, fake guest, host executor or new-seed retry.',
+              'fault_model': 'Guest fixture cases additionally use the explicitly pinned test image with read-only observer; crash-before-marker uses a reviewed compiler overlay, machine-id failure uses unmodified agent and directory EISDIR after entropy/boot binding. Test-only registry.persist wrapper completes the real file/directory fsync, then holds a pre-send barrier or renames the real Firecracker vsock listener and relays its framed traffic with selected ACK/epoch faults. No production fault flags, fake guest, host executor or new-seed retry.',
               'limitations': ['Finite same-host correctness cases, not production/SLO/load certification.',
-                              'Post-sealed barrier withholds exact normal health before host READY, not a precise guest CLAIMED-to-marker or partial privileged initialization crash.',
+                              'Post-sealed HOST barrier is not a guest crash. Only explicit guest_fixture_fault cases observe an injected guest-internal failure; these TEST images are not production images.',
                               'No full disk/power/dual-supervisor matrix or shared/private RAM accounting.',
                               'Private never-assigned builder export intentionally retained outside service runtime GC.']}
     controller_log = (logs / 'controller.log').open('ab', buffering=0)
@@ -155,7 +156,12 @@ def main():
 
         request = {'ttl_ms': 120000, 'limits': {'max_exec_ms': 5000, 'max_output_bytes': 16384, 'max_jobs': 64}}
         process = start(); stop(process); process = None  # Establish immutable binding only.
-        modes = ('before_initialize', 'after_sealed_before_ready', 'drop_claim_ack', 'drop_health_ack', 'wrong_health_epoch')
+        modes = ('before_initialize', 'after_sealed_before_ready', 'drop_claim_ack', 'drop_health_ack', 'wrong_health_epoch', 'drop_initialize_request')
+        if args.guest_fault:
+            modes = ('guest_machine_id_failure',) if args.guest_fault=='machine-id-directory' else ('guest_crash_before_marker',)
+            result['guest_fixture_fault'] = args.guest_fault
+            result['not_production_image'] = True
+        crash_modes = ('before_initialize', 'after_sealed_before_ready')
         for mode in modes:
             declaration = dict(manifest)
             declaration['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -171,7 +177,7 @@ def main():
             with (logs / (mode + '.log')).open('xb', buffering=0) as log:
                 child = subprocess.Popen([str(copied['test_binary']), '-test.run', '^TestKVMInitializationFault$', '-test.v', '-test.timeout', '50s'],
                                          env=child_env, stdout=log, stderr=log)
-                if mode in modes[:2]:
+                if mode in crash_modes:
                     def reached():
                         assert child.poll() is None, 'fault child exited before crash barrier; inspect private log'
                         return json.loads(barrier.read_text()) if barrier.exists() else None
@@ -198,7 +204,11 @@ def main():
                     child = None
                     child_report = json.loads(child_result.read_text())
                     assert child_report['passed'] and child_report['mode'] == mode
-                    assert child_report['initialize_requests'] == 1 and child_report['actual_sealed_health_replies_observed'] >= 1
+                    assert child_report['initialize_requests'] == 1
+                    unsealed = mode == 'drop_initialize_request' or mode.startswith('guest_')
+                    assert (child_report['actual_sealed_health_replies_observed'] == 0) == unsealed
+                    if mode == 'guest_machine_id_failure': assert child_report['actual_partial_privileged_failure_observed']
+                    elif unsealed: assert child_report['actual_waiting_after_uncertain_initialize']
                     assert child_report['create_returned_ready'] == (mode == 'drop_claim_ack')
                     ref = json.loads(ref_path.read_text())['ref']
                     assert ledger(ref)['state'] == 'DESTROYED'

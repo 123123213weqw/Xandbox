@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
+	"github.com/123123213weqw/Xandbox/internal/fixturewire"
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
 	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
@@ -38,6 +39,7 @@ import (
 type fixture struct {
 	Root, Cgroup, Firecracker, Jailer, Warden, Kernel, Initrd, Report, SourceRevision string
 	ExportDirectory                                                                   string
+	FaultMode                                                                         string
 	UIDStart                                                                          int
 	SHA256                                                                            map[string]string
 }
@@ -85,6 +87,9 @@ func copyFile(from, to string, mode os.FileMode) error {
 	}
 	_, e = io.Copy(b, a)
 	if e == nil {
+		e = b.Chmod(mode)
+	}
+	if e == nil {
 		e = b.Sync()
 	}
 	c := b.Close()
@@ -96,7 +101,13 @@ func copyFile(from, to string, mode os.FileMode) error {
 
 // This explicit-root component test never invokes a tenant command on the host.
 // It is NOT sandboxd integration, a snapshot catalog, or a production benchmark.
-func TestKVMPristineBootstrapSnapshot(t *testing.T) {
+func TestKVMPristineBootstrapSnapshot(t *testing.T) { runSnapshotFixture(t, false) }
+
+// Separate opt-in export for explicitly fault-instrumented TEST images. It is
+// never counted as the ordinary two-clone positive component acceptance.
+func TestKVMFaultFixtureSnapshotExport(t *testing.T) { runSnapshotFixture(t, true) }
+
+func runSnapshotFixture(t *testing.T, faultOnly bool) {
 	if os.Getenv("XANDBOX_KVM_PRISTINE") != "1" {
 		t.Skip("explicit isolated root fixture required; skip is not KVM acceptance")
 	}
@@ -110,6 +121,13 @@ func TestKVMPristineBootstrapSnapshot(t *testing.T) {
 	var f fixture
 	if e = strictjson.Decode(raw, &f); e != nil {
 		t.Fatal(e)
+	}
+	if faultOnly {
+		if f.ExportDirectory == "" || (f.FaultMode != "machine-id-directory" && f.FaultMode != "crash-before-marker") {
+			t.Fatal("explicit private test-image export required")
+		}
+	} else if f.FaultMode != "" {
+		t.Fatal("fault image cannot count as positive component acceptance")
 	}
 	revision, revisionErr := hex.DecodeString(f.SourceRevision)
 	if revisionErr != nil || len(revision) != 20 || f.UIDStart < 300000 || f.UIDStart > 4_000_000_000 || !filepath.IsAbs(f.Root) || filepath.Clean(f.Root) != f.Root || !filepath.IsAbs(f.Report) || filepath.Dir(f.Cgroup) != "/sys/fs/cgroup" || !strings.HasPrefix(f.Cgroup, "/sys/fs/cgroup/xandbox-pristine-proof-") {
@@ -429,6 +447,14 @@ func TestKVMPristineBootstrapSnapshot(t *testing.T) {
 	if _, e := guestCall(creator, guestwire.Request{Version: 1, Operation: "health", Ref: creator.ref}); e == nil {
 		t.Fatal("pristine template exposed normal execution service")
 	}
+	if faultOnly {
+		wait("fixture-only diagnostic ready", func() bool {
+			ctx, c := context.WithTimeout(context.Background(), 300*time.Millisecond)
+			defer c()
+			v, e := fixturewire.Inspect(ctx, filepath.Join(creator.root, "v.sock"), "")
+			return e == nil && v.AgentGenerations >= 1 && !v.Claimed && !v.Receipt
+		})
+	}
 	checks = append(checks, "unassigned pristine template exposes only one-shot bootstrap, never normal health/exec")
 	api(creator, "PATCH", "/vm", map[string]any{"state": "Paused"})
 	api(creator, "PUT", "/snapshot/create", map[string]any{"snapshot_type": "Full", "snapshot_path": "/template.state", "mem_file_path": "/template.mem"})
@@ -450,92 +476,95 @@ func TestKVMPristineBootstrapSnapshot(t *testing.T) {
 	}
 	checks = append(checks, "full snapshot created only before assignment; creator terminated without tenant execution or resume")
 	samples := []map[string]float64{}
-	clones := []*vm{}
-	epochs := []guestinit.Request{}
-	for index := 1; index <= 2; index++ {
-		began := time.Now()
-		v := start(index, mem, state, backing)
-		clones = append(clones, v)
-		staged := time.Since(began)
-		api(v, "PUT", "/snapshot/load", map[string]any{"snapshot_path": "/template.state", "mem_backend": map[string]any{"backend_path": "/template.mem", "backend_type": "File"}, "resume_vm": false})
-		api(v, "PATCH", "/vm", map[string]any{"state": "Resumed"})
-		wait("restored pristine WAITING", func() bool {
-			ctx, c := context.WithTimeout(context.Background(), 300*time.Millisecond)
-			defer c()
-			r, e := guestbridge.Bootstrap(ctx, filepath.Join(v.root, "v.sock"), guestinit.Request{Version: 1, Operation: "state"})
-			return e == nil && r.Phase == guestinit.Waiting
-		})
-		if _, e := guestCall(v, guestwire.Request{Version: 1, Operation: "health", Ref: v.ref}); e == nil {
-			t.Fatal("restored clone admitted before initialization")
+	if !faultOnly {
+		clones := []*vm{}
+		epochs := []guestinit.Request{}
+		for index := 1; index <= 2; index++ {
+			began := time.Now()
+			v := start(index, mem, state, backing)
+			clones = append(clones, v)
+			staged := time.Since(began)
+			api(v, "PUT", "/snapshot/load", map[string]any{"snapshot_path": "/template.state", "mem_backend": map[string]any{"backend_path": "/template.mem", "backend_type": "File"}, "resume_vm": false})
+			api(v, "PATCH", "/vm", map[string]any{"state": "Resumed"})
+			wait("restored pristine WAITING", func() bool {
+				ctx, c := context.WithTimeout(context.Background(), 300*time.Millisecond)
+				defer c()
+				r, e := guestbridge.Bootstrap(ctx, filepath.Join(v.root, "v.sock"), guestinit.Request{Version: 1, Operation: "state"})
+				return e == nil && r.Phase == guestinit.Waiting
+			})
+			if _, e := guestCall(v, guestwire.Request{Version: 1, Operation: "health", Ref: v.ref}); e == nil {
+				t.Fatal("restored clone admitted before initialization")
+			}
+			req, e := guestinit.NewRequest(v.ref)
+			if e != nil {
+				t.Fatal(e)
+			}
+			req.RealtimeNS = 1_609_459_200_000_000_000 // Guest-only2021 clock; never change the host clock.
+			want := req.Digest()
+			ctx, c := context.WithTimeout(context.Background(), 8*time.Second)
+			health, e := guestbridge.Initialize(ctx, filepath.Join(v.root, "v.sock"), req)
+			c()
+			if e != nil || health.InitializationHash != want || health.BootID != req.BootID {
+				t.Fatal("sealed handoff failed; inspect private log", e)
+			}
+			ctx, c = context.WithTimeout(context.Background(), time.Second)
+			_, stillOpen := guestbridge.Bootstrap(ctx, filepath.Join(v.root, "v.sock"), guestinit.Request{Version: 1, Operation: "state"})
+			c()
+			if stillOpen == nil {
+				t.Fatal("bootstrap port survived sealed exec")
+			}
+			if got := execute(v, "id", "-u").Output.Stdout; strings.TrimSpace(got) != "65534" {
+				t.Fatal("wrong guest task UID")
+			}
+			if got := execute(v, "cat", "/proc/sys/kernel/random/boot_id").Output.Stdout; strings.TrimSpace(got) != req.BootID {
+				t.Fatal("boot ID not rebound")
+			}
+			if got := execute(v, "cat", "/etc/machine-id").Output.Stdout; strings.TrimSpace(got) != strings.ReplaceAll(req.BootID, "-", "") {
+				t.Fatal("machine ID not rebound")
+			}
+			if got := execute(v, "date", "-u", "+%Y").Output.Stdout; strings.TrimSpace(got) != "2021" {
+				t.Fatal("guest clock not rebound")
+			}
+			if time.Now().Year() < 2025 {
+				t.Fatal("host clock altered instead of guest clock")
+			}
+			execute(v, "sh", "-c", "test ! -e other-clone; echo private > other-clone; test ! -r /run/xandbox-init/receipt.json")
+			epochs = append(epochs, req)
+			req.WipeEntropy()
+			samples = append(samples, map[string]float64{"private_staging_and_jailer_api_ms": float64(staged) / 1e6, "staging_to_initialized_guest_commands_ms": float64(time.Since(began)) / 1e6})
 		}
-		req, e := guestinit.NewRequest(v.ref)
+		if epochs[0].BootID == epochs[1].BootID || epochs[0].Nonce == epochs[1].Nonce || epochs[0].Ref == epochs[1].Ref {
+			t.Fatal("clone initialization identity reused")
+		}
+		checks = append(checks, "two actual restored KVM guests require new Ref/nonce/entropy and exact sealed normal-health hash before execution", "entropy-add and explicit reseed ioctls succeeded before fresh agent exec replaces agent userspace RNG caches", "per-clone proc boot ID, machine ID and guest-only clock rebound; host clock unchanged", "bootstrap listener removed after handoff; no post-admission reset RPC", "unprivileged tasks cannot read sealed initialization receipt; workspace markers isolated")
+		same, e := os.Stat(mem)
 		if e != nil {
 			t.Fatal(e)
 		}
-		req.RealtimeNS = 1_609_459_200_000_000_000 // Guest-only2021 clock; never change the host clock.
-		want := req.Digest()
-		ctx, c := context.WithTimeout(context.Background(), 8*time.Second)
-		health, e := guestbridge.Initialize(ctx, filepath.Join(v.root, "v.sock"), req)
-		c()
-		if e != nil || health.InitializationHash != want || health.BootID != req.BootID {
-			t.Fatal("sealed handoff failed; inspect private log", e)
+		link, e := os.Stat(filepath.Join(clones[1].root, "template.mem"))
+		if e != nil || !os.SameFile(same, link) {
+			t.Fatal("memory template not shared immutably")
 		}
-		ctx, c = context.WithTimeout(context.Background(), time.Second)
-		_, stillOpen := guestbridge.Bootstrap(ctx, filepath.Join(v.root, "v.sock"), guestinit.Request{Version: 1, Operation: "state"})
-		c()
-		if stillOpen == nil {
-			t.Fatal("bootstrap port survived sealed exec")
+		if hash(mem) != memHash || hash(backing) != diskHash {
+			t.Fatal("shared pristine template changed")
 		}
-		if got := execute(v, "id", "-u").Output.Stdout; strings.TrimSpace(got) != "65534" {
-			t.Fatal("wrong guest task UID")
+		if e = stop(clones[0]); e != nil {
+			t.Fatal(e)
 		}
-		if got := execute(v, "cat", "/proc/sys/kernel/random/boot_id").Output.Stdout; strings.TrimSpace(got) != req.BootID {
-			t.Fatal("boot ID not rebound")
+		if e := os.RemoveAll(filepath.Dir(clones[0].root)); e != nil {
+			t.Fatal(e)
 		}
-		if got := execute(v, "cat", "/etc/machine-id").Output.Stdout; strings.TrimSpace(got) != strings.ReplaceAll(req.BootID, "-", "") {
-			t.Fatal("machine ID not rebound")
+		execute(clones[1], "true")
+		stale := guestwire.Request{Version: 1, Operation: "health", Ref: clones[0].ref}
+		if _, e := guestCall(clones[1], stale); e == nil {
+			t.Fatal("cross-clone stale Ref accepted")
 		}
-		if got := execute(v, "date", "-u", "+%Y").Output.Stdout; strings.TrimSpace(got) != "2021" {
-			t.Fatal("guest clock not rebound")
+		if e = stop(clones[1]); e != nil {
+			t.Fatal(e)
 		}
-		if time.Now().Year() < 2025 {
-			t.Fatal("host clock altered instead of guest clock")
-		}
-		execute(v, "sh", "-c", "test ! -e other-clone; echo private > other-clone; test ! -r /run/xandbox-init/receipt.json")
-		epochs = append(epochs, req)
-		req.WipeEntropy()
-		samples = append(samples, map[string]float64{"private_staging_and_jailer_api_ms": float64(staged) / 1e6, "staging_to_initialized_guest_commands_ms": float64(time.Since(began)) / 1e6})
+		checks = append(checks, "read-only shared memory inode unchanged; removing one stopped clone cannot break another live clone", "cross-clone Ref rejected; host cgroup execution stopped before private file removal")
+
 	}
-	if epochs[0].BootID == epochs[1].BootID || epochs[0].Nonce == epochs[1].Nonce || epochs[0].Ref == epochs[1].Ref {
-		t.Fatal("clone initialization identity reused")
-	}
-	checks = append(checks, "two actual restored KVM guests require new Ref/nonce/entropy and exact sealed normal-health hash before execution", "entropy-add and explicit reseed ioctls succeeded before fresh agent exec replaces agent userspace RNG caches", "per-clone proc boot ID, machine ID and guest-only clock rebound; host clock unchanged", "bootstrap listener removed after handoff; no post-admission reset RPC", "unprivileged tasks cannot read sealed initialization receipt; workspace markers isolated")
-	same, e := os.Stat(mem)
-	if e != nil {
-		t.Fatal(e)
-	}
-	link, e := os.Stat(filepath.Join(clones[1].root, "template.mem"))
-	if e != nil || !os.SameFile(same, link) {
-		t.Fatal("memory template not shared immutably")
-	}
-	if hash(mem) != memHash || hash(backing) != diskHash {
-		t.Fatal("shared pristine template changed")
-	}
-	if e = stop(clones[0]); e != nil {
-		t.Fatal(e)
-	}
-	if e := os.RemoveAll(filepath.Dir(clones[0].root)); e != nil {
-		t.Fatal(e)
-	}
-	execute(clones[1], "true")
-	stale := guestwire.Request{Version: 1, Operation: "health", Ref: clones[0].ref}
-	if _, e := guestCall(clones[1], stale); e == nil {
-		t.Fatal("cross-clone stale Ref accepted")
-	}
-	if e = stop(clones[1]); e != nil {
-		t.Fatal(e)
-	}
-	checks = append(checks, "read-only shared memory inode unchanged; removing one stopped clone cannot break another live clone", "cross-clone Ref rejected; host cgroup execution stopped before private file removal")
 	// Optional PRIVATE export is only for the next real-service fixture. Never
 	// export an assigned clone: these sources belong to the stopped, unassigned
 	// creator and hashes were checked after both clones finished independently.
@@ -598,6 +627,12 @@ func TestKVMPristineBootstrapSnapshot(t *testing.T) {
 		}
 	}
 	report := map[string]any{"test": "experimental_pristine_bootstrap_snapshot_component", "source_revision": f.SourceRevision, "production_ready": false, "sandboxd_driver_integrated": false, "snapshot_catalog_implemented": false, "snapshot_performance_benchmark": false, "toolchain": runtime.Version(), "architecture": runtime.GOARCH, "guest_memory_mib": 512, "vcpus": 2, "workspace_bytes": 128 << 20, "guest_network_interfaces": 0, "artifacts_sha256": f.SHA256, "snapshot_memory_sha256": memHash, "pristine_disk_sha256": diskHash, "checks": checks, "samples": samples, "notes": "Two same-host restores of an unassigned template; private workspace copies and read-only memory hardlinks. Not a production catalog, shared-reference crash recovery, prewarm pool, load test or SLO. Samples include unoptimized staging/diagnostic commands; no latency claim."}
+	if faultOnly {
+		report["test"] = "fault_image_unassigned_export_only"
+		report["fault_mode"] = f.FaultMode
+		report["normal_positive_clone_acceptance"] = false
+		report["notes"] = "Private fixture-image builder only: no assigned clone exported and no successful initialization claimed. Real negative service tests are separate."
+	}
 	out, e := json.MarshalIndent(report, "", "  ")
 	if e != nil {
 		t.Fatal(e)

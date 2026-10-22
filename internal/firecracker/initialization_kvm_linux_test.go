@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/fixturewire"
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
 	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
@@ -37,17 +38,18 @@ type initializationFixture struct {
 // constructors, Prepare and Initialize are unmodified. The real Firecracker
 // listener inode is renamed, not replaced by a fake guest or host executor.
 type initializationFaultBridge struct {
-	listener                          *net.UnixListener
-	realSocket, mode, barrier         string
-	ref                               sandbox.Ref
-	ctx                               context.Context
-	cancel                            context.CancelFunc
-	wg                                sync.WaitGroup
-	initializeRequests, sealedReplies atomic.Int64
-	mu                                sync.Mutex
-	hash, bootID                      string
-	barrierOnce                       sync.Once
-	failure                           error
+	listener                                *net.UnixListener
+	realSocket, mode, barrier               string
+	ref                                     sandbox.Ref
+	ctx                                     context.Context
+	cancel                                  context.CancelFunc
+	wg                                      sync.WaitGroup
+	initializeRequests, sealedReplies       atomic.Int64
+	waitingObserved, partialFailureObserved atomic.Bool
+	mu                                      sync.Mutex
+	hash, bootID                            string
+	barrierOnce                             sync.Once
+	failure                                 error
 }
 
 func (p *initializationFaultBridge) fail(e error) {
@@ -138,6 +140,27 @@ func (p *initializationFaultBridge) serve(client *net.UnixConn) {
 		p.mu.Lock()
 		p.hash, p.bootID = req.Digest(), req.BootID
 		p.mu.Unlock()
+		if p.mode == "drop_initialize_request" {
+			upstream.Close()
+			ctx, cancel := context.WithTimeout(p.ctx, 2*time.Second)
+			defer cancel()
+			v, e := guestbridge.Bootstrap(ctx, p.realSocket, guestinit.Request{Version: 1, Operation: "state"})
+			if e != nil || v.Phase != guestinit.Waiting {
+				p.fail(errors.New("dropped request did not leave actual guest WAITING"))
+				return
+			}
+			p.waitingObserved.Store(true)
+			return
+		}
+		if strings.HasPrefix(p.mode, "guest_") {
+			ctx, cancel := context.WithTimeout(p.ctx, time.Second)
+			v, e := fixturewire.Inspect(ctx, p.realSocket, "")
+			cancel()
+			if e != nil || v.Claimed || v.Receipt || v.AgentGenerations != 1 {
+				p.fail(errors.New("fixture diagnostic baseline not pristine"))
+				return
+			}
+		}
 		if e = guestwire.Write(upstream, guestinit.MaxRequest, req); e != nil {
 			return
 		}
@@ -147,6 +170,29 @@ func (p *initializationFaultBridge) serve(client *net.UnixConn) {
 		}
 		if !out.Valid() || out.Phase != guestinit.Claimed || out.Digest != req.Digest() {
 			p.fail(errors.New("real guest did not claim exact request"))
+			return
+		}
+		if strings.HasPrefix(p.mode, "guest_") {
+			// Forward no more initialization. Read-only probes observe actual guest
+			// filesystem side effects or the exact compiler-overlay crash/respawn.
+			_ = guestwire.Write(client, guestinit.MaxResponse, out)
+			deadline := time.Now().Add(4 * time.Second)
+			for time.Now().Before(deadline) {
+				ctx, cancel := context.WithTimeout(p.ctx, 300*time.Millisecond)
+				state, stateError := guestbridge.Bootstrap(ctx, p.realSocket, guestinit.Request{Version: 1, Operation: "state"})
+				view, viewError := fixturewire.Inspect(ctx, p.realSocket, req.BootID)
+				cancel()
+				if p.mode == "guest_machine_id_failure" && viewError == nil && state.Phase == guestinit.Failed && state.Digest == req.Digest() && view.Claimed && !view.Receipt && view.MachineIDDirectory && view.BootMatches && view.BootReadOnlyBind {
+					p.partialFailureObserved.Store(true)
+					return
+				}
+				if p.mode == "guest_crash_before_marker" && stateError == nil && state.Phase == guestinit.Waiting && viewError == nil && !view.Claimed && !view.Receipt && view.AgentGenerations >= 2 {
+					p.waitingObserved.Store(true)
+					return
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+			p.fail(errors.New("expected guest-internal failure/respawn was not observed"))
 			return
 		}
 		if p.mode == "drop_claim_ack" {
@@ -236,7 +282,7 @@ func TestKVMInitializationFault(t *testing.T) {
 		}
 	}
 	switch f.Mode {
-	case "before_initialize", "after_sealed_before_ready", "drop_claim_ack", "drop_health_ack", "wrong_health_epoch":
+	case "before_initialize", "after_sealed_before_ready", "drop_claim_ack", "drop_health_ack", "wrong_health_epoch", "drop_initialize_request", "guest_machine_id_failure", "guest_crash_before_marker":
 	default:
 		t.Fatal("unknown fault mode")
 	}
@@ -329,8 +375,23 @@ func TestKVMInitializationFault(t *testing.T) {
 	if proxy == nil || proxy.err() != nil {
 		t.Fatal("fault relay failed; inspect private fixture", proxy)
 	}
-	if proxy.initializeRequests.Load() != 1 || proxy.sealedReplies.Load() < 1 {
-		t.Fatal("fault did not observe one initialization and actual sealed guest")
+	if proxy.initializeRequests.Load() != 1 {
+		t.Fatal("host initialized more than once")
+	}
+	unsealed := f.Mode == "drop_initialize_request" || strings.HasPrefix(f.Mode, "guest_")
+	if unsealed {
+		if proxy.sealedReplies.Load() != 0 {
+			t.Fatal("unsealed fault case exposed normal health")
+		}
+		if f.Mode == "guest_machine_id_failure" {
+			if !proxy.partialFailureObserved.Load() {
+				t.Fatal("partial privileged failure not witnessed")
+			}
+		} else if !proxy.waitingObserved.Load() {
+			t.Fatal("actual WAITING/respawn not witnessed")
+		}
+	} else if proxy.sealedReplies.Load() < 1 {
+		t.Fatal("actual sealed guest not observed")
 	}
 	positive := f.Mode == "drop_claim_ack"
 	if positive {
@@ -397,7 +458,7 @@ func TestKVMInitializationFault(t *testing.T) {
 		t.Fatal(e)
 	}
 	closed = true
-	report := map[string]any{"test": "experimental_real_kvm_initialization_fault_child", "mode": f.Mode, "source_revision": f.SourceRevision, "toolchain": runtime.Version(), "production_ready": false, "initialize_requests": proxy.initializeRequests.Load(), "actual_sealed_health_replies_observed": proxy.sealedReplies.Load(), "create_returned_ready": positive, "fenced_candidate_reclaimed": true, "passed": true}
+	report := map[string]any{"test": "experimental_real_kvm_initialization_fault_child", "mode": f.Mode, "source_revision": f.SourceRevision, "toolchain": runtime.Version(), "production_ready": false, "initialize_requests": proxy.initializeRequests.Load(), "actual_waiting_after_uncertain_initialize": proxy.waitingObserved.Load(), "actual_partial_privileged_failure_observed": proxy.partialFailureObserved.Load(), "actual_sealed_health_replies_observed": proxy.sealedReplies.Load(), "create_returned_ready": positive, "fenced_candidate_reclaimed": true, "passed": true}
 	if e = durableJSON(f.ResultPath, report); e != nil {
 		t.Fatal(e)
 	}
@@ -422,7 +483,7 @@ func TestInitializationFaultFixtureJSONIsPrivateOnly(t *testing.T) {
 // Synthetic framed UDS only; ordinary CI exercises the fault relay itself, not
 // real guest/KVM admission. The opt-in root test above supplies that evidence.
 func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
-	for _, mode := range []string{"drop_claim_ack", "drop_health_ack", "wrong_health_epoch", "after_sealed_before_ready"} {
+	for _, mode := range []string{"drop_claim_ack", "drop_health_ack", "wrong_health_epoch", "after_sealed_before_ready", "drop_initialize_request"} {
 		t.Run(mode, func(t *testing.T) {
 			root, e := os.MkdirTemp("/tmp", "xif")
 			if e != nil {
@@ -467,7 +528,11 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 								return
 							}
 							defer in.WipeEntropy()
-							_ = guestwire.Write(c, guestinit.MaxResponse, guestinit.Response{Version: 1, Phase: guestinit.Claimed, Digest: in.Digest()})
+							response := guestinit.Response{Version: 1, Phase: guestinit.Claimed, Digest: in.Digest()}
+							if in.Operation == "state" {
+								response = guestinit.Response{Version: 1, Phase: guestinit.Waiting}
+							}
+							_ = guestwire.Write(c, guestinit.MaxResponse, response)
 							return
 						}
 						var in guestwire.Request
@@ -491,8 +556,15 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 			if (e == nil) != (mode == "drop_claim_ack") {
 				t.Fatal("wrong relay fault outcome", e)
 			}
-			if proxy.err() != nil || proxy.initializeRequests.Load() != 1 || proxy.sealedReplies.Load() < 1 {
+			if proxy.err() != nil || proxy.initializeRequests.Load() != 1 {
 				t.Fatal("relay evidence incomplete")
+			}
+			if mode == "drop_initialize_request" {
+				if !proxy.waitingObserved.Load() || proxy.sealedReplies.Load() != 0 {
+					t.Fatal("dropped request not observed WAITING")
+				}
+			} else if proxy.sealedReplies.Load() < 1 {
+				t.Fatal("sealed response absent")
 			}
 			if mode == "after_sealed_before_ready" {
 				b, e := os.ReadFile(filepath.Join(root, "barrier.json"))

@@ -148,3 +148,10 @@ sudo -n python3 scripts/kvm_snapshot_faults.py \
 ### 仍未完成
 
 guest内部CLAIMED到marker之间的进程崩溃、部分特权初始化失败、分片/部分帧丢失和READY账本写入故障等剩余矩阵；物理存储故障/容量压力、跨节点/内核升级兼容性、预热池、持续混合负载/公平性、阶段尾延迟、共享/私有RAM完整记账与长期回收曲线均未验收。M3和整个生产Goal保持未完成。
+
+
+### 开发中：guest内部故障fixture（尚未实机验收）
+
+新增测试专用的只读观察器（`xandbox_guest_fixture`构建标签，默认构建/生产镜像不包含）、受摘要约束的initrd变体工具，以及独立的未分配故障模板export测试。机器身份目录故障使用未修改的agent，目标是在实际熵注入、guest时钟/只读boot视图之后令machine-id写入失败；认领后标记前崩溃使用固定源码摘要的Go compiler overlay，在该精确位置exit97，**不是生产agent二进制**。观察器仅接受host CID的固定inspect请求，返回布尔状态与进程代数，不接受路径、argv、写入或reset。
+
+这些测试镜像、overlay和诊断端口**不得用于生产模板**；需独立绑定实际agent/initrd摘要与私有state/runtime。普通正向双克隆组件不允许故障模式，故障export也不被计作正向克隆成功。当前仅有编译/合成回归，未通过新真实KVM案例前不宣称这些guest内部窗口已覆盖。
