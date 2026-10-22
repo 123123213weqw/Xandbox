@@ -1,0 +1,9 @@
+kvm-project-driver-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-project-driver-private-v3 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-project-driver-private-v4 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-project-driver-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-project-driver-private-v6 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-project-driver-private-v7 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-project-driver-default-power-private-v7 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-project-driver-default-state-io-private-v7 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL8 project-driver fixture scopes independently rechecked; 23 execution generations absent; read-only audit, no cleanup actions. Initial v1 unit-only failure created no L1 scope.

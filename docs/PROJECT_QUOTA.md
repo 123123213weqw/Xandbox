@@ -16,9 +16,11 @@ Linux6.8 的 `ignore_hardlimit()` 对持有 `CAP_SYS_RESOURCE` 的进程允许�
 - Root无CAP_SYS_RESOURCE不是全部边界：init user namespace内文件owner可修改project属性，见[固定内核fileattr权限检查](https://github.com/torvalds/linux/blob/v6.8/fs/ioctl.c)。quota模式warden额外继承seccomp，阻止后代quotactl/quotactl_fd、FSSETXATTR及SETFLAGS，保留Firecracker默认filter；READY前检查NNP与过滤器。Go race/cgo不能同步all-thread prctl时严格拒绝，实际kernel/exec继承证明另在CGO0运行，不单线程回退。
 - Stop/drain、文件清理、quota清零/Q_SYNC/读回、owner删除/目录fsync与容量归还是不同阶段；quota I/O或用量不归零就不能提前释放UID/project。恢复不把jailer的PID文件当成身份或kill依据。
 
-当前有限实测使用新原生普通daemon `1d66fc40…`、warden `b290a5ed…` 与原始pinned guest：running/stopped/destroyed三检查点、四次L1实际开机的同盘普通恢复、旧key410、新真实KVM执行销毁通过。running/stopped各N=1观察到非fsync PID文件在重启后为空，quota charge与独立命名inode分配同时由189,911,040变为189,906,944字节；192MiB hard、128 inode hard、归属/继承/不可变资产均保持，并在GC后清零。不是百分位、SLO或全部quota故障验收。原始失败前序和新成功材料暂存于私有验收目录，将在完整PR验收后按准确来源/原字节SHA公开，不改写旧失败。
+当前有限实测使用新原生普通daemon `1d66fc40…`、warden `b290a5ed…` 与原始pinned guest：running/stopped/destroyed三检查点、四次L1实际开机的同盘普通恢复、旧key410、新真实KVM执行销毁通过。running/stopped各N=1观察到非fsync PID文件在重启后为空，quota charge与独立命名inode分配同时由189,911,040变为189,906,944字节；192MiB hard、128 inode hard、归属/继承/不可变资产均保持，并在GC后清零。不是百分位、SLO或全部quota故障验收。已公开[本轮有限证据与精确SHA](validation/project-driver-basic-provenance-v7.json)：[cold三例](validation/kvm-project-driver-v7.json)、[默认健康掉电三例](validation/kvm-project-driver-default-power-v7.json)、[默认EIO/held-fsync四例](validation/kvm-project-driver-default-state-io-v7.json)，以及五份保持passed=false的原始前序；全部是部分验收，不是最终PR19通过。
 
 验收不能把live物理用量错误当成不可变policy：初版fixture要求整个quota record完全相等而失败；后来独立核对namespace，定位到pinned jailer的`firecracker.pid`有3字节未同步内容，重启后为空。上游[PID文件写入代码](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/src/jailer/src/env.rs)没有fsync；修正只允许这个固定非权威文件的有界size变化，仍严格检查同inode/owner/mode/link、所有其他文件尺寸、实际块/inode计数和硬限额，没有用保存PID回收或先停止VM来绕过running掉电。
+
+Linux full race×3/vet、fixture race×10/vet、root Python40和[CGO0实际kernel/exec过滤器证明×3](validation/project-driver-cgo0-kernel-filter-v7.txt)通过；[原样阶段转录](validation/project-driver-basic-pipeline-v7.txt)的runner退出0。[独立只读清理](validation/project-driver-independent-cleanup-v7.txt)复核8个scope、23个执行代际全部不存在；不是在已经删除的盘上虚构quota读回。上述数量只覆盖列出的cold/默认宿主profile，不包括后续所有旧服务矩阵。
 
 **合并前还必须完成**：quota清零阶段移出catalog全局pin锁并验证并发；quota启用的snapshot/pin/初始化与block/inode耗尽、拒绝/崩溃/存储错误；全部新native默认冷路径/快照/初始化/IO/故障回归、独立清理和最终CI。当前实现与三例cold通过不等于完成这些要求。
 
