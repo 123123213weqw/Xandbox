@@ -63,7 +63,7 @@ def main():
               'harness_sha256': digest(__file__), 'helper_sha256': {n: digest(Path(__file__).with_name(n)) for n in
                   ('kvm_storage.py', 'kvm_driver_smoke.py', 'kvm_resources.py', 'kvm_snapshot_smoke.py')},
               'artifacts_sha256': {n: digest(p) for n, p in inputs.items()},
-              'fault_image_bytes': VOLUME_BYTES, 'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
+              'fault_image_bytes': VOLUME_BYTES, 'configured_node_instance_capacity': 1, 'configured_tenant_instance_quota': 1, 'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
               'guest_network_interfaces': 0, 'modes': [], 'checks': [], 'limitations': [
                   '64MiB dedicated loop ext4 in private mount namespace; no host filesystem filled/remounted.',
                   'Cold schema1 runtime stays on healthy host ext4; not snapshot cross-filesystem behavior.',
@@ -107,7 +107,7 @@ def main():
                 '-auth-file', str(auth), '-firecracker-config', str(cfg), '-max-instances', '1', '-metrics']
         env = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'}
 
-        def call(method, endpoint, body=None, expected=200, key=None):
+        def call(method, endpoint, body=None, expected=200, key=None, with_status=False):
             conn = UnixHTTP(state / 'api.sock')
             headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token}
             if key: headers['Idempotency-Key'] = key
@@ -116,7 +116,8 @@ def main():
                 response = conn.getresponse(); raw = response.read()
                 assert response.status in ((expected,) if isinstance(expected, int) else expected), (response.status, raw.decode())
                 assert token.encode() not in raw and str(root).encode() not in raw
-                return json.loads(raw)
+                value = json.loads(raw)
+                return (response.status, value) if with_status else value
             finally:
                 conn.close()
 
@@ -145,6 +146,19 @@ def main():
         def jail(ref): return runtime / 'j/firecracker' / name(ref)
         request = {'ttl_ms': 300000, 'limits': {'max_exec_ms': 60000, 'max_output_bytes': 8192}}
 
+        def allocated():
+            conn = UnixHTTP(state / 'metrics.sock')
+            try:
+                conn.request('GET', '/metrics')
+                response = conn.getresponse(); raw = response.read(65537)
+                assert response.status == 200 and len(raw) <= 65536
+                assert token.encode() not in raw and str(root).encode() not in raw
+                values = [line.split()[1] for line in raw.decode().splitlines() if line.startswith('xandbox_allocated ')]
+                assert len(values) == 1 and values[0].isdigit()
+                return int(values[0])
+            finally:
+                conn.close()
+
         def create(key):
             ref = call('POST', '/v1/sandboxes', request, expected=201, key=key)
             assert ref['state'] == 'READY'
@@ -168,6 +182,7 @@ def main():
         def destroyed(ref):
             wait(lambda: call('GET', path(ref))['state'] == 'DESTROYED', 'storage durable destroy', seconds=30)
             assert not group(ref).exists() and not jail(ref).exists() and not owner(ref).exists()
+            wait(lambda: allocated() == 0, 'storage allocation release after durable destroy')
 
         def remove(ref):
             call('DELETE', path(ref), {'generation': ref['generation']}, expected=202)
@@ -209,7 +224,13 @@ def main():
             case['accepted_guest_job_terminal_status'] = terminal['status']
             assert ledger.read_bytes() == before and owner(ref).exists() and jail(ref).exists()
             assert call('GET', path(ref))['state'] != 'DESTROYED'
-            call('POST', '/v1/sandboxes', request, expected=429, key=secrets.token_hex(16))
+            # The node-capacity check precedes the tenant quota in this fixture
+            # (both limits are one). Assert node503 AND retained allocation.
+            denied, _ = call('POST', '/v1/sandboxes', request, expected=503,
+                             key=secrets.token_hex(16), with_status=True)
+            assert allocated() == 1
+            case['create_while_recovery_incomplete_status'] = denied
+            case['allocated_while_recovery_incomplete'] = 1
             case['no_false_durable_ack_or_capacity_release'] = True
             process.kill(); process.wait(timeout=10); process = None
             failed = subprocess.run(base, env=env, capture_output=True, timeout=15)
