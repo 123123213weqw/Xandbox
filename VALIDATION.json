@@ -879,5 +879,32 @@
       "host project quota, IO-rate budget, metadata retention and secure erase",
       "dual-supervisor failure, independent operator and production SLO"
     ]
+  },
+  "stop_after_fence_write_error": {
+    "production_ready": false,
+    "goal_complete": false,
+    "source_revision": "35548f67c2ae5a45549e7ecfc312c77c6b6473b0",
+    "new_daemon_sha256": "d2dc5358d0e8adc98847fa6611e6fff6d7e2a48bd28a38b35bed8dca8cbcb7c6",
+    "provenance": "docs/validation/emergency-stop-provenance-v1.json",
+    "runner_exit_status": 0,
+    "new_runtime_storage_cases": 5,
+    "snapshot_catalog_assertion_groups": 10,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_duration_seconds": 244.695,
+    "mixed_resource_samples": 402,
+    "normal_initialization_faults": 6,
+    "guest_test_image_cases": 2,
+    "cold_service_checks": 30,
+    "queue_and_binding_details_each": 9,
+    "details_not_additional_cases": true,
+    "old_negative_control_expected_exit": 1,
+    "negative_control_source_field_is_harness_not_old_runtime": true,
+    "independent_namespace_rechecks": 7,
+    "native_linux_race_repeat": 3,
+    "native_linux_vet": "passed",
+    "native_linux_process_smokes": 5,
+    "native_linux_python_tests": 20,
+    "mac_linux_daemon_admin_reproduction_exact": true,
+    "scope": "Only returned fence-write errors: try physical Stop with independent timeout but preserve errors and never publish durable stop/cleanup/capacity success. No hung-Save, kernel or production SLO guarantee."
   }
 }

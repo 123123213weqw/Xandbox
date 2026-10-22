@@ -1,0 +1,28 @@
+work/emergency-source-v1.tar.gz: 成功
+bin/sandboxd-mixed-v6: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native race/vet/smoke, private umask
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 0.008s
+
+OK
+d2dc5358d0e8adc98847fa6611e6fff6d7e2a48bd28a38b35bed8dca8cbcb7c6  bin/sandboxd-emergency-v1
+de9114762db85ab635c58880418df75b616a08d3b2111e2e0619ec4fc87e5e74  bin/xandbox-template-emergency-v1
+6de765e21ef077553cde8277baf43554f32a6b0c27def4896837330e17ab6fdd  bin/firecracker-emergency-v1.test
+506d3b33265f35fc9d0d49fd65df404ad84b91ce83ce539592f74911ab6be9e0  bin/session-emergency-v1.test
+stage: negative CONTROL old c577 daemon + NEW harness, not new-runtime evidence
+expected old-runtime guard failure confirmed; independent role/provenance, not new-runtime acceptance
+stage: NEW native daemon, ext4 block/inode busy+idle,1500ms observation guard
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+stage: NEW native snapshot + full two-tenant finite mixed probe
+{"passed": true, "checks": 10, "cleanup_confirmed": true}
+stage: NEW native six initialization faults
+{"passed": true, "cases": 6, "cleanup_confirmed": true}
+stage: NEW native host controller, PINNED historical guest fixture images (not rebuilt/unmodified crash ELF claim)
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: NEW native cold30 +queue/binding details, legacy setup022 ONLY, current recovery077
+{"passed": 30, "production_ready": false, "samples": {"create_api_ready_ms": [1426.038, 1448.628, 1468.43, 1411.175, 1392.711, 1570.065, 1497.647, 1527.118, 1490.226], "controller_sigkill_to_empty_cgroup_ms": 33.663, "restart_to_durable_reclaim_ms": 769.764, "stop_api_confirmed_ms": 47.286, "delete_phases": [{"from_state": "STOPPED", "accepted_ms": 2.139, "observed_stopped_ms": 2.57, "durable_destroyed_ms": 129.715}, {"from_state": "READY", "accepted_ms": 4.395, "observed_stopped_ms": 43.096, "durable_destroyed_ms": 136.024}, {"from_state": "READY", "accepted_ms": 3.346, "observed_stopped_ms": 45.848, "durable_destroyed_ms": 136.343}]}}
+all NEW runtime stages passed; old negative control intentionally failed its finite guard

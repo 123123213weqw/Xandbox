@@ -1,0 +1,81 @@
+{
+  "test": "physical_stop_on_returned_fence_write_error",
+  "production_ready": false,
+  "goal_complete": false,
+  "harness_and_new_host_runtime_source": "35548f67c2ae5a45549e7ecfc312c77c6b6473b0",
+  "runner_exit_status": 0,
+  "native_toolchain": "go1.27.3 linux/amd64 CGO0 trimpath buildvcs=false",
+  "native_race_repeat": 3,
+  "native_vet_passed": true,
+  "native_process_smoke_suites": 5,
+  "native_root_python_tests": 20,
+  "mac_to_linux_daemon_and_admin_reproduction_exact": true,
+  "native_artifacts_sha256": {
+    "daemon": "d2dc5358d0e8adc98847fa6611e6fff6d7e2a48bd28a38b35bed8dca8cbcb7c6",
+    "admin": "de9114762db85ab635c58880418df75b616a08d3b2111e2e0619ec4fc87e5e74",
+    "firecracker_test": "6de765e21ef077553cde8277baf43554f32a6b0c27def4896837330e17ab6fdd",
+    "session_test": "506d3b33265f35fc9d0d49fd65df404ad84b91ce83ce539592f74911ab6be9e0"
+  },
+  "new_runtime_assertion_groups": {
+    "ext4_storage": 5,
+    "snapshot_catalog": 10,
+    "snapshot_mixed_switches_per_tenant": 120,
+    "normal_initialization_faults": 6,
+    "guest_machine_id_fixture": 1,
+    "guest_before_marker_overlay_fixture": 1,
+    "cold_service": 30,
+    "cold_queue_details": 9,
+    "cold_binding_details": 9
+  },
+  "details_are_not_additional_independent_fault_cases": true,
+  "negative_control": {
+    "report": "kvm-emergency-old-control-v1.json",
+    "expected_exit_status": 1,
+    "actual_passed": false,
+    "cleanup_confirmed": true,
+    "report_source_revision_means_harness_not_old_runtime": true,
+    "harness_source": "35548f67c2ae5a45549e7ecfc312c77c6b6473b0",
+    "old_runtime_source": "547cd79a9c48f49b2410197db065419dcfff6bdf",
+    "old_runtime_daemon_sha256": "c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1",
+    "observation_guard_ms": 1500,
+    "old_block_idle_host_stopped_observed_ms": 5016.328
+  },
+  "guest_artifact_policy": "Pinned original v10/initrd and existing explicitly TEST-only guest fault images/exports retained. No newly-built guest image deployed; make-smoke agent ELF is a build artifact, not the guest used for this KVM matrix. Overlay crash fixture is NOT unmodified production-ELF attestation.",
+  "historical_guest_fixture_provenance": "guest-fault-image-provenance-v4.json",
+  "legacy_cold_upgrade_setup": {
+    "source": "97196a59aa508348d9293e9f44c5fa5f2f3e0891",
+    "historical_setup_umask": "0022",
+    "current_recovery_umask": "0077"
+  },
+  "independent_cleanup_recheck": {
+    "namespace_groups": 7,
+    "own_loop_bindings_absent": true,
+    "own_mounts_not_propagated_to_parent": true,
+    "cold_strict_finally_and_parent_exit_verified": true,
+    "private_resource_receipts_not_exported": true
+  },
+  "artifact_files_sha256": {
+    "kvm-emergency-cold-v1-session.json": "8a011246a972917bfa534c3e7c9f9c1578f716e27042ddbbfcbdff83b1955063",
+    "kvm-emergency-old-control-v1.json": "db5b30d099002d795cb75e3a98b99502cbbed24666c800695620dd523e58ad27",
+    "kvm-emergency-before-marker-v1.json": "31ee08b1f842138c53a8694d0b12089e73c0de32bb327b1c4266572e7c5d684f",
+    "kvm-emergency-initialization-v1.json": "015211776e5da71645e2b46d13dd4a5338d21c90c7f49a6d3c2c54db19fdc1ae",
+    "kvm-emergency-storage-v1.json": "3d7bdb95e3ea113c4fad7379d095beba9861f3c3dbbeecf8efb908dc8f40e973",
+    "kvm-emergency-snapshot-v1.json": "8495dfd473b8dc8bb13be189858ccc9b9e5bba38a45f1503808e9db9c12de985",
+    "kvm-emergency-cold-v1.json": "bb1fb782a9ff934b9f1f37f85f2a54bf91909034457db24b83e6bda33b5ede98",
+    "kvm-emergency-machine-id-v1.json": "9aeaea53f68a9f097a0f383344d72bf4b06ecc6d9579173029d0c5b7468f8625",
+    "kvm-emergency-cold-v1-queue.json": "95506136e287ea82c0e30d58c642b4b1d51c4949fa3ad31b324bfa2a3d114dc0",
+    "emergency-pipeline-transcript-v1.txt": "4b009016e4d925259fd5c00b1dd18d6cdc64bcb80e17ec6edba10080565d65c3",
+    "emergency-native-race-v1.txt": "f3ce7204d2038568f0072f8e630d75548521e5dd8deabcf5109c48b43ac22d1b"
+  },
+  "source_ci": {
+    "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39838834109",
+    "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39839422404",
+    "all_actual_jobs_and_steps_success": true
+  },
+  "not_validated": [
+    "hung Save without returned error or all-stop-workers blocked",
+    "kernel starvation, misbehaving driver, whole-host/power loss, full EIO/readonly matrix and dual-supervisor failure",
+    "host project quota, secure erase, metadata retention and independent operator acceptance",
+    "open-loop fairness, unique RAM attribution, audit/alert delivery and production tails/SLO"
+  ]
+}
