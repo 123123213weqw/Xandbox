@@ -190,6 +190,7 @@ func launch(path string) error {
 	if e = cmd.Start(); e != nil {
 		return e
 	}
+	fmt.Fprintln(os.Stderr, "private launch: guardian started")
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 	eof := make(chan struct{})
@@ -201,10 +202,12 @@ func launch(path string) error {
 		case e = <-done:
 			return e
 		case <-eof:
+			fmt.Fprintln(os.Stderr, "private launch: lifetime pipe closed")
 			_ = write.Close()
 			return <-done
 		case <-ticker.C:
 			if e = send(); e != nil {
+				fmt.Fprintln(os.Stderr, "private launch: lease renewal failed", e)
 				_ = write.Close()
 				return <-done
 			}
@@ -213,6 +216,7 @@ func launch(path string) error {
 }
 
 func qemuChild(path string) error {
+	fmt.Fprintln(os.Stderr, "private launch: fixed QEMU child entered")
 	if os.Geteuid() != 0 {
 		return errors.New("root fixture child required")
 	}
@@ -250,5 +254,6 @@ func qemuChild(path string) error {
 	cmd.Dir = p.Root
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: p.UID, Gid: p.UID, Groups: []uint32{p.KVMGroup}}}
+	fmt.Fprintln(os.Stderr, "private launch: starting fixed QEMU argv")
 	return cmd.Run()
 }
