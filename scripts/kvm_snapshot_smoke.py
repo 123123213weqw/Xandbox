@@ -69,7 +69,9 @@ def main():
               'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'host_kernel': os.uname().release, 'architecture': os.uname().machine,
               'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
-              'guest_network_interfaces': 0, 'artifacts_sha256': {k: digest(v) for k, v in sources.items()},
+              'guest_network_interfaces': 0, 'template_memory_sha256': manifest['memory_sha256'],
+              'template_state_sha256': manifest['state_sha256'], 'workspace_template_sha256': manifest['workspace_sha256'],
+              'artifacts_sha256': {k: digest(v) for k, v in sources.items()},
               'checks': [], 'samples': {},
               'limitations': ['Finite same-host correctness probe, not sustained load, fairness, percentiles or SLO.',
                               'Shared catalog page cache and per-VM private RAM are not fully accounted here.',
@@ -236,26 +238,34 @@ def main():
         session_exec(binding, ['sh', '-c', 'echo old > session-marker'])
         call('POST', path(binding['current']) + '/exec', {'generation': binding['current']['generation'], 'argv': ['true']}, expected=409)
         call('GET', endpoint, tenant='beta', expected=404)
-        began = time.perf_counter()
-        def observe_stop():
-            wait(lambda: empty(group(binding['current'])), 'old session stopped', seconds=30)
-            return round((time.perf_counter() - began) * 1000, 3)
-        with ThreadPoolExecutor(max_workers=1) as observers:
-            stopped = observers.submit(observe_stop)
-            switched = call('POST', endpoint + '/switch', {'expected_revision': 1, 'create': request}, key=secrets.token_hex(16))
-            bind_ms = round((time.perf_counter() - began) * 1000, 3)
-            session_exec(switched, ['true'])
-            first_ms = round((time.perf_counter() - began) * 1000, 3)
-            old_stop_ms = stopped.result(timeout=30)
-        destroyed(binding['current'])
-        gc_ms = round((time.perf_counter() - began) * 1000, 3)
-        session_exec(switched, ['test', '!', '-e', 'session-marker'])
-        call('POST', endpoint + '/exec', {'revision': 1, 'argv': ['true']}, expected=409)
-        result['samples']['session_switch'] = {'binding_response_ms': bind_ms, 'first_new_command_success_ms': first_ms,
-                                              'old_execution_stopped_observed_ms': old_stop_ms,
-                                              'old_durable_destroyed_observed_ms': gc_ms,
-                                              'server_phase_observations': switched['timings']}
-        result['checks'].append('real snapshot session switch separates new-command success, old host stop and old durable GC; fresh workspace and stale revision enforced')
+        result['samples']['session_switches'] = []
+        for cycle in range(5):
+            began = time.perf_counter()
+            def observe_stop():
+                wait(lambda: empty(group(binding['current'])), 'old session stopped', seconds=30)
+                return round((time.perf_counter() - began) * 1000, 3)
+            switch_key = secrets.token_hex(16)
+            switch_request = {'expected_revision': binding['revision'], 'create': request}
+            with ThreadPoolExecutor(max_workers=1) as observers:
+                stopped = observers.submit(observe_stop)
+                switched = call('POST', endpoint + '/switch', switch_request, key=switch_key)
+                assert switched['revision'] == binding['revision'] + 1
+                assert switched['previous'] == binding['current'] and switched['current'] != binding['current']
+                bind_ms = round((time.perf_counter() - began) * 1000, 3)
+                session_exec(switched, ['true'])
+                first_ms = round((time.perf_counter() - began) * 1000, 3)
+                old_stop_ms = stopped.result(timeout=30)
+            destroyed(binding['current'])
+            gc_ms = round((time.perf_counter() - began) * 1000, 3)
+            session_exec(switched, ['test', '!', '-e', 'session-marker'])
+            call('POST', endpoint + '/exec', {'revision': binding['revision'], 'argv': ['true']}, expected=409)
+            assert call('POST', endpoint + '/switch', switch_request, key=switch_key)['current'] == switched['current']
+            result['samples']['session_switches'].append({'cycle': cycle + 1, 'binding_response_ms': bind_ms,
+                    'first_new_command_success_ms': first_ms, 'old_execution_stopped_observed_ms': old_stop_ms,
+                    'old_durable_destroyed_observed_ms': gc_ms, 'server_phase_observations': switched['timings']})
+            session_exec(switched, ['sh', '-c', 'echo old > session-marker'])
+            binding = switched
+        result['checks'].append('five closed-loop real snapshot session switches separate new-command success, old host stop and old durable GC; fresh workspace, stale revision and exact-key replay enforced')
         call('POST', endpoint + '/revoke', {'expected_revision': switched['revision']})
         destroyed(switched['current'])
 
@@ -267,10 +277,16 @@ def main():
             wait(lambda: empty(group(first)), 'stop while catalog lock held')
             result['samples']['stop_under_catalog_lock_ms'] = round((time.perf_counter() - began) * 1000, 3)
             assert owner_path(first).exists(), 'stop unexpectedly released durable pin under held lock'
+            call('DELETE', path(first), {'generation': first['generation']}, expected=202)
+            wait(lambda: not jail(first).parent.exists(), 'private GC reaches locked owner release')
+            assert owner_path(first).exists() and call('GET', path(first))['state'] != 'DESTROYED'
             fcntl.flock(lock, fcntl.LOCK_UN)
-        remove(first)
+        destroyed(first)
         execute(second, ['true'], 'beta')
         result['checks'].append('Stop confirms empty host cgroup while catalog lock is held; subsequent GC releases only its own pin and another clone still executes')
+        assert digest(catalog / 'objects' / template / 'memory') == manifest['memory_sha256']
+        assert digest(catalog / 'objects' / template / 'state') == manifest['state_sha256']
+        result['checks'].append('shared catalog memory and VMM-state full SHA256 remain unchanged after guest writes and five switches')
         admin('retire', template)
         assert status_item(template)['phase'] == 'RETIRING' and status_item(template)['pins'] == 1
         create(expected=(500, 503))
