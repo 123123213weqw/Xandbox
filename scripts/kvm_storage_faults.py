@@ -38,6 +38,7 @@ def main():
                  'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--parent-mntns', help=argparse.SUPPRESS)
+    parser.add_argument('--io-budget', action='store_true', help='opt-in fixed8MiB/s +4096ops/s dual-layer IO pressure proof')
     parser.add_argument('--fault-suite', choices=('enospc', 'ledger-readonly'), default='enospc',
                         help='ENOSPC affects all state; read-only affects only a separately mounted ledger')
     parser.add_argument('--max-host-stop-ms', type=float, default=0,
@@ -130,6 +131,11 @@ def main():
         for name in ('warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace'):
             config[name] = {'path': str(copied[name]), 'sha256': digest(copied[name])}
         cfg, auth = root / 'config.json', root / 'auth.json'
+        if args.io_budget:
+            from kvm_io_probe import fixture_io_policy
+            config['io'] = fixture_io_policy(root, cgroup)
+            result['io_policy'] = config['io']
+            result['io_harness_sha256'] = digest(Path(__file__).with_name('kvm_io_probe.py'))
         private_json(cfg, config)
         token = secrets.token_hex(32)
         private_json(auth, {'version': 1, 'keys': [{'tenant_id': 'storage-fixture', 'max_instances': 1,
@@ -219,7 +225,20 @@ def main():
             call('DELETE', path(ref), {'generation': ref['generation']}, expected=202)
             destroyed(ref)
 
+        if args.io_budget:
+            from kvm_io_probe import startup_rejections
+            result['io_policy_rejections'] = startup_rejections(root=root, config=config, daemon=copied['daemon'], auth=auth, logs=logs, private_json=private_json)
         process = start()
+        if args.io_budget:
+            from kvm_io_probe import run_io_probe
+            probe = create(secrets.token_hex(16))
+            result['io_pressure'] = {}
+            result['io_pressure'] = run_io_probe(root=root, group=group(probe), api=jail(probe) / 'root/api.sock', policy=config['io'],
+                submit=lambda argv, timeout: job(probe, argv, timeout),
+                status=lambda accepted: call('GET', path(probe) + '/executions/' + accepted['id']),
+                delete=lambda: call('DELETE', path(probe), {'generation': probe['generation']}, expected=202),
+                destroyed=lambda: destroyed(probe), result=result['io_pressure'])
+            result['checks'].append('dual-layer IO readback, bounded operator direct-IO throttle and guest direct read/write pressure; busy guest host stop and durable reclamation observed separately')
         first = create(secrets.token_hex(16))
         assert execute(first, ['id', '-u'])['stdout'].strip() == '65534'
         full = finish(first, job(first, ['sh', '-c',
@@ -299,6 +318,12 @@ def main():
                 ' refuses durable acknowledgement/admission and capacity reuse, independently stops host, refuses still-faulted restart, then reclaims on same-state recovery')
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
         assert not [p for p in cgroup.iterdir() if p.is_dir()]
+        if args.io_budget:
+            from kvm_io_probe import bound_policy_rejection
+            process.kill(); process.wait(timeout=10); process = None
+            result['io_policy_rejections'].append(bound_policy_rejection(root=root, config=config, base=base, logs=logs, private_json=private_json))
+            process = start()
+            result['checks'].append('actual ordinary daemon rejects wrong IO queue, missing own delegation and removal of bound IO policy before any new VM')
         result['passed'] = True
     finally:
         safe = True

@@ -110,11 +110,19 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 	if err != nil || !hasWords(string(controllers), "memory", "pids", "cpu") {
 		return nil, errors.New("operator must delegate memory, pids and cpu controllers")
 	}
+	if cfg.IO != nil && !hasWords(string(controllers), "io") {
+		return nil, errors.New("configured IO policy requires delegated io controller")
+	}
 	if err := privateDir(cfg.RuntimeRoot); err != nil {
 		return nil, err
 	}
 	if err := unix.Statfs(cfg.RuntimeRoot, &fs); err != nil || fs.Flags&unix.ST_NOEXEC != 0 {
 		return nil, errors.New("runtime filesystem must permit jailer/VMM execution; do not disable host noexec as a fallback")
+	}
+	if cfg.IO != nil {
+		if err := checkRuntimeIO(cfg.RuntimeRoot, *cfg.IO); err != nil {
+			return nil, err
+		}
 	}
 	for _, p := range []string{filepath.Join(cfg.RuntimeRoot, "j"), filepath.Join(cfg.RuntimeRoot, "j/firecracker"), filepath.Join(stateDir, "firecracker")} {
 		if err := privateDir(p); err != nil {
@@ -183,6 +191,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	if clockErr != nil || !lease.ValidLifetime(nowNS, spec.DeadlineNS) {
 		return errors.New("invalid or expired host lifetime")
 	}
+	if d.cfg.IO != nil {
+		if err := checkRuntimeIO(d.cfg.RuntimeRoot, *d.cfg.IO); err != nil {
+			return err
+		}
+	}
 	group, jail := d.paths(k)
 	for _, p := range []string{group, jail} {
 		if _, err := os.Lstat(p); !os.IsNotExist(err) {
@@ -218,6 +231,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		actual, err := os.ReadFile(filepath.Join(group, file))
 		if err != nil || strings.TrimSpace(string(actual)) != value {
 			return errors.New("host resource limit verification failed")
+		}
+	}
+	if d.cfg.IO != nil {
+		if err := applyKernelIO(group, *d.cfg.IO); err != nil {
+			return err
 		}
 	}
 	cg, err := os.Open(group)
@@ -320,6 +338,13 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		if err := apiPut(ctx, apiSocket, "/snapshot/load", map[string]any{"snapshot_path": "/template.state", "mem_backend": map[string]any{"backend_path": "/template.mem", "backend_type": "File"}, "resume_vm": false}); err != nil {
 			return err
 		}
+		if d.cfg.IO != nil {
+			// Restored devices carry serialized policy. Override and verify it
+			// while PAUSED, before any guest CPU or initialization is admitted.
+			if err := configureSnapshotIO(ctx, apiSocket, *d.cfg.IO); err != nil {
+				return err
+			}
+		}
 		if err := apiRequest(ctx, apiSocket, "PATCH", "/vm", map[string]any{"state": "Resumed"}); err != nil {
 			return err
 		}
@@ -350,12 +375,17 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		}{
 			{"/machine-config", map[string]any{"vcpu_count": 2, "mem_size_mib": 512, "smt": false}},
 			{"/boot-source", map[string]any{"kernel_image_path": "/kernel", "initrd_path": "/initrd", "boot_args": bootArgs}},
-			{"/drives/workspace", map[string]any{"drive_id": "workspace", "path_on_host": "/workspace.ext4", "is_root_device": false, "is_read_only": false}},
+			{"/drives/workspace", workspaceDrive(d.cfg.IO)},
 			{"/vsock", map[string]any{"guest_cid": 3, "uds_path": "/v.sock"}},
 			{"/actions", map[string]any{"action_type": "InstanceStart"}},
 		} {
 			if err := apiPut(ctx, apiSocket, put.path, put.body); err != nil {
 				return err
+			}
+			if put.path == "/drives/workspace" && d.cfg.IO != nil {
+				if err := verifyFrontendIO(ctx, apiSocket, *d.cfg.IO); err != nil {
+					return err
+				}
 			}
 		}
 		if err := retry(ctx, p.done, func() error {

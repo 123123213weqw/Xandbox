@@ -10,6 +10,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [独立ledger只读/EROFS实机验收](docs/READONLY.md)：busy/idle两组分别39.017/47.907ms观察到host停止，DELETE仍500、无持久停止/销毁确认、容量保留；RO持续时普通重启拒绝，恢复自身小卷RW后同state回收。预先打开的directoryFD也验证真实EROFS；仅ledger只读，不代表介质EIO、整个state故障或生产SLO。
 
+新增 [双层I/O预算](docs/IO.md)：操作员绑定的Firecracker请求桶与每代cgroup块设备限制，cold/PAUSED快照均先设置、验证后才准入。新原生运行时及真实压力/拒绝/存储交叉回归通过；健康账本下活跃写盘的host停止观测29–47ms，持久销毁另测。缓冲写回与缓存口径不同，不把io.stat当完整计费；不是节点总预算、物理quota或生产SLO。
+
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
 停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。

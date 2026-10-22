@@ -1,0 +1,27 @@
+work/io-source-v1.tar.gz: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native Linux race3/vet/smoke, root Python31
+...............................
+----------------------------------------------------------------------
+Ran 31 tests in 0.020s
+
+OK
+9670b1886acb3a08ca5652d58b1fc546e4f72f7d37bf1832e91625e62579bbe8  bin/sandboxd-io-v1
+4e663c367905905252ccb3958fce75a19d16e8dd58883237b9009bd4b50770ee  bin/xandbox-template-io-v1
+70e8ba824a87195a966950a3d53039783e8a51e2043a054c65db4097996e0677  bin/firecracker-io-v1.test
+8fd77f9f07e3bfda47d8a1c993a8e0133b0bfd49100782d05e9f70e653e5d486  bin/session-io-v1.test
+stage: opt-in IO cold + ENOSPC6,8MiB/s4096ops
+{"passed": true, "cases": 6, "cleanup_confirmed": true}
+stage: opt-in IO paused-snapshot pressure + catalog11
+{"passed": true, "checks": 11, "cleanup_confirmed": true}
+stage: default IO-nil ledgerRO3 and full snapshot/mixed regression
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+{"passed": true, "checks": 10, "cleanup_confirmed": true}
+stage: default IO-nil initialization6 + pinned TEST fixtures1each
+{"passed": true, "cases": 6, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: default IO-nil cold30/load5/queue9/binding9; legacy setup022 only
+{"passed": 30, "production_ready": false, "samples": {"create_api_ready_ms": [1478.903, 1605.246, 1583.593, 1501.984, 1434.184, 1444.697, 1620.168, 1558.432, 1488.214], "controller_sigkill_to_empty_cgroup_ms": 48.754, "restart_to_durable_reclaim_ms": 770.999, "stop_api_confirmed_ms": 45.397, "delete_phases": [{"from_state": "STOPPED", "accepted_ms": 1.332, "observed_stopped_ms": 1.455, "durable_destroyed_ms": 51.957}, {"from_state": "READY", "accepted_ms": 2.615, "observed_stopped_ms": 51.045, "durable_destroyed_ms": 150.323}, {"from_state": "READY", "accepted_ms": 2.567, "observed_stopped_ms": 44.444, "durable_destroyed_ms": 136.318}]}}
+all new IO runtime stages passed
