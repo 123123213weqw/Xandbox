@@ -8,6 +8,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [持久化错误后的独立物理Stop](docs/EMERGENCY_STOP.md)：新Go1.27.3原生daemon通过5项ENOSPC故障及完整新运行时回归；idle故障停止两次观测为43.814/48.630ms，旧c577负对照约5016ms并按预期未过实验guard。仍返回存储错误、不假称持久STOPPED或提前清理/还容量；这不是线上SLO，也不覆盖尚未返回的卡死I/O。
 
+新增 [独立ledger只读/EROFS实机验收](docs/READONLY.md)：busy/idle两组分别39.017/47.907ms观察到host停止，DELETE仍500、无持久停止/销毁确认、容量保留；RO持续时普通重启拒绝，恢复自身小卷RW后同state回收。预先打开的directoryFD也验证真实EROFS；仅ledger只读，不代表介质EIO、整个state故障或生产SLO。
+
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
 停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。
@@ -32,7 +34,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 ## 已实现
 
-新增 [真实ext4 ENOSPC恢复验收](docs/STORAGE.md)：guest写满128MiB工作盘，以及小卷数据块/inode耗尽×忙碌/空闲VM共5场景通过。小卷只在独占mount namespace内填充，未填满共享宿主盘；持久删除失败不假称成功、不提前还容量，释放空间后同state恢复并拒绝旧key。空闲VM在故障下约4.3–5.0秒才确认host停止，不是毫秒级承诺；EIO、掉电、宿主配额和完整M2仍未完成。
+历史 [c577真实ext4 ENOSPC基线](docs/STORAGE.md)：guest写满128MiB工作盘，以及小卷数据块/inode耗尽×忙碌/空闲VM共5场景通过。小卷只在独占mount namespace内填充，未填满共享宿主盘；持久删除失败不假称成功、不提前还容量，释放空间后同state恢复并拒绝旧key。旧daemon空闲VM约4.3–5.0秒停止，不是当前D2dc的时延；当前程序的新回归见上方[物理Stop](docs/EMERGENCY_STOP.md)和[EROFS](docs/READONLY.md)。EIO、掉电、宿主配额和完整M2仍未完成。
 
 - HTTP 控制面使用 Go 标准库；Linux 宿主时钟/guardian 和实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。
 - HTTP over Unix socket，不监听 TCP；私有状态目录 `0700`、socket `0600`。

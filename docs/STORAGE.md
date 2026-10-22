@@ -1,6 +1,6 @@
 # 有界 ext4 ENOSPC 与真实 KVM 恢复
 
-本页为source5276/c577历史基线；后续Go停止路径修改与新运行时结果见 [EMERGENCY_STOP.md](EMERGENCY_STOP.md)，不能将本页旧表当作当前新程序的时延。
+本页为source5276/c577历史基线；后续Go停止路径修改与新运行时结果见 [EMERGENCY_STOP.md](EMERGENCY_STOP.md)，另有 [ledger单独只读EROFS及新ENOSPC回归](READONLY.md)。不能将本页旧表当作当前新程序的时延或将历史未覆盖项误读为后来全部完成。
 
 **开发中，不是完整存储、故障或生产 SLO 认证。** 本轮只验证 guest 工作盘限容，以及元数据所在文件系统的数据块/inode ENOSPC。真实内核 errno 来自独占的小 ext4，而不是 mock Store；没有填满共享宿主盘。
 

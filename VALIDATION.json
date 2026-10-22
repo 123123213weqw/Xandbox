@@ -906,5 +906,36 @@
     "native_linux_python_tests": 20,
     "mac_linux_daemon_admin_reproduction_exact": true,
     "scope": "Only returned fence-write errors: try physical Stop with independent timeout but preserve errors and never publish durable stop/cleanup/capacity success. No hung-Save, kernel or production SLO guarantee."
+  },
+  "ledger_readonly_erofs": {
+    "production_ready": false,
+    "goal_complete": false,
+    "harness_source": "1d4eb7f59a0ec00759c526a2b663ab358e011b26",
+    "runtime_original_source": "35548f67c2ae5a45549e7ecfc312c77c6b6473b0",
+    "runtime_daemon_sha256": "d2dc5358d0e8adc98847fa6611e6fff6d7e2a48bd28a38b35bed8dca8cbcb7c6",
+    "production_go_changed": false,
+    "new_native_build_race_or_vet_claim": false,
+    "provenance": "docs/validation/readonly-ledger-provenance-v3.json",
+    "runner_exit_status": 0,
+    "native_root_python_tests": 28,
+    "readonly_metadata_fault_cases": 2,
+    "enospc_metadata_fault_regressions": 4,
+    "readonly_report_checks": 3,
+    "enospc_report_checks": 5,
+    "shared_guest_workspace_bound_case_repeated_not_additional_faults": true,
+    "fault_scope": "Only ledger is remounted read-only from its own pre-mounted64MiB loop; controller lock, sockets, sessions, ownership and runtime remain healthy. Existing ENOSPC regressions still cover all state.",
+    "prefault_directory_fd_openat_erofs": true,
+    "no_false_api_stop_destroy_timestamps_or_capacity_release": true,
+    "same_state_ordinary_restart_recovery_and_old_key_rejection": true,
+    "independent_parent_cleanup_rechecks": 3,
+    "failed_precursor_report": "docs/validation/kvm-ledger-readonly-v1-failed.json",
+    "failed_precursor_checks": 0,
+    "failed_precursor_cleanup_confirmed": true,
+    "not_validated": [
+      "media EIO or automatic kernel errors=remount-ro",
+      "all-state/snapshot readonly matrix, held writable regular FD behavior",
+      "hung Save, kernel starvation, whole-host/power loss or dual-supervisor failure",
+      "host quota/IO budget, archival/erase, open-loop fairness, unique RAM, audit/alerts or production SLO"
+    ]
   }
 }

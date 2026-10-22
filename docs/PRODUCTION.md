@@ -50,6 +50,7 @@
 - [x] 未使用 mock 或宿主 shell 绕过实际验收。
 - [x] [有界真实ext4 ENOSPC](STORAGE.md)：guest工作盘限容及数据块/inode耗尽×忙碌/空闲KVM共5场景，拒绝虚假持久删除/容量释放，空间恢复后同state回收及旧key拒绝；不是全部磁盘故障/配额验收。
 - [x] [存储错误返回后的独立物理Stop](EMERGENCY_STOP.md)：新原生daemon的5场景ENOSPC、快照10组/双租户240次、初始化6+2例及独立冷路径30组回归；不把物理Stop当持久回收，不覆盖卡死尚未返回的I/O或完整M2。
+- [x] [独立ledger只读EROFS](READONLY.md)：真实小卷busy/idle两组、故障前目录FD写入拒绝、只读持续时重启拒绝/恢复可写后同state回收及原有5场景ENOSPC回归；不是全state/介质/自动remount故障矩阵。
 
 M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。宿主重启/磁盘故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
