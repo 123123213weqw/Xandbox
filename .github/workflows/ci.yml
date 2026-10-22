@@ -47,6 +47,9 @@ jobs:
           go test -race -count=3 ./...
       - name: Build and process smoke test
         run: make smoke
+      - name: Test opt-in nested host fixture only on Linux
+        if: runner.os == 'Linux'
+        run: go test -tags=xandbox_host_fixture -race -count=3 ./cmd/xandbox-host-fixture
       - name: Python harness syntax and guest image extraction safety
         run: |
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
@@ -55,6 +58,7 @@ jobs:
           python3 -m py_compile scripts/kvm_mixed_load.py scripts/kvm_resources.py
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
           python3 -m py_compile scripts/kvm_io_probe.py
+          python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
@@ -70,6 +74,8 @@ jobs:
           cache: false
       - name: Compile opt-in test-only guest observer
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_guest_fixture -trimpath -o /tmp/xandbox-fixture-observer ./cmd/xandbox-fixture-observer
+      - name: Compile opt-in nested host fixture
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_host_fixture -trimpath -o /tmp/xandbox-host-fixture ./cmd/xandbox-host-fixture
       - name: Build Linux amd64 and arm64
         run: |
           for arch in amd64 arm64; do

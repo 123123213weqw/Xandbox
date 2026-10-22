@@ -1,0 +1,33 @@
+//go:build linux && xandbox_host_fixture
+
+// TEST ONLY. A fixed nested-host acceptance fixture, never a production daemon
+// or tenant RPC. Default builds deliberately exclude this entire command.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+)
+
+func main() {
+	mode := flag.String("mode", "", "internal test-only mode")
+	config := flag.String("config", "", "root-owned fixture launch policy")
+	flag.Parse()
+	var err error
+	switch *mode {
+	case "launch":
+		err = launch(*config)
+	case "qemu-child":
+		err = qemuChild(*config)
+	case "node":
+		err = runNode()
+	default:
+		err = fmt.Errorf("invalid fixture mode")
+	}
+	if err != nil {
+		// This stream is PRIVATE operator diagnostics, never public evidence.
+		fmt.Fprintln(os.Stderr, "host fixture failed:", err)
+		os.Exit(1)
+	}
+}
