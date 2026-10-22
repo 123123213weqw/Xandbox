@@ -267,7 +267,11 @@ def main():
                 terminal = finish(ref, busy)
                 case['accepted_guest_job_terminal_status'] = terminal['status']
             assert ledger.read_bytes() == before and owner(ref).exists() and jail(ref).exists()
-            assert call('GET', path(ref))['state'] != 'DESTROYED'
+            view = call('GET', path(ref))
+            assert view['state'] == 'STOPPING'
+            assert view.get('stopped_at') in (None, '0001-01-01T00:00:00Z')
+            assert view.get('destroyed_at') in (None, '0001-01-01T00:00:00Z')
+            case['api_still_stopping_without_stop_or_destroy_timestamp'] = True
             # The node-capacity check precedes the tenant quota in this fixture
             # (both limits are one). Assert node503 AND retained allocation.
             denied, _ = call('POST', '/v1/sandboxes', request, expected=503,
