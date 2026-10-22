@@ -1,0 +1,11 @@
+{
+  "base_source": "61d88cfe1c84d048e2f52906afd99b2c0795fbb8",
+  "restored_production_registry_and_old_quota_tests_from": "10b0e46e1b3e2fd72774dd691942101b03e83ce8",
+  "concurrency_test_function_verbatim_from": "61d88cfe1c84d048e2f52906afd99b2c0795fbb8",
+  "command": "GOTOOLCHAIN=go1.27.3 go test -race -count=1 -run ^TestSlowQuotaClearDoesNotHoldCatalogPinLock$ ./internal/firecracker",
+  "files": {
+    "registry.go": "6e95826c5f148d869883b8a6ca2d5569c7d262eee4ab9cbe02b3c91ccd609356",
+    "quota_policy_test.go": "d97b54f122949a44b8ca5990b20dad6854a8b07602625646dc327cdefd8cedbf",
+    "quota_catalog_stall_repro_test.go": "9bfa4f7c4d19a22cb3ffad031f36443acb708aa46b98d6ce6459cad38a0f8b14"
+  }
+}

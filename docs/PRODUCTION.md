@@ -57,7 +57,7 @@
 
 - [x] [整状态盘EIO/held-fsync有限验收](STATE_IO.md)：原生新程序4例、原程序失败对照、普通daemon真实D-state fsync、独立lease EOF停止/快速intent拒绝、无虚假确认/容量保留及完整新native回归通过。不是VMM自身D-state、所有介质/Prepare窗口或完整M2。
 
-[ext4 project quota 前置验收与协议设计](PROJECT_QUOTA.md)单独区分内核行为与普通驱动功能：root能力绕过、受限root的EDQUOT、共享硬链接/继承及原盘重启持久化已有有限测试；本分支已实现实验性每代projectID/驱动接入并打通cold有限恢复，但snapshot、配额耗尽/故障矩阵、catalog锁与节点预算/全部崩溃窗口验收仍未完成，不能勾选完整磁盘预算。
+[ext4 project quota 前置验收与协议设计](PROJECT_QUOTA.md)单独区分内核行为与普通驱动功能：root能力绕过、受限root的EDQUOT、共享硬链接/继承及原盘重启持久化已有有限测试；本分支已实现实验性每代projectID/驱动接入并打通cold/snapshot有限恢复、双实例共享pin检查，quota清零已移出catalog pin锁；但配额耗尽/故障、节点预算、锁内owner元数据持久化与全部崩溃窗口验收仍未完成，不能勾选完整磁盘预算。
 
 M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。完整宿主重启窗口/物理介质故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
