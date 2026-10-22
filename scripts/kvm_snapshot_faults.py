@@ -28,6 +28,7 @@ def main():
                  'export-dir', 'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     args = parser.parse_args()
+    os.umask(0o077)  # Explicitly exercise production-private creation policy, including child CLIs.
     if os.geteuid() != 0 or os.uname().sysname != 'Linux' or os.uname().machine != 'x86_64':
         parser.error('requires dedicated root Linux amd64 KVM fixture')
     assert len(bytes.fromhex(args.source_revision)) == 20

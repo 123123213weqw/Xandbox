@@ -133,3 +133,33 @@ func TestCatalogLockAndDurablePinSurviveActualChildSIGKILL(t *testing.T) {
 		t.Fatal("ownership not reconstructed")
 	}
 }
+
+// Umask is process-global: change it only in an isolated test child, never in a
+// race-suite parent. Backing must still become0444 for the jailed reserved UID.
+func TestCatalogPublicationWithRestrictiveUmask(t *testing.T) {
+	if os.Getenv("XANDBOX_CATALOG_UMASK_CHILD") != "1" {
+		self, e := os.Executable()
+		if e != nil {
+			t.Fatal(e)
+		}
+		child := exec.Command(self, "-test.run=^TestCatalogPublicationWithRestrictiveUmask$", "-test.count=1")
+		child.Env = append(os.Environ(), "XANDBOX_CATALOG_UMASK_CHILD=1")
+		if b, e := child.CombinedOutput(); e != nil {
+			t.Fatalf("restrictive-umask child failed: %v\n%s", e, b)
+		}
+		return
+	}
+	old := syscall.Umask(0077)
+	defer syscall.Umask(old)
+	r, m, memory, state := catalogFixture(t)
+	id := publishActive(t, r, m, memory, state)
+	for _, name := range []string{"memory", "state", "manifest.json"} {
+		info, e := os.Stat(filepath.Join(r.catalog.object(id), name))
+		if e != nil || info.Mode().Perm() != 0444 {
+			t.Fatalf("backing not sealed under umask077: %s %v", name, e)
+		}
+	}
+	if _, e := r.reserve(reference("1")); e != nil {
+		t.Fatal("sealed backing not usable after restrictive-umask publish", e)
+	}
+}

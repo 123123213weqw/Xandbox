@@ -547,7 +547,7 @@ func copySnapshot(ctx context.Context, from, to, digest string, size int64) erro
 	if e != nil || !i.Mode().IsRegular() || i.Size() != size {
 		return errors.New("invalid snapshot source file size")
 	}
-	out, e := os.OpenFile(to, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0444)
+	out, e := os.OpenFile(to, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
 		return e
 	}
@@ -578,6 +578,11 @@ func copySnapshot(ctx context.Context, from, to, digest string, size int64) erro
 	}
 	if written != size || hex.EncodeToString(h.Sum(nil)) != digest {
 		return errors.New("snapshot source digest mismatch")
+	}
+	// Creation modes are filtered by the caller umask. Seal explicitly on the
+	// open inode so a private umask cannot leave VMM backing unreadable (0400).
+	if e = out.Chmod(0444); e != nil {
+		return e
 	}
 	if e = out.Sync(); e != nil {
 		return e
@@ -627,11 +632,14 @@ func (c *catalog) publish(ctx context.Context, m SnapshotManifest, memory, state
 			return e
 		}
 		b, _ := json.Marshal(m)
-		f, e := os.OpenFile(filepath.Join(stage, "manifest.json"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0444)
+		f, e := os.OpenFile(filepath.Join(stage, "manifest.json"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if e != nil {
 			return e
 		}
 		_, e = f.Write(append(b, '\n'))
+		if e == nil {
+			e = f.Chmod(0444)
+		}
 		if e == nil {
 			e = f.Sync()
 		}
