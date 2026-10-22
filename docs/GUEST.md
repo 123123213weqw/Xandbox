@@ -36,7 +36,7 @@ guest 使用 BusyBox init 作为 PID 1，负责回收孤儿进程；没有登录
 
 ## 在独立 Linux/KVM 节点复现
 
-需要：可读写 `/dev/kvm`、非交互 root、cgroup v2、Go 1.25+、Python（含 `tarfile.data_filter` 安全补丁）、`cpio`、`mkfs.ext4`、`unshare`、`nsenter`、`ip` 和 `curl`。不修改路由、转发、iptables 或已有 cgroup；验收只创建自己命名的临时 cgroup。
+需要：可读写 `/dev/kvm`、非交互 root、cgroup v2、Go 1.25+、Python（含 `tarfile.data_filter` 安全补丁）、`cpio`、`mkfs.ext4`、`unshare`、`nsenter`、`ip` 和 `curl`。不修改宿主路由、转发或 iptables，不调整/终止既有工作负载；jailer 按 cgroup v2 机制启用所需控制器，验收只创建和删除自己命名的专属层级。
 
 Go 1.25 是源码兼容下限，不是生产安全基线。本轮漏洞扫描在 Go 1.27.1 上发现标准库安全更新未包含；使用 Go 1.27.3 后重新扫描。构建部署镜像应使用仍受维护且已打补丁的工具链，不能把旧版本兼容性 CI 当成安全认证。修复版本可核对 [Go 发布记录](https://go.dev/doc/devel/release#go1.27.3) 和 [GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809)。
 
