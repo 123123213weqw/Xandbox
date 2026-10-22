@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are historical snapshots. Latest integration validation is current_status.latest_runtime_validation (ledger_path_hardening). Historical source-specific reports are not rewritten.",
+  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest integration validation is current_status.latest_runtime_validation (session_switching). Historical reports are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -124,7 +124,7 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "ledger_path_hardening"
+    "latest_runtime_validation": "session_switching"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -342,5 +342,120 @@
     ],
     "sample_scope": "8 new + 1 old daemon create samples in the KVM array. Small acceptance samples, uncontrolled load/cache, no RSS/percentile/switch/physical-failure SLO.",
     "remaining_gates": "All unresolved ledger_governance.not_validated gates remain, plus complete deployment ancestry/ACL/lock-file audit and independent operator recovery rehearsal."
+  },
+  "session_switching": {
+    "validated_on": "2026-10-22",
+    "source_revision": "ed25bf0d77861b9b73b85b447bce10f501db8868",
+    "runtime_go_source_revision": "f538b55263065244b17ffef381f92111ad458bba",
+    "production_ready": false,
+    "service_report": "docs/validation/kvm-session-phases-2026-10-22.json",
+    "binding_fsync_report": "docs/validation/kvm-session-phases-binding-fsync-2026-10-22.json",
+    "lifecycle_queue_report": "docs/validation/kvm-session-phases-queues-2026-10-22.json",
+    "mock_process_report": "docs/validation/session-process-phases-2026-10-22.json",
+    "service_checks": 27,
+    "scope": "Previous23 +3 HTTP session scenarios +1 blocked binding-fsync scenario. Two 9-assertion details expand existing scenarios; do not add them as18 more independent cases.",
+    "mode": "fresh cold VM per binding, not snapshot/prewarm; no dirty VM reuse; restart closes all prior sessions",
+    "defaults": {
+      "max_sessions": 1000,
+      "max_tenant_sessions": 100,
+      "attempts_per_session_including_create": 64,
+      "session_record_bytes": 131072
+    },
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "targeted_session_race_repeat_10": "passed",
+      "cancel_commit_ambiguity_race_repeat_20": "passed",
+      "go_vet": "passed",
+      "go_mod_verify": "passed",
+      "four_mock_process_smokes": "passed",
+      "trimmed_session_mock_repeat_3": "passed after waiting all retired generations, not only latest binding per session",
+      "session_decoder_fuzz_seconds": 5,
+      "actual_kvm_http_and_double_barrier": "passed with exact verified Go1.27.3 binaries",
+      "controller_session_sigkill_and_restart": "passed; old routes closed and all core resources reclaimed",
+      "govulncheck_linux": "0 reachable/0 imported-package; 6 uncalled required-module findings remain",
+      "owned_fixture_residue": "none",
+      "actual_kvm_full_repeat_2": "passed both complete runs, each27 main checks plus detailed9+9 assertions expanding two existing checks; second run separates first-command success from both commands completed",
+      "first_command_mock_process": "passed5 checks; not microVM performance",
+      "guest_image_extraction_safety": "3 tests passed using patched bundled Python; system Python skips are not counted",
+      "runtime_binary_reproduction": "Current source reproducibly rebuilt daemon, queue test and session test with exact matching accepted SHA-256, Go1.27.3 CGO_ENABLED=0 -trimpath -buildvcs=false."
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39779082894",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39779074851"
+    ],
+    "not_validated": [
+      "pristine snapshots, prewarm pool and shared image reference management",
+      "long-term session/key archive/rotation and metadata/resource curves",
+      "whole-node disk/power loss, host reboot and dual-supervisor/kernel starvation bounds",
+      "host disk quotas and cryptographic/physical erasure",
+      "complete auth-parent/ACL/lock-file deployment audit and independent operator recovery",
+      "structured metrics/audit/alerts and sustained-load fairness",
+      "production image/config upgrades and latency percentiles/SLO"
+    ],
+    "runtime_revision_note": "Subsequent acceptance-source commits only strengthen Python assertions/observations; runtime Go code and exact binaries unchanged.",
+    "sample_note": "One cold-switch sample; request to FIRST successful new command1452.165ms, both verification commands1458.727ms, old host stop observed1493.882ms, durable reclaim1557.920ms. Server fence-to-durable-bind1.136971ms is NOT full switch duration. Client/server origins differ, cache/load uncontrolled, no RSS/percentiles/SLO.",
+    "session_samples": {
+      "cold_request_to_binding_response_ms": 1444.962,
+      "request_to_first_new_command_success_ms": 1452.165,
+      "request_to_new_commands_completed_ms": 1458.727,
+      "request_to_old_stopped_observed_ms": 1493.882,
+      "request_to_old_durable_destroyed_observed_ms": 1557.92,
+      "server_phase_observations": {
+        "admission_revoked_ms": 1441.568645,
+        "measured": true,
+        "candidate_ready_ms": 1440.510018,
+        "fence_to_commit_ms": 1.136971,
+        "total_ms": 1442.708057
+      }
+    },
+    "initial_report_history": "session_switching_initial"
+  },
+  "session_switching_initial": {
+    "validated_on": "2026-10-22",
+    "source_revision": "8a6c07f5449774e0d9754346383bfd7db817a816",
+    "runtime_go_source_revision": "f538b55263065244b17ffef381f92111ad458bba",
+    "production_ready": false,
+    "service_report": "docs/validation/kvm-session-2026-10-22.json",
+    "binding_fsync_report": "docs/validation/kvm-session-binding-fsync-2026-10-22.json",
+    "lifecycle_queue_report": "docs/validation/kvm-session-queues-2026-10-22.json",
+    "mock_process_report": "docs/validation/session-process-2026-10-22.json",
+    "service_checks": 27,
+    "scope": "Previous23 +3 HTTP session scenarios +1 blocked binding-fsync scenario. Two 9-assertion details expand existing scenarios; do not add them as18 more independent cases.",
+    "mode": "fresh cold VM per binding, not snapshot/prewarm; no dirty VM reuse; restart closes all prior sessions",
+    "defaults": {
+      "max_sessions": 1000,
+      "max_tenant_sessions": 100,
+      "attempts_per_session_including_create": 64,
+      "session_record_bytes": 131072
+    },
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "targeted_session_race_repeat_10": "passed",
+      "cancel_commit_ambiguity_race_repeat_20": "passed",
+      "go_vet": "passed",
+      "go_mod_verify": "passed",
+      "four_mock_process_smokes": "passed",
+      "trimmed_session_mock_repeat_3": "passed after waiting all retired generations, not only latest binding per session",
+      "session_decoder_fuzz_seconds": 5,
+      "actual_kvm_http_and_double_barrier": "passed with exact verified Go1.27.3 binaries",
+      "controller_session_sigkill_and_restart": "passed; old routes closed and all core resources reclaimed",
+      "govulncheck_linux": "0 reachable/0 imported-package; 6 uncalled required-module findings remain",
+      "owned_fixture_residue": "none"
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39776112406",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39776106403"
+    ],
+    "not_validated": [
+      "pristine snapshots, prewarm pool and shared image reference management",
+      "long-term session/key archive/rotation and metadata/resource curves",
+      "whole-node disk/power loss, host reboot and dual-supervisor/kernel starvation bounds",
+      "host disk quotas and cryptographic/physical erasure",
+      "complete auth-parent/ACL/lock-file deployment audit and independent operator recovery",
+      "structured metrics/audit/alerts and sustained-load fairness",
+      "production image/config upgrades and latency percentiles/SLO"
+    ],
+    "runtime_revision_note": "Subsequent acceptance-source commits only strengthen Python assertions/observations; runtime Go code and exact binaries unchanged.",
+    "historical_sample_note": "One cold-switch sample; client request to new commands completed1495.857ms. Server fence-to-durable-bind0.855119ms is NOT full switch duration. Different client/server origins, uncontrolled load/cache, no RSS/percentiles/SLO."
   }
 }

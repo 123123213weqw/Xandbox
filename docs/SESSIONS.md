@@ -67,6 +67,38 @@
 
 本地 mock 进程入口 `scripts/session_smoke.py` 验证鉴权、CAS、独立新工作区、普通执行绕过拒绝和真实 SIGKILL/重启；**不是 microVM 性能**。普通 race/故障测试覆盖同 key 并发、迟到准入、准备取消、不可撤销点后的取消、绑定 fsync 卡住、失败 Close、迟到提交和永久 key/容量。
 
-真实 KVM 入口为 `scripts/kvm_driver_smoke.py --session-test <patched Linux test binary>`。它增加真实 HTTP 会话与 `TestKVMSessionCommitIOIsolation`：两个 VM 已 READY 而原会话仍可用、不可发布候选、绑定 fsync 阻塞下的独立旧 VM 停止、关闭时候选停止及状态锁保持。该测试只存在测试二进制，不是 production daemon 的故障注入参数。常规 CI skip 不能当作实际 KVM 通过；新运行时的报告发布前，历史 23 项报告也不覆盖这些新路径。
+真实 KVM 入口为 `scripts/kvm_driver_smoke.py --session-test <patched Linux test binary>`。它增加真实 HTTP 会话与 `TestKVMSessionCommitIOIsolation`：两个 VM 已 READY 而原会话仍可用、不可发布候选、绑定 fsync 阻塞下的独立旧 VM 停止、关闭时候选停止及状态锁保持。该测试只存在测试二进制，不是 production daemon 的故障注入参数。常规 CI skip 不能当作实际 KVM 通过；历史 23 项报告也不覆盖这些新路径。实际新证据见下节。
 
 快照恢复、干净预热池、共享镜像引用管理、持续负载/公平性/RSS、物理坏盘、生产 SLO 和完整审计/告警仍未完成。
+
+
+## 2026-10-22 实机证据：仍是冷 VM，不是快照
+
+最新验收源码 `ed25bf0d77861b9b73b85b447bce10f501db8868`，Go1.27.3。运行时 Go 代码为 `f538b55263065244b17ffef381f92111ad458bba`；其后提交仅强化 Python 验收断言/观测，以下相同二进制摘要可复核。
+
+- [最新真实 KVM 服务报告](validation/kvm-session-phases-2026-10-22.json) 通过27项：前版23项 + 冷会话/新工作区与版本准入 + 并发CAS + 会话控制器SIGKILL恢复 + 独立绑定fsync阻塞用例。
+- [绑定 fsync 专项](validation/kvm-session-phases-binding-fsync-2026-10-22.json) 的9项断言展开上述最后一个新用例；[原停止/GC分池](validation/kvm-session-phases-queues-2026-10-22.json) 另9项展开原有用例。不能再额外加18个独立场景。
+- [首轮服务](validation/kvm-session-2026-10-22.json)、[绑定fsync](validation/kvm-session-binding-fsync-2026-10-22.json) 与 [队列](validation/kvm-session-queues-2026-10-22.json) 报告保留原样，源自 `8a6c07f5449774e0d9754346383bfd7db817a816`，亦为27项通过。首轮1495.857ms测量的是**两条**新VM验证命令均完成，不是第一条成功；最新脚本先测无副作用命令成功，再做工作区新鲜度验证，并完整重跑KVM，而非重新解释首轮数字。
+- [最新Darwin真实进程报告](validation/session-process-phases-2026-10-22.json) 是5项mock回归，不是VM性能。[先前报告](validation/session-process-2026-10-22.json) 修复等待全部旧 generation 的观察条件后重复3次通过；早期一次只等各会话最新Ref便断言工作区空，漏了仍在恢复队列的旧Ref，失败不计作通过。脚本现在逐代等待持久DESTROYED。
+- 新Linux daemon SHA-256 `3b57d09f11c329d3841f1cbe89cf3b1360734792d32f62718e54163bed9e7cca`；session测试二进制 `1e6cd2e94bbfca75c045f9a2f23c574b151ec57058df395fc6f2f4086bb82181`。其他精确二进制/镜像摘要在报告内。
+- 最新验收源码 [CI #39779082894](https://github.com/123123213weqw/Xandbox/actions/runs/39779082894) 与 [#39779074851](https://github.com/123123213weqw/Xandbox/actions/runs/39779074851) 全绿。full race×3、Session重点race×10、取消/提交/不确定窗口race×20、vet、四套process smoke通过；decoder fuzz5秒约8万次。Linux govulncheck仍有6个未调用required-module findings，0reachable/0imported，不是依赖完全无漏洞。
+
+最新服务同次**单样本**如下（新建guest，不命中快照/预热；宿主cache不受控）：
+
+| 观测点 | 单样本 |
+|---|---|
+| 服务端操作进入 → 候选 READY | 1440.510 ms |
+| 服务端操作进入 → 旧准入撤销阶段边界 | 1441.569 ms |
+| 旧撤销 → 新绑定持久写入完成 | 1.137 ms |
+| 服务端操作进入 → 新路由发布 | 1442.708 ms |
+| 客户端请求发起 → switch响应 | 1444.962 ms |
+| 客户端请求发起 → 新VM第一条命令成功 | 1452.165 ms |
+| 客户端请求发起 → 新VM两条验证命令均完成 | 1458.727 ms |
+| 客户端请求发起 → 并行观察旧host cgroup空 | 1493.882 ms |
+| 客户端请求发起 → 观察旧持久DESTROYED | 1557.920 ms |
+
+服务端与客户端观测起点不同，不能简单相减当作精确撤销→停止时延；最后回收样本也含查询/观察开销。**不能把1.137ms宣传为完整切换耗时**：本轮大部分时间在准备新VM，用户请求到第一条新命令成功约1.45s。新命令可以先成功、旧VM随后才停止，这正是需要分开报告的边界，而不是把绑定响应当作停止确认。
+
+专项测试在两个实际VM均READY、旧路由仍可执行时冻结PREPARED写入，确认普通接口无法执行候选；继续到最终绑定Save的受控barrier后，旧VM仍独立停止（最新barrier到观测停止约47.6ms）。Close100ms返回未完成，候选也被独立停止，状态flock持续保留到旧写入者收敛；释放barrier后，迟到写入没有恢复路由，新controller/driver/broker也没有复活会话。barrier仅为测试代码，不是实际坏盘，不是生产RPC/环境开关。
+
+环境沿用 [guardian硬件说明](GUARDIAN.md)：Xeon Silver4216/64逻辑CPU、约251.5GiB系统RAM、runtime ext4，guest512MiB/2vCPU/128MiB私有盘，无NIC；只写少量文件。RSS未测、缓存/负载未控制、无持续吞吐/百分位/最坏延迟/物理擦除或生产SLO声明。两轮Runner均退出0，最终无本次VMM/cgroup/jail/UID manifest残留。SSH复用断开/临时端口超时期间使用有界重试，保留主机密钥校验，不关闭共享连接，也未重复启动或把未运行的尝试计为通过。

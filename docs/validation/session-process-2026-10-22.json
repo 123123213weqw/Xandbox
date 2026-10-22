@@ -1,0 +1,27 @@
+{
+  "test": "experimental_session_switch_process_acceptance",
+  "backend": "mock",
+  "microvm_benchmark": false,
+  "production_ready": false,
+  "source_revision": "8a6c07f5449774e0d9754346383bfd7db817a816",
+  "runtime_platform": "Darwin/arm64",
+  "daemon_sha256": "07bcc090101008f7ac9496368f4e85be3a29d7cca70d2ac122b2ba996b9375e8",
+  "checks": [
+    "authenticated scoped session API; plain per-VM Exec cannot bypass managed admission",
+    "per-tenant and node session metadata budgets include retained session identities",
+    "conditional cold switch rejects old revision; new workspace clean; old VM lifecycle separately reclaimed; idempotent switch key",
+    "two concurrent expected-revision switches publish exactly one next binding; private hashes omitted",
+    "actual controller SIGKILL restart closes old session routes, retains keys and reclaims all underlying generations"
+  ],
+  "samples": {
+    "mock_switch_response_ms": 40.506,
+    "mock_request_to_new_commands_completed_ms": 41.174,
+    "mock_server_phase_observations": {
+      "admission_revoked_ms": 32.24,
+      "measured": true,
+      "candidate_ready_ms": 24.261583,
+      "fence_to_commit_ms": 7.991708,
+      "total_ms": 40.232666
+    }
+  }
+}
