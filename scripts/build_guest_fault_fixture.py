@@ -106,6 +106,9 @@ def main():
     else:
         if not a.agent:raise ValueError('explicit compiler-overlay agent required')
         agent=Path(a.agent).read_bytes();static_elf(agent)
+        if sha(agent)==sha(items['usr/bin/xandbox-agent'][1]): raise ValueError('compiler overlay did not change the agent binary')
+        for witness in (b'/etc/xandbox-fixture-crash-before-marker', b'/run/xandbox-fixture-before-marker-exit'):
+            if witness not in agent: raise ValueError('reviewed injected exit/witness missing from ELF; canonicalize the Go build working directory')
         put('usr/bin/xandbox-agent',stat.S_IFREG|0o755,agent)
         put('etc/xandbox-fixture-crash-before-marker',stat.S_IFREG|0o600,b'test-only fixed before-marker exit\n')
     output=Path(a.output).resolve()
