@@ -56,8 +56,9 @@ def main():
     manifest = json.loads((export / 'manifest.json').read_text())
     assert manifest['assignment'] == 'UNASSIGNED' and manifest['memory_mib'] == 512 and manifest['vcpus'] == 2
     nonce = secrets.token_hex(3)
-    root = Path('/srv/xbs' + nonce)
+    root = Path('/srv/x' + nonce)
     cgroup = Path('/sys/fs/cgroup/xandbox-snapshot-service-proof-' + nonce)
+    assert len(os.fsencode(root / 'r/j/firecracker' / ('0' * 64) / 'root/api.sock')) <= 107
     assert not root.exists() and not cgroup.exists()
     root.mkdir(mode=0o700)
     runtime, state, assets = root / 'r', root / 's', root / 'a'
