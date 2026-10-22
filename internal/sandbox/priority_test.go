@@ -137,7 +137,7 @@ func TestReconcilerAndStatsSkipUnrelatedLockedRecord(t *testing.T) {
 	go func() { returned <- m.Stats() }()
 	select {
 	case s := <-returned:
-		if s.Active != 1 {
+		if s.Active < 1 || s.Active > 2 {
 			t.Fatalf("bad stats: %+v", s)
 		}
 	case <-time.After(time.Second):

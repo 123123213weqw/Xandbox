@@ -171,5 +171,46 @@
       "cause": "30 ms creation TTL expired during fsync/scheduling; creation correctly failed before READY",
       "fix": "deterministically expire durable ledger only after READY; no production TTL semantics changed"
     }
+  },
+  "lifecycle_scheduler": {
+    "validated_on": "2026-10-22",
+    "production_ready": false,
+    "source_revision": "1f42115f7bd841ba38e8a875945486b37b501025",
+    "service_report": "docs/validation/kvm-queues-2026-10-22.json",
+    "controlled_fsync_report": "docs/validation/kvm-queues-fsync-2026-10-22.json",
+    "service_checks": 17,
+    "service_scope": "16 baseline KVM service checks plus a separate controlled-fsync queue test",
+    "controlled_fsync_checks": 9,
+    "fault_model": "test-only ownership-directory fsync barrier after private unlink; not an actual broken or throttled disk",
+    "controlled_test_options": {
+      "stop_workers": 1,
+      "cleanup_workers": 1,
+      "queue_capacity_per_pool": 1,
+      "reap_interval_ms": 10,
+      "vm_capacity": 2,
+      "ttl_ms": 20000,
+      "close_deadline_ms": 100
+    },
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "targeted_queue_registry_race_repeat_5": "passed",
+      "priority_shutdown_cancel_race_repeat_30": "passed",
+      "go_vet": "passed",
+      "mock_auth_process_smoke": "passed",
+      "go_toolchain": "go1.27.3",
+      "linux_test_binary_guard": "normal CI skips KVM fixture unless explicitly enabled; skip is not counted as runtime acceptance"
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39741123284",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39740633260"
+    ],
+    "not_validated": [
+      "real whole-node filesystem failure or host reboot",
+      "all stop workers simultaneously stuck",
+      "sustained arrival load/fairness/resource curve",
+      "independent monotonic controller lease/watchdog",
+      "metadata retention/capacity and full audit/metrics",
+      "snapshot/prewarm/atomic switch and latency SLO"
+    ]
   }
 }
