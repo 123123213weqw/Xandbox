@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -24,7 +24,15 @@ import (
 
 const driverProjectFirst uint32 = 1300000
 
+type driverQuotaEntry struct {
+	Inode, Links, Device uint64
+	Mode, UID, GID       uint32
+	Size                 int64
+	Blocks               uint64
+}
 type driverQuotaReceipt struct {
+	Entries map[string]driverQuotaEntry
+
 	Phase           string
 	NamespaceBlocks uint64
 	NamespaceInodes uint64
@@ -139,7 +147,7 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 			return nil, e
 		}
 		qr.Jail = jail
-		qr.NamespaceBlocks, qr.NamespaceInodes, e = driverQuotaNamespace(jail)
+		qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries, e = driverQuotaTree(jail)
 		if e != nil {
 			return nil, e
 		}
@@ -151,6 +159,10 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 		if qr.Record.BHard != 192<<10 || qr.Record.IHard != 128 || qr.Record.Space < 128<<20 || qr.Record.Space > 192<<20 || qr.Record.Inodes == 0 || qr.Record.Inodes > 128 {
 			return nil, errors.New("ordinary driver quota limits/usage mismatch")
 		}
+		if e = validateDriverQuotaAccounting(qr, qr.Record, qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries); e != nil {
+			return nil, e
+		}
+		out["linked_namespace_accounted_before_cut"] = true
 		out["private_project_space_bytes"] = qr.Record.Space
 		out["private_project_inodes"] = qr.Record.Inodes
 		if phase == "running" {
@@ -221,27 +233,50 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 		if e != nil {
 			return nil, e
 		}
-		if r != old.Record {
-			blocks, inodes, statErr := driverQuotaNamespace(old.Jail)
-			fmt.Fprintf(os.Stderr, "private quota coldboot numeric diagnostic: before=%+v after=%+v; named-before blocks=%d inodes=%d; named-after blocks=%d inodes=%d stat-error=%v\n", old.Record, r, old.NamespaceBlocks, old.NamespaceInodes, blocks, inodes, statErr)
-			// Keep the failure strict; allow only the private UART diagnostic to drain.
-			time.Sleep(200 * time.Millisecond)
-			return nil, fmt.Errorf("ordinary driver quota record changed across coldboot")
+		blocks, inodes, entries, statErr := driverQuotaTree(old.Jail)
+		if statErr != nil {
+			return nil, statErr
+		}
+		if e = validateDriverQuotaAccounting(old, r, blocks, inodes, entries); e != nil {
+			fmt.Fprintf(os.Stderr, "private quota coldboot comparison failed: before=%+v after=%+v; named-after blocks=%d inodes=%d\n", old.Record, r, blocks, inodes)
+			return nil, e
+		}
+		// A live VM may change backing allocation after the checkpoint. Limits
+		// must be immutable; recovered charge must match independent inode stats.
+		for _, path := range []string{old.Jail, old.Jail + "/root", old.Jail + "/root/workspace.ext4", old.Jail + "/root/kernel", old.Jail + "/root/initrd", old.Jail + "/root/firecracker"} {
+			a, e := quotaAttributes(path, nil)
+			if e != nil || a.Project != old.Project {
+				return nil, errors.New("persistent private project attribute mismatch")
+			}
+			if (path == old.Jail || path == old.Jail+"/root") && a.XFlags&quotaInherit == 0 {
+				return nil, errors.New("persistent project inheritance missing")
+			}
+		}
+		for _, name := range []string{"kernel", "initrd", "firecracker"} {
+			actual, e := fileHash(old.Jail + "/root/" + name)
+			if e != nil {
+				return nil, e
+			}
+			want, e := fileHash("/srv/assets/" + name)
+			if e != nil || want != actual {
+				return nil, errors.New("immutable staged asset contents changed across coldboot")
+			}
 		}
 	}
-	return map[string]any{"quota_record_survived_cold_boot": true}, nil
+	return map[string]any{"quota_limits_and_ownership_survived_cold_boot": true, "quota_accounting_matches_recovered_namespace": true}, nil
 }
 
-func driverQuotaNamespace(jail string) (uint64, uint64, error) {
+func driverQuotaTree(jail string) (uint64, uint64, map[string]driverQuotaEntry, error) {
 	if e := requireNode(); e != nil {
-		return 0, 0, e
+		return 0, 0, nil, e
 	}
-	if !strings.HasPrefix(jail, "/srv/r/j/firecracker/") || len(strings.TrimPrefix(jail, "/srv/r/j/firecracker/")) != 64 || filepath.Clean(jail) != jail {
-		return 0, 0, errors.New("fixed private generation jail required")
+	suffix := strings.TrimPrefix(jail, "/srv/r/j/firecracker/")
+	if suffix == jail || len(suffix) != 64 || strings.Trim(suffix, "0123456789abcdef") != "" {
+		return 0, 0, nil, errors.New("fixed private generation jail required")
 	}
 	seen := map[uint64]bool{}
-	blocks := uint64(0)
-	inodes := uint64(0)
+	entries := map[string]driverQuotaEntry{}
+	var blocks, inodes uint64
 	e := filepath.WalkDir(jail, func(path string, d os.DirEntry, e error) error {
 		if e != nil {
 			return e
@@ -250,16 +285,42 @@ func driverQuotaNamespace(jail string) (uint64, uint64, error) {
 		if e = unix.Lstat(path, &st); e != nil {
 			return e
 		}
-		if seen[st.Ino] {
-			return nil
+		rel, e := filepath.Rel(jail, path)
+		if e != nil {
+			return e
 		}
-		seen[st.Ino] = true
-		inodes++
-		if inodes > 256 {
+		entries[rel] = driverQuotaEntry{Inode: st.Ino, Links: uint64(st.Nlink), Device: uint64(st.Rdev), Mode: st.Mode, UID: st.Uid, GID: st.Gid, Size: st.Size, Blocks: uint64(st.Blocks) * 512}
+		if len(entries) > 256 {
 			return errors.New("bounded fixed quota diagnostic exceeded")
 		}
-		blocks += uint64(st.Blocks) * 512
+		if !seen[st.Ino] {
+			seen[st.Ino] = true
+			inodes++
+			blocks += uint64(st.Blocks) * 512
+		}
 		return nil
 	})
-	return blocks, inodes, e
+	return blocks, inodes, entries, e
+}
+func validateDriverQuotaAccounting(old driverQuotaReceipt, actual quotaRecord, blocks, inodes uint64, entries map[string]driverQuotaEntry) error {
+	// Current charge is mutable, not an immutable policy field. Never accept
+	// limit drift, unaccounted physical allocation, lost names or lost identity.
+	want := old.Record
+	if actual.BHard != 192<<10 || actual.IHard != 128 || actual.BHard != want.BHard || actual.IHard != want.IHard ||
+		actual.BSoft != 0 || actual.ISoft != 0 || actual.BTime != 0 || actual.ITime != 0 ||
+		actual.Valid != want.Valid || actual.Space > 192<<20 || actual.Inodes > 128 ||
+		actual.Space < 128<<20 || actual.Inodes == 0 || actual.Space != blocks || actual.Inodes != inodes || len(old.Entries) == 0 || len(entries) != len(old.Entries) {
+		return errors.New("quota limits or independent recovered allocation mismatch")
+	}
+	for path, before := range old.Entries {
+		after, ok := entries[path]
+		if !ok {
+			return errors.New("persistent jail entry lost")
+		}
+		before.Blocks, after.Blocks = 0, 0
+		if !reflect.DeepEqual(before, after) {
+			return errors.New("persistent inode logical metadata changed")
+		}
+	}
+	return nil
 }

@@ -86,3 +86,32 @@ func TestOrdinaryQuotaDriverHelpersCannotRunOnL0(t *testing.T) {
 		t.Fatal("arbitrary quota phase accepted")
 	}
 }
+
+func TestDriverQuotaColdBootChecksPolicyAndIndependentChargeNotFrozenLiveBlocks(t *testing.T) {
+	entry := driverQuotaEntry{Inode: 100, Links: 1, Mode: 0100600, UID: 400000, GID: 400000, Size: 128 << 20, Blocks: (128 << 20) + 4096}
+	old := driverQuotaReceipt{Record: quotaRecord{BHard: 192 << 10, IHard: 128, Space: (128 << 20) + 4096, Inodes: 1, Valid: 63}, Entries: map[string]driverQuotaEntry{"root/workspace.ext4": entry}}
+	after := old.Record
+	after.Space = 128 << 20
+	entry.Blocks = 128 << 20
+	entries := map[string]driverQuotaEntry{"root/workspace.ext4": entry}
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 1, entries); e != nil {
+		t.Fatal("actual lower named allocation misclassified as lost quota", e)
+	}
+	for _, bad := range []quotaRecord{
+		{BHard: 191 << 10, IHard: 128, Space: 128 << 20, Inodes: 1, Valid: 63},
+		{BHard: 192 << 10, IHard: 128, Space: (128 << 20) - 4096, Inodes: 1, Valid: 63},
+		{BHard: 192 << 10, IHard: 128, Space: 128 << 20, Inodes: 2, Valid: 63},
+		{BHard: 192 << 10, IHard: 128, Space: 128 << 20, Inodes: 1, BSoft: 1, Valid: 63},
+	} {
+		if e := validateDriverQuotaAccounting(old, bad, 128<<20, 1, entries); e == nil {
+			t.Fatal("quota drift/unaccounted charge accepted")
+		}
+	}
+	entry.Inode++
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 1, map[string]driverQuotaEntry{"root/workspace.ext4": entry}); e == nil {
+		t.Fatal("changed persistent inode accepted")
+	}
+	if e := validateDriverQuotaAccounting(old, after, 128<<20, 1, map[string]driverQuotaEntry{"other": entry}); e == nil {
+		t.Fatal("lost name accepted")
+	}
+}
