@@ -316,7 +316,22 @@ func TestCleanupRetriesAndTTL(t *testing.T) {
 	d := &retryDriver{}
 	d.failures.Store(2)
 	m, _, _ := setup(t, Options{}, func(base Driver) Driver { d.Driver = base; return d })
-	r := create(t, m, CreateRequest{TTLMS: 30})
+	r := create(t, m, CreateRequest{})
+	// Expire only after READY. A 30 ms creation TTL races fsync/scheduling on
+	// shared CI and correctly fails creation instead of testing cleanup retries.
+	i, err := m.lookup(r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i.mu.Lock()
+	next := i.record
+	next.ExpiresAt = time.Now().Add(-time.Nanosecond)
+	err = m.saveLocked(i, next)
+	i.mu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.notify()
 	final := waitState(t, m, r.ID, Destroyed)
 	if d.failures.Load() >= 0 || final.LastError != "" {
 		t.Fatalf("cleanup was not retried successfully: %+v", final)

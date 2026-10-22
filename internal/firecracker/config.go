@@ -48,7 +48,7 @@ func key(ref sandbox.Ref) (string, error) {
 }
 
 func (c Config) validate() error {
-	if c.Version != 1 || !c.ReservedUIDRange || c.UIDStart < 65536 || c.UIDCount < 1 || c.UIDCount > 10000 || int64(c.UIDStart)+int64(c.UIDCount) > 1<<31 {
+	if c.Version != 1 || !c.ReservedUIDRange || c.UIDStart < 65536 || c.UIDCount < 1 || c.UIDCount > 10000 || int64(c.UIDStart) > (int64(1)<<31)-int64(c.UIDCount) {
 		return errors.New("invalid Firecracker version or reserved UID range")
 	}
 	if !cleanAbsolute(c.RuntimeRoot) || (!strings.HasPrefix(c.RuntimeRoot, "/run/") && !strings.HasPrefix(c.RuntimeRoot, "/srv/")) || len(filepath.Join(c.RuntimeRoot, "j/firecracker", strings.Repeat("0", 64), "root/api.sock")) > 107 {

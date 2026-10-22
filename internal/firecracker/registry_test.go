@@ -142,6 +142,7 @@ func TestPolicyRejectsUnsafePathsAndIdentities(t *testing.T) {
 	for _, change := range []func(*Config){
 		func(c *Config) { c.ReservedUIDRange = false },
 		func(c *Config) { c.UIDStart = 0 },
+		func(c *Config) { c.UIDStart = int(^uint(0) >> 1) },
 		func(c *Config) { c.UIDCount = 10001 },
 		func(c *Config) { c.Version = 2 },
 		func(c *Config) { c.RuntimeRoot = "/tmp/xb" },
