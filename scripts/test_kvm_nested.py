@@ -11,6 +11,13 @@ from kvm_nested_host import JSONSocket, replace_private_json, quota_format_optio
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_snapshot_quota_profile_is_separate_from_cold_and_never_loads_on_l0(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_snapshot=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-snapshot >/dev/console 2>&1\n'))
+        for flags in ({'quota_snapshot':True,'quota_driver':True},{'quota_snapshot':True,'quota_probe':True},{'quota_snapshot':True,'state_io':True}):
+            with self.assertRaises(ValueError):init_scripts([],**flags)
+
     def test_driver_quota_profile_loads_only_inside_owned_l1_and_is_exclusive(self):
         _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_driver=True)
         self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)

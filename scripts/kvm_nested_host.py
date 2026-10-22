@@ -13,6 +13,7 @@ import subprocess
 import time
 import traceback
 import uuid
+import re
 
 from build_nested_host import build_initrd, digest, validate_manifest
 from kvm_resources import cgroup_empty
@@ -80,11 +81,16 @@ def main():
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
                  'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
+    for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument('--quota-snapshot', action='store_true', help='TEST ONLY: genuinely L1-built pristine snapshot with ordinary driver quota')
     profiles.add_argument('--quota-driver', action='store_true', help='TEST ONLY: ordinary-driver quota lifecycle and coldboot')
     profiles.add_argument('--quota-probe', action='store_true', help='TEST ONLY: ext4 project quota kernel prerequisites, NOT production enforcement')
     profiles.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
     args = parser.parse_args(); os.umask(0o077)
+    driver_profile = args.quota_driver or args.quota_snapshot
+    if args.quota_snapshot: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
+    else: assert not args.admin and not args.snapshot_builder and not args.snapshot_seed_manifest
     assert os.geteuid() == 0 and os.uname().sysname == 'Linux' and os.uname().machine == 'x86_64'
     assert len(bytes.fromhex(args.source_revision)) == 20
     report, logs = Path(args.report).resolve(), Path(args.log_dir).resolve()
@@ -101,10 +107,15 @@ def main():
     parent_group = Path('/sys/fs/cgroup/xandbox-nested-proof-' + suffix); group = parent_group / secrets.token_hex(32)
     assert not any(p.exists() for p in (root, control, parent_group))
     sources = {n: Path(getattr(args,n)).resolve() for n in ('fixture','daemon','warden','firecracker','jailer','kernel','initrd','workspace','alpine')}
+    if args.quota_snapshot:
+        sources.update({n:Path(getattr(args,n)).resolve() for n in ('admin','snapshot_builder')})
+        seed=json.loads(Path(args.snapshot_seed_manifest).read_text())
+        assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
+        for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
     phases = ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if args.state_io else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+    result = {'test':'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
         'production_ready':False,'passed':False,'state_io_profile':args.state_io,'quota_prerequisite_profile':args.quota_probe,
-        'production_driver_quota':args.quota_driver,
+        'production_driver_quota':driver_profile,'quota_snapshot_profile':args.quota_snapshot,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -118,7 +129,7 @@ def main():
             'No TCG fallback, migration, snapshot save/restore or shared host reboot.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
-    if args.quota_probe or args.quota_driver:
+    if args.quota_probe or driver_profile:
         result['quota_modules_sha256'] = policy['quota_modules_sha256']
     if args.quota_probe:
         result['limitations'].append('Kernel prerequisite probe only: ordinary sandboxd has NO project quota integration or per-generation physical disk enforcement.')
@@ -135,22 +146,28 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=args.quota_driver)
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=args.quota_driver,quota_snapshot=args.quota_snapshot)
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
         filesystem_uuid = uuid.uuid4()
-        if args.quota_driver:
+        if driver_profile:
             backend['quota'] = {'version':1,'filesystem_uuid':filesystem_uuid.hex,'project_start':1300000,'max_bytes':192<<20,'max_inodes':128}
         for name in ('daemon','warden','firecracker','jailer','kernel','initrd','workspace'):
             target=staging/'assets'/('sandboxd' if name=='daemon' else name)
             shutil.copyfile(sources[name],target); target.chmod(0o555 if name in ('daemon','warden','firecracker','jailer') else 0o444)
             if name!='daemon': backend[name]={'path':'/srv/assets/'+name,'sha256':digest(target)}
+        if args.quota_snapshot:
+            backend['version']=2
+            backend['snapshot']={'version':1,'agent_sha256':seed['agent_sha256'],'memory_mib':512,'vcpus':2,'max_entries':2,'max_bytes':1<<30}
+            for name,target_name in (('admin','admin'),('snapshot_builder','snapshot-builder')):
+                shutil.copyfile(sources[name],staging/'assets'/target_name);(staging/'assets'/target_name).chmod(0o555)
+            private_json(staging/'config/snapshot-fixture.json',{'source_revision':args.source_revision,'agent_sha256':seed['agent_sha256'],'admin_sha256':digest(sources['admin']),'builder_sha256':digest(sources['snapshot_builder'])})
         private_json(staging/'config/backend.json',backend)
         disk=root/'disk.raw'
         with disk.open('xb') as f: os.posix_fallocate(f.fileno(),0,DISK_BYTES); os.fsync(f.fileno())
-        format_options = quota_format_options(args.quota_probe or args.quota_driver)
-        subprocess.run(['mkfs.ext4','-q','-F','-m','0','-E','root_owner=0:0',*format_options,*(['-U',str(filesystem_uuid)] if args.quota_driver else []),'-d',str(staging),str(disk)],check=True,timeout=120)
+        format_options = quota_format_options(args.quota_probe or driver_profile)
+        subprocess.run(['mkfs.ext4','-q','-F','-m','0','-E','root_owner=0:0',*format_options,*(['-U',str(filesystem_uuid)] if driver_profile else []),'-d',str(staging),str(disk)],check=True,timeout=120)
         with disk.open('rb') as f: os.fsync(f.fileno())
         # Only QEMU's private inputs become accessible to its reserved UID.
         for path in root.iterdir(): os.chown(path,uid,uid); path.chmod(0o600 if path==disk else 0o400)
@@ -187,7 +204,7 @@ def main():
                 return console.exists() and b'XANDBOX_NESTED_HOST_READY' in console.read_bytes()
             wait(ready,'L1 fixture boot',seconds=90)
             qmp_probe(root/'qmp.sock')
-            channel=JSONSocket(root/'control.sock')
+            channel=JSONSocket(root/'control.sock',210 if args.quota_snapshot else 90)
             channel.send({'version':1,'operation':'probe'}); reply=channel.read()
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
             assert disk.stat().st_size==DISK_BYTES
@@ -196,7 +213,7 @@ def main():
             value={'version':1,'operation':operation}
             if phase:value['phase']=phase
             channel.send(value); out=channel.read()
-            if not out['ok'] and args.quota_driver and operation=='recover' and 'quota_diagnostic' in out:
+            if not out['ok'] and driver_profile and operation=='recover' and 'quota_diagnostic' in out:
                 result['quota_coldboot_failure_diagnostic']=out['quota_diagnostic']
             assert out['ok'],'L1 fixed operation failed; inspect private console';return out['result']
         def power_cut():
@@ -212,15 +229,16 @@ def main():
             assert Path('/proc/sys/kernel/random/boot_id').read_bytes()==l0_boot
             return elapsed
         boot()
+        if args.quota_snapshot: result['snapshot_setup']=request('quota-snapshot-setup')
         for phase in phases:
-            checkpoint=request('quota-probe') if args.quota_probe else request('io-fault' if args.state_io else 'quota-checkpoint' if args.quota_driver else 'checkpoint',phase)
+            checkpoint=request('quota-probe') if args.quota_probe else request('io-fault' if args.state_io else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
             assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
             boot(); recovered=request('recover')
             assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
             assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
-            if args.quota_driver: assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
+            if driver_profile: assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
             if args.quota_probe: assert recovered['quota_persisted_after_power_cut'] and recovered['all_fixture_project_records_cleared']
             guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if args.state_io else True
             result['cases'].append({'phase':phase,'passed':guard,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})

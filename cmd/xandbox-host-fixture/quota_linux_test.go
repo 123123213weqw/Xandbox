@@ -3,7 +3,11 @@
 package main
 
 import (
+	"context"
+	"crypto/sha256"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"unsafe"
 )
@@ -140,5 +144,54 @@ func TestColdBootNeverDependsOnNonDurableJailerPIDFileContents(t *testing.T) {
 	pid.Size = 0
 	if e := validateDriverQuotaAccounting(old, after, 128<<20, 2, map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/firecracker.pid": pid}); e == nil {
 		t.Fatal("lost mutable backing size accepted")
+	}
+}
+
+func TestSnapshotProfileIsExclusiveAndNeverRunsBuilderOnL0(t *testing.T) {
+	if e := runNodeAllProfiles(false, false, true, true); e == nil {
+		t.Fatal("mixed ordinary/snapshot quota profile accepted")
+	}
+	if _, e := (&node{quotaDriver: true, quotaSnapshot: true}).quotaSnapshotSetup(context.Background()); e == nil {
+		t.Fatal("snapshot builder escaped L1 PID1 guard")
+	}
+	if e := runQuotaDaemonCapacity(2); e == nil {
+		t.Fatal("snapshot daemon escaped L1 guard")
+	}
+	if e := (nodeRequest{Version: 1, Operation: "quota-snapshot-setup"}).validate(); e != nil {
+		t.Fatal(e)
+	}
+	if e := (nodeRequest{Version: 1, Operation: "quota-snapshot-setup", Phase: "arbitrary"}).validate(); e == nil {
+		t.Fatal("arbitrary snapshot setup parameter accepted")
+	}
+	if e := verifySharedQuotaFiles("/srv/not-an-owned-fixture"); e == nil {
+		t.Fatal("shared template probe escaped L1 guard")
+	}
+}
+
+func TestSharedSnapshotHashChecksWholeExactRegularFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "memory")
+	content := []byte("a full snapshot payload")
+	if e := os.WriteFile(path, content, 0400); e != nil {
+		t.Fatal(e)
+	}
+	got, e := sharedQuotaHash(path, int64(len(content)))
+	if e != nil || got != fmt.Sprintf("%x", sha256.Sum256(content)) {
+		t.Fatal("incorrect full hash", e)
+	}
+	for _, size := range []int64{0, -1, int64(len(content) - 1), int64(len(content) + 1), (512 << 20) + 1} {
+		if _, e = sharedQuotaHash(path, size); e == nil {
+			t.Fatal("invalid/excess/truncated length accepted")
+		}
+	}
+	link := filepath.Join(dir, "symlink")
+	if e = os.Symlink(path, link); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = sharedQuotaHash(link, int64(len(content))); e == nil {
+		t.Fatal("symlink accepted")
+	}
+	if _, e = sharedQuotaHash(dir, int64(len(content))); e == nil {
+		t.Fatal("directory accepted")
 	}
 }

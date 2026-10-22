@@ -39,6 +39,7 @@ import (
 type fixture struct {
 	Root, Cgroup, Firecracker, Jailer, Warden, Kernel, Initrd, Report, SourceRevision string
 	ExportDirectory                                                                   string
+	Workspace                                                                         string
 	FaultMode                                                                         string
 	UIDStart                                                                          int
 	SHA256                                                                            map[string]string
@@ -238,17 +239,29 @@ func runSnapshotFixture(t *testing.T, faultOnly bool) {
 		}
 	}()
 	disk := filepath.Join(root, "blank.ext4")
-	df, e := os.OpenFile(disk, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
-	if e != nil {
-		t.Fatal(e)
-	}
-	e = df.Truncate(128 << 20)
-	df.Close()
-	if e != nil {
-		t.Fatal(e)
-	}
-	if out, e := exec.Command("/usr/sbin/mkfs.ext4", "-q", "-F", disk).CombinedOutput(); e != nil {
-		t.Fatal("trusted host mkfs", e, string(out))
+	if f.Workspace != "" {
+		// The nested host has no mkfs dependency. Only an explicit pinned,
+		// never-assigned source image may replace the default fresh mkfs path.
+		info, e := os.Lstat(f.Workspace)
+		if e != nil || !filepath.IsAbs(f.Workspace) || !info.Mode().IsRegular() || info.Size() != 128<<20 || len(f.SHA256["workspace"]) != 64 || hash(f.Workspace) != f.SHA256["workspace"] {
+			t.Fatal("invalid pinned blank workspace input")
+		}
+		if e = copyFile(f.Workspace, disk, 0600); e != nil {
+			t.Fatal(e)
+		}
+	} else {
+		df, e := os.OpenFile(disk, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+		if e != nil {
+			t.Fatal(e)
+		}
+		e = df.Truncate(128 << 20)
+		df.Close()
+		if e != nil {
+			t.Fatal(e)
+		}
+		if out, e := exec.Command("/usr/sbin/mkfs.ext4", "-q", "-F", disk).CombinedOutput(); e != nil {
+			t.Fatal("trusted host mkfs", e, string(out))
+		}
 	}
 	start := func(index int, mem, state, workspace string) *vm {
 		t.Helper()

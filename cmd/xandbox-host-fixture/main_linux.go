@@ -22,13 +22,19 @@ func main() {
 		err = qemuChild(*config)
 	case "node":
 		err = runNode()
+	case "node-quota-snapshot":
+		err = runNodeAllProfiles(false, false, false, true)
 	case "node-quota-driver":
 		err = runNodeProfiles(false, false, true)
-	case "quota-daemon-drop":
+	case "quota-daemon-drop", "quota-snapshot-daemon-drop":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("quota daemon accepts no parameters")
 		} else {
-			err = runQuotaDaemon()
+			if *mode == "quota-snapshot-daemon-drop" {
+				err = runQuotaDaemonCapacity(2)
+			} else {
+				err = runQuotaDaemon()
+			}
 		}
 	case "node-quota":
 		err = runNodeOptions(false, true)

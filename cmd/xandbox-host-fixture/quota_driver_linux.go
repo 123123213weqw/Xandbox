@@ -7,9 +7,12 @@ package main
 // ordinary driver sets or clears their limits. No generic command/ID surface.
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,11 +30,13 @@ const driverProjectFirst uint32 = 1300000
 type driverQuotaEntry struct {
 	Inode, Links, Device uint64
 	Mode, UID, GID       uint32
+	Shared               bool
 	Size                 int64
 	Blocks               uint64
 }
 type driverQuotaReceipt struct {
-	Entries map[string]driverQuotaEntry
+	Snapshot bool
+	Entries  map[string]driverQuotaEntry
 
 	Phase           string
 	NamespaceBlocks uint64
@@ -41,14 +46,23 @@ type driverQuotaReceipt struct {
 	Record          quotaRecord
 }
 
-func runQuotaDaemon() error {
+func runQuotaDaemon() error { return runQuotaDaemonCapacity(1) }
+func runQuotaDaemonCapacity(capacity int) error {
 	if e := requireQuotaChild(); e != nil {
 		return e
+	}
+	if capacity != 1 && capacity != 2 {
+		return errors.New("fixed driver capacity required")
+	}
+	if capacity == 2 {
+		if _, e := os.Stat("/srv/config/snapshot-fixture.json"); e != nil {
+			return e
+		}
 	}
 	if _, _, e := syscall.AllThreadsSyscall(unix.SYS_PRCTL, unix.PR_CAPBSET_DROP, unix.CAP_SYS_RESOURCE, 0); e != 0 {
 		return e
 	}
-	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "1", "-metrics"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
+	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", strconv.Itoa(capacity), "-metrics"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
 }
 func driverQuotaRead(id uint32) (quotaRecord, error) {
 	var r quotaRecord
@@ -91,7 +105,7 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 	if e = strictjson.Decode(b, &old); e != nil {
 		return nil, e
 	}
-	qr := driverQuotaReceipt{Phase: phase}
+	qr := driverQuotaReceipt{Phase: phase, Snapshot: n.quotaSnapshot}
 	if phase == "destroyed" {
 		if e = driverQuotaAllClear(); e != nil {
 			return nil, e
@@ -110,7 +124,11 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 		if e = json.Unmarshal(b, &owner); e != nil {
 			return nil, e
 		}
-		if owner.Version != 3 || !owner.Attempt {
+		wantVersion := 3
+		if n.quotaSnapshot {
+			wantVersion = 4
+		}
+		if owner.Version != wantVersion || !owner.Attempt {
 			return nil, errors.New("ordinary driver did not persist project ownership before limit setup")
 		}
 		jail := "/srv/r/j/firecracker/" + k
@@ -120,7 +138,7 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 				return nil, errors.New("jail/project inheritance not set")
 			}
 		}
-		for _, name := range []string{"workspace.ext4", "kernel", "initrd", "firecracker"} {
+		for _, name := range privateQuotaAssets(n.quotaSnapshot) {
 			path := jail + "/root/" + name
 			fd, e := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 			if e != nil {
@@ -147,7 +165,7 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 			return nil, e
 		}
 		qr.Jail = jail
-		qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries, e = driverQuotaTree(jail)
+		qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries, e = driverQuotaTree(jail, n.quotaSnapshot)
 		if e != nil {
 			return nil, e
 		}
@@ -163,6 +181,13 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 			return nil, e
 		}
 		out["linked_namespace_accounted_before_cut"] = true
+		if n.quotaSnapshot {
+			if e = verifySharedQuotaFiles(jail); e != nil {
+				return nil, e
+			}
+			out["shared_inodes_not_charged_to_clone"] = true
+			out["snapshot_owner_version4_checked"] = true
+		}
 		out["private_project_space_bytes"] = qr.Record.Space
 		out["private_project_inodes"] = qr.Record.Inodes
 		if phase == "running" {
@@ -234,7 +259,7 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 		if e != nil {
 			return nil, e
 		}
-		blocks, inodes, entries, statErr := driverQuotaTree(old.Jail)
+		blocks, inodes, entries, statErr := driverQuotaTree(old.Jail, old.Snapshot)
 		if statErr != nil {
 			return nil, statErr
 		}
@@ -249,9 +274,19 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 			result["non_authoritative_pid_file_not_used_for_recovery"] = true
 			result["pid_file_was_empty_after_cold_boot"] = before.Size > 0 && after.Size == 0
 		}
+		if old.Snapshot {
+			if e = verifySharedQuotaFiles(old.Jail); e != nil {
+				return nil, e
+			}
+			result["shared_template_project_zero_after_cold_boot"] = true
+		}
 		// A live VM may change backing allocation after the checkpoint. Limits
 		// must be immutable; recovered charge must match independent inode stats.
-		for _, path := range []string{old.Jail, old.Jail + "/root", old.Jail + "/root/workspace.ext4", old.Jail + "/root/kernel", old.Jail + "/root/initrd", old.Jail + "/root/firecracker"} {
+		paths := []string{old.Jail, old.Jail + "/root"}
+		for _, name := range privateQuotaAssets(old.Snapshot) {
+			paths = append(paths, old.Jail+"/root/"+name)
+		}
+		for _, path := range paths {
 			a, e := quotaAttributes(path, nil)
 			if e != nil || a.Project != old.Project {
 				return nil, errors.New("persistent private project attribute mismatch")
@@ -260,7 +295,11 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 				return nil, errors.New("persistent project inheritance missing")
 			}
 		}
-		for _, name := range []string{"kernel", "initrd", "firecracker"} {
+		immutable := []string{"kernel", "initrd", "firecracker"}
+		if old.Snapshot {
+			immutable = []string{"firecracker"}
+		}
+		for _, name := range immutable {
 			actual, e := fileHash(old.Jail + "/root/" + name)
 			if e != nil {
 				return nil, e
@@ -274,7 +313,7 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 	return result, nil
 }
 
-func driverQuotaTree(jail string) (uint64, uint64, map[string]driverQuotaEntry, error) {
+func driverQuotaTree(jail string, snapshot bool) (uint64, uint64, map[string]driverQuotaEntry, error) {
 	if e := requireNode(); e != nil {
 		return 0, 0, nil, e
 	}
@@ -297,11 +336,12 @@ func driverQuotaTree(jail string) (uint64, uint64, map[string]driverQuotaEntry, 
 		if e != nil {
 			return e
 		}
-		entries[rel] = driverQuotaEntry{Inode: st.Ino, Links: uint64(st.Nlink), Device: uint64(st.Rdev), Mode: st.Mode, UID: st.Uid, GID: st.Gid, Size: st.Size, Blocks: uint64(st.Blocks) * 512}
+		shared := snapshot && (rel == "root/template.mem" || rel == "root/template.state")
+		entries[rel] = driverQuotaEntry{Shared: shared, Inode: st.Ino, Links: uint64(st.Nlink), Device: uint64(st.Rdev), Mode: st.Mode, UID: st.Uid, GID: st.Gid, Size: st.Size, Blocks: uint64(st.Blocks) * 512}
 		if len(entries) > 256 {
 			return errors.New("bounded fixed quota diagnostic exceeded")
 		}
-		if !seen[st.Ino] {
+		if !shared && !seen[st.Ino] {
 			seen[st.Ino] = true
 			inodes++
 			blocks += uint64(st.Blocks) * 512
@@ -360,7 +400,7 @@ func driverQuotaDiagnostic() (map[string]any, error) {
 	if e != nil {
 		return nil, e
 	}
-	blocks, inodes, entries, e := driverQuotaTree(old.Jail)
+	blocks, inodes, entries, e := driverQuotaTree(old.Jail, old.Snapshot)
 	if e != nil {
 		return nil, e
 	}
@@ -429,4 +469,70 @@ func driverQuotaDiagnostic() (map[string]any, error) {
 		}
 	}
 	return map[string]any{"space_before": old.Record.Space, "space_after": actual.Space, "named_blocks_before": old.NamespaceBlocks, "named_blocks_after": blocks, "inodes_before": old.Record.Inodes, "inodes_after": actual.Inodes, "named_inodes_after": inodes, "block_hard_before": old.Record.BHard, "block_hard_after": actual.BHard, "inode_hard_before": old.Record.IHard, "inode_hard_after": actual.IHard, "changes": changes}, nil
+}
+
+func privateQuotaAssets(snapshot bool) []string {
+	if snapshot {
+		return []string{"workspace.ext4", "firecracker"}
+	}
+	return []string{"workspace.ext4", "kernel", "initrd", "firecracker"}
+}
+func sharedQuotaHash(path string, expected int64) (string, error) {
+	if expected < 1 || expected > 512<<20 {
+		return "", errors.New("bounded shared snapshot size required")
+	}
+	fd, e := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if e != nil {
+		return "", e
+	}
+	f := os.NewFile(uintptr(fd), "shared-snapshot-check")
+	defer f.Close()
+	info, e := f.Stat()
+	if e != nil || !info.Mode().IsRegular() || info.Size() != expected {
+		return "", errors.New("shared snapshot size/type mismatch")
+	}
+	h := sha256.New()
+	if _, e = io.CopyN(h, f, expected); e != nil {
+		return "", e
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+func verifySharedQuotaFiles(jail string) error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	b, e := os.ReadFile("/srv/export/manifest.json")
+	if e != nil {
+		return e
+	}
+	var m struct {
+		Memory     string `json:"memory_sha256"`
+		State      string `json:"state_sha256"`
+		StateBytes int64  `json:"state_bytes"`
+	}
+	if e = json.Unmarshal(b, &m); e != nil {
+		return e
+	}
+	for name, item := range map[string]struct {
+		hash string
+		size int64
+	}{"template.mem": {m.Memory, 512 << 20}, "template.state": {m.State, m.StateBytes}} {
+		path := jail + "/root/" + name
+		a, e := quotaAttributes(path, nil)
+		if e != nil || a.Project != 0 {
+			return errors.New("shared template left project zero")
+		}
+		var st unix.Stat_t
+		if e = unix.Lstat(path, &st); e != nil {
+			return e
+		}
+		if st.Uid != 0 || st.Mode&0222 != 0 || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Nlink < 2 {
+			return errors.New("shared template is not a read-only catalog hardlink")
+		}
+		actual, e := sharedQuotaHash(path, item.size)
+		if e != nil || actual != item.hash {
+			return errors.New("shared template content changed")
+		}
+	}
+	return nil
 }

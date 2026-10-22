@@ -38,11 +38,12 @@ type nodeReceipt struct {
 	Key, L1Boot, L2Boot string
 }
 type node struct {
-	quotaDriver bool
-	api         *client.Client
-	process     *exec.Cmd
-	exited      chan error
-	token, boot string
+	quotaDriver   bool
+	quotaSnapshot bool
+	api           *client.Client
+	process       *exec.Cmd
+	exited        chan error
+	token, boot   string
 }
 
 func (q nodeRequest) validate() error {
@@ -50,7 +51,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -156,9 +157,13 @@ func (n *node) initialize() error {
 	} else if e = json.Unmarshal(b, &n.token); e != nil {
 		return e
 	}
+	capacity := 1
+	if n.quotaSnapshot {
+		capacity = 2
+	}
 	h := sha256.Sum256([]byte(n.token))
 	if _, e = os.Stat("/srv/config/auth.json"); os.IsNotExist(e) {
-		if e = privateWrite("/srv/config/auth.json", map[string]any{"version": 1, "keys": []any{map[string]any{"tenant_id": "nested-fixture", "max_instances": 1, "token_sha256": hex.EncodeToString(h[:])}}}); e != nil {
+		if e = privateWrite("/srv/config/auth.json", map[string]any{"version": 1, "keys": []any{map[string]any{"tenant_id": "nested-fixture", "max_instances": capacity, "token_sha256": hex.EncodeToString(h[:])}}}); e != nil {
 			return e
 		}
 	}
@@ -204,7 +209,11 @@ func (n *node) start(ctx context.Context) error {
 	defer log.Close()
 	n.process = exec.Command("/srv/assets/sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "1", "-metrics")
 	if n.quotaDriver {
-		n.process = exec.Command("/usr/bin/xandbox-host-fixture", "-mode", "quota-daemon-drop")
+		mode := "quota-daemon-drop"
+		if n.quotaSnapshot {
+			mode = "quota-snapshot-daemon-drop"
+		}
+		n.process = exec.Command("/usr/bin/xandbox-host-fixture", "-mode", mode)
 	}
 	n.process.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	n.process.Stdout, n.process.Stderr = log, log
@@ -458,9 +467,19 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 	return runNodeProfiles(stateIO, quotaProbe, false)
 }
 func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
-	if (stateIO && quotaProbe) || (stateIO && quotaDriver) || (quotaProbe && quotaDriver) {
+	return runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, false)
+}
+func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) error {
+	count := 0
+	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot} {
+		if enabled {
+			count++
+		}
+	}
+	if count > 1 {
 		return errors.New("exclusive L1 image profile required")
 	}
+	quotaDriver = quotaDriver || quotaSnapshot
 	if e := requireNode(); e != nil {
 		return e
 	}
@@ -494,7 +513,7 @@ func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{quotaDriver: quotaDriver}
+	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -509,7 +528,11 @@ func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
 			e = q.validate()
 		}
 		if e == nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
+			timeout := 70 * time.Second
+			if q.Operation == "quota-snapshot-setup" {
+				timeout = 200 * time.Second
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			var result map[string]any
 			switch q.Operation {
 			case "probe":
@@ -519,6 +542,12 @@ func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
 				}
 			case "checkpoint":
 				result, e = n.checkpoint(ctx, q.Phase)
+			case "quota-snapshot-setup":
+				if !quotaSnapshot {
+					e = errors.New("fixed quota snapshot profile required")
+				} else {
+					result, e = n.quotaSnapshotSetup(ctx)
+				}
 			case "quota-checkpoint":
 				if !quotaDriver {
 					e = errors.New("ordinary driver quota image profile required")
