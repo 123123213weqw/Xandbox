@@ -1,0 +1,15 @@
+work/nested-source-v8.tar.gz: 成功
+bin/sandboxd-io-v1: 成功
+bin/warden-lease: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native test-only fixture race10/vet and root Python36
+....................................
+----------------------------------------------------------------------
+Ran 36 tests in 0.024s
+
+OK
+bin/host-fixture-v8: 成功
+stage: OWN nested L1 KVM host + L2 Firecracker, running/stopped/destroyed power checkpoints
+45290 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+nested L1 host power acceptance passed; L0 never rebooted

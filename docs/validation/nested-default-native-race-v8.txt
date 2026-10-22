@@ -1,0 +1,25 @@
+?   	github.com/123123213weqw/Xandbox/cmd/sandboxctl	[no test files]
+ok  	github.com/123123213weqw/Xandbox/cmd/sandboxd	1.028s
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-agent	[no test files]
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-guestctl	[no test files]
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-keygen	[no test files]
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-template	[no test files]
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-warden	[no test files]
+ok  	github.com/123123213weqw/Xandbox/internal/access	1.024s
+ok  	github.com/123123213weqw/Xandbox/internal/client	1.029s
+ok  	github.com/123123213weqw/Xandbox/internal/firecracker	19.563s
+ok  	github.com/123123213weqw/Xandbox/internal/fixturewire	1.023s
+ok  	github.com/123123213weqw/Xandbox/internal/guest	1.146s
+ok  	github.com/123123213weqw/Xandbox/internal/guestbridge	3.023s
+ok  	github.com/123123213weqw/Xandbox/internal/guestinit	1.062s
+ok  	github.com/123123213weqw/Xandbox/internal/guestwire	1.053s
+ok  	github.com/123123213weqw/Xandbox/internal/hostclock	1.017s
+ok  	github.com/123123213weqw/Xandbox/internal/httpapi	4.626s
+ok  	github.com/123123213weqw/Xandbox/internal/lease	1.020s
+ok  	github.com/123123213weqw/Xandbox/internal/observability	1.055s
+ok  	github.com/123123213weqw/Xandbox/internal/privatefile	1.026s
+ok  	github.com/123123213weqw/Xandbox/internal/sandbox	5.491s
+ok  	github.com/123123213weqw/Xandbox/internal/session	2.911s
+ok  	github.com/123123213weqw/Xandbox/internal/strictjson	1.019s
+ok  	github.com/123123213weqw/Xandbox/internal/telemetry	2.230s
+ok  	github.com/123123213weqw/Xandbox/internal/warden	10.325s

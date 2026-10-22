@@ -1,0 +1,519 @@
+//go:build linux && xandbox_host_fixture
+
+package main
+
+import (
+	"bufio"
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/123123213weqw/Xandbox/internal/client"
+	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/strictjson"
+	"golang.org/x/sys/unix"
+)
+
+const fixtureMarker = "Xandbox nested host fixture v1\n"
+const nodeGroup = "/sys/fs/cgroup/xandbox"
+
+type nodeRequest struct {
+	Version   int    `json:"version"`
+	Operation string `json:"operation"`
+	Phase     string `json:"phase,omitempty"`
+}
+type nodeReceipt struct {
+	Phase               string
+	Ref                 sandbox.Ref
+	Key, L1Boot, L2Boot string
+}
+type node struct {
+	api         *client.Client
+	process     *exec.Cmd
+	exited      chan error
+	token, boot string
+}
+
+func (q nodeRequest) validate() error {
+	if q.Version != 1 {
+		return errors.New("bad fixture protocol")
+	}
+	switch q.Operation {
+	case "probe", "recover":
+		if q.Phase != "" {
+			return errors.New("unexpected phase")
+		}
+	case "checkpoint":
+		if q.Phase != "running" && q.Phase != "stopped" && q.Phase != "destroyed" {
+			return errors.New("invalid checkpoint phase")
+		}
+	default:
+		return errors.New("unknown fixed fixture operation")
+	}
+	return nil
+}
+
+func privateWrite(path string, value any) error {
+	b, e := json.Marshal(value)
+	if e != nil {
+		return e
+	}
+	b = append(b, '\n')
+	f, e := os.CreateTemp(filepath.Dir(path), ".fixture-*")
+	if e != nil {
+		return e
+	}
+	defer os.Remove(f.Name())
+	if _, e = f.Write(b); e != nil {
+		f.Close()
+		return e
+	}
+	if e = f.Sync(); e != nil {
+		f.Close()
+		return e
+	}
+	if e = f.Close(); e != nil {
+		return e
+	}
+	if e = os.Rename(f.Name(), path); e != nil {
+		return e
+	}
+	dir, e := os.Open(filepath.Dir(path))
+	if e != nil {
+		return e
+	}
+	defer dir.Close()
+	return dir.Sync()
+}
+
+func randomKey() (string, error) {
+	b := make([]byte, 32)
+	_, e := rand.Read(b)
+	return hex.EncodeToString(b), e
+}
+func nodeSpec() sandbox.CreateRequest {
+	return sandbox.CreateRequest{TTLMS: 300000, Limits: sandbox.Limits{MaxExecMS: 60000, MaxOutputBytes: 8192}}
+}
+func nodePath(r sandbox.Ref) string { return "/v1/sandboxes/" + r.ID }
+func generationBody(r sandbox.Ref) map[string]string {
+	return map[string]string{"generation": r.Generation}
+}
+
+func waitNode(ctx context.Context, f func() (bool, error)) error {
+	for {
+		ok, e := f()
+		if e != nil {
+			return e
+		}
+		if ok {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+func (n *node) initialize() error {
+	for _, p := range []string{"/srv/config", "/srv/fixture", "/srv/state"} {
+		if e := os.MkdirAll(p, 0700); e != nil {
+			return e
+		}
+	}
+	b, e := os.ReadFile("/proc/sys/kernel/random/boot_id")
+	if e != nil {
+		return e
+	}
+	n.boot = strings.TrimSpace(string(b))
+	b, e = os.ReadFile("/srv/fixture/token")
+	if os.IsNotExist(e) {
+		n.token, e = randomKey()
+		if e != nil {
+			return e
+		}
+		if e = privateWrite("/srv/fixture/token", n.token); e != nil {
+			return e
+		}
+	} else if e != nil {
+		return e
+	} else if e = json.Unmarshal(b, &n.token); e != nil {
+		return e
+	}
+	h := sha256.Sum256([]byte(n.token))
+	if _, e = os.Stat("/srv/config/auth.json"); os.IsNotExist(e) {
+		if e = privateWrite("/srv/config/auth.json", map[string]any{"version": 1, "keys": []any{map[string]any{"tenant_id": "nested-fixture", "max_instances": 1, "token_sha256": hex.EncodeToString(h[:])}}}); e != nil {
+			return e
+		}
+	}
+	if e = os.WriteFile("/sys/fs/cgroup/cgroup.subtree_control", []byte("+memory +pids +cpu"), 0); e != nil {
+		return e
+	}
+	if e = os.Mkdir(nodeGroup, 0700); e != nil && !os.IsExist(e) {
+		return e
+	}
+	if e = os.WriteFile(nodeGroup+"/cgroup.subtree_control", []byte("+memory +pids +cpu"), 0); e != nil {
+		return e
+	}
+	n.api = client.NewWithToken("/srv/state/api.sock", n.token)
+	return nil
+}
+
+func kvmAvailable() error {
+	f, e := os.OpenFile("/dev/kvm", os.O_RDWR, 0)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	v, e := unix.IoctlRetInt(int(f.Fd()), 0xae00)
+	if e != nil || v != 12 {
+		return errors.New("real nested KVM API12 required")
+	}
+	return nil
+}
+
+func (n *node) start(ctx context.Context) error {
+	if n.process != nil {
+		select {
+		case <-n.exited:
+			return errors.New("controller already exited; fresh boot required")
+		default:
+			return nil
+		}
+	}
+	log, e := os.OpenFile("/srv/fixture/controller.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if e != nil {
+		return e
+	}
+	defer log.Close()
+	n.process = exec.Command("/srv/assets/sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "1", "-metrics")
+	n.process.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
+	n.process.Stdout, n.process.Stderr = log, log
+	if e = n.process.Start(); e != nil {
+		return e
+	}
+	n.exited = make(chan error, 1)
+	go func() { n.exited <- n.process.Wait() }()
+	return waitNode(ctx, func() (bool, error) {
+		var h struct {
+			Backend         string `json:"backend"`
+			Isolation       bool   `json:"isolation"`
+			ProductionReady bool   `json:"production_ready"`
+		}
+		select {
+		case <-n.exited:
+			return false, errors.New("controller exited before readiness")
+		default:
+		}
+		e := n.api.Do(ctx, "GET", "/healthz", nil, &h)
+		if e != nil {
+			return false, nil
+		}
+		if h.Backend != "firecracker" || !h.Isolation || h.ProductionReady {
+			return false, errors.New("wrong backend or readiness claim")
+		}
+		return true, nil
+	})
+}
+
+func (n *node) create(ctx context.Context, key string) (sandbox.Record, error) {
+	var r sandbox.Record
+	e := n.api.Create(ctx, key, nodeSpec(), &r)
+	if e == nil && (r.State != sandbox.Ready || r.Backend != "firecracker") {
+		e = errors.New("real READY required")
+	}
+	return r, e
+}
+func (n *node) submit(ctx context.Context, r sandbox.Ref, argv []string) (sandbox.Job, error) {
+	var j sandbox.Job
+	e := n.api.Do(ctx, "POST", nodePath(r)+"/exec", sandbox.ExecRequest{Generation: r.Generation, Argv: argv, TimeoutMS: 60000}, &j)
+	return j, e
+}
+func (n *node) job(ctx context.Context, r sandbox.Ref, j sandbox.Job) (sandbox.Job, error) {
+	var out sandbox.Job
+	e := n.api.Do(ctx, "GET", nodePath(r)+"/executions/"+j.ID, nil, &out)
+	return out, e
+}
+func (n *node) execute(ctx context.Context, r sandbox.Ref, argv []string) (sandbox.Output, error) {
+	j, e := n.submit(ctx, r, argv)
+	if e != nil {
+		return sandbox.Output{}, e
+	}
+	var out sandbox.Job
+	e = waitNode(ctx, func() (bool, error) {
+		var e error
+		out, e = n.job(ctx, r, j)
+		return e == nil && out.Status != "RUNNING", e
+	})
+	if e != nil {
+		return sandbox.Output{}, e
+	}
+	if out.Status != "EXITED" || out.Output.ExitCode != 0 {
+		return out.Output, errors.New("fixed guest command failed")
+	}
+	return out.Output, nil
+}
+
+func actualNestedVM(r sandbox.Ref) error {
+	group := nodeGroup + "/" + r.ID + r.Generation
+	procs, e := os.ReadFile(group + "/cgroup.procs")
+	if e != nil {
+		return e
+	}
+	for _, pid := range strings.Fields(string(procs)) {
+		fds, e := os.ReadDir("/proc/" + pid + "/fd")
+		if e != nil {
+			return e
+		}
+		for _, fd := range fds {
+			target, _ := os.Readlink("/proc/" + pid + "/fd/" + fd.Name())
+			if strings.Contains(target, "kvm-vm") {
+				return nil
+			}
+		}
+	}
+	return errors.New("nested guest lacks real VM FD in owned group")
+}
+
+func (n *node) destroy(ctx context.Context, r sandbox.Ref) error {
+	var v sandbox.Record
+	if e := n.api.Do(ctx, "DELETE", nodePath(r), generationBody(r), &v); e != nil {
+		return e
+	}
+	return waitNode(ctx, func() (bool, error) {
+		e := n.api.Do(ctx, "GET", nodePath(r), nil, &v)
+		return e == nil && v.State == sandbox.Destroyed, e
+	})
+}
+
+func (n *node) clean(r sandbox.Ref) error {
+	key := r.ID + r.Generation
+	for _, p := range []string{nodeGroup + "/" + key, "/srv/r/j/firecracker/" + key, "/srv/state/firecracker/" + key + ".json"} {
+		if _, e := os.Lstat(p); !os.IsNotExist(e) {
+			return errors.New("old owned resource retained")
+		}
+	}
+	return nil
+}
+
+func (n *node) checkpoint(ctx context.Context, phase string) (map[string]any, error) {
+	if e := n.start(ctx); e != nil {
+		return nil, e
+	}
+	key, e := randomKey()
+	if e != nil {
+		return nil, e
+	}
+	r, e := n.create(ctx, key)
+	if e != nil {
+		return nil, e
+	}
+	if e = actualNestedVM(r.Ref); e != nil {
+		return nil, e
+	}
+	u, e := n.execute(ctx, r.Ref, []string{"id", "-u"})
+	if e != nil || strings.TrimSpace(u.Stdout) != "65534" {
+		return nil, errors.New("wrong guest UID")
+	}
+	b, e := n.execute(ctx, r.Ref, []string{"cat", "/proc/sys/kernel/random/boot_id"})
+	if e != nil {
+		return nil, e
+	}
+	j, e := n.submit(ctx, r.Ref, []string{"sh", "-c", "echo ready > power-ready; sleep 120 & sleep 120 & wait"})
+	if e != nil {
+		return nil, e
+	}
+	if _, e = n.execute(ctx, r.Ref, []string{"sh", "-c", "while [ ! -f power-ready ]; do sleep 0.01; done"}); e != nil {
+		return nil, e
+	}
+	job, e := n.job(ctx, r.Ref, j)
+	if e != nil || job.Status != "RUNNING" {
+		return nil, errors.New("busy guest not running at checkpoint")
+	}
+	if phase == "stopped" {
+		var stopped sandbox.Record
+		if e = n.api.Do(ctx, "POST", nodePath(r.Ref)+"/stop", generationBody(r.Ref), &stopped); e != nil {
+			return nil, e
+		}
+		if stopped.State != sandbox.Stopped || stopped.StoppedAt.IsZero() {
+			return nil, errors.New("durable STOPPED not confirmed")
+		}
+	}
+	if phase == "destroyed" {
+		if e = n.destroy(ctx, r.Ref); e != nil {
+			return nil, e
+		}
+		if e = n.clean(r.Ref); e != nil {
+			return nil, e
+		}
+	}
+	receipt := nodeReceipt{Phase: phase, Ref: r.Ref, Key: key, L1Boot: n.boot, L2Boot: strings.TrimSpace(b.Stdout)}
+	if e = privateWrite("/srv/fixture/receipt.json", receipt); e != nil {
+		return nil, e
+	}
+	return map[string]any{"phase": phase, "real_nested_kvm": true, "guest_uid_checked": true, "checkpoint_receipt_fsynced": true}, nil
+}
+
+func (n *node) recover(ctx context.Context) (map[string]any, error) {
+	b, e := os.ReadFile("/srv/fixture/receipt.json")
+	if e != nil {
+		return nil, e
+	}
+	var old nodeReceipt
+	if e = strictjson.Decode(b, &old); e != nil {
+		return nil, e
+	}
+	if old.L1Boot == n.boot || old.L1Boot == "" {
+		return nil, errors.New("L1 boot identity did not change")
+	}
+	began := time.Now()
+	if e = n.start(ctx); e != nil {
+		return nil, e
+	}
+	var r sandbox.Record
+	if e = waitNode(ctx, func() (bool, error) {
+		e := n.api.Do(ctx, "GET", nodePath(old.Ref), nil, &r)
+		return e == nil && r.State == sandbox.Destroyed, e
+	}); e != nil {
+		return nil, e
+	}
+	if e = n.clean(old.Ref); e != nil {
+		return nil, e
+	}
+	var replay sandbox.Record
+	e = n.api.Create(ctx, old.Key, nodeSpec(), &replay)
+	if e == nil || !strings.HasPrefix(e.Error(), "HTTP 410:") {
+		return nil, errors.New("old key resurrected after host restart")
+	}
+	recoveryMS := float64(time.Since(began).Microseconds()) / 1000
+	key, e := randomKey()
+	if e != nil {
+		return nil, e
+	}
+	fresh, e := n.create(ctx, key)
+	if e != nil {
+		return nil, e
+	}
+	if fresh.Ref == old.Ref {
+		return nil, errors.New("old generation reused")
+	}
+	if e = actualNestedVM(fresh.Ref); e != nil {
+		return nil, e
+	}
+	u, e := n.execute(ctx, fresh.Ref, []string{"id", "-u"})
+	if e != nil || strings.TrimSpace(u.Stdout) != "65534" {
+		return nil, errors.New("wrong fresh guest UID")
+	}
+	boot, e := n.execute(ctx, fresh.Ref, []string{"cat", "/proc/sys/kernel/random/boot_id"})
+	if e != nil {
+		return nil, e
+	}
+	if strings.TrimSpace(boot.Stdout) == old.L2Boot {
+		return nil, errors.New("old guest resurrected")
+	}
+	if _, e = n.execute(ctx, fresh.Ref, []string{"true"}); e != nil {
+		return nil, e
+	}
+	if e = n.destroy(ctx, fresh.Ref); e != nil {
+		return nil, e
+	}
+	if e = n.clean(fresh.Ref); e != nil {
+		return nil, e
+	}
+	return map[string]any{"phase": old.Phase, "l1_boot_changed": true, "old_durable_destroyed": true, "old_resources_absent": true, "old_key_refused_410": true, "fresh_real_kvm_exec_destroy": true, "fresh_guest_boot_changed": true, "daemon_start_to_old_reclaimed_ms": recoveryMS}, nil
+}
+
+func runNode() error {
+	marker, e := os.ReadFile("/etc/xandbox-host-fixture")
+	if e != nil || string(marker) != fixtureMarker || os.Geteuid() != 0 || os.Getpid() != 1 {
+		return errors.New("isolated L1 PID1 fixture marker required")
+	}
+	serial, e := os.OpenFile("/dev/ttyS1", os.O_RDWR|unix.O_NOCTTY, 0)
+	if e != nil {
+		return e
+	}
+	defer serial.Close()
+	t, e := unix.IoctlGetTermios(int(serial.Fd()), unix.TCGETS)
+	if e != nil {
+		return e
+	}
+	t.Iflag = 0
+	t.Oflag = 0
+	t.Lflag = 0
+	t.Cflag = unix.B115200 | unix.CS8 | unix.CREAD | unix.CLOCAL
+	t.Cc[unix.VMIN] = 1
+	t.Cc[unix.VTIME] = 0
+	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
+		return e
+	}
+	n := &node{}
+	if e = n.initialize(); e != nil {
+		return e
+	}
+	fmt.Fprintln(os.Stderr, "XANDBOX_NESTED_HOST_READY")
+	scan := bufio.NewScanner(serial)
+	scan.Buffer(make([]byte, 1024), 8192)
+	for scan.Scan() {
+		q := nodeRequest{}
+		out := map[string]any{"version": 1, "ok": false}
+		e := strictjson.Decode(scan.Bytes(), &q)
+		if e == nil {
+			e = q.validate()
+		}
+		if e == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
+			var result map[string]any
+			switch q.Operation {
+			case "probe":
+				e = kvmAvailable()
+				if e == nil {
+					result = map[string]any{"nested_kvm_api": 12, "l1_pid1_fixture": true}
+				}
+			case "checkpoint":
+				result, e = n.checkpoint(ctx, q.Phase)
+			case "recover":
+				e = kvmAvailable()
+				if e == nil {
+					result, e = n.recover(ctx)
+				}
+			}
+			cancel()
+			if e == nil {
+				out["ok"] = true
+				out["result"] = result
+			}
+		}
+		if e != nil {
+			fmt.Fprintln(os.Stderr, "private node step failure:", e)
+			// Root fixture diagnostics ONLY on the private L1 console. Never
+			// add these fields to a tenant API or sanitized acceptance report.
+			if log, openErr := os.Open("/srv/fixture/controller.log"); openErr == nil {
+				if info, statErr := log.Stat(); statErr == nil {
+					offset := info.Size() - 16384
+					if offset < 0 {
+						offset = 0
+					}
+					_, _ = log.Seek(offset, 0)
+					_, _ = io.CopyN(os.Stderr, log, 16384)
+				}
+				_ = log.Close()
+			}
+			out["error"] = "FIXTURE_STEP_FAILED"
+		}
+		if e = json.NewEncoder(serial).Encode(out); e != nil {
+			return e
+		}
+	}
+	return scan.Err()
+}

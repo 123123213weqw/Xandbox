@@ -1,0 +1,15 @@
+{
+  "test_only": true,
+  "architecture": "x86_64",
+  "l1_kernel_release": "6.8.0-136-generic",
+  "l1_kernel_sha256": "492fa9eeab6454056d5790adce18c4d5178b4545557a8611f7bbcdaea8856a20",
+  "qemu_package_version": "1:6.2+dfsg-2ubuntu6.31",
+  "qemu_sha256": "55862c768c21fa7d3e72ca1b24797d8ab5b406eb5ef4c9ab9c2280f4e0b8f330",
+  "qemu_package_reference": "https://packages.ubuntu.com/jammy-updates/qemu",
+  "modules_sha256": {
+    "kernel/virt/lib/irqbypass.ko": "78301173ae998e06e20f5ce04313b526b14cd8b845b85bbe714d6306d1c03a0f",
+    "kernel/arch/x86/kvm/kvm.ko": "87365130f244e730c1bbf74a08bc2c8218f9853fa5318c8c0d184f6a9cd329c3",
+    "kernel/arch/x86/kvm/kvm-intel.ko": "6b529de2b24960bb06364e1117c9e51d902bc5e7d6ae32377dc78da8926bf199",
+    "kernel/drivers/char/hw_random/virtio-rng.ko": "ea491ce22605a370d76461b398eccc7c0ca9dbcb8d1bff166cf737cb6610a996"
+  }
+}

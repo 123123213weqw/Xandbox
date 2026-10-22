@@ -33,3 +33,8 @@ template.state
 
 # Private operator identity for recovering a failed hardware fixture.
 resource-receipt.json
+
+# Nested service-host disks contain private credentials and ledger state.
+*.raw
+*.qcow2
+*.iso
