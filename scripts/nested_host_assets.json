@@ -11,5 +11,9 @@
     "kernel/arch/x86/kvm/kvm.ko": "87365130f244e730c1bbf74a08bc2c8218f9853fa5318c8c0d184f6a9cd329c3",
     "kernel/arch/x86/kvm/kvm-intel.ko": "6b529de2b24960bb06364e1117c9e51d902bc5e7d6ae32377dc78da8926bf199",
     "kernel/drivers/char/hw_random/virtio-rng.ko": "ea491ce22605a370d76461b398eccc7c0ca9dbcb8d1bff166cf737cb6610a996"
+  },
+  "quota_modules_sha256": {
+    "kernel/fs/quota/quota_tree.ko": "32d9edf4d329e965613594e124cf80d291c2565cc8483d426a58999ada5bfe15",
+    "kernel/fs/quota/quota_v2.ko": "a75abaf96f0fece2139b9b5d88c214485f2aa3eb7fa587593b90beaa1424be99"
   }
 }
