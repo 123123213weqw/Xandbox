@@ -11,7 +11,7 @@
   → 返还实例配额
 ```
 
-- reconcile 扫描不执行 driver 或存储 I/O；对每代 mutex 使用 TryLock，跳过被自身存储操作卡住的记录。每个池使用轮转游标，不一直从固定最小 ID 抢队列位置。
+- reconcile 扫描不执行存储或阻塞式 driver I/O；唯一新增的 driver IPC 是 [guardian](GUARDIAN.md) 的有界、非阻塞续租写入。对每代 mutex 使用 TryLock，跳过被自身存储操作卡住的记录。每个池使用轮转游标，不一直从固定最小 ID 抢队列位置。
 - 一个 generation 最多有一项后台工作处于排队/执行状态；同代 Prepare/Stop/Cleanup 仍串行。等待同代操作的显式 Stop 可被请求 context 中止；后台 worker 不停车等待 Prepare/GC 占用的同代 gate。
 - 每池队列独立、有界。队列满时保留账本/内存意图，后续扫描继续调度，不丢 ownership，不启动“一请求一后台 goroutine”，不提前归还配额。清理堵塞会使新建最终得到 capacity/tenant quota 背压，而不是积累无限实例。
 - DELETE 的同步持久化仍决定能否返回 202，不依赖队列空闲。TTL/Close 的内部栅栏先在内存取消任务，worker 随后持久化。进程丢失后，非终态账本全部栅栏并重建队列；队列本身不是另一份持久真相。
@@ -62,7 +62,7 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 
 ## 仍缺少的门槛
 
-独立单调租约/控制器卡死看门狗、整节点磁盘故障与宿主重启、所有 Stop worker 同时卡死、持续到达负载下的公平性/资源曲线、物理/加密擦除、完整元数据保留期、快照/预热池和原子会话切换仍未完成。若某代自己的账本 mutex 被不可中断 I/O 长期占用，扫描只能跳过它；分池不能凭空提供该代的硬截止保障。真实故障策略仍需 M2/M4 补齐。
+整节点磁盘故障与宿主重启、所有 Stop worker 同时卡死、持续到达负载下的公平性/资源曲线、物理/加密擦除、完整元数据保留期、快照/预热池和原子会话切换仍未完成。独立 BOOTTIME 租约已增加 [实际暂停控制器的证据](GUARDIAN.md)，并在记录锁前撤销停止意图的续租；它不让不可中断账本 I/O 变得可取消。同代 HTTP 确认、持久状态和最终回收仍可能被延迟，双监督失效/内核饥饿也无生产上界保证。真实故障策略仍需 M2/M4 补齐。
 
 ## 2026-10-22 实机证据
 
@@ -71,3 +71,5 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 Go 1.27.3、真实 KVM/VMM/guest-agent；使用一个 Stop worker、一个 Cleanup worker、每池队列容量 1、两个 VM、20 秒 TTL，**测试扫描间隔为 10 ms，不是 daemon 默认 100 ms**。在 A 的归属删除 fsync 阻塞时，B 从 TTL 到观测 STOPPED 的单次样本约 52.8 ms，且实际 host cgroup 已空、任务已退出。A 的 UID 与两个实例配额一直保留到清理/持久提交；已确认的 Stop 不等待 A 的慢 GC。Close 在期限返回错误后，继续保持独占 fixture 锁，等旧池退出再创建新 controller/driver，并完成账本恢复与全部资源回收。
 
 这是受控故障证据，**不是磁盘性能、百分位、持续吞吐或生产最坏延迟承诺**。CI 常规编译/skip 不能代替这次手动实机运行，且两个 VM 不是多租户大规模压测。
+
+guardian 版本源码 `2f7ac5d` 已重跑同一 [服务回归](validation/kvm-guardian-2026-10-22.json) 和 [受控 fsync 断言](validation/kvm-guardian-fsync-2026-10-22.json)：B 的 TTL 到 STOPPED 单样本约 50.7 ms。本次改用实际 BOOTTIME 截止计算样本并拒绝提前停止；仍不是生产延迟承诺。前一组历史报告原样保留。
