@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/123123213weqw/Xandbox/internal/hostclock"
 )
 
 type Options struct {
@@ -36,6 +38,9 @@ type execution struct {
 type instance struct {
 	opMu          operationGate // Serializes one generation, never unrelated instances.
 	mu            sync.Mutex
+	expiresNS     int64 // Host deadline for this live creation; never restored on restart.
+	leaseEligible atomic.Bool
+	leaseFailed   atomic.Bool
 	ref           Ref // Immutable, even while the entire durable Record is replaced.
 	record        Record
 	tenantID      string // Immutable after registration; safe under Manager.mu.
@@ -267,6 +272,10 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	if err != nil {
 		return Record{}, err
 	}
+	nowNS, err := hostclock.NowNS()
+	if err != nil {
+		return Record{}, err
+	}
 	now := time.Now().UTC()
 	i := newInstance(Record{
 		Ref: Ref{ID: id, Generation: generation}, Backend: m.driver.Name(),
@@ -274,6 +283,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 		State: Creating, Limits: req.Limits, CreatedAt: now, UpdatedAt: now,
 		ExpiresAt: now.Add(time.Duration(req.TTLMS) * time.Millisecond),
 	})
+	i.expiresNS = nowNS + int64(time.Duration(req.TTLMS)*time.Millisecond)
 	i.prepared = make(chan struct{})
 	defer close(i.prepared)
 	if _, err := i.opMu.acquire(ctx, nil); err != nil {
@@ -300,7 +310,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 			if r.CreateSpecHash != specHash {
 				return Record{}, ErrIdempotencyConflict
 			}
-			if r.State != Ready || r.DeleteRequested || !time.Now().Before(r.ExpiresAt) {
+			if r.State != Ready || r.DeleteRequested || existing.expired() {
 				return Record{}, ErrIdempotencyGone
 			}
 			return r, nil
@@ -349,18 +359,18 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	stopCancel := context.AfterFunc(ctx, cancel)
 	i.mu.Lock()
 	i.prepareCancel = cancel
-	if i.record.State != Creating || i.record.DeleteRequested || !time.Now().Before(i.record.ExpiresAt) {
+	if i.record.State != Creating || i.record.DeleteRequested || i.expired() {
 		cancel()
 	}
 	i.mu.Unlock()
 	if err = opCtx.Err(); err == nil {
-		err = m.driver.Prepare(opCtx, ref, req.Limits)
+		err = m.driver.Prepare(opCtx, ref, Preparation{Limits: req.Limits, DeadlineNS: i.expiresNS})
 	}
 	stopCancel()
 	cancel()
 	i.mu.Lock()
 	i.prepareCancel = nil
-	if err == nil && (i.record.DeleteRequested || !time.Now().Before(i.record.ExpiresAt)) {
+	if err == nil && (i.record.DeleteRequested || i.expired()) {
 		err = fmt.Errorf("creation was fenced or expired")
 	}
 	if err == nil {
@@ -439,7 +449,7 @@ func (m *Manager) Exec(id string, req ExecRequest) (Job, error) {
 	if req.Generation != i.record.Generation {
 		return Job{}, ErrStale
 	}
-	if i.record.State != Ready || i.record.DeleteRequested || !time.Now().Before(i.record.ExpiresAt) {
+	if i.record.State != Ready || i.record.DeleteRequested || i.expired() {
 		return Job{}, ErrNotReady
 	}
 	if len(i.jobs) >= i.record.Limits.MaxJobs {

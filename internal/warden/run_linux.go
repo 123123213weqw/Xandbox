@@ -7,22 +7,24 @@ package warden
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
+	leasewire "github.com/123123213weqw/Xandbox/internal/lease"
 	"golang.org/x/sys/unix"
 )
 
 // Run consumes inherited fd 3 (lease reader) and fd 4 (cgroup.kill writer).
-// Only sandboxd retains the lease writer. EOF kills the entire immutable group,
-// including this root supervisor; jailer credential changes cannot clear it.
-func Run(cgroup string, argv []string) error {
+// Only sandboxd retains the lease writer. EOF, invalid/expired renewals or the
+// immutable BOOTTIME hard deadline kill the entire group, including this root
+// supervisor. Jailer credential changes do not clear this supervision.
+func Run(cgroup string, hardDeadlineNS int64, argv []string) error {
 	if os.Geteuid() != 0 || len(argv) == 0 || !filepath.IsAbs(argv[0]) || cgroup == "" || filepath.Clean(cgroup) != cgroup || filepath.IsAbs(cgroup) || strings.HasPrefix(cgroup, "..") {
 		return errors.New("invalid warden invocation")
 	}
@@ -56,27 +58,35 @@ func Run(cgroup string, argv []string) error {
 	if err != nil || path != "/sys/fs/cgroup/"+cgroup+"/cgroup.kill" {
 		return errors.New("warden kill descriptor does not match membership")
 	}
+	binding, err := leasewire.ParseBinding(filepath.Base(cgroup))
+	if err != nil {
+		return errors.New("invalid guardian generation binding")
+	}
 	// Neither descriptor is passed through to jailer or VMM. In particular no
 	// descendant can hold open a writer and suppress controller-death EOF.
 	unix.CloseOnExec(3)
 	unix.CloseOnExec(4)
+	var stopping sync.Once
 	stop := func() {
-		for {
-			_, _ = kill.Seek(0, 0)
-			_, _ = kill.Write([]byte("1"))
-			// Successful cgroup.kill kills this supervisor as well. If the
-			// kernel rejected it, keep trying rather than leave a live child.
-			time.Sleep(10 * time.Millisecond)
-		}
+		stopping.Do(func() {
+			for {
+				_, _ = kill.Seek(0, 0)
+				_, _ = kill.Write([]byte("1"))
+				// Successful cgroup.kill kills this supervisor as well. If the
+				// kernel rejected it, keep trying rather than leave a live child.
+				time.Sleep(10 * time.Millisecond)
+			}
+		})
 	}
+	ready, timer, err := beginLease(lease, binding, hardDeadlineNS, stop)
+	if err != nil {
+		return errors.New("guardian clock, lifetime or timer initialization failed")
+	}
+	defer timer.Close()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	go func() { <-signals; stop() }()
-	go func() {
-		var byte [1]byte
-		_, _ = io.ReadFull(lease, byte[:]) // EOF, error OR unexpected data fences.
-		stop()
-	}()
+	<-ready
 	child := exec.Command(argv[0], argv[1:]...)
 	child.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	child.Stdout, child.Stderr = os.Stdout, os.Stderr

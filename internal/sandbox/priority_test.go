@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"errors"
+	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -53,6 +54,12 @@ func expireReady(t *testing.T, m *Manager, r Record) {
 	i.mu.Lock()
 	next := i.record
 	next.ExpiresAt = time.Now().Add(-time.Nanosecond)
+	nowNS, clockErr := hostclock.NowNS()
+	if clockErr != nil {
+		i.mu.Unlock()
+		t.Fatal(clockErr)
+	}
+	i.expiresNS = nowNS - 1
 	err = m.saveLocked(i, next)
 	i.mu.Unlock()
 	if err != nil {
@@ -207,7 +214,7 @@ type prepareBarrier struct {
 	release chan struct{}
 }
 
-func (d *prepareBarrier) Prepare(ctx context.Context, ref Ref, l Limits) error {
+func (d *prepareBarrier) Prepare(ctx context.Context, ref Ref, l Preparation) error {
 	if err := d.Driver.Prepare(ctx, ref, l); err != nil {
 		return err
 	}

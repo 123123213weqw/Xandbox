@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"os"
 	"path/filepath"
 	"strings"
@@ -326,6 +327,12 @@ func TestCleanupRetriesAndTTL(t *testing.T) {
 	i.mu.Lock()
 	next := i.record
 	next.ExpiresAt = time.Now().Add(-time.Nanosecond)
+	nowNS, clockErr := hostclock.NowNS()
+	if clockErr != nil {
+		i.mu.Unlock()
+		t.Fatal(clockErr)
+	}
+	i.expiresNS = nowNS - 1
 	err = m.saveLocked(i, next)
 	i.mu.Unlock()
 	if err != nil {
@@ -340,7 +347,7 @@ func TestCleanupRetriesAndTTL(t *testing.T) {
 
 type partialPrepareDriver struct{ Driver }
 
-func (d partialPrepareDriver) Prepare(ctx context.Context, ref Ref, limits Limits) error {
+func (d partialPrepareDriver) Prepare(ctx context.Context, ref Ref, limits Preparation) error {
 	if err := d.Driver.Prepare(ctx, ref, limits); err != nil {
 		return err
 	}

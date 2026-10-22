@@ -19,7 +19,7 @@ type countingPrepare struct {
 	release chan struct{}
 }
 
-func (d *countingPrepare) Prepare(ctx context.Context, ref Ref, limits Limits) error {
+func (d *countingPrepare) Prepare(ctx context.Context, ref Ref, limits Preparation) error {
 	d.calls.Add(1)
 	if d.entered != nil {
 		close(d.entered)

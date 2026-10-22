@@ -30,7 +30,7 @@ func (d *MockDriver) instanceDir(ref Ref) (string, error) {
 	return filepath.Join(d.dir, ref.ID+"-"+ref.Generation), nil
 }
 
-func (d *MockDriver) Prepare(ctx context.Context, ref Ref, _ Limits) error {
+func (d *MockDriver) Prepare(ctx context.Context, ref Ref, _ Preparation) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -143,3 +143,5 @@ func (d *MockDriver) Cleanup(ctx context.Context, ref Ref) error {
 	}
 	return os.RemoveAll(path)
 }
+
+func (d *MockDriver) RefreshLease(ref Ref) error { return nil }

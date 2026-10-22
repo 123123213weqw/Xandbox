@@ -3,6 +3,8 @@ package sandbox
 import (
 	"sort"
 	"time"
+
+	"github.com/123123213weqw/Xandbox/internal/hostclock"
 )
 
 type workStage uint8
@@ -19,6 +21,7 @@ func stoppedState(s State) bool { return s == Stopped || s == Reclaiming || s ==
 // acknowledgement and its snapshot are immutable once published, so a Stop
 // waiter need not queue behind a subsequent slow Cleanup on the same instance.
 func (i *instance) publish() {
+	i.leaseEligible.Store(i.record.State == Creating || i.record.State == Ready)
 	i.recovering.Store(i.record.DeleteRequested || i.record.State == Stopping || i.record.State == Reclaiming)
 	if stoppedState(i.record.State) {
 		i.stopOnce.Do(func() { i.stoppedRecord = i.record; close(i.stopped) })
@@ -80,7 +83,7 @@ func (m *Manager) startWorkers() {
 	go func() { m.workers.Wait(); close(m.workerDone) }()
 }
 
-// Reconciliation does no driver or storage I/O and never waits for an instance
+// Reconciliation only performs bounded nonblocking lease IPC, never storage/RPC I/O and never waits for an instance
 // mutex. Saturation leaves durable/in-memory intent in the ledger; no ownership
 // or capacity is dropped. A rotating cursor per pool prevents hot early IDs
 // from repeatedly taking the only available queue slot ahead of older intents.
@@ -101,6 +104,13 @@ func (m *Manager) reaper() {
 		m.mu.Lock()
 		closing := m.closing
 		m.mu.Unlock()
+		for _, i := range items {
+			if !closing && i.leaseEligible.Load() {
+				if err := m.driver.RefreshLease(i.ref); err != nil {
+					i.leaseFailed.Store(true)
+				}
+			}
+		}
 		for _, stage := range []workStage{stopWork, cleanupWork} {
 			start := sort.Search(len(items), func(n int) bool { return items[n].ref.ID > cursors[stage] })
 			for n := range items {
@@ -111,7 +121,7 @@ func (m *Manager) reaper() {
 				if !i.mu.TryLock() {
 					continue
 				}
-				if !i.record.DeleteRequested && (closing || !time.Now().Before(i.record.ExpiresAt)) {
+				if !i.record.DeleteRequested && (closing || i.expired() || (i.leaseFailed.Load() && i.leaseEligible.Load())) {
 					i.fenceIntent(true)
 				}
 				needed := i.neededWork()
@@ -199,4 +209,10 @@ func (m *Manager) perform(i *instance, stage workStage) {
 		m.failed(i, err)
 		delay = m.opts.RetryDelay
 	}
+}
+
+// Clock failure is fail-closed. The kernel guardian also expires without renewal.
+func (i *instance) expired() bool {
+	now, err := hostclock.NowNS()
+	return err != nil || i.expiresNS <= 0 || now >= i.expiresNS
 }

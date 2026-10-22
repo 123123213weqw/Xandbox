@@ -26,15 +26,24 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
+	"github.com/123123213weqw/Xandbox/internal/hostclock"
+	"github.com/123123213weqw/Xandbox/internal/lease"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"golang.org/x/sys/unix"
 )
 
 type process struct {
-	life   *os.File // Only the controller owns a write end; never inherited by VMM.
-	done   chan struct{}
-	bootID string
-	slots  chan struct{} // Match the guest executor's two simultaneous groups.
+	leaseMu      sync.Mutex
+	leaseFD      int
+	leaseClosed  bool
+	binding      lease.Binding
+	hardDeadline int64
+	nextRenew    int64
+	sequence     uint64
+	life         *os.File // Only the controller owns a write end; never inherited by VMM.
+	done         chan struct{}
+	bootID       string
+	slots        chan struct{} // Match the guest executor's two simultaneous groups.
 }
 
 type driver struct {
@@ -137,7 +146,7 @@ func (d *driver) paths(k string) (string, string) {
 	return filepath.Join(d.cfg.CgroupRoot, k), filepath.Join(d.cfg.RuntimeRoot, "j/firecracker", k)
 }
 
-func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, limits sandbox.Limits) (retErr error) {
+func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Preparation) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			// Prepare has no tenant argv/output or bearer credentials. Bounded
@@ -148,6 +157,10 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, limits sandbox.Li
 	k, err := key(ref)
 	if err != nil {
 		return err
+	}
+	nowNS, clockErr := hostclock.NowNS()
+	if clockErr != nil || !lease.ValidLifetime(nowNS, spec.DeadlineNS) {
+		return errors.New("invalid or expired host lifetime")
 	}
 	group, jail := d.paths(k)
 	for _, p := range []string{group, jail} {
@@ -225,7 +238,7 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, limits sandbox.Li
 	// The first fork is already in the generation cgroup and new network
 	// namespace. The jailer inherits both, then enters that exact existing group.
 	rel := strings.TrimPrefix(group, "/sys/fs/cgroup/")
-	args := []string{"-cgroup", rel, "--", d.cfg.Jailer.Path, "--id", k, "--exec-file", d.cfg.Firecracker.Path,
+	args := []string{"-cgroup", rel, "-hard-deadline-ns", strconv.FormatInt(spec.DeadlineNS, 10), "--", d.cfg.Jailer.Path, "--id", k, "--exec-file", d.cfg.Firecracker.Path,
 		"--uid", strconv.Itoa(owner.UID), "--gid", strconv.Itoa(owner.UID), "--chroot-base-dir", filepath.Join(d.cfg.RuntimeRoot, "j"),
 		"--cgroup-version", "2", "--parent-cgroup", rel, "--resource-limit", "no-file=256", "--resource-limit", "fsize=134217728",
 		"--", "--api-sock", "/api.sock"}
@@ -241,10 +254,13 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, limits sandbox.Li
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	p, err := newProcess(leaseWrite, k, spec.DeadlineNS)
+	if err != nil {
+		return err
+	}
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start owned warden (clone3 required; no fallback): %w", err)
 	}
-	p := &process{life: leaseWrite, done: make(chan struct{}), slots: make(chan struct{}, 2)}
 	d.mu.Lock()
 	d.procs[k] = p
 	d.mu.Unlock()
@@ -253,7 +269,7 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, limits sandbox.Li
 	// Use the same immutable cgroup, never a recycled process identifier.
 	go func() {
 		_ = cmd.Wait()
-		_ = leaseWrite.Close()
+		p.closeLease()
 		_ = killGroup(group)
 		close(p.done)
 	}()
@@ -379,7 +395,7 @@ func (d *driver) Stop(ctx context.Context, ref sandbox.Ref) error {
 	p := d.procs[k]
 	d.mu.Unlock()
 	if p != nil {
-		_ = p.life.Close()
+		p.closeLease()
 	}
 	group, _ := d.paths(k)
 	if err := killGroup(group); err != nil {

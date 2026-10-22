@@ -170,9 +170,12 @@ def main():
                 assert h['backend'] == 'firecracker' and h['isolation'] and not h['production_ready'] and 'stats' not in h
                 return proc
 
-            def create():
+            def create(ttl_ms=0, max_exec_ms=0):
                 before = time.perf_counter()
-                record = call('POST', '/v1/sandboxes', {}, expected=201, key=secrets.token_hex(16))
+                body = {}
+                if ttl_ms: body['ttl_ms'] = ttl_ms
+                if max_exec_ms: body['limits'] = {'max_exec_ms': max_exec_ms}
+                record = call('POST', '/v1/sandboxes', body, expected=201, key=secrets.token_hex(16))
                 assert record['state'] == 'READY'
                 result['samples'].setdefault('create_api_ready_ms', []).append(round((time.perf_counter() - before) * 1000, 3))
                 return record
@@ -330,6 +333,67 @@ def main():
             process = start(); destroyed(owner)
             final = create(); remove(final)
             result['checks'].append('partial prepare SIGKILL recovery releases capacity only after cleanup')
+            # Healthy reconciliation must renew across multiple 5s lease windows.
+            healthy = create(ttl_ms=60000, max_exec_ms=60000)
+            healthy_job = finish(healthy, job(healthy, ['sleep', '12'], timeout=15000))
+            assert healthy_job['status'] == 'EXITED' and call('GET', path(healthy))['state'] == 'READY'
+            remove(healthy)
+            result['checks'].append('healthy controller reconciliation renews across multiple guardian lease windows')
+            result['guardian_policy'] = {'clock': 'CLOCK_BOOTTIME', 'lease_window_ms': 5000,
+                                         'renew_interval_ms': 1000, 'wire_version': 'XBL1'}
+            result['guardian_samples'] = []
+
+            def warden_identity(record):
+                for raw in (group(record) / 'cgroup.procs').read_text().split():
+                    pid = int(raw)
+                    try:
+                        status = Path(f'/proc/{pid}/status').read_text()
+                        argv = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
+                        if 'Uid:\t0\t0\t0\t0' in status and b'-hard-deadline-ns' in argv:
+                            hard = int(argv[argv.index(b'-hard-deadline-ns') + 1])
+                            return os.pidfd_open(pid), hard
+                    except FileNotFoundError:
+                        continue
+                raise AssertionError('owned guardian process not found')
+
+            for mode in ('controller_pause_lease', 'controller_pause_hard_ttl', 'guardian_sigkill'):
+                guarded = create(ttl_ms=10000 if mode.endswith('hard_ttl') else 60000, max_exec_ms=60000)
+                active = job(guarded, ['sh', '-c', 'echo started > guardian-started; sleep 55'], timeout=60000)
+                wait(lambda: execute(guarded, ['test', '-e', 'guardian-started'])['exit_code'] == 0, 'guardian workload started')
+                guardian_fd, hard = warden_identity(guarded)
+                paused = False
+                controller_fd = os.pidfd_open(process.pid)
+                try:
+                    if mode == 'controller_pause_hard_ttl':
+                        # Use the actual root guardian's immutable BOOTTIME policy,
+                        # not the wall-clock ExpiresAt display to schedule this test.
+                        remaining = (hard - time.clock_gettime_ns(time.CLOCK_BOOTTIME)) / 1e9
+                        assert remaining > 2, 'not enough hard TTL remaining for pause test'
+                        time.sleep(remaining - 1.5)
+                        assert hard - time.clock_gettime_ns(time.CLOCK_BOOTTIME) > 0
+                    began = time.perf_counter()
+                    if mode.startswith('controller_pause'):
+                        signal.pidfd_send_signal(controller_fd, signal.SIGSTOP)
+                        paused = True
+                    else:
+                        signal.pidfd_send_signal(guardian_fd, signal.SIGKILL)
+                    wait(lambda: stopped(group(guarded)), mode + ' independently fenced VMM', seconds=8)
+                    sample = {'case': mode, 'fault_to_empty_cgroup_ms': round((time.perf_counter() - began) * 1000, 3)}
+                    if mode == 'controller_pause_hard_ttl':
+                        now_boot = time.clock_gettime_ns(time.CLOCK_BOOTTIME)
+                        assert now_boot >= hard, 'VM died early instead of reaching hard TTL'
+                        sample['hard_deadline_to_empty_observed_ms'] = round((now_boot - hard) / 1e6, 3)
+                    if paused:
+                        persisted = json.loads((state / 'ledger' / (guarded['id'] + '.json')).read_text())
+                        assert persisted['state'] == 'READY', 'controller performed stop instead of independent guardian'
+                        assert list((state / 'firecracker').glob(guarded['id'] + '*.json')), 'ownership vanished while controller paused'
+                    result['guardian_samples'].append(sample)
+                finally:
+                    if paused:
+                        signal.pidfd_send_signal(controller_fd, signal.SIGCONT)
+                    os.close(controller_fd); os.close(guardian_fd)
+                destroyed(guarded)
+                result['checks'].append(mode + ' host execution fenced and controller recovery reclaimed ownership')
             process.terminate(); assert process.wait(timeout=15) == 0; process = None
             assert not [p for p in cgroup.iterdir() if p.is_dir()]
             assert not list((runtime / 'j/firecracker').iterdir())
