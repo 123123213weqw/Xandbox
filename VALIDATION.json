@@ -840,5 +840,44 @@
       "disk quota/failure, full host restart, independent operator deployment",
       "production tails, SLO or secure erase"
     ]
+  },
+  "bounded_ext4_enospc": {
+    "production_ready": false,
+    "goal_complete": false,
+    "source_revision": "5276a0432f793f9d5342b9452fb79e8e5108e02b",
+    "validated_at_utc": "2026-10-22T18:50:44.304730+00:00",
+    "report": "docs/validation/kvm-storage-enospc-v5.json",
+    "report_sha256": "0f13a2944532b88c9682da2ae533af884e55db303d71b2c82007f4e810352dca",
+    "runner_exit_status": 0,
+    "cases": 5,
+    "metadata_modes": [
+      "blocks/busy",
+      "blocks/idle",
+      "inodes/busy",
+      "inodes/idle"
+    ],
+    "fault_image_bytes": 67108864,
+    "native_linux_python_tests": 19,
+    "production_go_changed": false,
+    "same_go_sources_as": "55a2bba857b9232c3aeff1d16bd8e0d921d86ef8",
+    "runtime_daemon_sha256": "c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1",
+    "private_namespace_and_loop_binding_verified": true,
+    "cleanup_confirmed": true,
+    "parent_view_rechecked_no_own_root_cgroup_loop_or_mount": true,
+    "failed_precursor": {
+      "source_revision": "2c64b49aea5ce6ce2e2b333e839016d1ae56da82",
+      "report": "docs/validation/kvm-storage-enospc-v2-failed.json",
+      "report_sha256": "e0374ee560aa70c9dc17305db70af545fe82ff1308e04323a19b4300b5d13c5e",
+      "runner_exit_status": 1,
+      "owned_cleanup_confirmed": true,
+      "reason": "probe expected429 but actual documented node-capacity rejection503; no production policy relaxation"
+    },
+    "not_validated": [
+      "media EIO/readonly or journal corruption",
+      "power loss and whole-host restart",
+      "snapshot multi-filesystem fault matrix",
+      "host project quota, IO-rate budget, metadata retention and secure erase",
+      "dual-supervisor failure, independent operator and production SLO"
+    ]
   }
 }
