@@ -22,6 +22,7 @@
 - 命令仅作为受限 argv 经私有 vsock bridge 发往 VM；没有宿主 shell 或容器 fallback。
 - host 验证 Ref、execution ID、boot ID、响应状态和输出上限。并发 bridge 调用最多 2 个，与 guest 组数一致；额外已接收任务等待本代 slot，等待时间也计入任务期限。
 - **一旦已发往 guest 的任务遇到 host 期限、取消、传输/协议错误或非正常完成状态，整台 VM 被停止并栅栏。** 不依赖不可信 guest 宣称“已杀干净”。这意味着超时会失去本实例工作区，调用方需要新建实例，而不是继续在旧 VM 上执行。
+- 正常 EXITED 回包的真实性依赖镜像内的 guest 内核/agent；被攻陷的 guest 可以伪造完成，host 不能据此证明其内部没有后台执行。安全停止证明以整 VM 的 host cgroup 为单位，不承诺同代命令间隔离；需要强单命令边界时仍需一命令一代 VM。host 超时是未完成 RPC 的宿主截止机制，不是对恶意 guest 回包的远程证明。
 - `ErrBackendFenced` 只表示禁止再准入并需要恢复，不代表已证明停止；Stop 和持久状态仍分开确认。普通 API 不回传底层路径和原始错误。
 - 显式 Stop 正在进行时，在途执行返回错误不能把 STOPPED 意图悄悄变成 DELETE。DELETE/TTL/故障回收则按原生命周期继续。
 - 创建预算 30 秒，Stop 5 秒，Cleanup 10 秒；HTTP 写预算 40 秒。CLI 创建请使用 `-deadline 40s`（默认客户端预算仍为 10 秒）。预算到期不是资源已经清理完毕的证明。
@@ -82,6 +83,6 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
   --report work/kvm-driver-report.json --log-dir work/kvm-driver-logs
 ```
 
-普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、只停不 GC 的优先队列、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。生命周期管道检测控制器死亡，不检测仍保留写端的控制器死锁；独立租约/看门狗仍是开放门槛。
+普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、只停不 GC 的优先队列、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。DESTROYED 目前表示逻辑资源回收，不代表物理介质安全擦除；加密擦除/存储擦除策略尚未验收。生命周期管道检测控制器死亡，不检测仍保留写端的控制器死锁；独立租约/看门狗仍是开放门槛。
 
 参考：[jailer v1.17.0 已存在 cgroup 的精确行为](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/docs/jailer.md)、[cgroup v2 内核契约](https://docs.kernel.org/admin-guide/cgroup-v2.html)。

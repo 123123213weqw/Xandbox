@@ -301,7 +301,7 @@ def main():
             deadline_job = job(third, ['sleep', '30'], timeout=100)
             def deadline_done():
                 value = call('GET', path(third) + '/executions/' + deadline_job['id'], expected=(200, 404))
-                if 'error' in value:
+                if isinstance(value.get('error'), dict):
                     assert call('GET', path(third))['state'] == 'DESTROYED'
                     return True  # Contract drops in-memory history at reclamation.
                 if value['status'] == 'RUNNING':
