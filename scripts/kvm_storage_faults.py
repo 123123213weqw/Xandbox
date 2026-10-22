@@ -26,13 +26,25 @@ from kvm_snapshot_smoke import private_json
 from kvm_storage import BoundedExt4, VOLUME_BYTES, require_private_namespace
 
 
+def validate_host_stop_guard(value):
+    if value != 0 and not 100 <= value <= 4000:
+        raise ValueError('guard must be0(disabled) or100..4000ms')
+    return value
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace',
                  'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--parent-mntns', help=argparse.SUPPRESS)
+    parser.add_argument('--max-host-stop-ms', type=float, default=0,
+                        help='optional finite experimental observation guard, 100..4000ms; NOT a production SLO')
     args = parser.parse_args()
+    try:
+        validate_host_stop_guard(args.max_host_stop_ms)
+    except ValueError as error:
+        parser.error(str(error))
     os.umask(0o077)
     if os.geteuid() != 0 or os.uname().sysname != 'Linux' or os.uname().machine != 'x86_64':
         parser.error('requires root Linux amd64 KVM')
@@ -65,6 +77,7 @@ def main():
                   ('kvm_storage.py', 'kvm_driver_smoke.py', 'kvm_resources.py', 'kvm_snapshot_smoke.py')},
               'artifacts_sha256': {n: digest(p) for n, p in inputs.items()},
               'fault_image_bytes': VOLUME_BYTES, 'configured_node_instance_capacity': 1, 'configured_tenant_instance_quota': 1, 'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
+              'experimental_host_stop_guard_ms': args.max_host_stop_ms,
               'guest_network_interfaces': 0, 'modes': [], 'checks': [], 'limitations': [
                   '64MiB dedicated loop ext4 in private mount namespace; no host filesystem filled/remounted.',
                   'Cold schema1 runtime stays on healthy host ext4; not snapshot cross-filesystem behavior.',
@@ -73,6 +86,12 @@ def main():
                   'No whole-host restart, dual-supervisor failure, long-term metadata retention or independent operator acceptance.']}
     log = (logs / 'controller.log').open('xb', buffering=0)
     try:
+        # Keep an early recovery identity OUTSIDE the fault volume. It is
+        # private diagnostics and must never be copied to a public report.
+        private_json(logs / 'resource-receipt.json', {'version': 1, 'source_revision': args.source_revision,
+            'root': str(root), 'runtime': str(runtime), 'cgroup': str(cgroup),
+            'fault_image': str(volume.image), 'mountpoint': str(volume.mount),
+            'parent_mount_namespace': args.parent_mntns, 'mount_namespace': os.readlink('/proc/self/ns/mnt')})
         copied = {}
         for name, source in inputs.items():
             target = assets / name
@@ -221,12 +240,18 @@ def main():
             ledger = state / 'ledger' / (ref['id'] + '.json')
             before = ledger.read_bytes()
             case['fault'] = volume.fill(mode)
+            assert not cgroup_empty(group(ref)) and call('GET', path(ref))['state'] == 'READY'
+            if busy is not None:
+                assert call('GET', path(ref) + '/executions/' + busy['id'])['status'] == 'RUNNING'
+            case['ready_and_host_populated_at_fault_start'] = True
             began = time.perf_counter()
             call('DELETE', path(ref), {'generation': ref['generation']}, expected=500)
             case['request_to_failed_durable_delete_ms'] = round((time.perf_counter() - began) * 1000, 3)
             call('POST', path(ref) + '/exec', {'generation': ref['generation'], 'argv': ['true']}, expected=409)
             wait(lambda: cgroup_empty(group(ref)), 'host stop despite ENOSPC', seconds=15)
             case['request_to_host_cgroup_empty_observed_ms'] = round((time.perf_counter() - began) * 1000, 3)
+            if args.max_host_stop_ms:
+                assert case['request_to_host_cgroup_empty_observed_ms'] <= args.max_host_stop_ms, 'experimental physical-stop observation guard exceeded'
             if busy is not None:
                 terminal = finish(ref, busy)
                 case['accepted_guest_job_terminal_status'] = terminal['status']

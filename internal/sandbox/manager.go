@@ -666,7 +666,14 @@ func (m *Manager) stopLocked(ctx context.Context, i *instance) (retErr error) {
 	idle, ref := i.idle, i.record.Ref
 	i.mu.Unlock()
 	if err != nil {
-		return err
+		// The immutable Ref is already owned; stopping its execution domain is
+		// safe even when the fence write is unconfirmed. Do NOT publish STOPPED,
+		// run Cleanup or release capacity on this path. Keep the original error
+		// even if physical Stop succeeds. A cancelled request must not suppress
+		// this bounded attempt; a stuck Save still needs the independent guardian.
+		stopCtx, cancel := context.WithTimeout(context.Background(), m.opts.StopTimeout)
+		defer cancel()
+		return errors.Join(err, m.driver.Stop(stopCtx, ref))
 	}
 	opCtx, cancel := context.WithTimeout(ctx, m.opts.StopTimeout)
 	defer cancel()
