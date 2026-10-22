@@ -18,6 +18,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
+	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
 
@@ -84,7 +85,8 @@ func run() (retErr error) {
 			return fmt.Errorf("offline migration requires an existing ledger: %w", err)
 		}
 	}
-	if err := os.MkdirAll(absDir, 0700); err != nil {
+	absDir, err = privatefile.EnsureDirectory(absDir)
+	if err != nil {
 		return err
 	}
 	info, err := os.Lstat(absDir)

@@ -172,9 +172,15 @@ def main():
                         return call('GET', '/healthz', authenticated=False)
                     except (OSError, http.client.HTTPException):
                         return None
-                h = wait(health, 'controller start')
-                assert h['backend'] == 'firecracker' and h['isolation'] and not h['production_ready'] and 'stats' not in h
-                return proc
+                try:
+                    h = wait(health, 'controller start')
+                    assert h['backend'] == 'firecracker' and h['isolation'] and not h['production_ready'] and 'stats' not in h
+                    return proc
+                except BaseException:
+                    if proc.poll() is None:
+                        proc.kill()
+                    proc.wait(timeout=5)
+                    raise
 
             def create(ttl_ms=0, max_exec_ms=0, key=None):
                 before = time.perf_counter()
@@ -226,6 +232,33 @@ def main():
                     'from_state': from_state, 'accepted_ms': round(accepted_ms, 3),
                     'observed_stopped_ms': round(stopped_ms, 3),
                     'durable_destroyed_ms': round((time.perf_counter() - before) * 1000, 3)})
+
+            # Real root process tests: reject before creating a child/lock or
+            # consuming another UID's private auth policy. All paths belong to
+            # this disposable root-owned fixture, never another user's tree.
+            for mode in ('writable-parent', 'foreign-parent', 'foreign-auth', 'foreign-migration'):
+                parent = root / mode; parent.mkdir(mode=0o700)
+                target = parent / 'would-create'
+                denied_base = list(base)
+                denied_base[denied_base.index('-state-dir') + 1] = str(target)
+                if mode == 'writable-parent':
+                    parent.chmod(0o777)
+                elif mode == 'foreign-parent':
+                    os.chown(parent, 65534, 65534)
+                elif mode == 'foreign-auth':
+                    foreign_auth = parent / 'auth.json'; shutil.copyfile(auth, foreign_auth)
+                    foreign_auth.chmod(0o600); os.chown(foreign_auth, 65534, 65534)
+                    denied_base[denied_base.index('-auth-file') + 1] = str(foreign_auth)
+                else:
+                    target.mkdir(mode=0o700); (target / 'ledger').mkdir(mode=0o700)
+                    os.chown(target, 65534, 65534)
+                    denied_base = [str(copied['daemon']), '-state-dir', str(target), '-migrate-ledger']
+                assert subprocess.run(denied_base, stdout=log, stderr=log, timeout=10).returncode != 0
+                if mode == 'foreign-migration':
+                    assert not (target / 'controller.lock').exists() and not list((target / 'ledger').iterdir())
+                else:
+                    assert not target.exists(), 'created state before path/owner rejection'
+            result['checks'].append('real root rejects writable/foreign state ancestry and foreign private auth before state creation; offline migration cannot bypass ownership')
 
             if os.statvfs('/run').f_flag & os.ST_NOEXEC:
                 bad = dict(config); bad['runtime_root'] = str(noexec_runtime)

@@ -59,7 +59,8 @@ type FileStore struct {
 }
 
 func NewFileStore(dir string) (*FileStore, error) {
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	dir, err := privatefile.EnsureDirectory(dir)
+	if err != nil {
 		return nil, err
 	}
 	info, err := os.Lstat(dir)

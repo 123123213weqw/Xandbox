@@ -29,6 +29,8 @@
 
 示例省略了必需字段，不可直接写入状态目录。普通 HTTP 投影保持原状，不暴露 envelope、key/spec 摘要或内部错误。version 不是 guest 协议版本或后端资产绑定版本。
 
+创建前先逐层验证目录 owner/写权限，再逐层 mkdir；不会先 MkdirAll 后才发现进入了别人的可写父目录。私有叶目录和文件必须由当前 daemon UID 所有；root 不遍历目录符号链接。非 root 的 mock 可使用 root 所有且目标祖先验证通过的系统别名（例如 macOS /var），但私有叶目录不允许是链接。受信 sticky 目录仅允许创建/使用自有私有子目录。
+
 整个目录全部验证通过、目录 fsync 完成后，才发布索引/启动恢复。拒绝未知版本/字段、重复键、缺失的关键字段、不合法状态/时间戳/限额、重复租户 key、文件名身份不匹配、符号链接、非普通/非私有文件和过大文件。读取使用分批 ReadDir，并限制条数与目录条目总数，不先无界加载目录。时间戳只校验必要存在性，不以可跳变 civil clock 的先后顺序授权存活；实时 TTL 仍见 [guardian](GUARDIAN.md)。
 
 专用 ledger 目录只能放记录和实现生成的临时文件。重启遗留的 `.record-<数字>` 从不作为已提交真相，只在完整验证后删除并 fsync 目录；未知文件不静默忽略。不要在里面放备份、编辑器文件或诊断报告。Saves 不同 Ref 可并发，同 Ref 必须串行；嵌入方也必须遵守独占所有权和 Load 不与 Save 并发的契约。
@@ -75,3 +77,6 @@ PR #5 及以前的平铺 JSON 是 v0。正常启动遇到它会失败，不会�
 - full race×3、重点账本/配额 race×10、vet、依赖校验和 mock/auth/metadata smoke 通过；decoder fuzz5秒约 47 万次。源码 [CI #39757343251](https://github.com/123123213weqw/Xandbox/actions/runs/39757343251) 与 [#39757199135](https://github.com/123123213weqw/Xandbox/actions/runs/39757199135) 全绿，包含 Linux 旧/新 Go 兼容测试和真实内核 timerfd 测试。Linux 目标 govulncheck 仍有 6 项未调用 required-module findings，0 reachable/0 imported-package，不是依赖完全无漏洞。
 
 同一 KVM 节点的硬件/VM 规格与 [guardian 报告](GUARDIAN.md) 相同。新控制器的 8 次 READY 样本约 1.41–1.56 秒；原始数组第 9 次约 1.43 秒是迁移场景的**旧 binary**，不能混入新版性能统计。运行态 DELETE 两次观测停止约 33.7–49.3 ms，持久回收约 147.5–168.1 ms；单次受控 fsync 阻塞中的别代 TTL 到 STOPPED 约 42.3 ms（测试 reconcile10ms，非默认100ms）。只作小样本正确性证据，不是 RSS/持续负载、生产百分位、物理故障、擦除或切换 SLO。
+
+
+后续路径归属补强正在重新验收；上述源码 `cb66d78` 报告是补强前的真实证据，不覆盖 root 创建前父目录/外来 UID 配置的拒绝检查。
