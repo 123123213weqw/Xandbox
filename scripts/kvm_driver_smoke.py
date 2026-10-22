@@ -91,7 +91,7 @@ def main():
               'source_revision': args.source_revision, 'host_kernel': os.uname().release,
               'architecture': os.uname().machine, 'guest_memory_mib': 512, 'vcpus': 2,
               'workspace_bytes': 128 << 20, 'guest_network_interfaces': 0,
-              'metrics_note': 'Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; RSS not measured.',
+              'metrics_note': 'Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; baseline RSS not measured. Only optional closed_loop_load has separately scoped sampled resources.',
               'artifacts_sha256': {k: digest(v) for k, v in inputs.items()},
               'checks': [], 'samples': {}}
     process = None
