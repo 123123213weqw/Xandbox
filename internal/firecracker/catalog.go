@@ -642,9 +642,9 @@ func (c *catalog) publish(ctx context.Context, m SnapshotManifest, memory, state
 		if closeErr != nil {
 			return closeErr
 		}
-		if e = os.Chmod(stage, 0555); e != nil {
-			return e
-		}
+		// Some Unix filesystems require a writable source directory for rename.
+		// Keep it private and UNPUBLISHED until the final pathname is sealed;
+		// no acquire can observe it through the authoritative index yet.
 		if e = c.syncDirectory(stage); e != nil {
 			return e
 		}
@@ -652,6 +652,12 @@ func (c *catalog) publish(ctx context.Context, m SnapshotManifest, memory, state
 			return errors.New("unindexed snapshot object requires reconciliation")
 		}
 		if e = os.Rename(stage, c.object(id)); e != nil {
+			return e
+		}
+		if e = os.Chmod(c.object(id), 0555); e != nil {
+			return e
+		}
+		if e = c.syncDirectory(c.object(id)); e != nil {
 			return e
 		}
 		if e = c.syncDirectory(filepath.Join(c.root, "objects")); e != nil {

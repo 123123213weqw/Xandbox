@@ -501,3 +501,36 @@ func TestEmptySnapshotCatalogCannotFallBackToColdAllocation(t *testing.T) {
 		t.Fatal("unexpected empty catalog state", e, status)
 	}
 }
+
+func TestCatalogSealsFinalPathBeforeAvailabilityCommit(t *testing.T) {
+	r, m, mem, state := catalogFixture(t)
+	id := m.ID()
+	persist := r.catalog.persist
+	checked := false
+	r.catalog.persist = func(path string, value any) error {
+		d, ok := value.(catalogIndex)
+		if !ok {
+			t.Fatal("unexpected catalog persistence type")
+		}
+		if d.Entries[id].Phase == templateAvailable {
+			checked = true
+			i, e := os.Stat(r.catalog.object(id))
+			if e != nil || i.Mode().Perm() != 0555 {
+				t.Fatal("unsealed object became available", e)
+			}
+			for _, name := range []string{"memory", "state", "manifest.json"} {
+				i, e = os.Stat(filepath.Join(r.catalog.object(id), name))
+				if e != nil || i.Mode().Perm() != 0444 {
+					t.Fatal("unsealed file became available", name, e)
+				}
+			}
+		}
+		return persist(path, value)
+	}
+	if _, e := r.catalog.publish(context.Background(), m, mem, state, r.hostABI); e != nil {
+		t.Fatal(e)
+	}
+	if !checked {
+		t.Fatal("availability commit was not checked")
+	}
+}
