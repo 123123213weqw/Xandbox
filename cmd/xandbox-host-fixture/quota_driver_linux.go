@@ -11,9 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -23,9 +25,12 @@ import (
 const driverProjectFirst uint32 = 1300000
 
 type driverQuotaReceipt struct {
-	Phase   string
-	Project uint32
-	Record  quotaRecord
+	Phase           string
+	NamespaceBlocks uint64
+	NamespaceInodes uint64
+	Jail            string
+	Project         uint32
+	Record          quotaRecord
 }
 
 func runQuotaDaemon() error {
@@ -133,6 +138,11 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 		if e != nil {
 			return nil, e
 		}
+		qr.Jail = jail
+		qr.NamespaceBlocks, qr.NamespaceInodes, e = driverQuotaNamespace(jail)
+		if e != nil {
+			return nil, e
+		}
 		qr.Project = owner.Project
 		qr.Record, e = driverQuotaRead(owner.Project)
 		if e != nil {
@@ -212,9 +222,44 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 			return nil, e
 		}
 		if r != old.Record {
-			fmt.Fprintf(os.Stderr, "private quota coldboot numeric diagnostic: before=%+v after=%+v\n", old.Record, r)
+			blocks, inodes, statErr := driverQuotaNamespace(old.Jail)
+			fmt.Fprintf(os.Stderr, "private quota coldboot numeric diagnostic: before=%+v after=%+v; named-before blocks=%d inodes=%d; named-after blocks=%d inodes=%d stat-error=%v\n", old.Record, r, old.NamespaceBlocks, old.NamespaceInodes, blocks, inodes, statErr)
+			// Keep the failure strict; allow only the private UART diagnostic to drain.
+			time.Sleep(200 * time.Millisecond)
 			return nil, fmt.Errorf("ordinary driver quota record changed across coldboot")
 		}
 	}
 	return map[string]any{"quota_record_survived_cold_boot": true}, nil
+}
+
+func driverQuotaNamespace(jail string) (uint64, uint64, error) {
+	if e := requireNode(); e != nil {
+		return 0, 0, e
+	}
+	if !strings.HasPrefix(jail, "/srv/r/j/firecracker/") || len(strings.TrimPrefix(jail, "/srv/r/j/firecracker/")) != 64 || filepath.Clean(jail) != jail {
+		return 0, 0, errors.New("fixed private generation jail required")
+	}
+	seen := map[uint64]bool{}
+	blocks := uint64(0)
+	inodes := uint64(0)
+	e := filepath.WalkDir(jail, func(path string, d os.DirEntry, e error) error {
+		if e != nil {
+			return e
+		}
+		var st unix.Stat_t
+		if e = unix.Lstat(path, &st); e != nil {
+			return e
+		}
+		if seen[st.Ino] {
+			return nil
+		}
+		seen[st.Ino] = true
+		inodes++
+		if inodes > 256 {
+			return errors.New("bounded fixed quota diagnostic exceeded")
+		}
+		blocks += uint64(st.Blocks) * 512
+		return nil
+	})
+	return blocks, inodes, e
 }
