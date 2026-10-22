@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0, M1, guest_component, firecracker_driver, lifecycle_scheduler and guardian_leases entries are historical snapshots. Latest integration/upgrade status is in current_status and ledger_governance; historical reports are not rewritten.",
+  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are historical snapshots. Latest integration validation is current_status.latest_runtime_validation (ledger_path_hardening). Historical source-specific reports are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -124,7 +124,7 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "ledger_governance"
+    "latest_runtime_validation": "ledger_path_hardening"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -314,5 +314,33 @@
       "full structured audit/metrics/alerts and sustained load",
       "snapshot/prewarm/atomic switching and latency SLO"
     ]
+  },
+  "ledger_path_hardening": {
+    "validated_on": "2026-10-22",
+    "source_revision": "dc864660d74b25e1fa26d8aad70b768314b1202a",
+    "production_ready": false,
+    "base_policy": "ledger_governance",
+    "service_report": "docs/validation/kvm-ledger-hardened-2026-10-22.json",
+    "controlled_fsync_report": "docs/validation/kvm-ledger-hardened-fsync-2026-10-22.json",
+    "process_report": "docs/validation/ledger-process-hardened-2026-10-22.json",
+    "service_checks": 23,
+    "service_scope": "Previous 22 service scenarios plus 1 real-root pre-state-creation ownership/path scenario with 4 detailed assertions; fsync 9 assertions expand its single service scenario, not extra cases.",
+    "checks": {
+      "race_all_repeat_3": "passed",
+      "privatefile_race_repeat_10": "passed (non-root local; root-only unit case skipped)",
+      "real_root_state_and_config_refusal": "passed in actual KVM harness process scenario: writable parent, foreign UID parent/auth/offline state; no state child/controller lock created",
+      "go_vet": "passed",
+      "mock_auth_metadata_smoke": "passed",
+      "actual_old_binary_process_checks": 7,
+      "ledger_decoder_fuzz_seconds": 5,
+      "govulncheck_linux_target": "0 reachable/0 imported-package; 6 uncalled required-module findings remain",
+      "kernel_vmm_queue_upgrade_guardian_regression": "passed on exact final source binaries; no owned fixture residue"
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39761889227",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39761883420"
+    ],
+    "sample_scope": "8 new + 1 old daemon create samples in the KVM array. Small acceptance samples, uncontrolled load/cache, no RSS/percentile/switch/physical-failure SLO.",
+    "remaining_gates": "All unresolved ledger_governance.not_validated gates remain, plus complete deployment ancestry/ACL/lock-file audit and independent operator recovery rehearsal."
   }
 }

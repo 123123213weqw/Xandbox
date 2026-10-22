@@ -103,3 +103,5 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 
 
 账本 v1 的后续 [22 项服务报告](validation/kvm-ledger-2026-10-22.json) 来自源码 `cb66d78`，在上述 guardian/队列回归之外，实际验证旧 binary 创建的运行态 VM 经控制器死亡、显式离线迁移后由新版完成回收。格式升级不替代后端资产绑定迁移，也不恢复旧会话；操作方式、累计容量和样本中旧/新 binary 的区分见 [LEDGER.md](LEDGER.md)。
+
+路径归属补强后源码 `dc86466` 的 [23 项重验报告](validation/kvm-ledger-hardened-2026-10-22.json) 进一步用实际 root 进程测试状态创建前的父目录/owner 拒绝和外来 UID 鉴权配置拒绝，并重跑全部旧 VM 升级、guardian 和受控 fsync 路径。历史报告不覆盖这些新增检查，完整部署 ACL/锁文件/独立操作员审计仍未完成。

@@ -29,7 +29,7 @@
 
 示例省略了必需字段，不可直接写入状态目录。普通 HTTP 投影保持原状，不暴露 envelope、key/spec 摘要或内部错误。version 不是 guest 协议版本或后端资产绑定版本。
 
-创建前先逐层验证目录 owner/写权限，再逐层 mkdir；不会先 MkdirAll 后才发现进入了别人的可写父目录。私有叶目录和文件必须由当前 daemon UID 所有；root 不遍历目录符号链接。非 root 的 mock 可使用 root 所有且目标祖先验证通过的系统别名（例如 macOS /var），但私有叶目录不允许是链接。受信 sticky 目录仅允许创建/使用自有私有子目录。
+创建前先逐层验证目录 owner/写权限，再逐层 mkdir；不会先 MkdirAll 后才发现进入了别人的可写父目录。私有叶目录、配置与已提交的账本文件必须由当前 daemon UID 所有；root 不遍历目录符号链接。非 root 的 mock 可使用 root 所有且目标祖先验证通过的系统别名（例如 macOS /var），但私有叶目录不允许是链接。受信 sticky 目录仅允许创建/使用自有私有子目录。
 
 整个目录全部验证通过、目录 fsync 完成后，才发布索引/启动恢复。拒绝未知版本/字段、重复键、缺失的关键字段、不合法状态/时间戳/限额、重复租户 key、文件名身份不匹配、符号链接、非普通/非私有文件和过大文件。读取使用分批 ReadDir，并限制条数与目录条目总数，不先无界加载目录。时间戳只校验必要存在性，不以可跳变 civil clock 的先后顺序授权存活；实时 TTL 仍见 [guardian](GUARDIAN.md)。
 
@@ -79,4 +79,12 @@ PR #5 及以前的平铺 JSON 是 v0。正常启动遇到它会失败，不会�
 同一 KVM 节点的硬件/VM 规格与 [guardian 报告](GUARDIAN.md) 相同。新控制器的 8 次 READY 样本约 1.41–1.56 秒；原始数组第 9 次约 1.43 秒是迁移场景的**旧 binary**，不能混入新版性能统计。运行态 DELETE 两次观测停止约 33.7–49.3 ms，持久回收约 147.5–168.1 ms；单次受控 fsync 阻塞中的别代 TTL 到 STOPPED 约 42.3 ms（测试 reconcile10ms，非默认100ms）。只作小样本正确性证据，不是 RSS/持续负载、生产百分位、物理故障、擦除或切换 SLO。
 
 
-后续路径归属补强正在重新验收；上述源码 `cb66d78` 报告是补强前的真实证据，不覆盖 root 创建前父目录/外来 UID 配置的拒绝检查。
+### 路径归属补强后的重验
+
+最新源码 `dc864660d74b25e1fa26d8aad70b768314b1202a` 的 [23 项真实 KVM 报告](validation/kvm-ledger-hardened-2026-10-22.json)、[9 项受控 fsync 断言](validation/kvm-ledger-hardened-fsync-2026-10-22.json) 和 [7 项实际旧 binary 进程验收](validation/ledger-process-hardened-2026-10-22.json) 均通过。前述 `cb66d78` 报告原样保留，不能替代本节新检查。
+
+新增的一项服务场景由真实 root 进程验证四个私有 fixture：不受信可写父目录、其他 UID 所有的父目录、其他 UID 的 auth 文件，以及其他 UID 状态目录的离线迁移，都必须在创建状态子目录/控制器锁前拒绝。没有对其他用户的实际目录做操作。该场景是一项展开，不额外宣传为四个独立 KVM 场景。启动失败的 harness 子进程也显式终止并等待，避免验收程序自身遗留控制器。
+
+新 Linux daemon SHA-256 `11447499f199a7763a0af1b007f753efb5ec1d605b7856ee6973643dc6bc4064`，对应 queue binary `a84678f4d3c14663491b33cda2f1d7cc59c1487528df35ff18a9c692cd318a15`。全部基础/guardian/旧 VM 升级和 fsync 回归重跑，runner 退出 0、最终无本次资源残留。源码 [CI #39761889227](https://github.com/123123213weqw/Xandbox/actions/runs/39761889227) 与 [#39761883420](https://github.com/123123213weqw/Xandbox/actions/runs/39761883420) 全绿；本地 full race×3、privatefile race×10、vet、三套 process smoke 通过，decoder fuzz5秒约55万次。root 专用单元测试在非 root CI 会跳过，上述真实 root 场景不是用 skip 冒充通过。
+
+私有文件 owner/mode 检查不等于完整的部署目录/ACL/锁文件策略审计；auth 文件的父目录仍须受可信操作员控制。完整部署、备份/回滚、ACL 和独立操作员复现仍是后续门槛，不因本轮拒绝检查通过而宣称生产就绪。

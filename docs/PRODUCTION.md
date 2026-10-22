@@ -49,7 +49,7 @@
 - [ ] 控制器崩溃、驱动错误、部分准备失败、宿主重启后的资源清理经过真实验收。
 - [x] 未使用 mock 或宿主 shell 绕过实际验收。
 
-M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [最新真实 KVM 服务 21 项验收](validation/kvm-guardian-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。宿主重启/磁盘故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
+M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [最新真实 KVM 服务 23 项验收](validation/kvm-ledger-hardened-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。宿主重启/磁盘故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
 停止/GC 独立有界池、所有权 fsync 不持有全局锁及受控慢 I/O 下的恢复已有 [专项证据](LIFECYCLE.md)。[独立 guardian 租约](GUARDIAN.md) 已用真实暂停控制器测试；这只完成该部分基础设施，不替代持续负载、公平性、整机故障和最坏延迟验收。
 
