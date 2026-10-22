@@ -1,0 +1,13 @@
+{
+  "observed_after_run_utc": "2026-10-22T13:44:18.157966+00:00",
+  "cpu_model": "Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz",
+  "logical_cpus": 64,
+  "host_memory_kib": 263753640,
+  "host_kernel": "6.8.0-136-generic",
+  "architecture": "x86_64",
+  "runtime_filesystem": "ext4",
+  "context_note": "Observed after completed runner; load/cache were uncontrolled throughout test, no background load assumptions. No host-identifying paths/boot IDs/addresses included.",
+  "source_revision": "61496eb0e543d878b58599815c6914563a8b6237",
+  "production_ready": false,
+  "scope": "Host context observed after the completed KVM runner, not a during-load resource trace."
+}

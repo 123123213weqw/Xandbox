@@ -39,3 +39,31 @@ Gauges：累计Core records/预算、仍占实例配额allocated/预算、两个
 - 闭环每次等旧VM完整回收再开始下一轮，最多两代同时存在；不等于队列饱和、公平性、多租户竞争或生产持续负载。20ms资源采样可漏峰值；RSS不是PSS，cgroup memory.current含page cache/kernel。永久metadata随历史增长至预算，不能据短测宣布常驻内存与历史完全无关。
 
 新路径必须实际运行后才能发布验收结果；此前27项报告不自动覆盖指标代码。完整结构化审计、告警、备份/升级/回滚、长期容量曲线、真正混合持续负载与生产SLO仍保留在 [PRODUCTION.md](PRODUCTION.md) 门槛中。
+
+## 2026-10-22 实机：有限40次闭环，不是生产负载认证
+
+验收源码 `61496eb0e543d878b58599815c6914563a8b6237`；运行时Go源码为 `1a02760ee001429e0c719d2ee44b6f2cb0fcc93c`，后续仅补充Python报告的RSS范围与观测开销说明。Go1.27.3 / CGO0 / trimpath / buildvcs=false重新构建的daemon、queue-test、session-test均与实机工件SHA-256完全一致。
+
+- [主报告](validation/kvm-observability-2026-10-22.json)：30项通过，为此前27项 + 私有指标边界 + 管理连接压力下Stop/GC + 有限闭环。不能把40次迭代再算40个独立故障场景。
+- [绑定fsync](validation/kvm-observability-binding-fsync-2026-10-22.json) 与 [分池fsync](validation/kvm-observability-queues-2026-10-22.json) 各9细项展开既有两个场景；闭环4条断言也只是一个场景的细项。
+- [Darwin进程报告](validation/metrics-process-2026-10-22.json) 是5项mock回归，不提供隔离/性能认证。早期两次新smoke因普通404为text、创建缺少JSON body失败，已修正；失败没有计作通过。
+- 最新验收源码 [PR CI #39786247041](https://github.com/123123213weqw/Xandbox/actions/runs/39786247041) 与 [push CI #39786239230](https://github.com/123123213weqw/Xandbox/actions/runs/39786239230) 全绿。全量race×3、指标/锁专项race×10、vet/modverify、五套process smoke及patched Python提取测试通过。govulncheck仍有6个未调用required-module findings，0reachable/0imported，不能宣称依赖完全无漏洞。
+
+[宿主环境补充](validation/kvm-observability-host-context-2026-10-22.json) 在runner结束后只读核对：Xeon Silver4216、64逻辑CPU、263,753,640KiB RAM（约251.5GiB）、Linux6.8.0-136、runtime ext4；不是测试期间的负载轨迹。
+
+40次新VM切换闭环约67.105秒，单session、最多两代，逐次等待旧GC再切换。guest512MiB/2vCPU/128MiB私有工作盘，无NIC、快照或预热；只写少量文件。宿主缓存/背景负载不控制，私有诊断ledger扫描1ms、API轮询5ms、资源采样20ms以及逐轮metrics采集均开着，数字包含观测开销。并不是使所有物理页驻留的512MiB内存压力或满盘压测。
+
+| 从客户端请求开始的独立观测 | P50 | P95 | P99 / 本组max |
+|---|---:|---:|---:|
+| 新绑定响应 | 1520.174ms | 1606.644ms | 1643.992ms |
+| 第一条新命令成功 | 1527.586ms | 1617.639ms | 1650.953ms |
+| 旧host cgroup空 | 1557.891ms | 1650.068ms | 1689.341ms |
+| 旧持久DESTROYED | 1645.622ms | 1742.577ms | 1782.445ms |
+
+使用经验nearest-rank；N=40时P99就是max，不是可信尾延迟上界或SLO。服务端撤销→持久绑定P50/P95为1.938/2.855ms，**不是完整切换**，也不能把服务端/客户端不同起点简单相减来推导准确撤销→停止时间。
+
+外部采样峰值：controller RSS约16.688MiB，owned VM/warden进程RSS之和约156.500MiB，owned cgroup memory.current约159.707MiB，controller FD19。前两者不是PSS、后者也不是单纯guest RSS，且非同一时刻的原子全景；不能将它们相加当总物理内存，20ms采样也可能漏峰值。
+
+每轮旧GC后controller FD均为11；末轮controller RSS17,412,096 bytes，相对首轮15,310,848 bytes有所增加。最后撤销新代后owned进程RSS/cgroup memory.current均为0，controller FD8，controller仍在运行且保留17,162,240 bytes RSS及有限tombstone。没有据此宣布内存与历史完全无关：记录预算/归档、runtime高水位和长期曲线还需继续测量。
+
+Runner退出0，finally清理后再次核对本次cgroup无残留。网络观察连接中断没有重启runner：从其权威退出状态确认成功后，用压缩JSON读取方式恢复了报告传输；未把观察超时误记为测试失败或额外成功运行。原始含宿主路径的controller日志留在私有测试目录，没有上传public仓库。

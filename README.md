@@ -12,13 +12,13 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。真实后端的归属、监督与使用限制见 [Firecracker 驱动](docs/FIRECRACKER.md)。独立组件报告不是服务级生产认证，mock 接口始终不提供 VM 隔离。
 
-[最新真实后端验收](docs/validation/kvm-session-phases-2026-10-22.json) 已通过 27 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效、真实旧 VM 的账本升级恢复、root 创建前归属拒绝、会话冷切换/CAS/崩溃恢复及受控 fsync 阻塞用例。[绑定 fsync 专项](docs/validation/kvm-session-phases-binding-fsync-2026-10-22.json) 与 [停止/GC 分池专项](docs/validation/kvm-session-phases-queues-2026-10-22.json) 各9项断言是对应服务用例的展开，不再额外加18个独立场景。尚未覆盖完整生产故障矩阵或切换性能。
+[最新真实后端验收](docs/validation/kvm-observability-2026-10-22.json) 已通过 30 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效、真实旧 VM 的账本升级恢复、root 创建前归属拒绝、会话冷切换/CAS/崩溃恢复、受控 fsync 阻塞、独立管理指标，以及40次新VM切换闭环。[绑定 fsync 专项](docs/validation/kvm-observability-binding-fsync-2026-10-22.json) 与 [停止/GC 分池专项](docs/validation/kvm-observability-queues-2026-10-22.json) 各9项断言是对应服务用例的展开，不再额外加18个独立场景。尚未覆盖完整生产故障矩阵或切换性能。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 
 新增实验性 [会话绑定与冷切换](docs/SESSIONS.md)：候选 READY 后以 revision 条件切换，旧环境撤权/停止/回收分离，普通 per-VM 执行接口不能绕过会话准入。已通过真实 KVM 新路径验收；仍无快照/预热加速，约1.45s到新命令首次成功的冷切换单样本不是生产百分位或SLO。
 
-实验性 [独立管理指标](docs/OBSERVABILITY.md) 使用显式开启的私有Unix socket、固定基数直方图与原子gauges；不作为可靠审计或停止/销毁证明。
+实验性 [独立管理指标](docs/OBSERVABILITY.md) 使用显式开启的私有Unix socket、固定基数直方图与原子gauges；不作为可靠审计或停止/销毁证明。40次实机闭环的首命令成功P50/P95为1.53/1.62s；67秒有限测试不是长期稳定性或生产SLO。
 
 ## 已实现
 

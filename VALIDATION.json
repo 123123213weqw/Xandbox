@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest integration validation is current_status.latest_runtime_validation (session_switching). Historical reports are not rewritten.",
+  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest integration validation is current_status.latest_runtime_validation (observability_closed_loop). Historical reports are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -124,7 +124,7 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "session_switching"
+    "latest_runtime_validation": "observability_closed_loop"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -457,5 +457,166 @@
     ],
     "runtime_revision_note": "Subsequent acceptance-source commits only strengthen Python assertions/observations; runtime Go code and exact binaries unchanged.",
     "historical_sample_note": "One cold-switch sample; client request to new commands completed1495.857ms. Server fence-to-durable-bind0.855119ms is NOT full switch duration. Different client/server origins, uncontrolled load/cache, no RSS/percentiles/SLO."
+  },
+  "observability_closed_loop": {
+    "validated_on": "2026-10-22",
+    "source_revision": "61496eb0e543d878b58599815c6914563a8b6237",
+    "runtime_go_source_revision": "1a02760ee001429e0c719d2ee44b6f2cb0fcc93c",
+    "runtime_revision_note": "Following commit only clarifies Python report observer/resource scope; Go code and exact accepted binaries unchanged.",
+    "production_ready": false,
+    "production_load_acceptance": false,
+    "service_report": "docs/validation/kvm-observability-2026-10-22.json",
+    "binding_fsync_report": "docs/validation/kvm-observability-binding-fsync-2026-10-22.json",
+    "lifecycle_queue_report": "docs/validation/kvm-observability-queues-2026-10-22.json",
+    "mock_process_report": "docs/validation/metrics-process-2026-10-22.json",
+    "service_checks": 30,
+    "scope": "Previous27 +2 operator metrics cases +1 closed-loop case. 40 switches and detailed9/9/4 assertions expand those cases, not additional independent acceptance scenarios.",
+    "operator_surface": {
+      "enabled_by_default": false,
+      "endpoint": "private state-dir/metrics.sock, mode0600 under0700 state",
+      "authorization": "trusted host UID, not tenant bearer tokens; no TCP or tenant API route",
+      "accepted_connections": 16,
+      "concurrent_scrapes": 2,
+      "fixed_series": 319,
+      "observer": "atomic additions, zero I/O/callback/lock and zero allocations; scrape reads atomic/channel-length/immutable gauges, never lifecycle locks/files/driver/runtime heap",
+      "reliability": "process local, reset on restart and crash-tail loss possible; not a reliable audit ledger"
+    },
+    "checks": {
+      "full_race_repeat_3": "passed",
+      "metrics_and_lock_race_repeat_10": "passed",
+      "vet": "passed",
+      "go_mod_verify": "passed",
+      "five_process_smokes": "passed; two early metrics harness failures (404 text parsing and absent create JSON body) fixed, not counted as passing",
+      "patched_python_guest_extraction_tests": 3,
+      "linux_govulncheck": "0 reachable/0 imported-package;6 uncalled required-module findings remain",
+      "actual_kvm_private_operator_uid_boundary": "passed: different host UID denied; tenant API has no metrics route",
+      "actual_kvm_stop_under_offered_metrics_saturation": "passed: host Stop and durable cleanup independent",
+      "actual_kvm_closed_loop_cycles": 40,
+      "owned_fixture_residue": "none; runner status0 and final root cgroup scan empty",
+      "runtime_binary_reproduction": "daemon/queue/session test rebuilt from current source, accepted SHA-256 exact match"
+    },
+    "ci_source_runs": [
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39786247041",
+      "https://github.com/123123213weqw/Xandbox/actions/runs/39786239230"
+    ],
+    "load": {
+      "duration_seconds": 67.105,
+      "mode": "Fresh VM each time, no snapshot/prewarm; uncontrolled host load/page cache. Closed loop waits durable old GC before next switch; does NOT saturate queues or prove cross-tenant fairness. The private1ms diagnostic ledger scanner,5ms API polling and per-cycle metrics remain enabled; measured latency includes observer overhead.",
+      "quantile_method": "empirical nearest rank; P99 is max for fewer than100 samples, not a tail/SLO guarantee",
+      "resource_note": "20ms observer. RSS is sampled proc-status resident memory, not PSS; owned-process sums and cgroup-memory-current are non-transactional and can miss peaks. Cgroup memory includes page cache/kernel, NOT guest RSS alone. Tombstone metadata intentionally grows up to configured budget. This finite probe does not prove asymptotic memory stability.",
+      "summaries_ms": {
+        "request_to_binding_response_ms": {
+          "count": 40,
+          "min": 1416.334,
+          "max": 1643.992,
+          "p50": 1520.174,
+          "p95": 1606.644,
+          "p99": 1643.992
+        },
+        "request_to_first_new_command_success_ms": {
+          "count": 40,
+          "min": 1424.317,
+          "max": 1650.953,
+          "p50": 1527.586,
+          "p95": 1617.639,
+          "p99": 1650.953
+        },
+        "request_to_old_host_stopped_observed_ms": {
+          "count": 40,
+          "min": 1452.554,
+          "max": 1689.341,
+          "p50": 1557.891,
+          "p95": 1650.068,
+          "p99": 1689.341
+        },
+        "request_to_old_durable_destroyed_observed_ms": {
+          "count": 40,
+          "min": 1546.937,
+          "max": 1782.445,
+          "p50": 1645.622,
+          "p95": 1742.577,
+          "p99": 1782.445
+        },
+        "server_admission_revoked_ms": {
+          "count": 40,
+          "min": 1413.591441,
+          "max": 1640.051217,
+          "p50": 1516.538122,
+          "p95": 1603.635278,
+          "p99": 1640.051217
+        },
+        "server_candidate_ready_ms": {
+          "count": 40,
+          "min": 1412.025952,
+          "max": 1637.853999,
+          "p50": 1515.048518,
+          "p95": 1602.106581,
+          "p99": 1637.853999
+        },
+        "server_fence_to_commit_ms": {
+          "count": 40,
+          "min": 0.755599,
+          "max": 3.200334,
+          "p50": 1.938239,
+          "p95": 2.855317,
+          "p99": 3.200334
+        },
+        "server_total_ms": {
+          "count": 40,
+          "min": 1414.973507,
+          "max": 1642.632256,
+          "p50": 1518.249064,
+          "p95": 1605.219061,
+          "p99": 1642.632256
+        }
+      },
+      "sampled_resource_peaks": {
+        "controller_rss_bytes": 17498112,
+        "owned_vm_process_rss_bytes": 164102144,
+        "owned_cgroup_memory_current_bytes": 167464960,
+        "controller_fds": 19
+      },
+      "post_old_gc_controller_fd_range": [
+        11,
+        11
+      ],
+      "first_post_gc_controller_rss_bytes": 15310848,
+      "last_post_gc_controller_rss_bytes": 17412096,
+      "final_resources": {
+        "controller_rss_bytes": 17162240,
+        "owned_vm_process_rss_bytes": 0,
+        "owned_cgroup_memory_current_bytes": 0,
+        "controller_fds": 8
+      }
+    },
+    "report_name_mapping": {
+      "kvm-metrics-v1.json": "docs/validation/kvm-observability-2026-10-22.json",
+      "kvm-metrics-v1-queue.json": "docs/validation/kvm-observability-queues-2026-10-22.json",
+      "kvm-metrics-v1-session.json": "docs/validation/kvm-observability-binding-fsync-2026-10-22.json",
+      "metrics-process-v1.json": "docs/validation/metrics-process-2026-10-22.json"
+    },
+    "not_validated": [
+      "reliable structured audit, alert delivery/response, backup/upgrade/rollback and independent operator deployment",
+      "sustained mixed/concurrent multi-tenant load, fairness, long-term resource curves and true tail latency/SLO",
+      "long-term archive/rotation and retained metadata capacity curves",
+      "whole-node reboot/power/disk failures, dual-supervisor failure and kernel starvation bounds",
+      "host disk quotas and cryptographic/physical erasure",
+      "complete auth-parent/ACL/lock-file audit",
+      "pristine snapshot/prewarm identity/entropy initialization and shared reference ownership"
+    ],
+    "host_context_report": "docs/validation/kvm-observability-host-context-2026-10-22.json",
+    "host_context": {
+      "observed_after_run_utc": "2026-10-22T13:44:18.157966+00:00",
+      "cpu_model": "Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz",
+      "logical_cpus": 64,
+      "host_memory_kib": 263753640,
+      "host_kernel": "6.8.0-136-generic",
+      "architecture": "x86_64",
+      "runtime_filesystem": "ext4",
+      "context_note": "Observed after completed runner; load/cache were uncontrolled throughout test, no background load assumptions. No host-identifying paths/boot IDs/addresses included.",
+      "source_revision": "61496eb0e543d878b58599815c6914563a8b6237",
+      "production_ready": false,
+      "scope": "Host context observed after the completed KVM runner, not a during-load resource trace."
+    }
   }
 }

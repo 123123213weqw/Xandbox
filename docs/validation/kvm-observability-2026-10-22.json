@@ -1,0 +1,914 @@
+{
+  "validated_at_utc": "2026-10-22T13:23:23.704920+00:00",
+  "test": "experimental_sandboxd_firecracker_driver",
+  "production_ready": false,
+  "source_revision": "61496eb0e543d878b58599815c6914563a8b6237",
+  "host_kernel": "6.8.0-136-generic",
+  "architecture": "x86_64",
+  "guest_memory_mib": 512,
+  "vcpus": 2,
+  "workspace_bytes": 134217728,
+  "guest_network_interfaces": 0,
+  "metrics_note": "Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; baseline RSS not measured. Only optional closed_loop_load has separately scoped sampled resources.",
+  "artifacts_sha256": {
+    "daemon": "b4ca4230377941f03d052c8a8d82c09acf53c219ca32c989e0748c283f581657",
+    "warden": "b810afc53abd7a32c98c8a2845039e6397ab07779f2674d83a04a51b7a7a4be1",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "6b66122a3641bbc0aad7ef50745cbf4ca17b9f5d5971bfbdda9b09739024ead3",
+    "queue_test": "a23235a304e1504afe5fd81f3bf9432ce0c7be76f4f6f685ed6fc273f2c7a3df",
+    "session_test": "15861d1f72ead9cb1b6fe88eb6989dfdc1feb576401dd8c81be081ec571ef0c9",
+    "legacy_daemon": "6405f59fbd7a8e65793ba2bc8bb3b543ffe135add527e10a336ed0246239a783"
+  },
+  "checks": [
+    "real root rejects writable/foreign state ancestry and foreign private auth before state creation; offline migration cannot bypass ownership",
+    "noexec runtime rejected before any per-generation allocation",
+    "operator metrics are private host-UID UDS only, absent from tenant API, fixed labels and no credential/path/Ref projection",
+    "authenticated real-driver create and tenant quota",
+    "guest UID 65534 and no_new_privs",
+    "guest network loopback only",
+    "private workspace",
+    "stale generation rejected",
+    "actual KVM, jailer UID drop, default seccomp, private host netns and host cgroup limits",
+    "three accepted executions queue onto two guest slots without fencing healthy VM",
+    "controller SIGKILL stops a running guest via lifetime-pipe cgroup kill",
+    "changed backend locator rejected before ledger recovery",
+    "restart reclaim and UID/quota release",
+    "real guest Stop and durable cleanup succeed while operator metrics connection slots are saturated",
+    "new generation has fresh disk",
+    "concurrent exec/stop drains without deadlock and preserves explicit stop",
+    "host hard deadline fences and reclaims entire VM",
+    "partial prepare SIGKILL recovery releases capacity only after cleanup",
+    "healthy controller reconciliation renews across multiple guardian lease windows",
+    "controller_pause_lease host execution fenced and controller recovery reclaimed ownership",
+    "controller_pause_hard_ttl host execution fenced and controller recovery reclaimed ownership",
+    "guardian_sigkill host execution fenced and controller recovery reclaimed ownership",
+    "no owned VMM/cgroup/jail/UID manifest residue",
+    "actual old-daemon KVM SIGKILL ownership explicitly migrated then durably reclaimed at metadata capacity without key reuse",
+    "real cold session switch: scoped capability, fresh workspace, stale-version rejection and separate old stop/reclaim observations",
+    "real KVM concurrent session CAS publishes one next revision without duplicate preparation",
+    "bounded closed-loop real KVM switching with independent phase samples and external RSS/cgroup/FD observations",
+    "actual session-controller SIGKILL restart retains binding tombstone and reclaims underlying VMM without session revival",
+    "separate real KVM blocked session binding fsync/Close/recovery acceptance passed",
+    "separate real KVM controlled-fsync queue/recovery acceptance passed"
+  ],
+  "samples": {
+    "create_api_ready_ms": [
+      1583.179,
+      1531.744,
+      1466.304,
+      1519.695,
+      1494.583,
+      1554.741,
+      1480.722,
+      1454.246,
+      1428.57
+    ],
+    "controller_sigkill_to_empty_cgroup_ms": 28.193,
+    "restart_to_durable_reclaim_ms": 778.265,
+    "stop_api_confirmed_ms": 47.628,
+    "delete_phases": [
+      {
+        "from_state": "STOPPED",
+        "accepted_ms": 2.313,
+        "observed_stopped_ms": 2.688,
+        "durable_destroyed_ms": 184.192
+      },
+      {
+        "from_state": "READY",
+        "accepted_ms": 2.566,
+        "observed_stopped_ms": 50.799,
+        "durable_destroyed_ms": 150.395
+      },
+      {
+        "from_state": "READY",
+        "accepted_ms": 3.187,
+        "observed_stopped_ms": 35.121,
+        "durable_destroyed_ms": 126.021
+      }
+    ]
+  },
+  "workspace_template_sha256": "12f2de1bf5749dfc5be8603454b837e06813bb37f1aa10f6fedae050e0d94b1e",
+  "guardian_policy": {
+    "clock": "CLOCK_BOOTTIME",
+    "lease_window_ms": 5000,
+    "renew_interval_ms": 1000,
+    "wire_version": "XBL1"
+  },
+  "guardian_samples": [
+    {
+      "case": "controller_pause_lease",
+      "fault_to_empty_cgroup_ms": 4275.837
+    },
+    {
+      "case": "controller_pause_hard_ttl",
+      "fault_to_empty_cgroup_ms": 1524.457,
+      "hard_deadline_to_empty_observed_ms": 31.278
+    },
+    {
+      "case": "guardian_sigkill",
+      "fault_to_empty_cgroup_ms": 482.739
+    }
+  ],
+  "legacy_migration": {
+    "source_revision": "97196a59aa508348d9293e9f44c5fa5f2f3e0891",
+    "new_api_admission_at_capacity": "rejected; ownership/key retained",
+    "old_kvm_recovered": true
+  },
+  "session_samples": {
+    "cold_request_to_binding_response_ms": 1564.88,
+    "request_to_first_new_command_success_ms": 1573.823,
+    "request_to_new_commands_completed_ms": 1581.578,
+    "request_to_old_stopped_observed_ms": 1605.518,
+    "request_to_old_durable_destroyed_observed_ms": 1663.111,
+    "server_phase_observations": {
+      "admission_revoked_ms": 1560.680155,
+      "measured": true,
+      "candidate_ready_ms": 1559.647044,
+      "fence_to_commit_ms": 1.193028,
+      "total_ms": 1561.878757
+    }
+  },
+  "closed_loop_load": {
+    "test": "bounded_closed_loop_fresh_vm_switching",
+    "production_load_acceptance": false,
+    "cycles": 40,
+    "session_count": 1,
+    "maximum_live_generations": 2,
+    "duration_seconds": 67.105,
+    "quantile_method": "empirical nearest rank; P99 is max for fewer than100 samples, not a tail/SLO guarantee",
+    "conditions": "Fresh VM each time, no snapshot/prewarm; uncontrolled host load/page cache. Closed loop waits durable old GC before next switch; does NOT saturate queues or prove cross-tenant fairness. The private1ms diagnostic ledger scanner,5ms API polling and per-cycle metrics remain enabled; measured latency includes observer overhead.",
+    "resource_note": "20ms observer. RSS is sampled proc-status resident memory, not PSS; owned-process sums and cgroup-memory-current are non-transactional and can miss peaks. Cgroup memory includes page cache/kernel, NOT guest RSS alone. Tombstone metadata intentionally grows up to configured budget. This finite probe does not prove asymptotic memory stability.",
+    "summaries_ms": {
+      "request_to_binding_response_ms": {
+        "count": 40,
+        "min": 1416.334,
+        "max": 1643.992,
+        "p50": 1520.174,
+        "p95": 1606.644,
+        "p99": 1643.992
+      },
+      "request_to_first_new_command_success_ms": {
+        "count": 40,
+        "min": 1424.317,
+        "max": 1650.953,
+        "p50": 1527.586,
+        "p95": 1617.639,
+        "p99": 1650.953
+      },
+      "request_to_old_host_stopped_observed_ms": {
+        "count": 40,
+        "min": 1452.554,
+        "max": 1689.341,
+        "p50": 1557.891,
+        "p95": 1650.068,
+        "p99": 1689.341
+      },
+      "request_to_old_durable_destroyed_observed_ms": {
+        "count": 40,
+        "min": 1546.937,
+        "max": 1782.445,
+        "p50": 1645.622,
+        "p95": 1742.577,
+        "p99": 1782.445
+      },
+      "server_admission_revoked_ms": {
+        "count": 40,
+        "min": 1413.591441,
+        "max": 1640.051217,
+        "p50": 1516.538122,
+        "p95": 1603.635278,
+        "p99": 1640.051217
+      },
+      "server_candidate_ready_ms": {
+        "count": 40,
+        "min": 1412.025952,
+        "max": 1637.853999,
+        "p50": 1515.048518,
+        "p95": 1602.106581,
+        "p99": 1637.853999
+      },
+      "server_fence_to_commit_ms": {
+        "count": 40,
+        "min": 0.755599,
+        "max": 3.200334,
+        "p50": 1.938239,
+        "p95": 2.855317,
+        "p99": 3.200334
+      },
+      "server_total_ms": {
+        "count": 40,
+        "min": 1414.973507,
+        "max": 1642.632256,
+        "p50": 1518.249064,
+        "p95": 1605.219061,
+        "p99": 1642.632256
+      }
+    },
+    "samples_ms": [
+      {
+        "request_to_binding_response_ms": 1467.084,
+        "request_to_first_new_command_success_ms": 1474.436,
+        "request_to_old_host_stopped_observed_ms": 1508.947,
+        "request_to_old_durable_destroyed_observed_ms": 1555.324,
+        "server_admission_revoked_ms": 1464.873547,
+        "server_candidate_ready_ms": 1464.02371,
+        "server_fence_to_commit_ms": 0.755599,
+        "server_total_ms": 1465.631425
+      },
+      {
+        "request_to_binding_response_ms": 1512.255,
+        "request_to_first_new_command_success_ms": 1527.586,
+        "request_to_old_host_stopped_observed_ms": 1552.801,
+        "request_to_old_durable_destroyed_observed_ms": 1660.706,
+        "server_admission_revoked_ms": 1510.167972,
+        "server_candidate_ready_ms": 1509.00995,
+        "server_fence_to_commit_ms": 0.774769,
+        "server_total_ms": 1510.944998
+      },
+      {
+        "request_to_binding_response_ms": 1578.343,
+        "request_to_first_new_command_success_ms": 1586.272,
+        "request_to_old_host_stopped_observed_ms": 1610.77,
+        "request_to_old_durable_destroyed_observed_ms": 1711.932,
+        "server_admission_revoked_ms": 1573.231584,
+        "server_candidate_ready_ms": 1572.067894,
+        "server_fence_to_commit_ms": 1.148062,
+        "server_total_ms": 1574.384779
+      },
+      {
+        "request_to_binding_response_ms": 1466.209,
+        "request_to_first_new_command_success_ms": 1474.709,
+        "request_to_old_host_stopped_observed_ms": 1512.608,
+        "request_to_old_durable_destroyed_observed_ms": 1614.017,
+        "server_admission_revoked_ms": 1463.360141,
+        "server_candidate_ready_ms": 1462.144091,
+        "server_fence_to_commit_ms": 1.390338,
+        "server_total_ms": 1464.755287
+      },
+      {
+        "request_to_binding_response_ms": 1475.183,
+        "request_to_first_new_command_success_ms": 1482.608,
+        "request_to_old_host_stopped_observed_ms": 1517.168,
+        "request_to_old_durable_destroyed_observed_ms": 1618.224,
+        "server_admission_revoked_ms": 1471.594768,
+        "server_candidate_ready_ms": 1470.301204,
+        "server_fence_to_commit_ms": 1.739558,
+        "server_total_ms": 1473.340377
+      },
+      {
+        "request_to_binding_response_ms": 1529.787,
+        "request_to_first_new_command_success_ms": 1538.049,
+        "request_to_old_host_stopped_observed_ms": 1573.421,
+        "request_to_old_durable_destroyed_observed_ms": 1649.968,
+        "server_admission_revoked_ms": 1525.551631,
+        "server_candidate_ready_ms": 1524.16383,
+        "server_fence_to_commit_ms": 1.439789,
+        "server_total_ms": 1526.993834
+      },
+      {
+        "request_to_binding_response_ms": 1416.334,
+        "request_to_first_new_command_success_ms": 1424.317,
+        "request_to_old_host_stopped_observed_ms": 1452.554,
+        "request_to_old_durable_destroyed_observed_ms": 1546.937,
+        "server_admission_revoked_ms": 1413.591441,
+        "server_candidate_ready_ms": 1412.025952,
+        "server_fence_to_commit_ms": 1.377786,
+        "server_total_ms": 1414.973507
+      },
+      {
+        "request_to_binding_response_ms": 1455.203,
+        "request_to_first_new_command_success_ms": 1468.695,
+        "request_to_old_host_stopped_observed_ms": 1498.859,
+        "request_to_old_durable_destroyed_observed_ms": 1594.013,
+        "server_admission_revoked_ms": 1452.723533,
+        "server_candidate_ready_ms": 1451.506679,
+        "server_fence_to_commit_ms": 1.108855,
+        "server_total_ms": 1453.835623
+      },
+      {
+        "request_to_binding_response_ms": 1534.973,
+        "request_to_first_new_command_success_ms": 1543.262,
+        "request_to_old_host_stopped_observed_ms": 1578.604,
+        "request_to_old_durable_destroyed_observed_ms": 1658.739,
+        "server_admission_revoked_ms": 1531.374298,
+        "server_candidate_ready_ms": 1528.433911,
+        "server_fence_to_commit_ms": 1.64971,
+        "server_total_ms": 1533.027948
+      },
+      {
+        "request_to_binding_response_ms": 1440.766,
+        "request_to_first_new_command_success_ms": 1453.3,
+        "request_to_old_host_stopped_observed_ms": 1477.552,
+        "request_to_old_durable_destroyed_observed_ms": 1571.688,
+        "server_admission_revoked_ms": 1437.985026,
+        "server_candidate_ready_ms": 1436.363815,
+        "server_fence_to_commit_ms": 1.940147,
+        "server_total_ms": 1439.931457
+      },
+      {
+        "request_to_binding_response_ms": 1606.644,
+        "request_to_first_new_command_success_ms": 1614.63,
+        "request_to_old_host_stopped_observed_ms": 1650.068,
+        "request_to_old_durable_destroyed_observed_ms": 1742.577,
+        "server_admission_revoked_ms": 1603.635278,
+        "server_candidate_ready_ms": 1602.106581,
+        "server_fence_to_commit_ms": 1.577083,
+        "server_total_ms": 1605.219061
+      },
+      {
+        "request_to_binding_response_ms": 1524.174,
+        "request_to_first_new_command_success_ms": 1532.643,
+        "request_to_old_host_stopped_observed_ms": 1564.739,
+        "request_to_old_durable_destroyed_observed_ms": 1607.916,
+        "server_admission_revoked_ms": 1521.170698,
+        "server_candidate_ready_ms": 1519.516555,
+        "server_fence_to_commit_ms": 1.601361,
+        "server_total_ms": 1522.774667
+      },
+      {
+        "request_to_binding_response_ms": 1536.755,
+        "request_to_first_new_command_success_ms": 1549.736,
+        "request_to_old_host_stopped_observed_ms": 1566.665,
+        "request_to_old_durable_destroyed_observed_ms": 1612.344,
+        "server_admission_revoked_ms": 1533.73607,
+        "server_candidate_ready_ms": 1532.026034,
+        "server_fence_to_commit_ms": 1.691542,
+        "server_total_ms": 1535.431528
+      },
+      {
+        "request_to_binding_response_ms": 1584.179,
+        "request_to_first_new_command_success_ms": 1599.627,
+        "request_to_old_host_stopped_observed_ms": 1623.991,
+        "request_to_old_durable_destroyed_observed_ms": 1713.295,
+        "server_admission_revoked_ms": 1580.508813,
+        "server_candidate_ready_ms": 1578.672434,
+        "server_fence_to_commit_ms": 2.008691,
+        "server_total_ms": 1582.52119
+      },
+      {
+        "request_to_binding_response_ms": 1437.097,
+        "request_to_first_new_command_success_ms": 1444.192,
+        "request_to_old_host_stopped_observed_ms": 1478.589,
+        "request_to_old_durable_destroyed_observed_ms": 1552.737,
+        "server_admission_revoked_ms": 1433.091679,
+        "server_candidate_ready_ms": 1431.042804,
+        "server_fence_to_commit_ms": 2.186604,
+        "server_total_ms": 1435.283581
+      },
+      {
+        "request_to_binding_response_ms": 1450.611,
+        "request_to_first_new_command_success_ms": 1459.117,
+        "request_to_old_host_stopped_observed_ms": 1493.085,
+        "request_to_old_durable_destroyed_observed_ms": 1585.9,
+        "server_admission_revoked_ms": 1446.928641,
+        "server_candidate_ready_ms": 1445.100139,
+        "server_fence_to_commit_ms": 1.88923,
+        "server_total_ms": 1448.822638
+      },
+      {
+        "request_to_binding_response_ms": 1577.566,
+        "request_to_first_new_command_success_ms": 1591.527,
+        "request_to_old_host_stopped_observed_ms": 1617.309,
+        "request_to_old_durable_destroyed_observed_ms": 1709.536,
+        "server_admission_revoked_ms": 1574.35425,
+        "server_candidate_ready_ms": 1572.505596,
+        "server_fence_to_commit_ms": 1.794645,
+        "server_total_ms": 1576.1528
+      },
+      {
+        "request_to_binding_response_ms": 1499.451,
+        "request_to_first_new_command_success_ms": 1508.33,
+        "request_to_old_host_stopped_observed_ms": 1545.51,
+        "request_to_old_durable_destroyed_observed_ms": 1645.622,
+        "server_admission_revoked_ms": 1496.350121,
+        "server_candidate_ready_ms": 1495.041442,
+        "server_fence_to_commit_ms": 1.043421,
+        "server_total_ms": 1497.395368
+      },
+      {
+        "request_to_binding_response_ms": 1489.289,
+        "request_to_first_new_command_success_ms": 1495.962,
+        "request_to_old_host_stopped_observed_ms": 1537.421,
+        "request_to_old_durable_destroyed_observed_ms": 1576.4,
+        "server_admission_revoked_ms": 1486.295227,
+        "server_candidate_ready_ms": 1483.842003,
+        "server_fence_to_commit_ms": 1.769972,
+        "server_total_ms": 1488.067823
+      },
+      {
+        "request_to_binding_response_ms": 1592.218,
+        "request_to_first_new_command_success_ms": 1604.407,
+        "request_to_old_host_stopped_observed_ms": 1637.768,
+        "request_to_old_durable_destroyed_observed_ms": 1750.055,
+        "server_admission_revoked_ms": 1589.634644,
+        "server_candidate_ready_ms": 1587.421999,
+        "server_fence_to_commit_ms": 1.814933,
+        "server_total_ms": 1591.452057
+      },
+      {
+        "request_to_binding_response_ms": 1520.174,
+        "request_to_first_new_command_success_ms": 1527.381,
+        "request_to_old_host_stopped_observed_ms": 1557.37,
+        "request_to_old_durable_destroyed_observed_ms": 1651.156,
+        "server_admission_revoked_ms": 1516.538122,
+        "server_candidate_ready_ms": 1515.048518,
+        "server_fence_to_commit_ms": 1.708065,
+        "server_total_ms": 1518.249064
+      },
+      {
+        "request_to_binding_response_ms": 1507.789,
+        "request_to_first_new_command_success_ms": 1516.12,
+        "request_to_old_host_stopped_observed_ms": 1548.366,
+        "request_to_old_durable_destroyed_observed_ms": 1642.619,
+        "server_admission_revoked_ms": 1503.352559,
+        "server_candidate_ready_ms": 1501.149568,
+        "server_fence_to_commit_ms": 2.229307,
+        "server_total_ms": 1505.587059
+      },
+      {
+        "request_to_binding_response_ms": 1551.676,
+        "request_to_first_new_command_success_ms": 1564.319,
+        "request_to_old_host_stopped_observed_ms": 1594.4,
+        "request_to_old_durable_destroyed_observed_ms": 1691.637,
+        "server_admission_revoked_ms": 1548.303961,
+        "server_candidate_ready_ms": 1544.420154,
+        "server_fence_to_commit_ms": 2.000121,
+        "server_total_ms": 1550.306454
+      },
+      {
+        "request_to_binding_response_ms": 1643.992,
+        "request_to_first_new_command_success_ms": 1650.953,
+        "request_to_old_host_stopped_observed_ms": 1689.341,
+        "request_to_old_durable_destroyed_observed_ms": 1782.445,
+        "server_admission_revoked_ms": 1640.051217,
+        "server_candidate_ready_ms": 1637.853999,
+        "server_fence_to_commit_ms": 2.575343,
+        "server_total_ms": 1642.632256
+      },
+      {
+        "request_to_binding_response_ms": 1499.399,
+        "request_to_first_new_command_success_ms": 1514.37,
+        "request_to_old_host_stopped_observed_ms": 1538.941,
+        "request_to_old_durable_destroyed_observed_ms": 1609.546,
+        "server_admission_revoked_ms": 1496.279499,
+        "server_candidate_ready_ms": 1493.870113,
+        "server_fence_to_commit_ms": 2.081363,
+        "server_total_ms": 1498.36516
+      },
+      {
+        "request_to_binding_response_ms": 1576.023,
+        "request_to_first_new_command_success_ms": 1584.542,
+        "request_to_old_host_stopped_observed_ms": 1609.366,
+        "request_to_old_durable_destroyed_observed_ms": 1660.476,
+        "server_admission_revoked_ms": 1572.148137,
+        "server_candidate_ready_ms": 1569.899931,
+        "server_fence_to_commit_ms": 2.217067,
+        "server_total_ms": 1574.37069
+      },
+      {
+        "request_to_binding_response_ms": 1594.537,
+        "request_to_first_new_command_success_ms": 1610.203,
+        "request_to_old_host_stopped_observed_ms": 1627.226,
+        "request_to_old_durable_destroyed_observed_ms": 1734.462,
+        "server_admission_revoked_ms": 1590.067927,
+        "server_candidate_ready_ms": 1587.639788,
+        "server_fence_to_commit_ms": 2.220011,
+        "server_total_ms": 1592.292656
+      },
+      {
+        "request_to_binding_response_ms": 1587.617,
+        "request_to_first_new_command_success_ms": 1600.035,
+        "request_to_old_host_stopped_observed_ms": 1625.725,
+        "request_to_old_durable_destroyed_observed_ms": 1711.867,
+        "server_admission_revoked_ms": 1583.178302,
+        "server_candidate_ready_ms": 1580.296678,
+        "server_fence_to_commit_ms": 2.855317,
+        "server_total_ms": 1586.038575
+      },
+      {
+        "request_to_binding_response_ms": 1618.914,
+        "request_to_first_new_command_success_ms": 1636.292,
+        "request_to_old_host_stopped_observed_ms": 1664.98,
+        "request_to_old_durable_destroyed_observed_ms": 1718.473,
+        "server_admission_revoked_ms": 1615.156619,
+        "server_candidate_ready_ms": 1613.005107,
+        "server_fence_to_commit_ms": 1.938239,
+        "server_total_ms": 1617.098638
+      },
+      {
+        "request_to_binding_response_ms": 1505.937,
+        "request_to_first_new_command_success_ms": 1517.891,
+        "request_to_old_host_stopped_observed_ms": 1544.058,
+        "request_to_old_durable_destroyed_observed_ms": 1640.465,
+        "server_admission_revoked_ms": 1500.883421,
+        "server_candidate_ready_ms": 1498.333586,
+        "server_fence_to_commit_ms": 2.588129,
+        "server_total_ms": 1503.479204
+      },
+      {
+        "request_to_binding_response_ms": 1453.435,
+        "request_to_first_new_command_success_ms": 1462.545,
+        "request_to_old_host_stopped_observed_ms": 1493.765,
+        "request_to_old_durable_destroyed_observed_ms": 1582.175,
+        "server_admission_revoked_ms": 1448.808018,
+        "server_candidate_ready_ms": 1445.692231,
+        "server_fence_to_commit_ms": 2.845219,
+        "server_total_ms": 1451.659583
+      },
+      {
+        "request_to_binding_response_ms": 1476.46,
+        "request_to_first_new_command_success_ms": 1490.549,
+        "request_to_old_host_stopped_observed_ms": 1519.634,
+        "request_to_old_durable_destroyed_observed_ms": 1579.281,
+        "server_admission_revoked_ms": 1472.832195,
+        "server_candidate_ready_ms": 1470.085459,
+        "server_fence_to_commit_ms": 2.45962,
+        "server_total_ms": 1475.296373
+      },
+      {
+        "request_to_binding_response_ms": 1597.0,
+        "request_to_first_new_command_success_ms": 1603.514,
+        "request_to_old_host_stopped_observed_ms": 1636.891,
+        "request_to_old_durable_destroyed_observed_ms": 1731.213,
+        "server_admission_revoked_ms": 1593.26346,
+        "server_candidate_ready_ms": 1590.371953,
+        "server_fence_to_commit_ms": 2.622516,
+        "server_total_ms": 1595.890856
+      },
+      {
+        "request_to_binding_response_ms": 1478.007,
+        "request_to_first_new_command_success_ms": 1493.56,
+        "request_to_old_host_stopped_observed_ms": 1520.044,
+        "request_to_old_durable_destroyed_observed_ms": 1605.086,
+        "server_admission_revoked_ms": 1473.874559,
+        "server_candidate_ready_ms": 1471.268007,
+        "server_fence_to_commit_ms": 2.382944,
+        "server_total_ms": 1476.262077
+      },
+      {
+        "request_to_binding_response_ms": 1511.41,
+        "request_to_first_new_command_success_ms": 1525.332,
+        "request_to_old_host_stopped_observed_ms": 1557.891,
+        "request_to_old_durable_destroyed_observed_ms": 1617.854,
+        "server_admission_revoked_ms": 1507.892367,
+        "server_candidate_ready_ms": 1504.498586,
+        "server_fence_to_commit_ms": 1.619886,
+        "server_total_ms": 1509.517269
+      },
+      {
+        "request_to_binding_response_ms": 1535.893,
+        "request_to_first_new_command_success_ms": 1543.095,
+        "request_to_old_host_stopped_observed_ms": 1579.706,
+        "request_to_old_durable_destroyed_observed_ms": 1650.584,
+        "server_admission_revoked_ms": 1532.230975,
+        "server_candidate_ready_ms": 1529.391483,
+        "server_fence_to_commit_ms": 2.620177,
+        "server_total_ms": 1534.855704
+      },
+      {
+        "request_to_binding_response_ms": 1530.327,
+        "request_to_first_new_command_success_ms": 1542.503,
+        "request_to_old_host_stopped_observed_ms": 1576.988,
+        "request_to_old_durable_destroyed_observed_ms": 1670.104,
+        "server_admission_revoked_ms": 1526.319341,
+        "server_candidate_ready_ms": 1523.542924,
+        "server_fence_to_commit_ms": 2.642275,
+        "server_total_ms": 1528.963872
+      },
+      {
+        "request_to_binding_response_ms": 1572.546,
+        "request_to_first_new_command_success_ms": 1579.879,
+        "request_to_old_host_stopped_observed_ms": 1608.882,
+        "request_to_old_durable_destroyed_observed_ms": 1704.384,
+        "server_admission_revoked_ms": 1568.198382,
+        "server_candidate_ready_ms": 1563.791657,
+        "server_fence_to_commit_ms": 2.953401,
+        "server_total_ms": 1571.156343
+      },
+      {
+        "request_to_binding_response_ms": 1494.729,
+        "request_to_first_new_command_success_ms": 1501.772,
+        "request_to_old_host_stopped_observed_ms": 1538.121,
+        "request_to_old_durable_destroyed_observed_ms": 1640.419,
+        "server_admission_revoked_ms": 1490.029633,
+        "server_candidate_ready_ms": 1486.693249,
+        "server_fence_to_commit_ms": 3.200334,
+        "server_total_ms": 1493.235019
+      },
+      {
+        "request_to_binding_response_ms": 1604.105,
+        "request_to_first_new_command_success_ms": 1617.639,
+        "request_to_old_host_stopped_observed_ms": 1643.638,
+        "request_to_old_durable_destroyed_observed_ms": 1739.32,
+        "server_admission_revoked_ms": 1599.294815,
+        "server_candidate_ready_ms": 1596.290586,
+        "server_fence_to_commit_ms": 2.468421,
+        "server_total_ms": 1601.765463
+      }
+    ],
+    "sampled_resource_peaks": {
+      "controller_rss_bytes": 17498112,
+      "owned_vm_process_rss_bytes": 164102144,
+      "owned_cgroup_memory_current_bytes": 167464960,
+      "controller_fds": 19
+    },
+    "post_old_gc_resources": [
+      {
+        "iteration": 1,
+        "controller_rss_bytes": 15310848,
+        "owned_vm_process_rss_bytes": 82124800,
+        "owned_cgroup_memory_current_bytes": 83492864,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 2,
+        "controller_rss_bytes": 15241216,
+        "owned_vm_process_rss_bytes": 82092032,
+        "owned_cgroup_memory_current_bytes": 83283968,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 3,
+        "controller_rss_bytes": 15097856,
+        "owned_vm_process_rss_bytes": 80138240,
+        "owned_cgroup_memory_current_bytes": 81170432,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 4,
+        "controller_rss_bytes": 15450112,
+        "owned_vm_process_rss_bytes": 77737984,
+        "owned_cgroup_memory_current_bytes": 79450112,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 5,
+        "controller_rss_bytes": 15699968,
+        "owned_vm_process_rss_bytes": 77471744,
+        "owned_cgroup_memory_current_bytes": 78905344,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 6,
+        "controller_rss_bytes": 15921152,
+        "owned_vm_process_rss_bytes": 82100224,
+        "owned_cgroup_memory_current_bytes": 83537920,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 7,
+        "controller_rss_bytes": 15847424,
+        "owned_vm_process_rss_bytes": 79859712,
+        "owned_cgroup_memory_current_bytes": 81051648,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 8,
+        "controller_rss_bytes": 15413248,
+        "owned_vm_process_rss_bytes": 77631488,
+        "owned_cgroup_memory_current_bytes": 78962688,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 9,
+        "controller_rss_bytes": 16031744,
+        "owned_vm_process_rss_bytes": 79822848,
+        "owned_cgroup_memory_current_bytes": 80916480,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 10,
+        "controller_rss_bytes": 15781888,
+        "owned_vm_process_rss_bytes": 79745024,
+        "owned_cgroup_memory_current_bytes": 80928768,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 11,
+        "controller_rss_bytes": 15544320,
+        "owned_vm_process_rss_bytes": 81993728,
+        "owned_cgroup_memory_current_bytes": 83038208,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 12,
+        "controller_rss_bytes": 16240640,
+        "owned_vm_process_rss_bytes": 82055168,
+        "owned_cgroup_memory_current_bytes": 83554304,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 13,
+        "controller_rss_bytes": 16478208,
+        "owned_vm_process_rss_bytes": 79859712,
+        "owned_cgroup_memory_current_bytes": 81154048,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 14,
+        "controller_rss_bytes": 16343040,
+        "owned_vm_process_rss_bytes": 82067456,
+        "owned_cgroup_memory_current_bytes": 83468288,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 15,
+        "controller_rss_bytes": 16158720,
+        "owned_vm_process_rss_bytes": 79675392,
+        "owned_cgroup_memory_current_bytes": 81514496,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 16,
+        "controller_rss_bytes": 16289792,
+        "owned_vm_process_rss_bytes": 74289152,
+        "owned_cgroup_memory_current_bytes": 75788288,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 17,
+        "controller_rss_bytes": 15982592,
+        "owned_vm_process_rss_bytes": 79982592,
+        "owned_cgroup_memory_current_bytes": 81698816,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 18,
+        "controller_rss_bytes": 16220160,
+        "owned_vm_process_rss_bytes": 74506240,
+        "owned_cgroup_memory_current_bytes": 75943936,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 19,
+        "controller_rss_bytes": 15925248,
+        "owned_vm_process_rss_bytes": 74129408,
+        "owned_cgroup_memory_current_bytes": 75296768,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 20,
+        "controller_rss_bytes": 16150528,
+        "owned_vm_process_rss_bytes": 80166912,
+        "owned_cgroup_memory_current_bytes": 81518592,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 21,
+        "controller_rss_bytes": 16560128,
+        "owned_vm_process_rss_bytes": 76517376,
+        "owned_cgroup_memory_current_bytes": 77697024,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 22,
+        "controller_rss_bytes": 16932864,
+        "owned_vm_process_rss_bytes": 80134144,
+        "owned_cgroup_memory_current_bytes": 81313792,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 23,
+        "controller_rss_bytes": 17301504,
+        "owned_vm_process_rss_bytes": 81920000,
+        "owned_cgroup_memory_current_bytes": 83288064,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 24,
+        "controller_rss_bytes": 16748544,
+        "owned_vm_process_rss_bytes": 81915904,
+        "owned_cgroup_memory_current_bytes": 83202048,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 25,
+        "controller_rss_bytes": 16523264,
+        "owned_vm_process_rss_bytes": 82108416,
+        "owned_cgroup_memory_current_bytes": 83296256,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 26,
+        "controller_rss_bytes": 16863232,
+        "owned_vm_process_rss_bytes": 81612800,
+        "owned_cgroup_memory_current_bytes": 82800640,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 27,
+        "controller_rss_bytes": 16580608,
+        "owned_vm_process_rss_bytes": 80125952,
+        "owned_cgroup_memory_current_bytes": 81649664,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 28,
+        "controller_rss_bytes": 16728064,
+        "owned_vm_process_rss_bytes": 80060416,
+        "owned_cgroup_memory_current_bytes": 81088512,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 29,
+        "controller_rss_bytes": 16654336,
+        "owned_vm_process_rss_bytes": 80023552,
+        "owned_cgroup_memory_current_bytes": 81887232,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 30,
+        "controller_rss_bytes": 16355328,
+        "owned_vm_process_rss_bytes": 76582912,
+        "owned_cgroup_memory_current_bytes": 77971456,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 31,
+        "controller_rss_bytes": 16617472,
+        "owned_vm_process_rss_bytes": 77500416,
+        "owned_cgroup_memory_current_bytes": 78909440,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 32,
+        "controller_rss_bytes": 16502784,
+        "owned_vm_process_rss_bytes": 74596352,
+        "owned_cgroup_memory_current_bytes": 75915264,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 33,
+        "controller_rss_bytes": 16928768,
+        "owned_vm_process_rss_bytes": 82063360,
+        "owned_cgroup_memory_current_bytes": 83488768,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 34,
+        "controller_rss_bytes": 17199104,
+        "owned_vm_process_rss_bytes": 77582336,
+        "owned_cgroup_memory_current_bytes": 78770176,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 35,
+        "controller_rss_bytes": 17498112,
+        "owned_vm_process_rss_bytes": 78659584,
+        "owned_cgroup_memory_current_bytes": 79978496,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 36,
+        "controller_rss_bytes": 16535552,
+        "owned_vm_process_rss_bytes": 80220160,
+        "owned_cgroup_memory_current_bytes": 81616896,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 37,
+        "controller_rss_bytes": 16896000,
+        "owned_vm_process_rss_bytes": 80117760,
+        "owned_cgroup_memory_current_bytes": 81485824,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 38,
+        "controller_rss_bytes": 16752640,
+        "owned_vm_process_rss_bytes": 80117760,
+        "owned_cgroup_memory_current_bytes": 81514496,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 39,
+        "controller_rss_bytes": 16949248,
+        "owned_vm_process_rss_bytes": 76046336,
+        "owned_cgroup_memory_current_bytes": 77717504,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 40,
+        "controller_rss_bytes": 17412096,
+        "owned_vm_process_rss_bytes": 80105472,
+        "owned_cgroup_memory_current_bytes": 81387520,
+        "controller_fds": 11
+      }
+    ],
+    "final_resources": {
+      "controller_rss_bytes": 17162240,
+      "owned_vm_process_rss_bytes": 0,
+      "owned_cgroup_memory_current_bytes": 0,
+      "controller_fds": 8
+    },
+    "checks": [
+      "every new VM has clean workspace and successful exact-revision guest execution",
+      "each old generation independently host-stopped then durably reclaimed before next switch",
+      "metrics scrapes remain available; per-pool queues drained at each iteration",
+      "final revoke reclaims last generation without VMM/cgroup residue"
+    ]
+  },
+  "session_acceptance_report": "kvm-metrics-v1-session.json",
+  "queue_acceptance_report": "kvm-metrics-v1-queue.json"
+}
