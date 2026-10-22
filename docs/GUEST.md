@@ -17,6 +17,8 @@ agent 启动要求专用镜像标记、guest 启动参数中的 ID/generation、
 
 guest 使用 BusyBox init 作为 PID 1，负责回收孤儿进程；没有登录终端、SSH 服务或业务网络配置。agent 不以 PID 1 身份兼任 Go 子进程 wait/reaper，避免抢走 `exec.Cmd` 的退出状态。
 
+新增互斥的 [未分配模板初始化模式](PRISTINE.md)：不携带冷启动Ref，仅在901接受一次宿主初始化；完成熵/身份/时钟重绑定及固定agent exec后才开放900。普通服务仍走冷启动，实验组件不提供已使用VM重置或生产快照能力。
+
 ## 执行与取消
 
 - 命令以 argv 传递，不自动拼接 shell。需要 shell 时显式执行 guest 的 `sh -c`，并始终在 VM 内运行。
