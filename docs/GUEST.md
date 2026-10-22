@@ -17,7 +17,7 @@ agent 启动要求专用镜像标记、guest 启动参数中的 ID/generation、
 
 guest 使用 BusyBox init 作为 PID 1，负责回收孤儿进程；没有登录终端、SSH 服务或业务网络配置。agent 不以 PID 1 身份兼任 Go 子进程 wait/reaper，避免抢走 `exec.Cmd` 的退出状态。
 
-新增互斥的 [未分配模板初始化模式](PRISTINE.md)：不携带冷启动Ref，仅在901接受一次宿主初始化；完成熵/身份/时钟重绑定及固定agent exec后才开放900。普通服务仍走冷启动，实验组件不提供已使用VM重置或生产快照能力。
+新增互斥的 [未分配模板初始化模式](PRISTINE.md)：不携带冷启动Ref，仅在901接受一次宿主初始化；完成熵/身份/时钟重绑定及固定agent exec后才开放900。新模式已通过真实KVM双克隆组件验证，新agent也通过 [冷启动15项组件回归](validation/kvm-pristine-cold-guest-2026-10-22.json)。普通服务仍走冷启动，实验组件不提供已使用VM重置或生产快照能力。
 
 ## 执行与取消
 
@@ -35,6 +35,8 @@ guest 使用 BusyBox init 作为 PID 1，负责回收孤儿进程；没有登录
 每连接一个请求：4 字节大端长度 + 一个严格 JSON 对象。请求帧最多 256 KiB，响应帧最多 512 KiB；先检查长度再分配内存，JSON 拒绝重复键、未知字段和超深嵌套。输出响应预留了 JSON 转义膨胀空间。
 
 版本固定为 1，支持 `health` 和 `exec`。健康检查中的 `active_execution_groups` 来自 kernel cgroup 目录观察，而非仅靠内存任务计数。请求携带 Ref；exec 还带独立的 32 位十六进制 execution ID。响应回显版本、Ref、execution ID、boot ID 和状态。host 校验身份、状态及输出界限，不因收到任意合法 JSON 就认为 guest 已就绪。当前没有请求重放缓存或执行响应丢失后的 exactly-once 承诺，客户端不自动重试执行。
+
+封存初始化模式另带可选的 `initialization_hash`，宿主必须同时匹配该摘要、Ref和boot ID才接受初始化完成；`CLAIMED` 不是READY。冷启动不输出该字段，保留普通v1冷路径兼容性。摘要不是租户凭证或远程证明。
 
 ## 在独立 Linux/KVM 节点复现
 

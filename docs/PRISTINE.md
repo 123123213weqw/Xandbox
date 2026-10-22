@@ -39,6 +39,16 @@
 - 共享memory backing在全部VM退出前不得修改/删除。CRC不是真实性校验；可信manifest、不可变catalog、版本兼容策略、共享引用与崩溃重建仍未实现。
 - 当前组件测试复制私有磁盘并共享只读memory inode，不是reflink/池化性能实现；不从两个克隆样本推导加速、P95或SLO。
 
+## 本轮实测证据
+
+[真实快照组件报告](validation/kvm-pristine-bootstrap-2026-10-22.json) 已通过：从一个未分配模板恢复两个真实KVM guest，9条断言均通过，runner退出0，专属宿主cgroup和运行目录均已删除。9条断言是一个双克隆组件用例，不是9种独立故障场景。新agent另外通过 [冷启动组件15项回归](validation/kvm-pristine-cold-guest-2026-10-22.json)，包含实际KVM fd、进程树取消、UID/no_new_privs、seccomp和私有工作区。
+
+[当前源码冷路径服务回归](validation/kvm-pristine-cold-service-2026-10-22.json) 另通过30项检查，覆盖鉴权、监督/崩溃回收、会话与受控fsync；仅5次新VM闭环为兼容性烟测。停止/GC与绑定fsync各9条断言展开现有用例，不另算18场景。它验证新agent不破坏现有冷路径，不验证服务快照功能。
+
+报告固定到源码 `ec4e56ef417c300d5a302ba245839de5093e7806` 与具体二进制/镜像SHA256；测试材料和快照本体不公开。记录的两个时长包含未优化的私有文件复制、jailer和多条诊断命令，不是切换首命令指标，不能与冷启动样本直接比较或宣称加速/P95/SLO。
+
+当前KVM覆盖正向双克隆和身份拒绝；认领后的guest进程崩溃、部分初始化失败、catalog/共享引用故障和持续恢复压力尚未实测。并发/失败回调/丢失ACK的协议单测不能替代这些硬件故障验收。
+
 ## 显式 Linux/KVM 组件验证
 
 普通 `go test` **跳过**硬件用例，跳过不是KVM验收。需要root、Linux amd64、已打补丁的Go1.27.3、独立cgroup v2、KVM、mkfs.ext4，以及 [guest镜像构建步骤](GUEST.md)。不需要Rust编译或修改宿主时钟/路由。

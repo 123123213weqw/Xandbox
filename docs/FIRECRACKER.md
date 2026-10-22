@@ -105,3 +105,7 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 账本 v1 的后续 [22 项服务报告](validation/kvm-ledger-2026-10-22.json) 来自源码 `cb66d78`，在上述 guardian/队列回归之外，实际验证旧 binary 创建的运行态 VM 经控制器死亡、显式离线迁移后由新版完成回收。格式升级不替代后端资产绑定迁移，也不恢复旧会话；操作方式、累计容量和样本中旧/新 binary 的区分见 [LEDGER.md](LEDGER.md)。
 
 路径归属补强后源码 `dc86466` 的 [23 项重验报告](validation/kvm-ledger-hardened-2026-10-22.json) 进一步用实际 root 进程测试状态创建前的父目录/owner 拒绝和外来 UID 鉴权配置拒绝，并重跑全部旧 VM 升级、guardian 和受控 fsync 路径。历史报告不覆盖这些新增检查，完整部署 ACL/锁文件/独立操作员审计仍未完成。
+
+## 新agent冷路径兼容回归
+
+加入 [干净模板初始化组件](PRISTINE.md) 后，源码 `ec4e56ef417c300d5a302ba245839de5093e7806` 使用新guest镜像再次通过 [30项真实服务冷路径回归](validation/kvm-pristine-cold-service-2026-10-22.json)。闭环5次仅为兼容性烟测，不替代此前40次有限负载报告；两个各9条的队列/绑定断言展开既有用例，不是额外18场景。driver仍只执行冷启动，无快照模式、catalog或预热池；快照双克隆报告是独立组件，不能作为服务加速验收。
