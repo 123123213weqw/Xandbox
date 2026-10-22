@@ -67,6 +67,7 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-keygen-$arch" ./cmd/xandbox-keygen
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-agent-$arch" ./cmd/xandbox-agent
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-guestctl-$arch" ./cmd/xandbox-guestctl
+          done
 
   vulnerability-scan:
     runs-on: ubuntu-24.04
@@ -81,4 +82,3 @@ jobs:
           cache: false
       - name: Scan reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-          done
