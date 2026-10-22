@@ -20,3 +20,6 @@ tokens.json
 vmlinux*
 firecracker
 jailer
+
+# Raw client credentials
+*.token

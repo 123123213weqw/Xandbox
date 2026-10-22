@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/client"
+	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
 
@@ -23,6 +27,7 @@ func main() {
 func run() error {
 	global := flag.NewFlagSet("sandboxctl", flag.ContinueOnError)
 	socket := global.String("socket", "", "sandboxd Unix socket (required)")
+	tokenFile := global.String("token-file", "", "private bearer token file (not a command-line token)")
 	deadline := global.Duration("deadline", 10*time.Second, "overall client deadline")
 	if err := global.Parse(os.Args[1:]); err != nil {
 		return err
@@ -31,7 +36,18 @@ func run() error {
 	if *socket == "" || len(args) == 0 {
 		return fmt.Errorf("usage: sandboxctl -socket PATH {health|create|exec|job|get|stop|destroy} [options]")
 	}
-	c := client.New(*socket)
+	var token string
+	if *tokenFile != "" {
+		data, err := privatefile.Read(*tokenFile, 513)
+		if err != nil {
+			return fmt.Errorf("read token file: %w", err)
+		}
+		token = strings.TrimSpace(string(data))
+		if len(token) < 32 || len(token) > 512 || strings.ContainsAny(token, " \t\r\n") {
+			return fmt.Errorf("invalid token file")
+		}
+	}
+	c := client.NewWithToken(*socket, token)
 	defer c.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), *deadline)
 	defer cancel()
@@ -42,6 +58,7 @@ func run() error {
 		err = c.Do(ctx, http.MethodGet, "/healthz", nil, &result)
 	case "create":
 		flags := flag.NewFlagSet("create", flag.ContinueOnError)
+		key := flags.String("idempotency-key", "", "creation retry key (generated if omitted)")
 		ttl := flags.Duration("ttl", 5*time.Minute, "instance lifetime")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
@@ -49,7 +66,16 @@ func run() error {
 		if flags.NArg() != 0 {
 			return fmt.Errorf("usage: create [-ttl 5m]")
 		}
-		err = c.Do(ctx, http.MethodPost, "/v1/sandboxes", sandbox.CreateRequest{TTLMS: int(ttl.Milliseconds())}, &result)
+		if *key == "" {
+			var bytes [16]byte
+			if _, err := rand.Read(bytes[:]); err != nil {
+				return err
+			}
+			*key = hex.EncodeToString(bytes[:])
+		}
+		// Report before the request so a lost response can be retried safely.
+		fmt.Fprintln(os.Stderr, "Idempotency-Key:", *key)
+		err = c.Create(ctx, *key, sandbox.CreateRequest{TTLMS: int(ttl.Milliseconds())}, &result)
 	case "get":
 		if len(args) != 2 {
 			return fmt.Errorf("usage: get ID")

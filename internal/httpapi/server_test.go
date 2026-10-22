@@ -102,6 +102,8 @@ func TestRejectInvalidBodies(t *testing.T) {
 		{"null", `null`, 400},
 		{"array", `[]`, 400},
 		{"negative TTL", `{"ttl_ms":-1}`, 400},
+		{"duplicate field", `{"ttl_ms":1000,"TTL_MS":2000}`, 400},
+		{"Unicode duplicate", `{"limits":{"max_jobs":1,"MAX_JOBſ":2}}`, 400},
 		{"oversized", `{"padding":"` + strings.Repeat("x", 70_000) + `"}`, 413},
 	} {
 		t.Run(test.name, func(t *testing.T) {

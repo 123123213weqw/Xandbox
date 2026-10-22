@@ -1,26 +1,63 @@
 package httpapi
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
 
-type API struct{ manager *sandbox.Manager }
+type API struct {
+	manager *sandbox.Manager
+	auth    *access.Authenticator
+}
 
+type Options struct {
+	Authenticator            *access.Authenticator
+	AllowUnauthenticatedMock bool
+}
+
+type identityKey struct{}
+
+// New is a local mock-test convenience; daemon startup uses NewConfigured.
 func New(manager *sandbox.Manager) http.Handler {
-	a := &API{manager: manager}
+	handler, err := NewConfigured(manager, Options{AllowUnauthenticatedMock: true})
+	if err != nil {
+		panic(err)
+	}
+	return handler
+}
+
+func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error) {
+	if manager == nil {
+		return nil, errors.New("manager is required")
+	}
+	if opts.Authenticator == nil && (!opts.AllowUnauthenticatedMock || manager.Stats().Backend != "mock") {
+		return nil, errors.New("authentication required; unauthenticated access is mock-only and opt-in")
+	}
+	if opts.Authenticator != nil && opts.AllowUnauthenticatedMock {
+		return nil, errors.New("conflicting authentication modes")
+	}
+	a := &API{manager: manager, auth: opts.Authenticator}
+	node := manager.Stats()
+	localOwner := sandbox.Owner{TenantID: "local", MaxInstances: node.Capacity}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		respond(w, http.StatusOK, map[string]any{
-			"backend": manager.Stats().Backend, "isolation": false,
-			"message": "mock lifecycle prototype; no host commands or microVMs are executed",
-			"stats":   manager.Stats(),
-		})
+		health := map[string]any{
+			"backend": node.Backend, "isolation": false,
+			"authentication": a.auth != nil,
+			"message":        "lifecycle prototype; real isolation has not been validated",
+		}
+		if a.auth == nil {
+			health["stats"] = manager.Stats()
+		}
+		respond(w, http.StatusOK, health)
 	})
 	mux.HandleFunc("POST /v1/sandboxes", a.create)
 	mux.HandleFunc("GET /v1/sandboxes/{id}", a.get)
@@ -28,7 +65,69 @@ func New(manager *sandbox.Manager) http.Handler {
 	mux.HandleFunc("GET /v1/sandboxes/{id}/executions/{job}", a.job)
 	mux.HandleFunc("POST /v1/sandboxes/{id}/stop", a.stop)
 	mux.HandleFunc("DELETE /v1/sandboxes/{id}", a.destroy)
-	return mux
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" && r.Method == http.MethodGet {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		owner := localOwner
+		if a.auth != nil {
+			var err error
+			headers := r.Header.Values("Authorization")
+			if len(headers) == 1 {
+				owner, err = a.auth.Authenticate(headers[0])
+			} else {
+				err = access.ErrUnauthorized
+			}
+			if err != nil {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="xandbox"`)
+				respond(w, http.StatusUnauthorized, map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "authentication required"}})
+				return
+			}
+		}
+		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), identityKey{}, owner)))
+	}), nil
+}
+
+func identity(r *http.Request) sandbox.Owner { return r.Context().Value(identityKey{}).(sandbox.Owner) }
+
+// Deliberately enumerate public fields; durable ledger details are not an API.
+type recordView struct {
+	sandbox.Ref
+	Backend         string         `json:"backend"`
+	TenantID        string         `json:"tenant_id"`
+	State           sandbox.State  `json:"state"`
+	DeleteRequested bool           `json:"delete_requested"`
+	Limits          sandbox.Limits `json:"limits"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	ExpiresAt       time.Time      `json:"expires_at"`
+	StoppedAt       time.Time      `json:"stopped_at,omitempty"`
+	DestroyedAt     time.Time      `json:"destroyed_at,omitempty"`
+	LastError       string         `json:"last_error,omitempty"`
+}
+
+func publicRecord(r sandbox.Record) recordView {
+	v := recordView{Ref: r.Ref, Backend: r.Backend, TenantID: r.TenantID, State: r.State, DeleteRequested: r.DeleteRequested,
+		Limits: r.Limits, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, ExpiresAt: r.ExpiresAt, StoppedAt: r.StoppedAt, DestroyedAt: r.DestroyedAt}
+	if r.LastError != "" {
+		v.LastError = "lifecycle operation pending or failed"
+	}
+	return v
+}
+
+func publicJob(j sandbox.Job) sandbox.Job {
+	if j.Error != "" {
+		switch j.Status {
+		case "CANCELLED":
+			j.Error = "execution cancelled"
+		case "TIMED_OUT":
+			j.Error = "execution deadline exceeded"
+		default:
+			j.Error = "execution failed"
+		}
+	}
+	return j
 }
 
 func (a *API) create(w http.ResponseWriter, r *http.Request) {
@@ -36,21 +135,27 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	record, err := a.manager.Create(r.Context(), req)
+	keys := r.Header.Values("Idempotency-Key")
+	key := r.Header.Get("Idempotency-Key")
+	if len(keys) > 1 || (a.auth != nil && key == "") {
+		failure(w, sandbox.ErrInvalid)
+		return
+	}
+	record, err := a.manager.CreateScoped(r.Context(), identity(r), key, req)
 	if err != nil {
 		failure(w, err)
 		return
 	}
-	respond(w, http.StatusCreated, record)
+	respond(w, http.StatusCreated, publicRecord(record))
 }
 
 func (a *API) get(w http.ResponseWriter, r *http.Request) {
-	record, err := a.manager.Get(r.PathValue("id"))
+	record, err := a.manager.GetScoped(identity(r).TenantID, r.PathValue("id"))
 	if err != nil {
 		failure(w, err)
 		return
 	}
-	respond(w, http.StatusOK, record)
+	respond(w, http.StatusOK, publicRecord(record))
 }
 
 func (a *API) exec(w http.ResponseWriter, r *http.Request) {
@@ -58,21 +163,21 @@ func (a *API) exec(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	job, err := a.manager.Exec(r.PathValue("id"), req)
+	job, err := a.manager.ExecScoped(identity(r).TenantID, r.PathValue("id"), req)
 	if err != nil {
 		failure(w, err)
 		return
 	}
-	respond(w, http.StatusAccepted, job)
+	respond(w, http.StatusAccepted, publicJob(job))
 }
 
 func (a *API) job(w http.ResponseWriter, r *http.Request) {
-	job, err := a.manager.GetJob(r.PathValue("id"), r.PathValue("job"))
+	job, err := a.manager.GetJobScoped(identity(r).TenantID, r.PathValue("id"), r.PathValue("job"))
 	if err != nil {
 		failure(w, err)
 		return
 	}
-	respond(w, http.StatusOK, job)
+	respond(w, http.StatusOK, publicJob(job))
 }
 
 func refFrom(w http.ResponseWriter, r *http.Request) (sandbox.Ref, bool) {
@@ -90,12 +195,12 @@ func (a *API) stop(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	record, err := a.manager.Stop(r.Context(), ref)
+	record, err := a.manager.StopScoped(r.Context(), identity(r).TenantID, ref)
 	if err != nil {
 		failure(w, err)
 		return
 	}
-	respond(w, http.StatusOK, record)
+	respond(w, http.StatusOK, publicRecord(record))
 }
 
 func (a *API) destroy(w http.ResponseWriter, r *http.Request) {
@@ -103,38 +208,23 @@ func (a *API) destroy(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	record, err := a.manager.Destroy(ref)
+	record, err := a.manager.DestroyScoped(identity(r).TenantID, ref)
 	if err != nil {
 		failure(w, err)
 		return
 	}
 	// 202 means deletion was accepted, not that the instance is already stopped.
-	respond(w, http.StatusAccepted, record)
+	respond(w, http.StatusAccepted, publicRecord(record))
 }
 
 func decode(w http.ResponseWriter, r *http.Request, target any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, 65_536)
-	decoder := json.NewDecoder(r.Body)
-	var raw json.RawMessage
-	if err := decoder.Decode(&raw); err != nil {
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
 		badJSON(w, err)
 		return false
 	}
-	var extra any
-	if err := decoder.Decode(&extra); err != io.EOF {
-		if err == nil {
-			err = errors.New("exactly one JSON object is required")
-		}
-		badJSON(w, err)
-		return false
-	}
-	if data := bytes.TrimSpace(raw); len(data) == 0 || data[0] != '{' {
-		badJSON(w, errors.New("request body must be a JSON object"))
-		return false
-	}
-	typed := json.NewDecoder(bytes.NewReader(raw))
-	typed.DisallowUnknownFields()
-	if err := typed.Decode(target); err != nil {
+	if err := strictjson.Decode(data, target); err != nil {
 		badJSON(w, err)
 		return false
 	}
@@ -147,26 +237,32 @@ func badJSON(w http.ResponseWriter, err error) {
 	if errors.As(err, &tooLarge) {
 		status = http.StatusRequestEntityTooLarge
 	}
-	respond(w, status, map[string]any{"error": map[string]string{"code": "INVALID_JSON", "message": err.Error()}})
+	respond(w, status, map[string]any{"error": map[string]string{"code": "INVALID_JSON", "message": "invalid JSON object"}})
 }
 
 func failure(w http.ResponseWriter, err error) {
-	status, code := http.StatusInternalServerError, "INTERNAL"
+	status, code, message := http.StatusInternalServerError, "INTERNAL", "internal operation failed"
 	switch {
 	case errors.Is(err, sandbox.ErrNotFound):
-		status, code = http.StatusNotFound, "NOT_FOUND"
+		status, code, message = 404, "NOT_FOUND", "not found"
 	case errors.Is(err, sandbox.ErrInvalid):
-		status, code = http.StatusBadRequest, "INVALID_REQUEST"
+		status, code, message = 400, "INVALID_REQUEST", "invalid request"
 	case errors.Is(err, sandbox.ErrStale):
-		status, code = http.StatusConflict, "STALE_GENERATION"
+		status, code, message = 409, "STALE_GENERATION", "stale generation"
 	case errors.Is(err, sandbox.ErrNotReady):
-		status, code = http.StatusConflict, "NOT_READY"
+		status, code, message = 409, "NOT_READY", "sandbox is not ready"
+	case errors.Is(err, sandbox.ErrIdempotencyConflict):
+		status, code, message = 409, "IDEMPOTENCY_CONFLICT", "key already used with a different request"
+	case errors.Is(err, sandbox.ErrIdempotencyGone):
+		status, code, message = 410, "IDEMPOTENCY_GONE", "creation no longer usable; use a new key"
 	case errors.Is(err, sandbox.ErrJobLimit):
-		status, code = http.StatusTooManyRequests, "JOB_LIMIT"
+		status, code, message = 429, "JOB_LIMIT", "execution history limit reached"
+	case errors.Is(err, sandbox.ErrTenantCapacity):
+		status, code, message = 429, "TENANT_QUOTA", "tenant instance quota exhausted"
 	case errors.Is(err, sandbox.ErrCapacity), errors.Is(err, sandbox.ErrClosing):
-		status, code = http.StatusServiceUnavailable, "UNAVAILABLE"
+		status, code, message = 503, "UNAVAILABLE", "service unavailable"
 	}
-	respond(w, status, map[string]any{"error": map[string]string{"code": code, "message": err.Error()}})
+	respond(w, status, map[string]any{"error": map[string]string{"code": code, "message": message}})
 }
 
 func respond(w http.ResponseWriter, status int, value any) {
