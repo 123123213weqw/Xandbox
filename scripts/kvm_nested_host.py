@@ -50,6 +50,14 @@ def qmp_probe(path):
     finally: conn.close()
 
 
+def private_group_counters(group):
+    values = {}
+    for name in ('memory.current', 'memory.peak', 'memory.events', 'pids.current', 'pids.events', 'cgroup.events'):
+        try: values[name] = (group/name).read_text()[:4096]
+        except OSError: values[name] = 'unavailable'
+    return values
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
@@ -82,6 +90,7 @@ def main():
         'l1_memory_mib':2048,'l0_cgroup_memory_max':3<<30,'l1_vcpus':4,'l1_disk_bytes':DISK_BYTES,
         'l1_business_network_interfaces':0,'l2_guest_memory_mib':512,'l2_vcpus':2,'l2_workspace_bytes':128<<20,
         'outer_disk_format':'raw','outer_disk_cache':'none','outer_disk_aio':'native','cases':[],
+        'l1_boots_completed':0,'checkpoint_progress':[],
         'limitations':['Forced loss of our isolated L1 service-host VM, not physical L0 power/media failure.',
             'No TCG fallback, migration, snapshot save/restore or shared host reboot.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
@@ -143,6 +152,7 @@ def main():
             channel.send({'version':1,'operation':'probe'}); reply=channel.read()
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
             assert disk.stat().st_size==DISK_BYTES
+            result['l1_boots_completed']+=1
         def request(operation,phase=None):
             value={'version':1,'operation':operation}
             if phase:value['phase']=phase
@@ -160,13 +170,16 @@ def main():
         boot()
         for phase in ('running','stopped','destroyed'):
             checkpoint=request('checkpoint',phase); assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
-            stopped=power_cut(); boot(); recovered=request('recover')
+            progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
+            stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
+            boot(); recovered=request('recover')
             assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
             assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
             result['cases'].append({'phase':phase,'passed':True,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
         result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True;result['passed']=True
     finally:
         if group.exists():
+            private_json(logs/'final-private-cgroup.json',private_group_counters(group))
             (group/'cgroup.kill').write_text('1');wait(lambda:cgroup_empty(group),'owned nested cleanup',seconds=15)
         if process is not None: process.wait(timeout=15)
         if lifetime is not None: os.close(lifetime)
