@@ -708,7 +708,7 @@
     "owned_service_runtime_cleanup_confirmed": true,
     "private_unassigned_builder_export_retained_for_followup_fault_tests": true,
     "not_validated": [
-      "precise real-KVM guest claim/marker/partial privileged initialization/lost-health-ACK fault windows",
+      "remaining real-KVM guest CLAIMED-to-marker crash, partial privileged initialization, fragmented/lost partial frames and READY-ledger write fault windows",
       "cross-host/kernel upgrade compatibility or prewarm pool",
       "physical disk failure, quotas, secure erase and long-term metadata retention",
       "shared/private RAM accounting, sustained mixed load, fairness, true tails and production SLO"
@@ -720,5 +720,28 @@
       "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39812735832",
       "result": "success; separate from KVM acceptance"
     }
+  },
+  "snapshot_initialization_faults": {
+    "validated_on": "2026-10-22",
+    "source_revision": "f9f47ecd026b60ba501d5e9a804907f3a2fb0054",
+    "report": "docs/validation/kvm-catalog-initialization-v2.json",
+    "production_ready": false,
+    "goal_complete": false,
+    "cases": 5,
+    "runner_exit_status": 0,
+    "cleanup_confirmed": true,
+    "toolchain": "go1.27.3",
+    "production_runtime_modified": false,
+    "production_daemon_sha256": "87e6799c653cea11039a64c9e67b91c53a95cc34d80d48e026dd68baeab85125",
+    "test_only_transport_injection": true,
+    "ordinary_daemon_recovery_and_same_key_rejection_in_all_cases": true,
+    "local_native_race_repeat_3": "passed; darwin does not execute Linux-only relay tests",
+    "ordinary_linux_ci": "new source jobs queued when last inspected; not counted as passed",
+    "not_validated": [
+      "guest-internal claim-to-marker crash and partial privileged initialization",
+      "fragmented/partial frame loss and READY-ledger write fault matrix",
+      "sustained mixed load, memory accounting, host/storage/power failures and production SLO"
+    ],
+    "creation_controller": "root Go test child uses real Manager/CreateScoped/Driver with12s PrepareTimeout; ordinary unmodified sandboxd handles restart and HTTP idempotency replay"
   }
 }

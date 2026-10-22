@@ -77,6 +77,26 @@ manifest为root私有0600文件；源文件/祖先必须root所有、无symlink�
 
 首次服务fixture在创建VMM之前因Unix socket路径109字节被配置校验拒绝；改为107字节并加入显式长度断言后重跑，旧失败不计入通过报告。失败日志/fixture、账号、宿主路径、身份/随机种子均不公开。本轮普通CI仍跳过硬件用例，CI绿不替代上述KVM证据。
 
+### 初始化故障：5个独立实机用例
+
+[初始化故障报告](validation/kvm-catalog-initialization-v2.json) 固定到源码`f9f47ecd026b60ba501d5e9a804907f3a2fb0054`，5个用例、runner退出0、`passed/cleanup_confirmed=true`。这次只新增`_test.go`与Python harness，**未修改生产构造器、Driver.Prepare或guestbridge.Initialize，也未添加生产故障开关**；普通恢复daemon重建的SHA256与之前实测一致。
+
+故障发生时控制器为root测试子进程，通过真实Manager/CreateScoped/Driver创建（不是HTTP创建），其PrepareTimeout为12秒以界定用例；生产daemon的30秒准备上限未改。恢复及旧创建键的HTTP验证使用普通sandboxd；正常HTTP创建/切换仍由上一节服务报告覆盖。
+
+测试子进程包装现有`registry.persist`适配器：先完成真实owner文件/目录fsync，再设置屏障或将实际Firecracker vsock监听inode改名，原路径安装仅用于测试的有界帧转发器。转发器连接真实KVM guest，不伪造guest或在宿主执行任务；只在明确指定的点丢弃ACK或修改实际健康响应的epoch。初始化请求/种子只在私有进程内转发，报告只包含计数与布尔结果。
+
+| 用例 | 实际证据与期望 |
+| --- | --- |
+| 持久attempt后、initialize发送前SIGKILL | guest实测WAITING、正常执行端口不可用；Core账本仍CREATING、attempt已落盘、所属cgroup有KVM fd。精确父Popen杀死子控制器，guardian停止VM；离线退役GC仍重建1个pin。 |
+| guest已封存、宿主READY前SIGKILL | 从真实guest收到精确Ref/boot/hash及0执行组的健康响应，但转发器不把任何成功健康帧交给生产客户端。屏障处账本仍CREATING；随后同样验证guardian、持久pin和普通daemon重启回收。不是guest内部CLAIMED到marker之间的崩溃。 |
+| 丢弃CLAIMED ACK | 初始化请求只发送1次；实际guest已认领。原Initialize通过精确正常健康响应确认原epoch后才READY，并通过原Driver执行guest UID65534命令。没有新种子重试。 |
+| 丢弃所有正常健康响应 | 真实guest已封存，但客户端不能确认；Create失败、Exec拒绝、候选回收。只发送1个初始化请求，重复的是只读健康探测。 |
+| 错误但语法有效的正常健康epoch | 仅修改真实健康响应的hash，其余Ref/bootID/状态/空执行组保持正确；必须拒绝READY并回收，仍只有1次初始化。 |
+
+每个用例独立发布新的可信未分配声明，结束后均由**普通sandboxd**重启验证旧代DESTROYED、旧创建键410（不会再Initialize）、pin为0，才删除RETIRING来源并保留RETIRED tombstone。整个专属运行目录/cgroup清理成功。两个SIGKILL到宿主空cgroup的时长只为本用例观测，包含父进程回收与轮询开销，不是延迟上界或SLO。
+
+普通Linux CI另用合成UDS测试转发器自身；该单测和本轮KVM报告不能相互替代。合成服务器现在会在清零请求前join所有处理协程，避免测试自身的熵清零/读取竞态；修正后的完整5例已再次在KVM运行（本报告），不是仅沿用旧测试二进制。
+
 ### 复现服务用例
 
 先按[组件步骤](PRISTINE.md)创建新的root私有fixture，并增加`ExportDirectory`（Root之外的新绝对目录）与`SHA256.agent`（实际agent摘要）。使用本源码的`TestKVMPristineBootstrapSnapshot`成功终止并确认builder命名空间删除后，才可使用其私有export。不要导入旧租户VM或手工伪造声明。
@@ -95,6 +115,18 @@ sudo -n python3 scripts/kvm_snapshot_smoke.py \
 
 脚本仅创建新的专属短`/srv`目录和cgroup，显式保留16个未分配UID、固定512MiB/2vCPU/128MiB工作盘；不改宿主时钟/路由、不采用已有目录、不执行宿主任意租户命令。任一错误保留失败终态，不应在相同report/log路径重启runner。需要确认进程终态0、报告`passed/cleanup_confirmed=true`及专属资源确已删除；stdout静默/观察超时不是进程未启动的证据。原始日志和export保持私有，不随报告提交。
 
+初始化故障另用同一源码构建Linux测试二进制，保留前述未分配export；它不能替代常规服务脚本：
+
+```sh
+GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test -c -trimpath -buildvcs=false -o bin/initialization.test ./internal/firecracker
+sudo -n python3 scripts/kvm_snapshot_faults.py \
+  --test-binary bin/initialization.test --daemon bin/sandboxd --admin bin/xandbox-template \
+  --warden bin/xandbox-warden --firecracker /absolute/pinned/firecracker --jailer /absolute/pinned/jailer \
+  --kernel /absolute/pinned/vmlinux --initrd /absolute/pinned/guest.cpio.gz \
+  --export-dir /absolute/private-unassigned-export --source-revision "$(git rev-parse HEAD)" \
+  --report /absolute/private-proof/initialization.json --log-dir /absolute/private-proof/fault-logs
+```
+
 ### 仍未完成
 
-guest认领/标记前后、部分特权初始化、正常健康ACK丢失等精确窗口的真实KVM故障矩阵；物理存储故障/容量压力、跨节点/内核升级兼容性、预热池、持续混合负载/公平性、阶段尾延迟、共享/私有RAM完整记账与长期回收曲线均未验收。M3和整个生产Goal保持未完成。
+guest内部CLAIMED到marker之间的进程崩溃、部分特权初始化失败、分片/部分帧丢失和READY账本写入故障等剩余矩阵；物理存储故障/容量压力、跨节点/内核升级兼容性、预热池、持续混合负载/公平性、阶段尾延迟、共享/私有RAM完整记账与长期回收曲线均未验收。M3和整个生产Goal保持未完成。
