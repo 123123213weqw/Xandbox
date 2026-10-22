@@ -16,7 +16,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [整状态盘EIO与fsync卡住时的独立撤权](docs/STATE_IO.md)：新原生daemon四场景通过，并完成健康宿主/IO预算/只读/快照双租户240次/初始化及冷路径回归。held-fsync idle的执行域停止观测从旧4381.622ms变为新43.555ms，新Exec拒绝1.843ms；均为各N=1，不是持久销毁或生产SLO。旧失败基线保留，仍需等待存储恢复后完成持久确认、清理与还容量。
 
-新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。普通驱动尚未接入，不能将该测试工具当成每代磁盘预算已经实现。
+新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。本分支另有普通驱动quota的实验性接入，cold有限恢复已打通；snapshot、配额耗尽/故障与完整新运行时验收尚未完成，不能按生产能力启用。
 
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 

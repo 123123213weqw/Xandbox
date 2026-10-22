@@ -36,7 +36,7 @@
 
 操作员需预先准备**独立空 cgroup 根**并委派 `memory pids cpu`，不能把控制器或其他业务进程移进去。驱动只管理其下的 64 位十六进制 ID+generation 子目录，不修改路由/iptables，不创建 guest NIC。UID/GID 范围必须由操作员专门保留，不得与宿主账户、其他执行器或彼此重叠；配置中需显式确认，驱动还会拒绝已知宿主账户冲突。
 
-固定规格：guest 512 MiB / 2 vCPU / 128 MiB 私有工作盘；host cgroup memory 768 MiB、swap 0、OOM 整组、pids 64、CPU 2 核预算。guest 任务规格见 [GUEST.md](GUEST.md)。实例数配额不是物理内存的自动容量规划；操作员必须限制总数，当前不提供磁盘项目 quota 或节点资源自动调度；[quota前置实验与待实现协议](PROJECT_QUOTA.md)不是已接入的配置项。可显式配置 [双层I/O策略](IO.md)：启用时额外要求委派io、实际runtime/backing queue匹配；cold和PAUSED快照都在准入前设置并核对frontend与io.max，缺失或错误不能忽略。旧state绑定不可直接加/删/改策略；缺省IO仍是旧实验规格，不代表生产资源预算。
+固定规格：guest 512 MiB / 2 vCPU / 128 MiB 私有工作盘；host cgroup memory 768 MiB、swap 0、OOM 整组、pids 64、CPU 2 核预算。guest 任务规格见 [GUEST.md](GUEST.md)。实例数配额不是物理内存的自动容量规划；操作员必须限制总数，本分支新增显式启用、尚未生产验收的ext4项目quota实验实现，见[前置证据与实现中的协议](PROJECT_QUOTA.md)；不提供节点资源自动调度或完整生产预算承诺。可显式配置 [双层I/O策略](IO.md)：启用时额外要求委派io、实际runtime/backing queue匹配；cold和PAUSED快照都在准入前设置并核对frontend与io.max，缺失或错误不能忽略。旧state绑定不可直接加/删/改策略；缺省IO仍是旧实验规格，不代表生产资源预算。
 
 配置结构（占位路径和摘要不能直接运行）：
 

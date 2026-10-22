@@ -1,12 +1,28 @@
-# ext4 project quota：前置验收与待实现的生产协议
+# ext4 project quota：前置证据与实现中的驱动协议
 
-**开发中。普通 sandboxd 尚未接入 project quota。** 本页区分内核前置证据与未来驱动设计；不能把“实例数配额”“128MiB guest 工作盘”或测试夹具的限额，当成每代宿主物理盘预算已经实现。M2 的完整磁盘/节点预算仍未完成。
+**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold有限恢复；snapshot、耗尽/故障矩阵、catalog锁和完整新运行时回归仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
 
 ## 为什么不能只设一个 hard limit
 
 Linux6.8 的 `ignore_hardlimit()` 对持有 `CAP_SYS_RESOURCE` 的进程允许绕过硬限制；project quota 不天然约束拥有该能力的 root 准备进程。检查来源是[固定内核 dquot.c](https://github.com/torvalds/linux/blob/v6.8/fs/quota/dquot.c)，不是根据“root 应该不受限制”猜测。仅 Q_GETQUOTA 读回正确，不代表实际写入会受限。
 
 同时，带 PROJINHERIT 的 ext4 目录会拒绝跨 project 的 hardlink（EXDEV），见[固定内核 namei.c](https://github.com/torvalds/linux/blob/v6.8/fs/ext4/namei.c)。当前快照路径以硬链接共享只读 memory/state inode，因此给新 jail 目录加继承标记后直接套用现有链接流程并不成立。不能靠只支持 cold、默默复制大快照，或给已运行 VM 临时取消限制来掩盖这个问题。
+
+## 当前分支的实验性接入（PR19，未完成验收）
+
+- `Config.Quota` 为操作员不可变策略：完整ext4 UUID、独占project范围、block/inode硬上限；mount-ID、实际enforcement与所有controller线程的capability均检查。旧state不可直接加/删/改策略，缺省仍是原有无quota实验规格。
+- projectID与既有durable UID slot一一对应，owner v3/v4分别支持cold/snapshot；`quota_attempted`必须持久化后才允许设置限额。未知或未attempt的非空quota记录不能收养；准备失败也保留owner直到准确清理。
+- 全部私有jail/root在复制前设置project/继承，快照共享链接仅在可信pre-fork区间进入并reseal，fork前读回。代码包含两条路径，**quota启用的snapshot实际矩阵尚未完成**。
+- Root无CAP_SYS_RESOURCE不是全部边界：init user namespace内文件owner可修改project属性，见[固定内核fileattr权限检查](https://github.com/torvalds/linux/blob/v6.8/fs/ioctl.c)。quota模式warden额外继承seccomp，阻止后代quotactl/quotactl_fd、FSSETXATTR及SETFLAGS，保留Firecracker默认filter；READY前检查NNP与过滤器。Go race/cgo不能同步all-thread prctl时严格拒绝，实际kernel/exec继承证明另在CGO0运行，不单线程回退。
+- Stop/drain、文件清理、quota清零/Q_SYNC/读回、owner删除/目录fsync与容量归还是不同阶段；quota I/O或用量不归零就不能提前释放UID/project。恢复不把jailer的PID文件当成身份或kill依据。
+
+当前有限实测使用新原生普通daemon `1d66fc40…`、warden `b290a5ed…` 与原始pinned guest：running/stopped/destroyed三检查点、四次L1实际开机的同盘普通恢复、旧key410、新真实KVM执行销毁通过。running/stopped各N=1观察到非fsync PID文件在重启后为空，quota charge与独立命名inode分配同时由189,911,040变为189,906,944字节；192MiB hard、128 inode hard、归属/继承/不可变资产均保持，并在GC后清零。不是百分位、SLO或全部quota故障验收。原始失败前序和新成功材料暂存于私有验收目录，将在完整PR验收后按准确来源/原字节SHA公开，不改写旧失败。
+
+验收不能把live物理用量错误当成不可变policy：初版fixture要求整个quota record完全相等而失败；后来独立核对namespace，定位到pinned jailer的`firecracker.pid`有3字节未同步内容，重启后为空。上游[PID文件写入代码](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/src/jailer/src/env.rs)没有fsync；修正只允许这个固定非权威文件的有界size变化，仍严格检查同inode/owner/mode/link、所有其他文件尺寸、实际块/inode计数和硬限额，没有用保存PID回收或先停止VM来绕过running掉电。
+
+**合并前还必须完成**：quota清零阶段移出catalog全局pin锁并验证并发；quota启用的snapshot/pin/初始化与block/inode耗尽、拒绝/崩溃/存储错误；全部新native默认冷路径/快照/初始化/IO/故障回归、独立清理和最终CI。当前实现与三例cold通过不等于完成这些要求。
+
+以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 
 ## TEST ONLY 夹具的边界
 
@@ -52,7 +68,7 @@ Go源码在 `ca8cfa6995fef3e6360ba6e917082d872d3e1689` 冻结；后续测试头 
 
 测试源码 [push CI](https://github.com/123123213weqw/Xandbox/actions/runs/39865136998) / [PR CI](https://github.com/123123213weqw/Xandbox/actions/runs/39865156844) 共10个实际job和全部步骤completed/success，attempt1；最终文档头另验，不将这个SHA的CI当成后续提交CI。
 
-## 待接入普通驱动的协议（设计，不是现有功能）
+## 协议检查清单（部分已实现，完整验收未完成）
 
 ### 1. 不可变策略与启动前置条件
 
@@ -74,7 +90,7 @@ Go源码在 `ca8cfa6995fef3e6360ba6e917082d872d3e1689` 冻结；后续测试头 
   → READY
 ```
 
-需要扩展版本化 ownership/registry，而不是在文件创建后随机挑一个 ID。allocator 必须有 durable reservation、并发互斥和重启一致性；外部未知非空 project 不可当作空闲 ID。projectID 耗尽应保留背压/容量，而不是绕回重用。准备失败也必须能从精确 owner/ref 恢复清理。
+当前以owner v3/v4扩展ownership/registry，而不是在文件创建后随机挑一个ID；完整并发与每个崩溃窗口仍需实际验证。allocator 必须有 durable reservation、并发互斥和重启一致性；外部未知非空 project 不可当作空闲 ID。projectID 耗尽应保留背压/容量，而不是绕回重用。准备失败也必须能从精确 owner/ref 恢复清理。
 
 ### 3. 共享模板与每代文件分开记账
 
