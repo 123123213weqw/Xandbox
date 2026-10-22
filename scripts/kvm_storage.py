@@ -31,9 +31,13 @@ def backing_file(device):
 
 
 class BoundedExt4:
-    def __init__(self, root):
+    def __init__(self, root, mount_name='m'):
+        # The ledger-only variant leaves the controller's writable lock/socket
+        # on healthy storage. Never bind-over a directory with pre-opened FDs.
+        if mount_name not in ('m', 'ledger'):
+            raise ValueError('unknown exclusive fault mount layout')
         self.root = Path(root)
-        self.mount = self.root / 'm'
+        self.mount = self.root / mount_name
         self.image = self.root / 'fault.ext4'
         self.mounted = False
         self.device = None
@@ -71,9 +75,26 @@ class BoundedExt4:
         return usage
 
     def fill(self, mode):
-        self._check()
+        usage = self._check()
         if self.fillers:
             raise RuntimeError('previous filler not released')
+        if usage.f_flag & os.ST_RDONLY:
+            raise RuntimeError('previous read-only fault not released')
+        if mode == 'readonly':
+            # Keep this pre-fault directory FD through the real superblock
+            # remount; a path-only bind-over could leave old FDs writable.
+            fd = os.open(self.mount, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                self._remount(True)
+                usage = self._check()
+                return {'mode': mode, 'volume_total_bytes': usage.f_blocks * usage.f_frsize,
+                        'available_bytes': usage.f_bavail * usage.f_frsize,
+                        'available_inodes': usage.f_favail,
+                        'statvfs_readonly': bool(usage.f_flag & os.ST_RDONLY),
+                        'write_probe': self.probe(errno.EROFS),
+                        'preopened_directory_write_probe': self.probe(errno.EROFS, dir_fd=fd)}
+            finally:
+                os.close(fd)
         observed = False
         count = 0
         if mode == 'blocks':
@@ -121,28 +142,46 @@ class BoundedExt4:
                 'available_bytes': usage.f_bavail * usage.f_frsize, 'available_inodes': usage.f_favail,
                 'write_probe': self.probe()}
 
-    def probe(self):
+    def _remount(self, readonly):
+        self._check()  # Identity/capacity check BEFORE every mount mutation.
+        subprocess.run(['mount', '-n', '-o', 'remount,' + ('ro' if readonly else 'rw') + ',nosuid,nodev,noexec',
+                        str(self.mount)], check=True, timeout=15)
+        usage = self._check()
+        if bool(usage.f_flag & os.ST_RDONLY) != readonly:
+            raise RuntimeError('owned fault remount flags did not take effect')
+
+    def probe(self, expected_errno=errno.ENOSPC, *, dir_fd=None):
         self._check()
         path = self.mount / '.enospc-probe'
         fd = None
         phase = 'open'
         try:
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            fd = os.open(path if dir_fd is None else path.name,
+                         os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600, dir_fd=dir_fd)
             phase = 'write'
             os.write(fd, b'x' * 4096)
             phase = 'fsync'
             os.fsync(fd)
         except OSError as error:
-            if error.errno != errno.ENOSPC:
+            if error.errno != expected_errno:
                 raise
             return {'errno': error.errno, 'phase': phase}
         finally:
             if fd is not None:
                 os.close(fd)
-                path.unlink()
+                os.unlink(path if dir_fd is None else path.name, dir_fd=dir_fd)
+        if expected_errno == 0:
+            return {'errno': 0, 'phase': phase}
         raise AssertionError('fault volume still accepts a durable new block')
 
     def release(self):
+        if self.mounted:
+            usage = self._check()
+            # Inspect actual flags rather than a Python bool: even a timed-out
+            # mount helper might already have changed this OWNED filesystem.
+            if usage.f_flag & os.ST_RDONLY:
+                self._remount(False)
+                self.probe(expected_errno=0)
         if self.fillers:
             self._check()
             for path in self.fillers:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Finite real ext4 block/inode ENOSPC + KVM recovery, not disk/power attestation.
+"""Finite real ext4 ENOSPC or ledger EROFS + KVM recovery, not media attestation.
 
 Re-execs in a private mount namespace. Only the exclusive 64MiB loop image is
 filled. Runtime/guest images and private diagnostics stay OUTSIDE that volume.
@@ -38,6 +38,8 @@ def main():
                  'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--parent-mntns', help=argparse.SUPPRESS)
+    parser.add_argument('--fault-suite', choices=('enospc', 'ledger-readonly'), default='enospc',
+                        help='ENOSPC affects all state; read-only affects only a separately mounted ledger')
     parser.add_argument('--max-host-stop-ms', type=float, default=0,
                         help='optional finite experimental observation guard, 100..4000ms; NOT a production SLO')
     args = parser.parse_args()
@@ -68,9 +70,18 @@ def main():
     root.mkdir(mode=0o700)
     runtime, assets = root / 'r', root / 'a'
     assets.mkdir(mode=0o700)
-    volume = BoundedExt4(root)
+    readonly = args.fault_suite == 'ledger-readonly'
+    if readonly:
+        state = root / 's'
+        state.mkdir(mode=0o700)
+        volume = BoundedExt4(state, mount_name='ledger')
+    else:
+        volume = BoundedExt4(root)
+        state = volume.mount / 's'
     process = None
-    result = {'test': 'bounded_ext4_enospc_real_kvm_recovery', 'passed': False, 'production_ready': False,
+    result = {'test': 'bounded_ext4_ledger_erofs_real_kvm_recovery' if readonly else 'bounded_ext4_enospc_real_kvm_recovery',
+              'fault_suite': args.fault_suite, 'fault_scope': 'ledger_only' if readonly else 'entire_state_directory',
+              'passed': False, 'production_ready': False,
               'source_revision': args.source_revision, 'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'host_kernel': os.uname().release, 'architecture': os.uname().machine,
               'harness_sha256': digest(__file__), 'helper_sha256': {n: digest(Path(__file__).with_name(n)) for n in
@@ -79,9 +90,9 @@ def main():
               'fault_image_bytes': VOLUME_BYTES, 'configured_node_instance_capacity': 1, 'configured_tenant_instance_quota': 1, 'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
               'experimental_host_stop_guard_ms': args.max_host_stop_ms,
               'guest_network_interfaces': 0, 'modes': [], 'checks': [], 'limitations': [
-                  '64MiB dedicated loop ext4 in private mount namespace; no host filesystem filled/remounted.',
+                  '64MiB dedicated loop ext4 in private mount namespace; no shared host filesystem filled/remounted.',
                   'Cold schema1 runtime stays on healthy host ext4; not snapshot cross-filesystem behavior.',
-                  'Real ENOSPC, not media EIO, power loss, journal corruption, project quota or secure erase.',
+                  'Returned ENOSPC or explicit ledger-only read-only remount/EROFS, not media EIO, automatic error-triggered remount, power loss, journal corruption, project quota or secure erase.',
                   'Stop observation includes existing independent guardian lease; no production latency/SLO claim.',
                   'No whole-host restart, dual-supervisor failure, long-term metadata retention or independent operator acceptance.']}
     log = (logs / 'controller.log').open('xb', buffering=0)
@@ -102,8 +113,8 @@ def main():
         assert copied['workspace'].stat().st_size == 128 << 20
         volume.create()
         result['private_mount_and_exact_autoclear_loop_binding_verified'] = True
-        state = volume.mount / 's'
-        state.mkdir(mode=0o700)
+        if not readonly:
+            state.mkdir(mode=0o700)
         cgroup.mkdir(mode=0o700)
         (cgroup / 'cgroup.subtree_control').write_text('+memory +pids +cpu')
         uid = 700000 + secrets.randbelow(30000)
@@ -223,7 +234,7 @@ def main():
                                          'host_image_size_unchanged': True, 'exec_after_freeing_space_passed': True}
         result['checks'].append('unprivileged real guest reaches workspace ENOSPC without growing host image; freeing guest file restores execution and clean deletion')
 
-        for mode, workload in itertools.product(('blocks', 'inodes'), ('busy', 'idle')):
+        for mode, workload in itertools.product(('readonly',) if readonly else ('blocks', 'inodes'), ('busy', 'idle')):
             case = {'mode': mode, 'workload': workload, 'passed': False}; result['modes'].append(case)
             key = secrets.token_hex(16)
             ref = create(key)
@@ -248,7 +259,7 @@ def main():
             call('DELETE', path(ref), {'generation': ref['generation']}, expected=500)
             case['request_to_failed_durable_delete_ms'] = round((time.perf_counter() - began) * 1000, 3)
             call('POST', path(ref) + '/exec', {'generation': ref['generation'], 'argv': ['true']}, expected=409)
-            wait(lambda: cgroup_empty(group(ref)), 'host stop despite ENOSPC', seconds=15)
+            wait(lambda: cgroup_empty(group(ref)), 'host stop despite storage fault', seconds=15)
             case['request_to_host_cgroup_empty_observed_ms'] = round((time.perf_counter() - began) * 1000, 3)
             if args.max_host_stop_ms:
                 assert case['request_to_host_cgroup_empty_observed_ms'] <= args.max_host_stop_ms, 'experimental physical-stop observation guard exceeded'
@@ -268,8 +279,9 @@ def main():
             process.kill(); process.wait(timeout=10); process = None
             failed = subprocess.run(base, env=env, capture_output=True, timeout=15)
             (logs / (mode + '-' + workload + '-full-restart.log')).write_bytes(failed.stdout + failed.stderr)
-            assert failed.returncode != 0 and b'no space left on device' in failed.stderr.lower()
-            case['restart_while_full_refused_with_enospc'] = True
+            expected_error = b'read-only file system' if readonly else b'no space left on device'
+            assert failed.returncode != 0 and expected_error in failed.stderr.lower()
+            case['restart_while_readonly_refused_with_erofs' if readonly else 'restart_while_full_refused_with_enospc'] = True
             assert owner(ref).exists() and jail(ref).exists() and cgroup_empty(group(ref))
             volume.release()
             process = start(); destroyed(ref)
@@ -279,7 +291,8 @@ def main():
             case['same_state_restart_reclaims_old_and_rejects_old_key'] = True
             case['fresh_real_vm_create_exec_destroy_after_recovery'] = True
             case['passed'] = True
-            result['checks'].append(mode + '/' + workload + ' ENOSPC refuses durable acknowledgement/admission and capacity reuse, independently stops host, refuses full-disk restart, then reclaims on same-state recovery')
+            result['checks'].append(mode + '/' + workload + ' ' + ('ledger EROFS' if readonly else 'ENOSPC') +
+                ' refuses durable acknowledgement/admission and capacity reuse, independently stops host, refuses still-faulted restart, then reclaims on same-state recovery')
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
         assert not [p for p in cgroup.iterdir() if p.is_dir()]
         result['passed'] = True
