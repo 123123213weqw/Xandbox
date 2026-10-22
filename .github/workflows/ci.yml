@@ -52,6 +52,8 @@ jobs:
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py
           python3 -m unittest discover -s scripts -p test_guest_fault_fixture.py
+          python3 -m py_compile scripts/kvm_mixed_load.py scripts/kvm_resources.py
+          python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
     runs-on: ubuntu-24.04

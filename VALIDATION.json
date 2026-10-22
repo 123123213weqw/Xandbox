@@ -793,5 +793,52 @@
       "partial frames and READY ledger-write faults",
       "sustained mixed-load fairness, RAM accounting, prewarm and production SLO"
     ]
+  },
+  "snapshot_mixed_load_finite": {
+    "production_ready": false,
+    "goal_complete": false,
+    "source_revision": "55a2bba857b9232c3aeff1d16bd8e0d921d86ef8",
+    "validated_at_utc": "2026-10-22T18:23:35.962913+00:00",
+    "report": "docs/validation/kvm-mixed-load-v6.json",
+    "report_sha256": "6e8e1119dba35c0fc186c5741af79633abe7ba7434c4a3a75b839b7daae6a460",
+    "runner_exit_status": 0,
+    "owned_runtime_cleanup_confirmed": true,
+    "cycles_per_tenant": 120,
+    "tenants": 2,
+    "mixed_duration_seconds": 246.267,
+    "resource_samples": 404,
+    "minimum_explicit_pacing_seconds": 180,
+    "default_catalog_assertion_groups_after_load": 10,
+    "native_linux_race_repeat": 1,
+    "native_linux_vet": "passed",
+    "native_linux_python_tests": 16,
+    "go_toolchain": "go1.27.3",
+    "daemon_sha256": "c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1",
+    "production_go_implementation_changed": false,
+    "failed_precursor": {
+      "source_revision": "6c594141c13b6a968e47fcd129041121760266f7",
+      "runner_exit_status": 1,
+      "report": "docs/validation/kvm-mixed-load-v5-failed.json",
+      "report_sha256": "8be98f858ea5aac0b5b8b655ba5a5801458a6472ecc07d1ebb01719697a18525",
+      "duration_seconds": 147.934,
+      "alpha_completed": 72,
+      "beta_completed": 97,
+      "beta_incomplete_iteration": 98,
+      "owned_cleanup_confirmed": true,
+      "diagnosis": "Original worker error overwritten by peer abort; stop-observer ENODEV rmdir race reproduced independently, not proof of original root cause."
+    },
+    "source_ci": {
+      "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39830903698",
+      "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39830912089",
+      "result": "all five actual jobs completed/success in each run"
+    },
+    "not_validated": [
+      "open-loop saturation or scheduler fairness",
+      "complete unique RAM/cgroup charge attribution or billing",
+      "busy-old-job termination storm in this probe",
+      "long-term resource stability/metadata archival",
+      "disk quota/failure, full host restart, independent operator deployment",
+      "production tails, SLO or secure erase"
+    ]
   }
 }

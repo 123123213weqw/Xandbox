@@ -20,6 +20,7 @@ import subprocess
 import time
 
 from kvm_driver_smoke import UnixHTTP, digest, wait
+from kvm_resources import cgroup_empty
 
 
 def sync_dir(path):
@@ -44,7 +45,13 @@ def main():
     for name in ('daemon', 'admin', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd',
                  'export-dir', 'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
+    parser.add_argument('--mixed-cycles', type=int, default=0, help='optional 1..256 fresh-VM switches PER tenant, two workers')
+    parser.add_argument('--mixed-min-seconds', type=float, default=0, help='0..240 seconds of explicit closed-loop pacing')
     args = parser.parse_args()
+    if (args.mixed_cycles != 0 and not 1 <= args.mixed_cycles <= 256) or not 0 <= args.mixed_min_seconds <= 240:
+        parser.error('mixed cycles must be0..256; pacing0..240 seconds')
+    if args.mixed_min_seconds and not args.mixed_cycles:
+        parser.error('--mixed-min-seconds requires --mixed-cycles')
     os.umask(0o077)  # Explicitly exercise production-private creation policy, including child CLIs.
     if os.geteuid() != 0 or os.uname().sysname != 'Linux' or os.uname().machine != 'x86_64':
         parser.error('requires root Linux amd64 on the same isolated KVM builder node')
@@ -64,7 +71,7 @@ def main():
     root.mkdir(mode=0o700)
     runtime, state, assets = root / 'r', root / 's', root / 'a'
     assets.mkdir(mode=0o700); state.mkdir(mode=0o700)
-    result = {'test': 'experimental_snapshot_catalog_service', 'production_ready': False,
+    result = {'test': 'experimental_snapshot_catalog_service', 'production_ready': False, 'passed': False,
               'source_revision': args.source_revision, 'harness_sha256': digest(__file__),
               'builder_source_revision': manifest['source_revision'],
               'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -82,6 +89,19 @@ def main():
     log = (logs / 'controller.log').open('ab', buffering=0)
     restored_owner = None
     try:
+        memory_info = {line.split(':')[0]: int(line.split()[1]) * 1024
+                       for line in Path('/proc/meminfo').read_text().splitlines()
+                       if line.startswith(('MemTotal:', 'MemAvailable:'))}
+        filesystem = os.statvfs(root)
+        cpu_models = sorted({line.partition(':')[2].strip() for line in Path('/proc/cpuinfo').read_text().splitlines()
+                             if line.startswith('model name')})
+        result['host_observations_before_test'] = {'logical_cpus': os.cpu_count(), 'cpu_models': cpu_models,
+                  'memory_total_bytes': memory_info['MemTotal'], 'memory_available_bytes': memory_info['MemAvailable'],
+                  'load_averages': os.getloadavg(),
+                  'filesystem_type': subprocess.check_output(['findmnt', '-n', '-o', 'FSTYPE', '-T', str(root)],
+                      text=True, timeout=5).strip(),
+                  'filesystem_total_bytes': filesystem.f_blocks * filesystem.f_frsize,
+                  'filesystem_available_bytes': filesystem.f_bavail * filesystem.f_frsize}
         copied = {}
         for name, source in sources.items():
             target = assets / name
@@ -114,12 +134,16 @@ def main():
         cfg, auth = root / 'config.json', root / 'auth.json'
         private_json(cfg, config)
         tokens = {name: secrets.token_hex(32) for name in ('alpha', 'beta')}
-        private_json(auth, {'version': 1, 'keys': [{'tenant_id': n, 'max_instances': 8,
+        private_json(auth, {'version': 1, 'keys': [{'tenant_id': n, 'max_instances': 3 if args.mixed_cycles else 8,
                      'token_sha256': hashlib.sha256(t.encode()).hexdigest()} for n, t in tokens.items()]})
         sock = state / 'api.sock'
         catalog = state / 'firecracker/catalog'
         base = [str(copied['daemon']), '-backend', 'firecracker', '-state-dir', str(state),
                 '-firecracker-config', str(cfg), '-auth-file', str(auth), '-max-instances', '8']
+        if args.mixed_cycles:
+            # Keep quota and metadata policy explicit; never raise session history.
+            base += ['-metrics', '-max-records', '2048', '-max-tenant-records', '1024',
+                     '-max-sessions', '32', '-max-tenant-sessions', '16']
         env = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'}
 
         def call(method, endpoint, body=None, expected=200, tenant='alpha', key=None):
@@ -171,7 +195,7 @@ def main():
         def path(ref): return '/v1/sandboxes/' + ref['id']
         def name(ref): return ref['id'] + ref['generation']
         def group(ref): return cgroup / name(ref)
-        def empty(g): return not g.exists() or 'populated 0' in (g / 'cgroup.events').read_text()
+        def empty(g): return cgroup_empty(g)
         def owner_path(ref): return state / 'firecracker' / (name(ref) + '.json')
         def jail(ref): return runtime / 'j/firecracker' / name(ref) / 'root'
         request = {'ttl_ms': 300000, 'limits': {'max_exec_ms': 60000, 'max_output_bytes': 16384, 'max_jobs': 128}}
@@ -217,6 +241,27 @@ def main():
         assert not list((state / 'firecracker').glob('[0-9a-f]' * 64 + '.json'))
         result['checks'].append('empty schema2 catalog refuses Create without cold or host fallback and leaves no owner')
         template = admin('publish')['template_id']; admin('activate', template)
+        if args.mixed_cycles:
+            from kvm_mixed_load import run_mixed
+            def metrics():
+                conn = UnixHTTP(state / 'metrics.sock')
+                try:
+                    conn.request('GET', '/metrics')
+                    response = conn.getresponse(); raw = response.read(65537)
+                    assert response.status == 200 and len(raw) <= 65536
+                    assert all(token.encode() not in raw for token in tokens.values())
+                    return raw.decode()
+                finally:
+                    conn.close()
+            result['mixed_load'] = {}
+            result['mixed_harness_sha256'] = {p: digest(Path(__file__).with_name(p))
+                                            for p in ('kvm_mixed_load.py', 'kvm_resources.py')}
+            run_mixed(cycles=args.mixed_cycles, min_seconds=args.mixed_min_seconds,
+                      call=call, finish=finish, destroyed=destroyed, group=group, empty=empty, wait=wait,
+                      metrics=metrics, process=process, cgroup=cgroup, runtime=runtime,
+                      memory=catalog / 'objects' / template / 'memory',
+                      snapshot_state=catalog / 'objects' / template / 'state', backend=state / 'firecracker',
+                      request=request, result=result['mixed_load'])
         first, second = create(), create('beta')
         check_kvm(first, template); check_kvm(second, template)
         a = execute(first, ['cat', '/proc/sys/kernel/random/boot_id'])['stdout'].strip()
