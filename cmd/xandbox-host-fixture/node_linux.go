@@ -38,6 +38,7 @@ type nodeReceipt struct {
 	Key, L1Boot, L2Boot string
 }
 type node struct {
+	quotaDriver bool
 	api         *client.Client
 	process     *exec.Cmd
 	exited      chan error
@@ -53,7 +54,7 @@ func (q nodeRequest) validate() error {
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
-	case "checkpoint":
+	case "checkpoint", "quota-checkpoint":
 		if q.Phase != "running" && q.Phase != "stopped" && q.Phase != "destroyed" {
 			return errors.New("invalid checkpoint phase")
 		}
@@ -202,6 +203,9 @@ func (n *node) start(ctx context.Context) error {
 	}
 	defer log.Close()
 	n.process = exec.Command("/srv/assets/sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "1", "-metrics")
+	if n.quotaDriver {
+		n.process = exec.Command("/usr/bin/xandbox-host-fixture", "-mode", "quota-daemon-drop")
+	}
 	n.process.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	n.process.Stdout, n.process.Stderr = log, log
 	if e = n.process.Start(); e != nil {
@@ -451,7 +455,10 @@ func runNode() error { return runNodeProfile(false) }
 func runNodeProfile(stateIO bool) error { return runNodeOptions(stateIO, false) }
 
 func runNodeOptions(stateIO, quotaProbe bool) error {
-	if stateIO && quotaProbe {
+	return runNodeProfiles(stateIO, quotaProbe, false)
+}
+func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
+	if (stateIO && quotaProbe) || (stateIO && quotaDriver) || (quotaProbe && quotaDriver) {
 		return errors.New("exclusive L1 image profile required")
 	}
 	if e := requireNode(); e != nil {
@@ -487,7 +494,7 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{}
+	n := &node{quotaDriver: quotaDriver}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -512,6 +519,12 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 				}
 			case "checkpoint":
 				result, e = n.checkpoint(ctx, q.Phase)
+			case "quota-checkpoint":
+				if !quotaDriver {
+					e = errors.New("ordinary driver quota image profile required")
+				} else {
+					result, e = n.quotaDriverCheckpoint(ctx, q.Phase)
+				}
 			case "io-fault":
 				if mapper == nil {
 					e = errors.New("isolated state-I/O image profile required")
@@ -529,11 +542,20 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 				if quotaProbe {
 					quotaResult, e = recoverQuotaProbe()
 				}
+				if e == nil && quotaDriver {
+					quotaResult, e = verifyDriverQuotaColdBoot()
+				}
 				if e == nil {
 					e = kvmAvailable()
 				}
 				if e == nil {
 					result, e = n.recover(ctx)
+					if e == nil && quotaDriver {
+						e = driverQuotaAllClear()
+						if e == nil {
+							quotaResult["all_private_project_ids_cleared"] = true
+						}
+					}
 					if e == nil {
 						for k, v := range quotaResult {
 							result[k] = v

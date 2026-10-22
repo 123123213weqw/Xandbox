@@ -11,6 +11,13 @@ from kvm_nested_host import JSONSocket, replace_private_json, quota_format_optio
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_driver_quota_profile_loads_only_inside_owned_l1_and_is_exclusive(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_driver=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-driver >/dev/console 2>&1\n'))
+        for flags in ({'state_io':True,'quota_driver':True},{'quota_probe':True,'quota_driver':True}):
+            with self.assertRaises(ValueError):init_scripts([],**flags)
+
     def test_quota_format_uses_installed_e2fsprogs_extended_option_not_unknown_flag(self):
         self.assertEqual(quota_format_options(False),[])
         self.assertEqual(quota_format_options(True),['-O','project,quota','-E','quotatype=prjquota','-I','256','-b','4096'])

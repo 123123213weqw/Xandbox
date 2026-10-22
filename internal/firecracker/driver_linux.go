@@ -53,6 +53,7 @@ type driver struct {
 	registry *registry
 	cfg      Config
 	procs    map[string]*process
+	quota    *projectQuota
 }
 
 // New requires root and a pre-delegated empty cgroup-v2 root. Its caller must
@@ -124,6 +125,16 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 			return nil, err
 		}
 	}
+	quota, err := openProjectQuota(cfg)
+	if err != nil {
+		return nil, err
+	}
+	keepQuota := false
+	defer func() {
+		if quota != nil && !keepQuota {
+			quota.anchor.Close()
+		}
+	}()
 	for _, p := range []string{filepath.Join(cfg.RuntimeRoot, "j"), filepath.Join(cfg.RuntimeRoot, "j/firecracker"), filepath.Join(stateDir, "firecracker")} {
 		if err := privateDir(p); err != nil {
 			return nil, err
@@ -132,6 +143,12 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 	r, err := newRegistry(filepath.Join(stateDir, "firecracker"), cfg, records)
 	if err != nil {
 		return nil, err
+	}
+	if quota != nil {
+		if err := quota.reconcile(r.owners); err != nil {
+			return nil, err
+		}
+		r.beforeRelease = quota.release
 	}
 	// Unknown resources must not be adopted or silently ignored. In particular,
 	// a lost ownership manifest must not make a previous VM appear destroyed.
@@ -166,7 +183,8 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 			return nil, errors.New("snapshot catalog and runtime require the same filesystem")
 		}
 	}
-	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process)}, nil
+	keepQuota = true
+	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process), quota: quota}, nil
 }
 
 func (*driver) Name() string { return "firecracker" }
@@ -206,6 +224,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	if err != nil {
 		return err
 	}
+	if d.quota != nil {
+		if err := d.quota.reserve(owner, func() error { return d.registry.markQuotaAttempt(k) }); err != nil {
+			return err
+		}
+	}
 	// A configured reserved range is mandatory; also reject known host accounts.
 	if _, err := user.LookupId(strconv.Itoa(owner.UID)); err == nil {
 		return errors.New("reserved UID conflicts with a host account")
@@ -244,7 +267,20 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	}
 	defer cg.Close()
 	root := filepath.Join(jail, "root")
-	if err := os.MkdirAll(root, 0700); err != nil {
+	if d.quota != nil {
+		if err := os.Mkdir(jail, 0700); err != nil {
+			return err
+		}
+		if err := d.quota.setDir(jail, owner, true); err != nil {
+			return err
+		}
+		if err := os.Mkdir(root, 0700); err != nil {
+			return err
+		}
+		if err := d.quota.setDir(root, owner, true); err != nil {
+			return err
+		}
+	} else if err := os.MkdirAll(root, 0700); err != nil {
 		return err
 	}
 	assets := map[string]Asset{"workspace.ext4": d.cfg.Workspace}
@@ -258,8 +294,20 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		}
 	}
 	if d.registry.catalog != nil {
+		// Only trusted immutable links enter during this pre-fork window.
+		// Every failure leaves an owned, never-admitted jail for normal GC.
+		if d.quota != nil {
+			if err := d.quota.setDir(root, owner, false); err != nil {
+				return err
+			}
+		}
 		if err := d.registry.catalog.linkOwned(ctx, owner, root); err != nil {
 			return err
+		}
+		if d.quota != nil {
+			if err := d.quota.setDir(root, owner, true); err != nil {
+				return err
+			}
 		}
 	}
 	if err := os.Chmod(filepath.Join(root, "workspace.ext4"), 0600); err != nil {
@@ -267,6 +315,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	}
 	if err := os.Chown(filepath.Join(root, "workspace.ext4"), owner.UID, owner.UID); err != nil {
 		return err
+	}
+	if d.quota != nil {
+		if err := d.quota.verifyPrepared(jail, owner); err != nil {
+			return err
+		}
 	}
 	leaseRead, leaseWrite, err := os.Pipe()
 	if err != nil {
@@ -291,6 +344,9 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		"--uid", strconv.Itoa(owner.UID), "--gid", strconv.Itoa(owner.UID), "--chroot-base-dir", filepath.Join(d.cfg.RuntimeRoot, "j"),
 		"--cgroup-version", "2", "--parent-cgroup", rel, "--resource-limit", "no-file=256", "--resource-limit", "fsize=134217728",
 		"--", "--api-sock", "/api.sock"}
+	if d.quota != nil {
+		args = append([]string{"-deny-quota-mutation"}, args...)
+	}
 	cmd := exec.Command(d.cfg.Warden.Path, args...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	cmd.ExtraFiles = []*os.File{leaseRead, kill}
@@ -395,6 +451,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 			health, err = guestbridge.Call(callCtx, filepath.Join(root, "v.sock"), guestwire.Request{Version: guestwire.Version, Operation: "health", Ref: ref})
 			return err
 		}); err != nil {
+			return err
+		}
+	}
+	if d.quota != nil {
+		if err := retry(ctx, p.done, func() error { return d.quota.verifyDomain(group, owner) }); err != nil {
 			return err
 		}
 	}

@@ -33,6 +33,7 @@ type Config struct {
 	Initrd           Asset           `json:"initrd"`
 	Workspace        Asset           `json:"workspace"`
 	Snapshot         *SnapshotPolicy `json:"snapshot,omitempty"`
+	Quota            *QuotaPolicy    `json:"quota,omitempty"`
 	IO               *IOPolicy       `json:"io,omitempty"`
 }
 
@@ -76,6 +77,11 @@ func (c Config) validate() error {
 	}
 	if filepath.Base(c.Firecracker.Path) != "firecracker" {
 		return errors.New("Firecracker executable basename must be firecracker")
+	}
+	if c.Quota != nil {
+		if err := c.Quota.validate(c.UIDCount); err != nil {
+			return err
+		}
 	}
 	if c.IO != nil {
 		return c.IO.validate()

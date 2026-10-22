@@ -66,3 +66,23 @@ func TestQuotaRequestAcceptsOnlyFixedPhaseLessOperation(t *testing.T) {
 		}
 	}
 }
+
+func TestOrdinaryQuotaDriverHelpersCannotRunOnL0(t *testing.T) {
+	if e := runQuotaDaemon(); e == nil {
+		t.Fatal("fixed daemon cap drop escaped L1 guard")
+	}
+	if _, e := driverQuotaRead(driverProjectFirst); e == nil {
+		t.Fatal("driver quota read escaped L1 guard")
+	}
+	if _, e := driverQuotaRead(0); e == nil {
+		t.Fatal("arbitrary project read accepted")
+	}
+	for _, phase := range []string{"running", "stopped", "destroyed"} {
+		if e := (nodeRequest{Version: 1, Operation: "quota-checkpoint", Phase: phase}).validate(); e != nil {
+			t.Fatal(e)
+		}
+	}
+	if e := (nodeRequest{Version: 1, Operation: "quota-checkpoint", Phase: "1300000"}).validate(); e == nil {
+		t.Fatal("arbitrary quota phase accepted")
+	}
+}
