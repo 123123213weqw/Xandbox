@@ -531,8 +531,9 @@ def main():
                     bind_ms = round((time.perf_counter() - began) * 1000, 3)
                     assert switched['revision'] == 2 and switched['previous'] == initial['current']
                     assert switched['current'] != initial['current']
-                    assert session_exec(switched, ['test', '!', '-e', 'session-note'])['output']['exit_code'] == 0
                     assert session_exec(switched, ['true'])['output']['exit_code'] == 0
+                    first_command_ms = round((time.perf_counter() - began) * 1000, 3)
+                    assert session_exec(switched, ['test', '!', '-e', 'session-note'])['output']['exit_code'] == 0
                     command_ms = round((time.perf_counter() - began) * 1000, 3)
                     stopped_ms = stop_sample.result(timeout=15)
                 destroyed(initial['current'])
@@ -540,6 +541,7 @@ def main():
                 assert call('POST', session_path + '/switch', {'expected_revision': 1, 'create': session_req}, key=switch_key)['current'] == switched['current']
                 call('POST', session_path + '/exec', {'revision': 1, 'argv': ['true']}, expected=409)
                 result['session_samples'] = {'cold_request_to_binding_response_ms': bind_ms,
+                    'request_to_first_new_command_success_ms': first_command_ms,
                     'request_to_new_commands_completed_ms': command_ms, 'request_to_old_stopped_observed_ms': stopped_ms,
                     'request_to_old_durable_destroyed_observed_ms': reclaimed_ms, 'server_phase_observations': switched['timings']}
                 result['checks'].append('real cold session switch: scoped capability, fresh workspace, stale-version rejection and separate old stop/reclaim observations')

@@ -108,16 +108,18 @@ def main():
                 second = call('POST', path(first) + '/switch', {'expected_revision': 1}, key='switch-one')
                 bound_ms = (time.perf_counter() - before) * 1000
                 assert second['revision'] == 2 and second['previous'] == first['current'] and second['current'] != first['current']
-                assert execute(second, ['read', 'note'])['status'] == 'FAILED', 'dirty workspace reused'
                 assert execute(second, ['echo', 'new'])['status'] == 'EXITED'
                 first_command_ms = (time.perf_counter() - before) * 1000
+                assert execute(second, ['read', 'note'])['status'] == 'FAILED', 'dirty workspace reused'
+                commands_completed_ms = (time.perf_counter() - before) * 1000
                 call('POST', path(first) + '/exec', {'revision': 1, 'argv': ['echo']}, status=409)
                 replay = call('POST', path(first) + '/switch', {'expected_revision': 1}, key='switch-one')
                 assert replay['current'] == second['current']
                 call('POST', path(first) + '/switch', {'expected_revision': 2}, key='switch-one', status=409)
                 wait(lambda: call('GET', '/v1/sandboxes/' + first['current']['id'])['state'] == 'DESTROYED', 'old durable reclaim')
                 samples['mock_switch_response_ms'] = round(bound_ms, 3)
-                samples['mock_request_to_new_commands_completed_ms'] = round(first_command_ms, 3)
+                samples['mock_request_to_first_new_command_success_ms'] = round(first_command_ms, 3)
+                samples['mock_request_to_new_commands_completed_ms'] = round(commands_completed_ms, 3)
                 samples['mock_server_phase_observations'] = second['timings']
                 checks.append('conditional cold switch rejects old revision; new workspace clean; old VM lifecycle separately reclaimed; idempotent switch key')
 
