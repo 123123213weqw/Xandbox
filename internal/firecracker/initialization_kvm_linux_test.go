@@ -165,17 +165,20 @@ func (p *initializationFaultBridge) serve(client *net.UnixConn) {
 			return
 		}
 		var out guestinit.Response
-		if e = guestwire.Read(remote, guestinit.MaxResponse, &out); e != nil {
+		ackError := guestwire.Read(remote, guestinit.MaxResponse, &out)
+		if ackError != nil && !strings.HasPrefix(p.mode, "guest_") {
 			return
 		}
-		if !out.Valid() || out.Phase != guestinit.Claimed || out.Digest != req.Digest() {
+		if ackError == nil && (!out.Valid() || out.Phase != guestinit.Claimed || out.Digest != req.Digest()) {
 			p.fail(errors.New("real guest did not claim exact request"))
 			return
 		}
 		if strings.HasPrefix(p.mode, "guest_") {
 			// Forward no more initialization. Read-only probes observe actual guest
 			// filesystem side effects or the exact compiler-overlay crash/respawn.
-			_ = guestwire.Write(client, guestinit.MaxResponse, out)
+			if ackError == nil {
+				_ = guestwire.Write(client, guestinit.MaxResponse, out)
+			}
 			deadline := time.Now().Add(4 * time.Second)
 			for time.Now().Before(deadline) {
 				ctx, cancel := context.WithTimeout(p.ctx, 300*time.Millisecond)
@@ -186,7 +189,7 @@ func (p *initializationFaultBridge) serve(client *net.UnixConn) {
 					p.partialFailureObserved.Store(true)
 					return
 				}
-				if p.mode == "guest_crash_before_marker" && stateError == nil && state.Phase == guestinit.Waiting && viewError == nil && !view.Claimed && !view.Receipt && view.AgentGenerations >= 2 {
+				if p.mode == "guest_crash_before_marker" && stateError == nil && state.Phase == guestinit.Waiting && viewError == nil && !view.Claimed && !view.Receipt && view.BeforeMarkerExit && view.AgentGenerations >= 2 {
 					p.waitingObserved.Store(true)
 					return
 				}

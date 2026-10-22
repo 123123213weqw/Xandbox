@@ -56,6 +56,9 @@ func main() {
 				return
 			}
 			out := fixturewire.Response{Version: 1}
+			if b, e := os.ReadFile("/run/xandbox-fixture-before-marker-exit"); e == nil {
+				out.BeforeMarkerExit = string(b) == "fixture exit97"
+			}
 			_, e = os.Lstat("/run/xandbox-init/claimed")
 			out.Claimed = e == nil
 			_, e = os.Lstat("/run/xandbox-init/receipt.json")

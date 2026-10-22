@@ -71,7 +71,7 @@ def prepare_overlay(root, destination):
     if sha(text)!=INITIALIZE_SOURCE_SHA: raise ValueError('reviewed source changed; do not silently patch another function')
     needle=b'\tif _, e := privatefile.EnsureDirectory(initDir); e != nil {'
     assert text.count(needle)==1
-    injection=b'\t// TEST COMPILER OVERLAY ONLY: exact post-CLAIMED/pre-marker process death.\n\tif _, e := os.Stat("/etc/xandbox-fixture-crash-before-marker"); e == nil { os.Exit(97) }\n'
+    injection=b'\t// TEST COMPILER OVERLAY ONLY: exact post-CLAIMED/pre-marker process death.\n\tif _, e := os.Stat("/etc/xandbox-fixture-crash-before-marker"); e == nil { if e = os.WriteFile("/run/xandbox-fixture-before-marker-exit", []byte("fixture exit97"), 0600); e != nil { return e }; os.Exit(97) }\n'
     patched=destination/'initialize_linux.go';patched.write_bytes(text.replace(needle,injection+needle))
     patched.chmod(0o600)
     overlay=destination/'overlay.json';overlay.write_text(json.dumps({'Replace':{str(source.resolve()):str(patched.resolve())}}));overlay.chmod(0o600)

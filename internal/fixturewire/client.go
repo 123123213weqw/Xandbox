@@ -24,6 +24,7 @@ type Request struct {
 }
 type Response struct {
 	Version            int  `json:"version"`
+	BeforeMarkerExit   bool `json:"before_marker_exit"`
 	Claimed            bool `json:"claimed"`
 	Receipt            bool `json:"receipt"`
 	MachineIDDirectory bool `json:"machine_id_directory"`
