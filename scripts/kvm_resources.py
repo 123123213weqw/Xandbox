@@ -5,6 +5,7 @@ Never add them to manufacture total unique RAM or claim memory.current is all
 guest RAM. No PID/path/Ref escapes the numeric result.
 """
 import ctypes
+import errno
 import os
 from pathlib import Path
 import re
@@ -14,6 +15,22 @@ KB_FIELDS = ('Rss', 'Pss', 'Pss_Anon', 'Pss_File', 'Pss_Shmem',
              'Private_Clean', 'Private_Dirty', 'Shared_Clean', 'Shared_Dirty', 'Anonymous')
 HEADER = re.compile(r'^[0-9a-f]+-[0-9a-f]+\s+\S+\s+[0-9a-f]+\s+([0-9a-f]+):([0-9a-f]+)\s+(\d+)(?:\s|$)')
 REF_NAME = re.compile(r'^[0-9a-f]{64}$')
+
+
+def cgroup_empty(path):
+    try:
+        lines = (path / 'cgroup.events').read_text().splitlines()
+        if 'populated 0' in lines:
+            return True
+        if 'populated 1' in lines:
+            return False
+        raise ValueError('missing cgroup populated observation')
+    except OSError as error:
+        if error.errno not in (errno.ENOENT, errno.ENODEV):
+            raise
+        # kernfs can return ENODEV on a previously opened FD after rmdir.
+        # Never interpret ENODEV alone as stop proof for a still-existing group.
+        return not path.exists()
 
 
 def parse_kb(text):
@@ -158,9 +175,11 @@ class ResourceSampler:
                 row['owned_cgroup_count'] += 1
                 row['owned_cgroup_memory_current_bytes'] += int((group / 'memory.current').read_text())
                 pids = (group / 'cgroup.procs').read_text().split()
-            except FileNotFoundError:
-                self.transient_misses += 1
-                continue
+            except OSError as error:
+                if error.errno in (errno.ENOENT, errno.ENODEV) and not group.exists():
+                    self.transient_misses += 1
+                    continue
+                raise
             for pid in pids:
                 value = self._process(pid, group)
                 if value is None or (pid, value[0]) in seen:

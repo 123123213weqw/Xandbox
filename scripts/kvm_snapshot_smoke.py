@@ -20,6 +20,7 @@ import subprocess
 import time
 
 from kvm_driver_smoke import UnixHTTP, digest, wait
+from kvm_resources import cgroup_empty
 
 
 def sync_dir(path):
@@ -70,7 +71,7 @@ def main():
     root.mkdir(mode=0o700)
     runtime, state, assets = root / 'r', root / 's', root / 'a'
     assets.mkdir(mode=0o700); state.mkdir(mode=0o700)
-    result = {'test': 'experimental_snapshot_catalog_service', 'production_ready': False,
+    result = {'test': 'experimental_snapshot_catalog_service', 'production_ready': False, 'passed': False,
               'source_revision': args.source_revision, 'harness_sha256': digest(__file__),
               'builder_source_revision': manifest['source_revision'],
               'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -194,11 +195,7 @@ def main():
         def path(ref): return '/v1/sandboxes/' + ref['id']
         def name(ref): return ref['id'] + ref['generation']
         def group(ref): return cgroup / name(ref)
-        def empty(g):
-            try:
-                return 'populated 0' in (g / 'cgroup.events').read_text()
-            except FileNotFoundError:
-                return not g.exists()
+        def empty(g): return cgroup_empty(g)
         def owner_path(ref): return state / 'firecracker' / (name(ref) + '.json')
         def jail(ref): return runtime / 'j/firecracker' / name(ref) / 'root'
         request = {'ttl_ms': 300000, 'limits': {'max_exec_ms': 60000, 'max_output_bytes': 16384, 'max_jobs': 128}}
