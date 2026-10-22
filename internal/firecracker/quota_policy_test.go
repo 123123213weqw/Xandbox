@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
@@ -148,5 +150,126 @@ func TestQuotaOwnerVersionsAndInitializationCannotCrossPolicies(t *testing.T) {
 	}
 	if !r.owners[k].InitializationAttempted || !validOwnership(r.owners[k], r.cfg) {
 		t.Fatal("snapshot quota epoch lost")
+	}
+}
+
+func TestSlowQuotaClearDoesNotHoldCatalogPinLock(t *testing.T) {
+	r, m, mem, st := catalogFixtureQuota(t, quotaPolicy())
+	id := publishActive(t, r, m, mem, st)
+	first, e := r.reserve(reference("1"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	k, _ := key(first.Ref)
+	if e = r.markQuotaAttempt(k); e != nil {
+		t.Fatal(e)
+	}
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	r.beforeRelease = func(o ownership) error {
+		if o.ProjectID != first.ProjectID {
+			return errors.New("unexpected quota release")
+		}
+		close(entered)
+		<-release
+		return nil
+	}
+	done := make(chan error, 1)
+	go func() { done <- r.release(k) }()
+	defer func() {
+		once.Do(func() { close(release) })
+		if e := <-done; e != nil {
+			t.Error(e)
+		}
+		if t.Failed() {
+			return
+		}
+		status, e := r.catalog.status(context.Background())
+		if e != nil || len(status.Items) != 1 || status.Items[0].Pins != 1 || r.owns(k) {
+			t.Error("completed quota cleanup did not release exactly its old pin", e)
+		}
+	}()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("quota barrier not entered")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	status, e := r.catalog.status(ctx)
+	if e != nil {
+		t.Fatal("unrelated catalog status waited for quota I/O", e)
+	}
+	if len(status.Items) != 1 || status.Items[0].Pins != 1 || !r.owns(k) {
+		t.Fatal("old pin/ownership released during quota I/O")
+	}
+	if _, e = os.Stat(filepath.Join(r.dir, k+".json")); e != nil {
+		t.Fatal("durable owner removed before quota proof", e)
+	}
+	other, e := r.reserveContext(ctx, reference("2"))
+	if e != nil {
+		t.Fatal("new prepare waited for another quota clear", e)
+	}
+	if other.UID == first.UID || other.ProjectID == first.ProjectID {
+		t.Fatal("pending quota slot reused")
+	}
+	if e = r.catalog.retire(ctx, id); e != nil {
+		t.Fatal(e)
+	}
+	if removed, e := r.catalog.collect(ctx); e != nil || len(removed) != 0 {
+		t.Fatal("old and new pins not retained", e)
+	}
+	once.Do(func() { close(release) })
+}
+
+func TestQuotaDeleteRequiresUnchangedProofAndHonorsCancellation(t *testing.T) {
+	for _, mode := range []string{"direct", "changed", "cancel-before", "cancel-after"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg := policy()
+			cfg.Quota = quotaPolicy()
+			cfg.UIDCount = 1
+			r, e := newRegistry(t.TempDir(), cfg, nil)
+			if e != nil {
+				t.Fatal(e)
+			}
+			o, e := r.reserve(reference("1"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			k, _ := key(o.Ref)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			calls := 0
+			r.beforeRelease = func(owner ownership) error {
+				calls++
+				if mode == "changed" {
+					return r.markQuotaAttempt(k)
+				}
+				if mode == "cancel-after" {
+					cancel()
+				}
+				return nil
+			}
+			if mode == "direct" {
+				e = r.releaseOwner(k, nil)
+			} else {
+				if mode == "cancel-before" {
+					cancel()
+				}
+				e = r.releaseContext(ctx, k)
+			}
+			if e == nil || !r.owns(k) {
+				t.Fatal("ownership released without a current complete proof")
+			}
+			if _, e = os.Stat(filepath.Join(r.dir, k+".json")); e != nil {
+				t.Fatal("durable owner removed", e)
+			}
+			if _, e = r.reserve(reference("2")); !errors.Is(e, sandbox.ErrCapacity) {
+				t.Fatal("quota slot reused before durable release", e)
+			}
+			if (mode == "direct" || mode == "cancel-before") && calls != 0 {
+				t.Fatal("quota I/O started without authorization/context")
+			}
+		})
 	}
 }

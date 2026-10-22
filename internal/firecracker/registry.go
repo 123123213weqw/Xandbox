@@ -178,21 +178,40 @@ func (r *registry) reserveOwner(ref sandbox.Ref, template string) (ownership, er
 
 func (r *registry) release(k string) error { return r.releaseContext(context.Background(), k) }
 func (r *registry) releaseContext(ctx context.Context, k string) error {
-	if r.catalog == nil {
-		return r.releaseOwner(k)
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	return r.catalog.withLock(ctx, func() error { return r.releaseOwner(k) })
-}
-func (r *registry) releaseOwner(k string) error {
-	r.mu.RLock()
-	o, exists := r.owners[k]
-	r.mu.RUnlock()
-	if exists && r.cfg.Quota != nil {
-		if r.beforeRelease == nil {
+	var quotaProof *ownership
+	if r.cfg.Quota != nil {
+		r.mu.RLock()
+		o, exists := r.owners[k]
+		r.mu.RUnlock()
+		if !exists || !validOwnership(o, r.cfg) || r.beforeRelease == nil {
 			return errors.New("quota ownership cannot be released without zero-usage proof")
 		}
+		// Slow quota I/O must not hold the catalog's inter-process pin lock.
+		// The exact durable owner (and hence pin, UID and project) stays in
+		// place until the short, serialized ownership deletion below succeeds.
 		if err := r.beforeRelease(o); err != nil {
 			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		quotaProof = &o
+	}
+	if r.catalog == nil {
+		return r.releaseOwner(k, quotaProof)
+	}
+	return r.catalog.withLock(ctx, func() error { return r.releaseOwner(k, quotaProof) })
+}
+func (r *registry) releaseOwner(k string, quotaProof *ownership) error {
+	if r.cfg.Quota != nil {
+		r.mu.RLock()
+		o, exists := r.owners[k]
+		r.mu.RUnlock()
+		if !exists || quotaProof == nil || o != *quotaProof || !validOwnership(o, r.cfg) {
+			return errors.New("quota ownership changed or its release proof is missing")
 		}
 	}
 
