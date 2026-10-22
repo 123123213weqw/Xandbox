@@ -18,6 +18,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增实验性 [会话绑定与冷切换](docs/SESSIONS.md)：候选 READY 后以 revision 条件切换，旧环境撤权/停止/回收分离，普通 per-VM 执行接口不能绕过会话准入。已通过真实 KVM 新路径验收；仍无快照/预热加速，约1.45s到新命令首次成功的冷切换单样本不是生产百分位或SLO。
 
+实验性 [独立管理指标](docs/OBSERVABILITY.md) 使用显式开启的私有Unix socket、固定基数直方图与原子gauges；不作为可靠审计或停止/销毁证明。
+
 ## 已实现
 
 - HTTP 控制面使用 Go 标准库；Linux 宿主时钟/guardian 和实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。

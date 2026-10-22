@@ -14,9 +14,11 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
 )
 
 type Options struct {
+	Metrics                                     *telemetry.Registry
 	MaxSessions, MaxTenantSessions, MaxAttempts int
 	RetryInterval                               time.Duration
 }
@@ -45,6 +47,7 @@ type entry struct {
 	route       atomic.Pointer[route]
 }
 type Broker struct {
+	metricRecords   atomic.Int64
 	mu              sync.Mutex
 	core            *sandbox.Manager
 	store           Store
@@ -139,6 +142,7 @@ func New(core *sandbox.Manager, store Store, opts Options) (*Broker, error) {
 		e.record = r
 		b.revokeAll(e)
 	}
+	b.metricRecords.Store(int64(len(b.records)))
 	go b.journal()
 	return b, nil
 }
@@ -211,7 +215,9 @@ func (b *Broker) lookup(tenant, id string) (*entry, error) {
 	return e, nil
 }
 
-func (b *Broker) Open(ctx context.Context, owner sandbox.Owner, key string, req sandbox.CreateRequest) (Result, error) {
+func (b *Broker) Open(ctx context.Context, owner sandbox.Owner, key string, req sandbox.CreateRequest) (_ Result, retErr error) {
+	started := time.Now()
+	defer func() { b.opts.Metrics.Observe(telemetry.SessionOpenCall, time.Since(started), retErr != nil) }()
 	if !owner.Valid() {
 		return Result{}, sandbox.ErrInvalid
 	}
@@ -266,13 +272,16 @@ func (b *Broker) Open(ctx context.Context, owner sandbox.Owner, key string, req 
 	e.attempts[kh] = a
 	e.busy = true
 	b.records[id], b.keys[owner.TenantID+"\x00"+kh] = e, e
+	b.metricRecords.Add(1)
 	b.tenantCounts[owner.TenantID]++
 	b.mu.Unlock()
 	defer b.finish(e, a)
 	return b.mutate(ctx, owner, e, a, req)
 }
 
-func (b *Broker) Switch(ctx context.Context, owner sandbox.Owner, id, key string, req SwitchRequest) (Result, error) {
+func (b *Broker) Switch(ctx context.Context, owner sandbox.Owner, id, key string, req SwitchRequest) (_ Result, retErr error) {
+	started := time.Now()
+	defer func() { b.opts.Metrics.Observe(telemetry.SessionSwitchCall, time.Since(started), retErr != nil) }()
 	if !owner.Valid() {
 		return Result{}, sandbox.ErrInvalid
 	}
@@ -573,6 +582,10 @@ func (b *Broker) mutate(ctx context.Context, owner sandbox.Owner, e *entry, a *a
 	publishedNS, publishClockErr := hostclock.NowNS()
 	timing := Timings{}
 	if readyClockErr == nil && fenceClockErr == nil && commitClockErr == nil && publishClockErr == nil {
+		b.opts.Metrics.Observe(telemetry.CandidateReadyOffset, time.Duration(readyNS-a.startedNS), false)
+		b.opts.Metrics.Observe(telemetry.AdmissionRevokedOffset, time.Duration(fencedNS-a.startedNS), false)
+		b.opts.Metrics.Observe(telemetry.FenceToCommit, time.Duration(commitNS-fencedNS), false)
+		b.opts.Metrics.Observe(telemetry.RoutePublishedOffset, time.Duration(publishedNS-a.startedNS), false)
 		timing = Timings{Measured: true, AdmissionRevokedMS: millis(a.startedNS, fencedNS), CandidateReadyMS: millis(a.startedNS, readyNS), FenceToCommitMS: millis(fencedNS, commitNS), TotalMS: millis(a.startedNS, publishedNS)}
 	}
 	// Process-local observations; later journal writes may retain them, but a
@@ -758,3 +771,8 @@ func (b *Broker) Done() <-chan struct{} { return b.done }
 
 // Uses identifies the exact authority behind an HTTP binding layer.
 func (b *Broker) Uses(core *sandbox.Manager) bool { return b.core == core }
+
+// Metrics returns retained records (including CLOSED), never an active-route count.
+func (b *Broker) Metrics() (records, capacity int64) {
+	return b.metricRecords.Load(), int64(b.opts.MaxSessions)
+}

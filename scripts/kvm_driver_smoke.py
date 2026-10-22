@@ -61,8 +61,12 @@ def main():
     parser.add_argument('--session-test', help='optional patched Linux session test binary, also enables HTTP session acceptance')
     parser.add_argument('--legacy-daemon', help='optional trusted pre-ledger-v1 binary for actual KVM crash/upgrade acceptance')
     parser.add_argument('--legacy-source-revision')
+    parser.add_argument('--load-cycles', type=int, default=0, help='1..50 closed-loop switches; requires --metrics and --session-test')
+    parser.add_argument('--metrics', action='store_true', help='exercise the separate bounded operator metrics socket')
     parser.add_argument('--source-revision', default='uncommitted')
     args = parser.parse_args()
+    if args.load_cycles and (not 1 <= args.load_cycles <= 50 or not args.metrics or not args.session_test):
+        parser.error('--load-cycles requires1..50, --metrics and --session-test')
     if os.geteuid() != 0 or os.uname().sysname != 'Linux':
         parser.error('requires root on an isolated Linux/KVM test node')
     inputs = {name: Path(getattr(args, name)).resolve() for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd')}
@@ -163,12 +167,14 @@ def main():
                     allowed = expected if isinstance(expected, tuple) else (expected,)
                     assert response.status in allowed, (response.status, data.decode())
                     assert token.encode() not in data
+                    if response.status == 404 and not response.getheader('Content-Type', '').startswith('application/json'):
+                        return {}
                     return json.loads(data)
                 finally:
                     conn.close()
 
             def start(command=None):
-                proc = subprocess.Popen(base if command is None else command, stdout=log, stderr=log)
+                proc = subprocess.Popen((base + (['-metrics'] if args.metrics else [])) if command is None else command, stdout=log, stderr=log)
                 def health():
                     if proc.poll() is not None:
                         raise AssertionError('controller exited; inspect private log')
@@ -274,6 +280,30 @@ def main():
                 result['checks'].append('noexec runtime rejected before any per-generation allocation')
             process = start()
             call('POST', '/v1/sandboxes', {}, expected=401, key='denied', authenticated=False)
+            if args.metrics:
+                metric_sock = state / 'metrics.sock'
+                assert metric_sock.stat().st_mode & 0o777 == 0o600
+                def metrics():
+                    conn = UnixHTTP(state / 'metrics.sock')
+                    try:
+                        conn.request('GET', '/metrics')
+                        response = conn.getresponse(); raw = response.read(65537)
+                        assert response.status == 200 and len(raw) <= 65536
+                        text = raw.decode()
+                        for secret in (token, str(state), 'token_sha256', 'tenant_id', 'generation', 'argv'):
+                            assert secret not in text
+                        return text
+                    finally:
+                        conn.close()
+                call('GET', '/metrics', expected=404)
+                assert 'xandbox_allocated 0\n' in metrics()
+                # A different host UID cannot traverse the private state or open
+                # its operator socket. Do not impersonate another tenant token.
+                denied = subprocess.run(['/usr/bin/setpriv', '--reuid=65534', '--regid=65534', '--clear-groups',
+                    '/usr/bin/python3', '-c', "import socket,sys; s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1])", str(metric_sock)],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+                assert denied.returncode != 0
+                result['checks'].append('operator metrics are private host-UID UDS only, absent from tenant API, fixed labels and no credential/path/Ref projection')
             first = create()
             assert execute(first, ['id', '-u'])['stdout'].strip() == '65534'
             assert execute(first, ['sh', '-c', "grep '^NoNewPrivs:' /proc/self/status"])['stdout'].strip() == 'NoNewPrivs:\t1'
@@ -338,13 +368,34 @@ def main():
             running = job(second, ['sh', '-c', 'echo started > active; sleep 30'])
             wait(lambda: execute(second, ['test', '-e', 'active'])['exit_code'] == 0, 'stop race task started')
             began = time.perf_counter()
-            stop = call('POST', path(second) + '/stop', {'generation': second['generation']})
+            slow_metrics = []
+            try:
+                if args.metrics:
+                    # Fill the bounded listener with incomplete headers; this
+                    # must not prevent actual host Stop and lifecycle cleanup.
+                    for _ in range(24):
+                        conn = socket.socket(socket.AF_UNIX); conn.settimeout(2)
+                        conn.connect(str(state / 'metrics.sock'))
+                        try:
+                            conn.sendall(b'GET /metrics HTTP/1.1\r\n')
+                            slow_metrics.append(conn)
+                        except (BrokenPipeError, ConnectionResetError):
+                            conn.close()
+                stop = call('POST', path(second) + '/stop', {'generation': second['generation']})
+            finally:
+                for conn in slow_metrics:
+                    conn.close()
             result['samples']['stop_api_confirmed_ms'] = round((time.perf_counter() - began) * 1000, 3)
             assert stop['state'] == 'STOPPED' and stopped(group(second))
             assert not stop['delete_requested'], 'explicit stop must not become automatic deletion'
             assert finish(second, running)['status'] == 'CANCELLED'
             call('POST', path(second) + '/exec', {'generation': second['generation'], 'argv': ['true'], 'timeout_ms': 1000}, expected=409)
             remove(second)
+            if args.metrics:
+                observed = metrics()
+                assert 'xandbox_allocated 0\n' in observed
+                assert 'xandbox_operation_seconds_count{operation="stop_attempt",outcome="success"} ' in observed
+                result['checks'].append('real guest Stop and durable cleanup succeed while operator metrics connection slots are saturated')
             result['checks'] += ['new generation has fresh disk', 'concurrent exec/stop drains without deadlock and preserves explicit stop']
             third = create()
             deadline_job = job(third, ['sleep', '30'], timeout=100)
@@ -579,6 +630,12 @@ def main():
                 call('POST', '/v1/sessions', session_req, key=session_key, expected=410)
                 for owned in (initial['current'], switched['current'], latest['current']):
                     destroyed(owned)
+                if args.load_cycles:
+                    from kvm_session_load import run_load
+                    result['closed_loop_load'] = run_load(cycles=args.load_cycles, call=call, finish=finish,
+                        destroyed=destroyed, group=group, stopped=stopped, wait=wait, metrics=metrics,
+                        process=process, cgroup=cgroup)
+                    result['checks'].append('bounded closed-loop real KVM switching with independent phase samples and external RSS/cgroup/FD observations')
                 process.terminate(); assert process.wait(timeout=15) == 0; process = None
                 assert not [p for p in cgroup.iterdir() if p.is_dir()]
                 assert not list((runtime / 'j/firecracker').iterdir())

@@ -23,3 +23,4 @@ smoke: build
 	python3 scripts/auth_smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl" --keygen "$(BIN_DIR)/xandbox-keygen"
 	python3 scripts/metadata_smoke.py --daemon "$(BIN_DIR)/sandboxd"
 	python3 scripts/session_smoke.py --daemon "$(BIN_DIR)/sandboxd"
+	python3 scripts/metrics_smoke.py --daemon "$(BIN_DIR)/sandboxd"
