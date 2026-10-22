@@ -23,6 +23,15 @@ class ResourceObservationTests(unittest.TestCase):
         fields=['S']+['0']*18+['1234']+['0']*5
         self.assertEqual(module.start_ticks('99 (guest (worker)) '+' '.join(fields)),'1234')
         with self.assertRaises(ValueError):module.start_ticks('invalid')
+    def test_preparing_workspace_is_counted_not_rejected(self):
+        with tempfile.TemporaryDirectory() as root:
+            p=Path(root)/'workspace.ext4';p.write_bytes(b'x'*4096)
+            info, preparing=module.workspace_observation(p)
+            self.assertEqual(info.st_size,4096);self.assertEqual(preparing,1)
+            with p.open('r+b') as f:f.truncate(128<<20)
+            self.assertEqual(module.workspace_observation(p)[1],0)
+            os.link(p,Path(root)/'unexpected-hardlink')
+            with self.assertRaises(ValueError):module.workspace_observation(p)
     @unittest.skipUnless(os.uname().sysname=='Linux','mincore layout is explicitly Linux-only')
     def test_residency_bounded_and_no_symlink(self):
         with tempfile.TemporaryDirectory() as root:
