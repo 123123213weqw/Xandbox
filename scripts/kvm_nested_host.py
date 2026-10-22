@@ -94,7 +94,7 @@ def main():
             'No TCG fallback, migration, snapshot save/restore or shared host reboot.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
-    process = None; lifetime = None; channel = None; launcher_log = None
+    process = None; lifetime = None; channel = None; launcher_log = None; owned_groups = []
     l0_boot = Path('/proc/sys/kernel/random/boot_id').read_bytes()
     try:
         root.mkdir(mode=0o700); control.mkdir(mode=0o700)
@@ -123,16 +123,23 @@ def main():
         # Only QEMU's private inputs become accessible to its reserved UID.
         for path in root.iterdir(): os.chown(path,uid,uid); path.chmod(0o600 if path==disk else 0o400)
         os.chown(root,uid,uid)
-        parent_group.mkdir(mode=0o700); (parent_group/'cgroup.subtree_control').write_text('+memory +pids +cpu'); group.mkdir(mode=0o700)
-        for name,value in {'memory.max':str(3<<30),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'128','cpu.max':'400000 100000'}.items():
-            (group/name).write_text(value); assert (group/name).read_text().strip()==value
+        parent_group.mkdir(mode=0o700); (parent_group/'cgroup.subtree_control').write_text('+memory +pids +cpu')
         cfg = control/'launch.json'
-        private_json(cfg,{'version':1,'root':str(root),'cgroup':str(group),'uid':uid,'kvm_group':os.stat('/dev/kvm').st_gid,
+        launch_policy={'version':1,'root':str(root),'cgroup':str(group),'uid':uid,'kvm_group':os.stat('/dev/kvm').st_gid,
             'warden':str(warden),'warden_sha256':digest(warden),'fixture_sha256':digest(fixture),'qemu_sha256':policy['qemu_sha256'],
-            'kernel_sha256':policy['l1_kernel_sha256'],'initrd_sha256':result['l1_initrd_sha256']})
+            'kernel_sha256':policy['l1_kernel_sha256'],'initrd_sha256':result['l1_initrd_sha256']}
         boot_number=0
         def boot():
-            nonlocal process,lifetime,channel,launcher_log,boot_number
+            nonlocal process,lifetime,channel,launcher_log,boot_number,group
+            # A new host incarnation gets a new execution generation/lease
+            # binding. Reuse ONLY the private disk, never a killed domain.
+            if boot_number: group=parent_group/secrets.token_hex(32)
+            group.mkdir(mode=0o700);owned_groups.append(group)
+            private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),
+                'cgroup_parent':str(parent_group),'cgroup':str(group),'all_cgroups':[str(p) for p in owned_groups]})
+            for name,value in {'memory.max':str(3<<30),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'128','cpu.max':'400000 100000'}.items():
+                (group/name).write_text(value); assert (group/name).read_text().strip()==value
+            launch_policy['cgroup']=str(group);private_json(cfg,launch_policy)
             boot_number+=1
             for name in ('control.sock','qmp.sock','console.log'):
                 p=root/name
@@ -165,6 +172,8 @@ def main():
             process.wait(timeout=15); process=None
             shutil.copyfile(root/'console.log',logs/f'l1-console-{boot_number}.log')
             os.close(lifetime);lifetime=None;channel.close();channel=None;launcher_log.close();launcher_log=None
+            private_json(logs/f'private-cgroup-{boot_number}.json',private_group_counters(group))
+            group.rmdir()
             assert Path('/proc/sys/kernel/random/boot_id').read_bytes()==l0_boot
             return elapsed
         boot()
@@ -177,6 +186,8 @@ def main():
             assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
             result['cases'].append({'phase':phase,'passed':True,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
         result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True;result['passed']=True
+        assert len(owned_groups)==4 and len(set(owned_groups))==4
+        result['distinct_l0_execution_generations']=len(owned_groups)
     finally:
         if group.exists():
             private_json(logs/'final-private-cgroup.json',private_group_counters(group))
@@ -189,7 +200,8 @@ def main():
             with (root/'console.log').open('rb') as source:
                 source.seek(max(0,(root/'console.log').stat().st_size-(2<<20)))
                 (logs/'final-private-console.log').write_bytes(source.read(2<<20))
-        if group.exists(): group.rmdir()
+        for owned in owned_groups:
+            if owned.exists(): owned.rmdir()
         if parent_group.exists(): parent_group.rmdir()
         if root.exists(): shutil.rmtree(root)
         if control.exists(): shutil.rmtree(control)
