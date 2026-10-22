@@ -6,9 +6,9 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 **状态：生产化开发中，尚未生产就绪。**
 
-这是生命周期管理的可运行地基，不是已实现隔离的云沙箱。 当前只有 `mock` 后端，必须显式指定；它不会启动宿主机 shell、容器或虚拟机，也没有 CPU、内存和网络隔离。不要将它作为执行不可信原生代码的服务。
+目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
-生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。它仍尚未接入 sandboxd，不能因此把 mock 接口当作真实 VM 服务。
+生产化范围与验收门槛见 [生产化计划](docs/PRODUCTION.md)。实验性 [guest-agent/vsock](docs/GUEST.md) 组件已通过独立的 jailed KVM 验收，见 [实测报告](docs/validation/kvm-guest-2026-10-22.json)。真实后端的归属、监督与使用限制见 [Firecracker 驱动](docs/FIRECRACKER.md)。独立组件报告不是服务级生产认证，mock 接口始终不提供 VM 隔离。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 
@@ -132,18 +132,20 @@ python3 scripts/smoke.py \
 3. **Stop**：终止实例所属执行单元和专属辅助进程，并确认退出；不能只发送信号后返回成功。驱动必须配合 context 的有界操作约定。
 4. **Cleanup**：幂等回收该 Ref 的私有资源，不能删除仍被其他实例使用的基础镜像、快照或全局共享服务。
 
-当前 **没有集成到服务的** Firecracker 驱动、guest-agent/cgroup 策略、网络策略、快照恢复、预热池、会话原子切换、多节点调度。先用真实 Linux/KVM 后端替换 mock 并通过同一套契约测试，再测冷启动、停止、回收三个阶段，最后加入快照与预热优化。
+实验性 Firecracker 驱动已经接入鉴权与生命周期，采用持久归属、出生即入 cgroup 的 warden、EOF 整组停止和私有复制工作盘。仍缺少完整故障/重启/负载验收、业务网络策略、快照恢复、预热池、会话原子切换与多节点调度；详见生产门槛和驱动限制。
 
 重启策略当前是“全部回收”，不是“自动恢复会话”。后端名不匹配时拒绝恢复。管理服务收到 SIGINT/SIGTERM 后停止接受请求并尝试回收；超时则非零退出，下次使用同一状态目录继续恢复。
 
 ## 结构
 
 ```text
-cmd/sandboxd          宿主机管理服务（本版本仅 mock）
+cmd/sandboxd          宿主机管理服务（mock / 实验性 Firecracker）
 cmd/sandboxctl        Unix-socket 客户端
 cmd/xandbox-keygen    私有令牌与摘要配置生成器
-cmd/xandbox-agent     Linux guest 专用执行组件（未接入服务）
+cmd/xandbox-agent     Linux guest 专用执行组件
 cmd/xandbox-guestctl  Firecracker vsock 诊断客户端
+cmd/xandbox-warden    Linux 可信生命周期管道监督进程
+internal/firecracker 实验性真实驱动、持久归属与 UID 租约
 internal/guest*      guest 执行、受限协议与 bridge 传输
 internal/access      令牌摘要校验与服务端租户策略
 internal/sandbox     生命周期、账本、驱动接口、mock 与故障测试

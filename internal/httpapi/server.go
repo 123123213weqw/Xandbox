@@ -51,8 +51,13 @@ func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		health := map[string]any{
 			"backend": node.Backend, "isolation": false,
-			"authentication": a.auth != nil,
-			"message":        "lifecycle prototype; real isolation has not been validated",
+			"authentication":   a.auth != nil,
+			"production_ready": false,
+			"message":          "lifecycle prototype; production acceptance incomplete",
+		}
+		if node.Backend == "firecracker" {
+			health["isolation"] = true // Configured mechanism, not a production certification.
+			health["isolation_mechanism"] = "firecracker-kvm-jailer"
 		}
 		if a.auth == nil {
 			health["stats"] = manager.Stats()
