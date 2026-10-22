@@ -628,6 +628,7 @@ func runSnapshotFixture(t *testing.T, faultOnly bool) {
 	}
 	report := map[string]any{"test": "experimental_pristine_bootstrap_snapshot_component", "source_revision": f.SourceRevision, "production_ready": false, "sandboxd_driver_integrated": false, "snapshot_catalog_implemented": false, "snapshot_performance_benchmark": false, "toolchain": runtime.Version(), "architecture": runtime.GOARCH, "guest_memory_mib": 512, "vcpus": 2, "workspace_bytes": 128 << 20, "guest_network_interfaces": 0, "artifacts_sha256": f.SHA256, "snapshot_memory_sha256": memHash, "pristine_disk_sha256": diskHash, "checks": checks, "samples": samples, "notes": "Two same-host restores of an unassigned template; private workspace copies and read-only memory hardlinks. Not a production catalog, shared-reference crash recovery, prewarm pool, load test or SLO. Samples include unoptimized staging/diagnostic commands; no latency claim."}
 	if faultOnly {
+		checks[0] = "unassigned TEST fixture exposes bootstrap plus read-only observer; normal health/exec remains unavailable"
 		report["test"] = "fault_image_unassigned_export_only"
 		report["fault_mode"] = f.FaultMode
 		report["normal_positive_clone_acceptance"] = false

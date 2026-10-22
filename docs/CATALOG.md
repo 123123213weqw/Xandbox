@@ -147,11 +147,21 @@ sudo -n python3 scripts/kvm_snapshot_faults.py \
 
 ### 仍未完成
 
-guest内部CLAIMED到marker之间的进程崩溃、部分特权初始化失败、分片/部分帧丢失和READY账本写入故障等剩余矩阵；物理存储故障/容量压力、跨节点/内核升级兼容性、预热池、持续混合负载/公平性、阶段尾延迟、共享/私有RAM完整记账与长期回收曲线均未验收。M3和整个生产Goal保持未完成。
+已测的一个guest内部注入崩溃点及一个部分特权失败点之外的其他初始化窗口、分片/部分帧丢失、READY账本写入故障等剩余矩阵；物理存储故障/容量压力、跨节点/内核升级兼容性、预热池、持续混合负载/公平性、阶段尾延迟、共享/私有RAM完整记账与长期回收曲线均未验收。M3和整个生产Goal保持未完成。
 
 
-### 开发中：guest内部故障fixture（尚未实机验收）
+### guest内部故障：新增实机证据（测试镜像，不是生产镜像）
 
 新增测试专用的只读观察器（`xandbox_guest_fixture`构建标签，默认构建/生产镜像不包含）、受摘要约束的initrd变体工具，以及独立的未分配故障模板export测试。机器身份目录故障使用未修改的agent，目标是在实际熵注入、guest时钟/只读boot视图之后令machine-id写入失败；认领后标记前崩溃使用固定源码摘要的Go compiler overlay，在该精确位置exit97，**不是生产agent二进制**。观察器仅接受host CID的固定inspect请求，返回布尔状态与进程代数，不接受路径、argv、写入或reset。
 
-这些测试镜像、overlay和诊断端口**不得用于生产模板**；需独立绑定实际agent/initrd摘要与私有state/runtime。普通正向双克隆组件不允许故障模式，故障export也不被计作正向克隆成功。当前仅有编译/合成回归，未通过新真实KVM案例前不宣称这些guest内部窗口已覆盖。
+这些测试镜像、overlay和诊断端口**不得用于生产模板**；需独立绑定实际agent/initrd摘要与私有state/runtime。普通正向双克隆组件不允许故障模式，故障export也不被计作正向克隆成功。现已通过以下独立实机用例，不将其扩大为完整初始化/存储故障矩阵：
+
+- [正常生产镜像的6例传输/宿主故障](validation/kvm-guest-internal-normal-v3.json)，源码`52daaf63c85f4cf1509c58733c73048980936711`。在原5例之外新增丢弃initialize请求：实际guest仍WAITING，宿主仍只发送1次initialize，不换种子重试，Create/Exec失败并回收，重启旧键410。这个Python阶段退出0且cleanup=true；外层批处理后来因两个builder共用日志目录而退出1，不能称整批通过，该失败不计作guest验证。
+- [未修改agent的部分特权初始化失败](validation/kvm-guest-machine-id-v4.json)，源码`6c9a94c335146c65491fb07bcf22a64146147fab`。只将测试initrd的machine-id布置成目录。只读观察器确认claimed存在、receipt不存在、boot-id精确匹配本请求且实际bind mount只读；按生产源码顺序，这发生在熵注入/显式reseed、guest时间设置与boot绑定之后。实际bootstrap为FAILED且hash匹配；主流程没有正常健康响应、没有READY/Exec，完整回收并拒绝旧键。未修改生产agent二进制。
+- [精确认领后/标记前崩溃](validation/kvm-guest-before-marker-v4.json)，同为源码6c9a94c。固定源码摘要的compiler overlay在该位置写入不含身份/种子的固定测试见证，再exit97；BusyBox实际respawn，观察器确认见证、agent代数至少2、claimed/receipt均不存在，新gate重新WAITING。宿主仍只有1次initialize，不能因为WAITING换新种子；候选拒绝、回收、重启旧键410。**此例agent经过故障注入，不是对原生产ELF的无修改崩溃测试或远程证明。**
+
+两个guest用例的外层批处理退出0，报告passed/cleanup_confirmed=true。普通恢复daemon SHA仍为`c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1`；生产Driver/Initialize/agent源码没有更改。新测试镜像、观察器和overlay摘要见[来源记录](validation/guest-fault-image-provenance-v4.json)。export只包含停止的未分配creator，不能把故障export当正向双克隆成功；原builder报告中“only bootstrap”旧文字没有枚举额外的902观察器，来源记录只选取有效元数据，不沿用该表述。
+
+初轮overlay因逻辑工作目录与真实路径不同而未生效，agent摘要仍等于原ELF；该镜像不计入崩溃证据。修正为物理工作目录构建，并增加ELF必须含注入见证且摘要必须不同的检查后重新构建。初轮还发现两个builder共享日志目录冲突，后续每个fixture独立目录；没有重启未知终态的runner。原始日志、内存、镜像与fixture保持私有。
+
+复现时使用**物理工作目录**（`cd -P`），显式构建带`xandbox_guest_fixture`标签的观察器，以`build_guest_fault_fixture.py --prepare-overlay`生成受摘要约束的overlay，再用`go build -overlay=...`构建测试agent；工具会拒绝忽略overlay的ELF。独立root fixture需设置FaultMode与ExportDirectory，用`TestKVMFaultFixtureSnapshotExport`，不得用普通正向测试冒充。最后`kvm_snapshot_faults.py --guest-fault machine-id-directory|crash-before-marker`验证每个单独绑定的测试镜像。

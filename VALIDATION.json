@@ -768,5 +768,30 @@
     "runtime_daemon_sha256": "c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1",
     "unassigned_builder_export_still_retained_private": true,
     "scope": "Replaces prior runtime evidence for the changed production paths; not guest-internal marker/partial-privileged-init faults, sustainedload, RAMaccounting or productionSLO."
+  },
+  "guest_internal_fault_fixtures": {
+    "production_ready": false,
+    "goal_complete": false,
+    "normal_source": "52daaf63c85f4cf1509c58733c73048980936711",
+    "normal_transport_cases": 6,
+    "guest_fixture_source": "6c9a94c335146c65491fb07bcf22a64146147fab",
+    "guest_fixture_cases": 2,
+    "normal_report": "docs/validation/kvm-guest-internal-normal-v3.json",
+    "partial_privileged_report": "docs/validation/kvm-guest-machine-id-v4.json",
+    "pre_marker_injected_crash_report": "docs/validation/kvm-guest-before-marker-v4.json",
+    "fixture_provenance": "docs/validation/guest-fault-image-provenance-v4.json",
+    "guest_fixture_outer_runner_exit_status": 0,
+    "normal_case_stage_exit_status": 0,
+    "normal_outer_batch_later_exit_status": 1,
+    "normal_outer_failure": "later builder report-directory collision; not a normal-case failure",
+    "test_only_observer": true,
+    "production_agent_modified_in_partial_failure_case": false,
+    "compiler_overlay_used_for_exact_crash_case": true,
+    "production_runtime_code_changed": false,
+    "not_validated": [
+      "all remaining init syscall/failure windows or arbitrary memory attestation",
+      "partial frames and READY ledger-write faults",
+      "sustained mixed-load fairness, RAM accounting, prewarm and production SLO"
+    ]
   }
 }
