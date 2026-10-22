@@ -89,8 +89,10 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 
 ## 2026-10-22 服务实测
 
-[脱敏报告](validation/kvm-driver-2026-10-22.json) 来自源码 `6c4b947`，控制器/warden 均用 Go 1.27.3 构建并在真实 Linux/KVM 节点运行，16 项通过。机器为 Xeon Silver 4216、64 逻辑 CPU、约 251.5 GiB 系统内存，runtime 使用 ext4；只顺序测试单 VM，三个已接受任务在两个执行 slot 上排队。
+[最新脱敏报告](validation/kvm-driver-hardened-2026-10-22.json) 来自源码 `254b269`，控制器/warden 均用 Go 1.27.3 构建并在真实 Linux/KVM 节点运行，16 项通过。机器为 Xeon Silver 4216、64 逻辑 CPU、约 251.5 GiB 系统内存，runtime 使用 ext4；只顺序测试单 VM，三个已接受任务在两个执行 slot 上排队。
 
-创建 READY 的 4 次样本约 1.41–1.51 秒。单次运行态 DELETE：接受约 1.8 ms、观测执行停止约 49.5 ms、持久 DESTROYED 约 141.6 ms；显式 Stop 的一个样本约 45.4 ms。控制器 SIGKILL 到 kernel cgroup 归零约 49.5 ms，重启到持久回收约 779 ms。这些是**顺序小样本验收，绝不是 P50/P95/P99、快照切换时间或 SLO**。缓存/负载未控制，驻留内存未测，磁盘仅写少量文件，未压满 128 MiB；具体观测点与原始精度见报告。
+本轮创建 READY 的 4 次样本约 1.50–1.67 秒。单次运行态 DELETE：接受约 2.7 ms、观测执行停止约 39.3 ms、持久 DESTROYED 约 133.2 ms；显式 Stop 的一个样本约 56.3 ms。控制器 SIGKILL 到 kernel cgroup 归零约 37.9 ms，重启到持久回收约 772 ms。这些是**顺序小样本验收，绝不是 P50/P95/P99、快照切换时间或 SLO**。缓存/负载未控制，驻留内存未测，磁盘仅写少量文件，未压满 128 MiB；具体观测点与原始精度见报告。
 
 初始化期间真实遇到 `/run` noexec 的失败，已增加前置拒绝并改用专属 `/srv` 目录，没有改变宿主挂载策略。另修复验收脚本把 Job 的字符串 error 当成 HTTP error 对象的断言错误；失败运行没有被计为通过。控制器及监督二进制摘要、镜像摘要均在报告中，重建修复脚本后的提交得到完全相同的控制器摘要。
+
+[首次 patched-toolchain 服务报告](validation/kvm-driver-2026-10-22.json) 保留不变。其后补强了 UID 区间加法溢出的拒绝检查，并将 CI 中依赖 30 ms 创建 TTL 的旧测试改为 READY 后确定性过期（原失败是创建按预期拒绝了已过期实例，不是延长生产 TTL）。该回归测试 race 重复 100 次通过，数值校验补强后的真实 KVM 全部 16 项已再次通过。

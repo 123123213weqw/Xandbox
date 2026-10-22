@@ -1,0 +1,65 @@
+{
+  "validated_at_utc": "2026-10-22T06:23:46.369281+00:00",
+  "test": "experimental_sandboxd_firecracker_driver",
+  "production_ready": false,
+  "source_revision": "254b269e8f5d982756f3e26a9f7a2de8df9cbc21",
+  "host_kernel": "6.8.0-136-generic",
+  "architecture": "x86_64",
+  "guest_memory_mib": 512,
+  "vcpus": 2,
+  "workspace_bytes": 134217728,
+  "guest_network_interfaces": 0,
+  "metrics_note": "Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; RSS not measured.",
+  "artifacts_sha256": {
+    "daemon": "da681053869bc9261b13662e9b029197c703bccc50d40869ee4b8bdeded52796",
+    "warden": "776d325fc55b984ae6f7cfdf3ae5740ec00a2d1651a1b7f36126726597cc01f0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "6b66122a3641bbc0aad7ef50745cbf4ca17b9f5d5971bfbdda9b09739024ead3"
+  },
+  "checks": [
+    "noexec runtime rejected before any per-generation allocation",
+    "authenticated real-driver create and tenant quota",
+    "guest UID 65534 and no_new_privs",
+    "guest network loopback only",
+    "private workspace",
+    "stale generation rejected",
+    "actual KVM, jailer UID drop, default seccomp, private host netns and host cgroup limits",
+    "three accepted executions queue onto two guest slots without fencing healthy VM",
+    "controller SIGKILL stops a running guest via lifetime-pipe cgroup kill",
+    "changed backend locator rejected before ledger recovery",
+    "restart reclaim and UID/quota release",
+    "new generation has fresh disk",
+    "concurrent exec/stop drains without deadlock and preserves explicit stop",
+    "host hard deadline fences and reclaims entire VM",
+    "partial prepare SIGKILL recovery releases capacity only after cleanup",
+    "no owned VMM/cgroup/jail/UID manifest residue"
+  ],
+  "samples": {
+    "create_api_ready_ms": [
+      1508.339,
+      1515.118,
+      1498.284,
+      1672.97
+    ],
+    "controller_sigkill_to_empty_cgroup_ms": 37.884,
+    "restart_to_durable_reclaim_ms": 771.771,
+    "stop_api_confirmed_ms": 56.287,
+    "delete_phases": [
+      {
+        "from_state": "STOPPED",
+        "accepted_ms": 2.269,
+        "observed_stopped_ms": 2.742,
+        "durable_destroyed_ms": 94.907
+      },
+      {
+        "from_state": "READY",
+        "accepted_ms": 2.687,
+        "observed_stopped_ms": 39.312,
+        "durable_destroyed_ms": 133.19
+      }
+    ]
+  },
+  "workspace_template_sha256": "27ec67e2fceafb030ecbcf15dd6dd0cf06aa6d4d712827090d633276c26735fd"
+}
