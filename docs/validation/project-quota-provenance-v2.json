@@ -1,0 +1,89 @@
+{
+  "production_ready": false,
+  "goal_complete": false,
+  "ordinary_driver_project_quota": false,
+  "fixture_go_source": "ca8cfa6995fef3e6360ba6e917082d872d3e1689",
+  "native_build_and_final_harness_source": "7db7b3561f3c6c6c394629a205c1264766296dbf",
+  "after_fixture_go_source_changes": "Only Python mkfs options and a Python regression test; production Go, fixture Go, dependencies and CI unchanged.",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "fixture_sha256": "6c2f78e07b6836b1227cc0d8ce6c08c0cb3361ba31a1827115231cfbfca2c7e5",
+  "ordinary_daemon_sha256": "b8d2e5b9b5b312841c7287871ee073017d46044592b447736fdf6d39f139a8af",
+  "cross_and_native_fixture_and_daemon_exact_match": true,
+  "ordinary_daemon_role": "Rebuilt but byte-identical to state-io-v2; NOT new production quota integration. Original warden and original pinned guest retained.",
+  "native_race_all_count": 3,
+  "native_vet_all_passed": true,
+  "native_fixture_race_count": 10,
+  "native_fixture_vet_passed": true,
+  "root_python_tests": 39,
+  "darwin_race_all_count": 3,
+  "darwin_vet_passed": true,
+  "darwin_python_tests": 39,
+  "darwin_python_skipped": 4,
+  "failed_predecessor": {
+    "runner_exit_status": 1,
+    "report": "kvm-quota-v1.json",
+    "l1_boots": 0,
+    "reason": "Fixture used unsupported mke2fs -Q flag; fixed to installed-manual quotatype extended option, not a quota enforcement bypass. Original passed=false retained.",
+    "cleanup_confirmed": true
+  },
+  "final_runner_exit_status": 0,
+  "quota_probe_cases": 1,
+  "quota_probe_l1_boots": 2,
+  "healthy_power_regression_cases": 3,
+  "healthy_power_l1_boots": 4,
+  "state_io_regression_cases": 4,
+  "state_io_l1_boots": 5,
+  "independent_cleanup": {
+    "fixture_scopes": 4,
+    "actual_execution_generations": 11,
+    "all_owned_roots_control_and_cgroups_absent": true,
+    "read_only_audit": true,
+    "failed_preboot_scope_included": true
+  },
+  "final_source_ci": {
+    "all_10_actual_jobs_and_steps_completed_success": true,
+    "attempt": 1,
+    "runs": [
+      39865136998,
+      39865156844
+    ]
+  },
+  "scope": "Kernel prerequisites only: expected root bypass, limited-root real EDQUOT, trusted shared hardlink/reseal and quota persistence across owned L1 coldboot. No L0 quota/mount/module/capability changes; no TCG or tenant host execution. Default nested profiles regressed with same ordinary daemon. Not new per-generation quota, durable allocator, node budget, production SLO or complete M2.",
+  "files": {
+    "kvm-quota-v1.json": {
+      "sha256": "8faddcd1c1a9353d9123884a511c2db9e0997c8fda4bb4cd05b031ac892c7ead",
+      "bytes": 3172
+    },
+    "kvm-quota-v2.json": {
+      "sha256": "748cf39360b0dcea25d0a840707938b15bfcf11c37fa94aa13cdc77deb8715c2",
+      "bytes": 5315
+    },
+    "kvm-quota-default-power-v2.json": {
+      "sha256": "3aea574571ef1c500ef4d242b8bb13886f2b9e451de5d87d5789e57b1901a4ca",
+      "bytes": 4897
+    },
+    "kvm-quota-default-state-io-v2.json": {
+      "sha256": "95c1abc6906546c038df8481c97acc30379b1632531b841a924486fc5d63e56a",
+      "bytes": 9594
+    },
+    "project-quota-native-race-v2.txt": {
+      "sha256": "6c224b01d14005497803ae87e54a005f7134b6c1cb19ef1f7e6c67ca0abad612",
+      "bytes": 1639
+    },
+    "project-quota-fixture-native-race-v2.txt": {
+      "sha256": "670822d18cdb89d5c312f38713172497764f017fbf77537afa558c181c17c6d6",
+      "bytes": 70
+    },
+    "project-quota-pipeline-transcript-v2.txt": {
+      "sha256": "e1142a341a5c93615888ea93ca481e2d23152c27ce836155d4f929c5c4c081e8",
+      "bytes": 978
+    },
+    "project-quota-independent-cleanup-v2.txt": {
+      "sha256": "aaf8d7629cf61c512af1080f53fd3ea42f9e4dc0290c0b5ff381283e66b4ebb3",
+      "bytes": 548
+    }
+  }
+}

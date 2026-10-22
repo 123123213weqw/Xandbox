@@ -1,0 +1,5 @@
+kvm-quota-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 0
+kvm-quota-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-default-power-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-default-state-io-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL4 quota fixture scopes independently rechecked; 11 actual L1 execution generations absent; failed preboot scope included; read-only audit, no cleanup actions
