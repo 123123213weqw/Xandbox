@@ -312,7 +312,11 @@ func TestLedgerDuplicateKeyAndDirectoryBoundsFailBeforeMutation(t *testing.T) {
 
 func TestLedgerDirectoryMustBePrivate(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ledger")
-	if e := os.Mkdir(path, 0755); e != nil {
+	if e := os.Mkdir(path, 0700); e != nil {
+		t.Fatal(e)
+	}
+	// Ensure the negative fixture is actually public even under umask077.
+	if e := os.Chmod(path, 0755); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := NewFileStore(path); e == nil {
