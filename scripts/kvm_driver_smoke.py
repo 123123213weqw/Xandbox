@@ -65,6 +65,7 @@ def main():
     parser.add_argument('--metrics', action='store_true', help='exercise the separate bounded operator metrics socket')
     parser.add_argument('--source-revision', default='uncommitted')
     args = parser.parse_args()
+    os.umask(0o077)
     if args.load_cycles and (not 1 <= args.load_cycles <= 50 or not args.metrics or not args.session_test):
         parser.error('--load-cycles requires1..50, --metrics and --session-test')
     if os.geteuid() != 0 or os.uname().sysname != 'Linux':
@@ -93,7 +94,7 @@ def main():
               'workspace_bytes': 128 << 20, 'guest_network_interfaces': 0,
               'metrics_note': 'Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; baseline RSS not measured. Only optional closed_loop_load has separately scoped sampled resources.',
               'artifacts_sha256': {k: digest(v) for k, v in inputs.items()},
-              'checks': [], 'samples': {}}
+              'checks': [], 'samples': {}, 'current_controller_umask': '0077'}
     process = None
     watch_stop = threading.Event()
     watcher = None
@@ -173,8 +174,8 @@ def main():
                 finally:
                     conn.close()
 
-            def start(command=None):
-                proc = subprocess.Popen((base + (['-metrics'] if args.metrics else [])) if command is None else command, stdout=log, stderr=log)
+            def start(command=None, child_umask=0o077):
+                proc = subprocess.Popen((base + (['-metrics'] if args.metrics else [])) if command is None else command, stdout=log, stderr=log, umask=child_umask)
                 def health():
                     if proc.poll() is not None:
                         raise AssertionError('controller exited; inspect private log')
@@ -501,7 +502,9 @@ def main():
                 base = [str(copied['daemon']), '-backend', 'firecracker', '-state-dir', str(state),
                         '-auth-file', str(auth), '-firecracker-config', str(cfg), '-max-instances', '2']
                 old_base = list(base); old_base[0] = str(copied['legacy_daemon'])
-                process = start(old_base)
+                # Historical binary predates the private-umask fix. Only its
+                # trusted legacy setup uses022; ALL new/recovery controllers077.
+                process = start(old_base, child_umask=0o022)
                 legacy_key = secrets.token_hex(16)
                 legacy_vm = create(ttl_ms=60000, max_exec_ms=60000, key=legacy_key)
                 legacy_job = job(legacy_vm, ['sh', '-c', 'echo started > upgrade-started; sleep 55'], timeout=60000)
@@ -531,6 +534,7 @@ def main():
                 assert not list((runtime / 'j/firecracker').iterdir())
                 assert [p.name for p in (state / 'firecracker').iterdir() if not p.name.startswith('.')] == ['config.json']
                 result['legacy_migration'] = {'source_revision': args.legacy_source_revision,
+                                             'historical_setup_umask': '0022; current recovery0077',
                                              'new_api_admission_at_capacity': 'rejected; ownership/key retained',
                                              'old_kvm_recovered': True}
                 result['checks'].append('actual old-daemon KVM SIGKILL ownership explicitly migrated then durably reclaimed at metadata capacity without key reuse')
