@@ -1,6 +1,6 @@
 # 实验性快照 catalog 与服务接入（开发中）
 
-**新路径尚未通过真实 KVM 服务验收，不可按生产服务部署。** PR #9 的双克隆/冷路径报告不覆盖本页的新代码。本分支已连接 schema2 → catalog → Driver.Prepare → snapshot/load → 一次性初始化，但目前只有合成文件、进程、race 与交叉编译证据；不是快照切换性能、完整崩溃矩阵或生产认证。默认 schema1 仍是原冷启动。
+**已通过有限同机真实 KVM 服务检查，仍不可按生产服务部署。** 本分支已连接 schema2 → catalog → Driver.Prepare → snapshot/load → 一次性初始化，并新增独立的模板导出、服务与冷路径报告（见下文）。PR #9 的历史报告不覆盖这些新代码；本轮也不是完整初始化故障矩阵、预热池、性能认证或生产认证。默认schema1仍冷启动。
 
 ## 权威与顺序
 
@@ -65,6 +65,36 @@ manifest为root私有0600文件；源文件/祖先必须root所有、无symlink�
 
 本地测试使用1MiB合成文件，**生产配置校验仍强制512MiB**。覆盖双pin恢复、退役/获取互斥、独立进程flock、真实子进程SIGKILL后的持久pin、owner/namespace缺失拒绝GC、错inode拒绝GC、部分发布/部分删除重建、不可逆初始化尝试、ABI/镜像/权限拒绝等。它们不执行VMM，不证明隔离或性能。
 
-`TestKVMPristineBootstrapSnapshot`新增root fixture的可选`ExportDirectory`，仅在原未分配builder与两克隆验证后导出私有原模板供下一项服务测试；默认不导出，快照本体/fixture绝不提交GitHub。该导出分支尚未在新源码上运行，原报告不覆盖它。
+`TestKVMPristineBootstrapSnapshot`新增root fixture的可选`ExportDirectory`，仅在原未分配builder与两克隆验证后导出私有原模板供下一项服务测试；默认不导出，快照本体/fixture绝不提交GitHub。该导出分支已在源码8b1c43f运行并通过；原PR #9报告不覆盖它，本轮报告单独列出。
 
-待完成真实服务验证：实际snapshot/load准入、两租户/会话切换、catalog锁下Stop、活引用退役、SIGKILL重启重建、丢失ownership拒删、guest初始化各窗口崩溃、模板兼容拒绝、持续混合负载/公平性、阶段尾延迟与共享/私有资源完整回收。没有这些证据前，M3与整个生产Goal均保持未完成。
+### 2026-10-22 UTC：独立实机报告
+
+- [模板导出组件](validation/kvm-catalog-builder-v3.json)：源码`8b1c43f5243f540b42d1618be03d1193433446e5`，一个未分配builder、两个实际恢复guest及原9条断言通过，随后仅导出停止的未分配原模板。runner退出0，builder运行目录/cgroup删除；私有离线export为后续故障测试有意保留，不计作服务运行态GC，也不公开快照。
+- [schema2服务](validation/kvm-catalog-service-v6.json)：源码`c7d559e9d343ccd6ef308576437a33a8731aa924`，10条有限检查、5次串行闭环切换，runner退出0，`passed/cleanup_confirmed=true`。实际检查所属cgroup内KVM fd、memory/state硬链接、持久尝试标记、两租户/新身份/私有工作区、stale revision和重放；锁下Stop返回并确认宿主停止，DELETE继续到私有jail删除但owner/DESTROYED被catalog锁阻塞，释放后才完成GC。另含活pin退役、实际controller SIGKILL/guardian停止、离线GC重建pin、重启关闭旧代、永久退役、丢失owner时拒删，以及错误ABI/agent/已分配声明拒绝。10条是本脚本的断言分组，不是完整故障矩阵或10种独立灾难场景。
+- [独立冷路径](validation/kvm-catalog-cold-v4.json)：源码`e292e4d63d83b3c1130c2df0a196e4394f041e7d`，30项检查及5次冷切换烟测通过；[停止/GC队列](validation/kvm-catalog-cold-v4-queue.json)和[绑定fsync](validation/kvm-catalog-cold-v4-session.json)各9条仅展开其中已有用例，不另加18场景。e292e4d到c7d559e只修改硬件脚本，Go源码相同；Go1.27.3/CGO0/trimpath/buildvcs=false重建daemon/admin/组件与队列测试的SHA256和节点实测完全一致。
+
+5次快照切换从请求开始分别观测：绑定响应654–742ms、新首命令成功666–755ms、旧执行停止682–772ms、旧代持久销毁733–845ms；锁下独立Stop单样本56.281ms。创建READY的3个独立样本为2543.698、615.257、2489.420ms。共享memory/state完整SHA256在写入guest工作区和切换后未变。样本包含复制/校验/调度/观测开销、缓存与背景负载未控制；不能与历史冷切换直接相除得出加速比，更不能当P95/P99/SLO。宿主共享页缓存/私有RAM未完整记账，逻辑unlink不等于物理擦除。
+
+首次服务fixture在创建VMM之前因Unix socket路径109字节被配置校验拒绝；改为107字节并加入显式长度断言后重跑，旧失败不计入通过报告。失败日志/fixture、账号、宿主路径、身份/随机种子均不公开。本轮普通CI仍跳过硬件用例，CI绿不替代上述KVM证据。
+
+### 复现服务用例
+
+先按[组件步骤](PRISTINE.md)创建新的root私有fixture，并增加`ExportDirectory`（Root之外的新绝对目录）与`SHA256.agent`（实际agent摘要）。使用本源码的`TestKVMPristineBootstrapSnapshot`成功终止并确认builder命名空间删除后，才可使用其私有export。不要导入旧租户VM或手工伪造声明。
+
+```sh
+# 固定Go1.27.3；这些Linux二进制需与当前源码及固定镜像一致。
+GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o bin/sandboxd ./cmd/sandboxd
+GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o bin/xandbox-template ./cmd/xandbox-template
+sudo -n python3 scripts/kvm_snapshot_smoke.py \
+  --daemon bin/sandboxd --admin bin/xandbox-template --warden bin/xandbox-warden \
+  --firecracker /absolute/pinned/firecracker --jailer /absolute/pinned/jailer \
+  --kernel /absolute/pinned/vmlinux --initrd /absolute/pinned/guest.cpio.gz \
+  --export-dir /absolute/private-unassigned-export --source-revision "$(git rev-parse HEAD)" \
+  --report /absolute/private-proof/service.json --log-dir /absolute/private-proof/logs
+```
+
+脚本仅创建新的专属短`/srv`目录和cgroup，显式保留16个未分配UID、固定512MiB/2vCPU/128MiB工作盘；不改宿主时钟/路由、不采用已有目录、不执行宿主任意租户命令。任一错误保留失败终态，不应在相同report/log路径重启runner。需要确认进程终态0、报告`passed/cleanup_confirmed=true`及专属资源确已删除；stdout静默/观察超时不是进程未启动的证据。原始日志和export保持私有，不随报告提交。
+
+### 仍未完成
+
+guest认领/标记前后、部分特权初始化、正常健康ACK丢失等精确窗口的真实KVM故障矩阵；物理存储故障/容量压力、跨节点/内核升级兼容性、预热池、持续混合负载/公平性、阶段尾延迟、共享/私有RAM完整记账与长期回收曲线均未验收。M3和整个生产Goal保持未完成。

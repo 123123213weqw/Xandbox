@@ -690,10 +690,35 @@
     "goal_complete": false,
     "implemented_in_development_branch": true,
     "enabled_by_default": false,
-    "actual_snapshot_service_runtime_validation": "not performed on new path",
+    "actual_snapshot_service_runtime_validation": "passed finite same-host KVM service probe; not production acceptance",
     "historical_report_scope": "Prior pristine component and cold-service reports validate only their named source revisions, not this development path.",
     "documentation": "docs/CATALOG.md",
     "metadata_tests": "synthetic 1MiB files and test-only child SIGKILL/flock; production policy still fixes512MiB/2vCPU; not KVM isolation/load proof",
-    "current_source_real_kvm_validation": "not yet performed for either the changed cold code or new snapshot mode"
+    "current_source_real_kvm_validation": "snapshot source c7d559e; independent cold source e292e4d; identical Go source/artifact hashes",
+    "source_revision": "c7d559e9d343ccd6ef308576437a33a8731aa924",
+    "service_report": "docs/validation/kvm-catalog-service-v6.json",
+    "builder_export_report": "docs/validation/kvm-catalog-builder-v3.json",
+    "cold_service_report": "docs/validation/kvm-catalog-cold-v4.json",
+    "cold_queue_report": "docs/validation/kvm-catalog-cold-v4-queue.json",
+    "cold_binding_fsync_report": "docs/validation/kvm-catalog-cold-v4-session.json",
+    "snapshot_service_assertion_groups": 10,
+    "closed_loop_snapshot_switches": 5,
+    "independent_cold_service_checks": 30,
+    "runner_exit_status": 0,
+    "owned_service_runtime_cleanup_confirmed": true,
+    "private_unassigned_builder_export_retained_for_followup_fault_tests": true,
+    "not_validated": [
+      "precise real-KVM guest claim/marker/partial privileged initialization/lost-health-ACK fault windows",
+      "cross-host/kernel upgrade compatibility or prewarm pool",
+      "physical disk failure, quotas, secure erase and long-term metadata retention",
+      "shared/private RAM accounting, sustained mixed load, fairness, true tails and production SLO"
+    ],
+    "toolchain": "go1.27.3",
+    "source_ci": {
+      "source_revision": "c7d559e9d343ccd6ef308576437a33a8731aa924",
+      "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39812725648",
+      "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39812735832",
+      "result": "success; separate from KVM acceptance"
+    }
   }
 }
