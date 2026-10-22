@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "real VMM workload stopped at TTL while unrelated ownership deletion fsync was blocked",
+    "kernel host cgroup empty and guest execution drained",
+    "already-confirmed Stop bypasses its own blocked GC",
+    "cleanup queue bounded with one queued generation",
+    "UID and node capacity retained until durable cleanup",
+    "Close deadline returns without claiming worker termination",
+    "exclusive fixture lock retained until old workers quiesced",
+    "new controller/driver recovers unfinished ledger without resurrecting generations",
+    "all private resources and capacity reclaimed after recovery"
+  ],
+  "cleanup_workers": 1,
+  "fault_model": "test-only ownership-directory fsync barrier after private unlink, not an actual failing disk or a production runtime flag",
+  "production_ready": false,
+  "queue_capacity_per_pool": 1,
+  "source_revision": "8a6c07f5449774e0d9754346383bfd7db817a816",
+  "stop_workers": 1,
+  "test": "real_kvm_controlled_ownership_fsync_stall",
+  "toolchain": "go1.27.3",
+  "ttl_expiry_to_stopped_observed_ms": 51.800278
+}

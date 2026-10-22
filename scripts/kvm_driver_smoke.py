@@ -4,6 +4,7 @@
 Uses only its own cgroup subtree and short runtime root. Never runs tenant
 commands on the host. Raw controller logs stay private; the report is sanitized.
 """
+from concurrent.futures import ThreadPoolExecutor
 import argparse
 import concurrent.futures
 import datetime
@@ -57,6 +58,7 @@ def main():
     for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--queue-test', help='optional Linux Go test binary for controlled fsync queue acceptance')
+    parser.add_argument('--session-test', help='optional patched Linux session test binary, also enables HTTP session acceptance')
     parser.add_argument('--legacy-daemon', help='optional trusted pre-ledger-v1 binary for actual KVM crash/upgrade acceptance')
     parser.add_argument('--legacy-source-revision')
     parser.add_argument('--source-revision', default='uncommitted')
@@ -66,6 +68,8 @@ def main():
     inputs = {name: Path(getattr(args, name)).resolve() for name in ('daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd')}
     if args.queue_test:
         inputs['queue_test'] = Path(args.queue_test).resolve()
+    if args.session_test:
+        inputs['session_test'] = Path(args.session_test).resolve()
     if args.legacy_daemon:
         assert args.legacy_source_revision, 'legacy source revision is required'
         inputs['legacy_daemon'] = Path(args.legacy_daemon).resolve()
@@ -97,7 +101,7 @@ def main():
         for name, path in inputs.items():
             target = assets / name
             shutil.copyfile(path, target)
-            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test', 'legacy_daemon') else 0o444)
+            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test', 'legacy_daemon', 'session_test') else 0o444)
             assert digest(target) == result['artifacts_sha256'][name]
             copied[name] = target
         workspace = assets / 'empty.ext4'
@@ -479,6 +483,120 @@ def main():
                                              'new_api_admission_at_capacity': 'rejected; ownership/key retained',
                                              'old_kvm_recovered': True}
                 result['checks'].append('actual old-daemon KVM SIGKILL ownership explicitly migrated then durably reclaimed at metadata capacity without key reuse')
+            if args.session_test:
+                state = root / 'session-api-state'; state.mkdir(mode=0o700)
+                sock = state / 'api.sock'
+                session_auth = root / 'session-auth.json'
+                other_token = secrets.token_hex(32)
+                session_auth.write_text(json.dumps({'version': 1, 'keys': [
+                    {'tenant_id': 'proof', 'max_instances': 2, 'token_sha256': hashlib.sha256(token.encode()).hexdigest()},
+                    {'tenant_id': 'other', 'max_instances': 2, 'token_sha256': hashlib.sha256(other_token.encode()).hexdigest()}]}))
+                session_auth.chmod(0o600)
+                base = [str(copied['daemon']), '-backend', 'firecracker', '-state-dir', str(state),
+                        '-auth-file', str(session_auth), '-firecracker-config', str(cfg), '-max-instances', '2']
+                process = start()
+                session_req = {'ttl_ms': 60000, 'limits': {'max_exec_ms': 60000}}
+                session_key = secrets.token_hex(16)
+                initial = call('POST', '/v1/sessions', session_req, expected=201, key=session_key)
+                session_path = '/v1/sessions/' + initial['id']
+                def session_job(binding, argv, timeout=5000):
+                    accepted = call('POST', session_path + '/exec', {'revision': binding['revision'], 'argv': argv, 'timeout_ms': timeout}, expected=202)
+                    assert accepted['revision'] == binding['revision'] and accepted['sandbox'] == binding['current']
+                    return accepted
+                def session_exec(binding, argv):
+                    accepted = session_job(binding, argv)
+                    return finish(accepted['sandbox'], accepted['job'])
+                assert session_exec(initial, ['sh', '-c', 'echo old > session-note'])['status'] == 'EXITED'
+                call('POST', path(initial['current']) + '/exec', {'generation': initial['current']['generation'], 'argv': ['true']}, expected=409)
+                for method, endpoint, body in [('GET', session_path, None), ('POST', session_path + '/switch', {'expected_revision': 1}),
+                                                ('POST', session_path + '/exec', {'revision': 1, 'argv': ['true']}),
+                                                ('POST', session_path + '/revoke', {'expected_revision': 1})]:
+                    conn = UnixHTTP(sock)
+                    try:
+                        conn.request(method, endpoint, None if body is None else json.dumps(body),
+                                     {'Authorization': 'Bearer ' + other_token, 'Content-Type': 'application/json', 'Idempotency-Key': secrets.token_hex(16)})
+                        response = conn.getresponse(); response.read(); assert response.status == 404
+                    finally:
+                        conn.close()
+                session_job(initial, ['sh', '-c', 'echo started > session-active; sleep 55'], timeout=60000)
+                wait(lambda: session_exec(initial, ['test', '-e', 'session-active'])['output']['exit_code'] == 0, 'session guest active')
+                began = time.perf_counter()
+                def observe_old_stop():
+                    wait(lambda: stopped(group(initial['current'])), 'old session VM host stop', seconds=15)
+                    return round((time.perf_counter() - began) * 1000, 3)
+                with ThreadPoolExecutor(max_workers=1) as observers:
+                    stop_sample = observers.submit(observe_old_stop)
+                    switch_key = secrets.token_hex(16)
+                    switched = call('POST', session_path + '/switch', {'expected_revision': 1, 'create': session_req}, key=switch_key)
+                    bind_ms = round((time.perf_counter() - began) * 1000, 3)
+                    assert switched['revision'] == 2 and switched['previous'] == initial['current']
+                    assert switched['current'] != initial['current']
+                    assert session_exec(switched, ['true'])['output']['exit_code'] == 0
+                    first_command_ms = round((time.perf_counter() - began) * 1000, 3)
+                    assert session_exec(switched, ['test', '!', '-e', 'session-note'])['output']['exit_code'] == 0
+                    command_ms = round((time.perf_counter() - began) * 1000, 3)
+                    stopped_ms = stop_sample.result(timeout=15)
+                destroyed(initial['current'])
+                reclaimed_ms = round((time.perf_counter() - began) * 1000, 3)
+                assert call('POST', session_path + '/switch', {'expected_revision': 1, 'create': session_req}, key=switch_key)['current'] == switched['current']
+                call('POST', session_path + '/exec', {'revision': 1, 'argv': ['true']}, expected=409)
+                result['session_samples'] = {'cold_request_to_binding_response_ms': bind_ms,
+                    'request_to_first_new_command_success_ms': first_command_ms,
+                    'request_to_new_commands_completed_ms': command_ms, 'request_to_old_stopped_observed_ms': stopped_ms,
+                    'request_to_old_durable_destroyed_observed_ms': reclaimed_ms, 'server_phase_observations': switched['timings']}
+                result['checks'].append('real cold session switch: scoped capability, fresh workspace, stale-version rejection and separate old stop/reclaim observations')
+                def competing_session_switch(key):
+                    conn = UnixHTTP(sock)
+                    try:
+                        conn.request('POST', session_path + '/switch', json.dumps({'expected_revision': 2, 'create': session_req}),
+                                     {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Idempotency-Key': key})
+                        response = conn.getresponse(); return response.status, json.loads(response.read())
+                    finally:
+                        conn.close()
+                before_cas_records = len(list((state / 'ledger').glob('*.json')))
+                with ThreadPoolExecutor(max_workers=2) as contenders:
+                    outcomes = list(contenders.map(competing_session_switch, [secrets.token_hex(16), secrets.token_hex(16)]))
+                assert sorted(status for status, _ in outcomes) == [200, 409]
+                assert len(list((state / 'ledger').glob('*.json'))) == before_cas_records + 1, 'CAS loser allocated a second candidate'
+                latest = next(value for status, value in outcomes if status == 200)
+                assert latest['revision'] == 3
+                public = call('GET', session_path)
+                assert 'key_hash' not in json.dumps(public) and public['has_binding']
+                result['checks'].append('real KVM concurrent session CAS publishes one next revision without duplicate preparation')
+                session_job(latest, ['sh', '-c', 'echo started > session-crash; sleep 55'], timeout=60000)
+                wait(lambda: session_exec(latest, ['test', '-e', 'session-crash'])['output']['exit_code'] == 0, 'session crash task started')
+                pidfd = os.pidfd_open(process.pid)
+                try:
+                    signal.pidfd_send_signal(pidfd, signal.SIGKILL)
+                    process.wait(timeout=5); process = None
+                finally:
+                    os.close(pidfd)
+                wait(lambda: stopped(group(latest['current'])), 'crashed session controller stopped VMM', seconds=5)
+                process = start()
+                recovered = call('GET', session_path)
+                assert recovered['phase'] == 'CLOSED' and not recovered['has_binding']
+                call('POST', session_path + '/exec', {'revision': 3, 'argv': ['true']}, expected=410)
+                call('POST', '/v1/sessions', session_req, key=session_key, expected=410)
+                for owned in (initial['current'], switched['current'], latest['current']):
+                    destroyed(owned)
+                process.terminate(); assert process.wait(timeout=15) == 0; process = None
+                assert not [p for p in cgroup.iterdir() if p.is_dir()]
+                assert not list((runtime / 'j/firecracker').iterdir())
+                result['checks'].append('actual session-controller SIGKILL restart retains binding tombstone and reclaims underlying VMM without session revival')
+                session_report = report.with_name(report.stem + '-session.json')
+                fixture = root / 'session-fixture.json'
+                fixture.write_text(json.dumps({'state_dir': str(root / 'session-stall-state'), 'config_path': str(cfg),
+                                               'report_path': str(session_report), 'source_revision': args.source_revision}))
+                fixture.chmod(0o600)
+                check = subprocess.run([str(copied['session_test']), '-test.run', '^TestKVMSessionCommitIOIsolation$', '-test.timeout', '120s', '-test.v'],
+                    stdout=log, stderr=log, timeout=140, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin',
+                    'XANDBOX_KVM_SESSION_ACCEPTANCE': '1', 'XANDBOX_KVM_SESSION_FIXTURE': str(fixture)})
+                assert check.returncode == 0, 'session commit-fsync KVM acceptance failed; inspect private log'
+                session_result = json.loads(session_report.read_text())
+                assert len(session_result['checks']) == 9 and session_result['source_revision'] == args.source_revision
+                assert session_result['toolchain'] == 'go1.27.3' and session_result['production_ready'] is False
+                result['session_acceptance_report'] = session_report.name
+                result['checks'].append('separate real KVM blocked session binding fsync/Close/recovery acceptance passed')
             if args.queue_test:
                 queue_report = report.with_name(report.stem + '-queue.json')
                 fixture = root / 'queue-fixture.json'
