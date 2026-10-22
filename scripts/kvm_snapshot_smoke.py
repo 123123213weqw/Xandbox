@@ -88,6 +88,19 @@ def main():
     log = (logs / 'controller.log').open('ab', buffering=0)
     restored_owner = None
     try:
+        memory_info = {line.split(':')[0]: int(line.split()[1]) * 1024
+                       for line in Path('/proc/meminfo').read_text().splitlines()
+                       if line.startswith(('MemTotal:', 'MemAvailable:'))}
+        filesystem = os.statvfs(root)
+        cpu_models = sorted({line.partition(':')[2].strip() for line in Path('/proc/cpuinfo').read_text().splitlines()
+                             if line.startswith('model name')})
+        result['host_observations_before_test'] = {'logical_cpus': os.cpu_count(), 'cpu_models': cpu_models,
+                  'memory_total_bytes': memory_info['MemTotal'], 'memory_available_bytes': memory_info['MemAvailable'],
+                  'load_averages': os.getloadavg(),
+                  'filesystem_type': subprocess.check_output(['findmnt', '-n', '-o', 'FSTYPE', '-T', str(root)],
+                      text=True, timeout=5).strip(),
+                  'filesystem_total_bytes': filesystem.f_blocks * filesystem.f_frsize,
+                  'filesystem_available_bytes': filesystem.f_bavail * filesystem.f_frsize}
         copied = {}
         for name, source in sources.items():
             target = assets / name
