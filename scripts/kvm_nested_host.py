@@ -79,7 +79,6 @@ def main():
     root = Path('/srv/nh-' + suffix); control = Path('/var/lib/xandbox-nested-proof-' + suffix)
     parent_group = Path('/sys/fs/cgroup/xandbox-nested-proof-' + suffix); group = parent_group / secrets.token_hex(32)
     assert not any(p.exists() for p in (root, control, parent_group))
-    root.mkdir(mode=0o700); control.mkdir(mode=0o700)
     sources = {n: Path(getattr(args,n)).resolve() for n in ('fixture','daemon','warden','firecracker','jailer','kernel','initrd','workspace','alpine')}
     result = {'test':'owned_l1_host_power_cut_real_l2_kvm','production_ready':False,'passed':False,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -98,6 +97,7 @@ def main():
     process = None; lifetime = None; channel = None; launcher_log = None
     l0_boot = Path('/proc/sys/kernel/random/boot_id').read_bytes()
     try:
+        root.mkdir(mode=0o700); control.mkdir(mode=0o700)
         private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),'cgroup_parent':str(parent_group),'cgroup':str(group)})
         uid = 850000 + secrets.randbelow(30000)
         try: pwd.getpwuid(uid)
