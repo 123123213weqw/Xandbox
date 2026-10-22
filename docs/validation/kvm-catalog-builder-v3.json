@@ -1,0 +1,47 @@
+{
+  "architecture": "amd64",
+  "artifacts_sha256": {
+    "agent": "78d26abea63f0a520d76e2fbe704148cec1b5043fcec41765f56b19d8eb4c2fd",
+    "component_test": "88eee32063847b6a19e344ee2d23e8dd826a7300e7a543e065571aa55724e897",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "warden": "b810afc53abd7a32c98c8a2845039e6397ab07779f2674d83a04a51b7a7a4be1"
+  },
+  "checks": [
+    "unassigned pristine template exposes only one-shot bootstrap, never normal health/exec",
+    "full snapshot created only before assignment; creator terminated without tenant execution or resume",
+    "two actual restored KVM guests require new Ref/nonce/entropy and exact sealed normal-health hash before execution",
+    "entropy-add and explicit reseed ioctls succeeded before fresh agent exec replaces agent userspace RNG caches",
+    "per-clone proc boot ID, machine ID and guest-only clock rebound; host clock unchanged",
+    "bootstrap listener removed after handoff; no post-admission reset RPC",
+    "unprivileged tasks cannot read sealed initialization receipt; workspace markers isolated",
+    "read-only shared memory inode unchanged; removing one stopped clone cannot break another live clone",
+    "cross-clone Ref rejected; host cgroup execution stopped before private file removal"
+  ],
+  "guest_memory_mib": 512,
+  "guest_network_interfaces": 0,
+  "notes": "Two same-host restores of an unassigned template; private workspace copies and read-only memory hardlinks. Not a production catalog, shared-reference crash recovery, prewarm pool, load test or SLO. Samples include unoptimized staging/diagnostic commands; no latency claim.",
+  "pristine_disk_sha256": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+  "production_ready": false,
+  "samples": [
+    {
+      "private_staging_and_jailer_api_ms": 466.050928,
+      "staging_to_initialized_guest_commands_ms": 535.14084
+    },
+    {
+      "private_staging_and_jailer_api_ms": 441.714795,
+      "staging_to_initialized_guest_commands_ms": 507.76451
+    }
+  ],
+  "sandboxd_driver_integrated": false,
+  "snapshot_catalog_implemented": false,
+  "snapshot_memory_sha256": "6ba79f852d0cfe0b87781826e3134728f99543f4b84926a51e55e9b684808696",
+  "snapshot_performance_benchmark": false,
+  "source_revision": "8b1c43f5243f540b42d1618be03d1193433446e5",
+  "test": "experimental_pristine_bootstrap_snapshot_component",
+  "toolchain": "go1.27.3",
+  "vcpus": 2,
+  "workspace_bytes": 134217728
+}

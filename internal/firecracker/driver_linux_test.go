@@ -3,12 +3,18 @@
 package firecracker
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"fmt"
+	"github.com/123123213weqw/Xandbox/internal/guestinit"
+	"github.com/123123213weqw/Xandbox/internal/guestwire"
+	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -79,5 +85,171 @@ func TestOwnedCgroupProofRequiresExplicitEmpty(t *testing.T) {
 	}
 	if _, err := New(group, "missing", nil); err == nil {
 		t.Fatal("driver initialized without required root policy")
+	}
+}
+
+// Synthetic UDS/cgroup files only. A wire-valid completed response with the
+// wrong initialization epoch must still take the host stop/fence path.
+func TestDriverExecutionRequiresSealedSnapshotEpoch(t *testing.T) {
+	for _, epoch := range []string{"matching", "different", "absent"} {
+		t.Run(epoch, func(t *testing.T) {
+			runtime, e := os.MkdirTemp("/tmp", "x")
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer os.RemoveAll(runtime)
+			ref := reference("1")
+			k, _ := key(ref)
+			cfg := policy()
+			cfg.RuntimeRoot = runtime
+			cfg.CgroupRoot = t.TempDir()
+			root := filepath.Join(runtime, "j/firecracker", k, "root")
+			if e = os.MkdirAll(root, 0700); e != nil {
+				t.Fatal(e)
+			}
+			group := filepath.Join(cfg.CgroupRoot, k)
+			if e = os.Mkdir(group, 0700); e != nil {
+				t.Fatal(e)
+			}
+			for name, value := range map[string]string{"cgroup.events": "populated 0\n", "cgroup.kill": ""} {
+				if e = os.WriteFile(filepath.Join(group, name), []byte(value), 0600); e != nil {
+					t.Fatal(e)
+				}
+			}
+			reader, writer, e := os.Pipe()
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer reader.Close()
+			defer writer.Close()
+			boot := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+			hash := strings.Repeat("a", 64)
+			p := &process{bootID: boot, initializationHash: hash, slots: make(chan struct{}, 2), done: make(chan struct{}), life: writer}
+			d := &driver{cfg: cfg, registry: &registry{owners: map[string]ownership{k: {Version: 1, Ref: ref, UID: cfg.UIDStart}}}, procs: map[string]*process{k: p}}
+			l, e := net.Listen("unix", filepath.Join(root, "v.sock"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer l.Close()
+			served := make(chan struct{})
+			go func() {
+				defer close(served)
+				defer close(p.done)
+				c, err := l.Accept()
+				if err != nil {
+					return
+				}
+				defer c.Close()
+				r := bufio.NewReader(c)
+				line, err := r.ReadString('\n')
+				if err != nil || line != "CONNECT 900\n" {
+					t.Error("invalid synthetic bridge request")
+					return
+				}
+				fmt.Fprint(c, "OK 1234\n")
+				var req guestwire.Request
+				if err = guestwire.Read(r, guestwire.MaxRequest, &req); err != nil {
+					t.Error(err)
+					return
+				}
+				got := hash
+				if epoch == "different" {
+					got = strings.Repeat("b", 64)
+				} else if epoch == "absent" {
+					got = ""
+				}
+				if err = guestwire.Write(c, guestwire.MaxResponse, guestwire.Response{Version: 1, Ref: req.Ref, ExecutionID: req.ExecutionID, BootID: boot, InitializationHash: got, Status: "EXITED", Output: sandbox.Output{ExitCode: 0}}); err != nil {
+					t.Error(err)
+				}
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_, e = d.Exec(ctx, ref, sandbox.ExecRequest{Generation: ref.Generation, Argv: []string{"true"}, TimeoutMS: 1000}, 4096)
+			if epoch == "matching" && e != nil {
+				t.Fatal(e)
+			}
+			if epoch != "matching" && !errors.Is(e, sandbox.ErrBackendFenced) {
+				t.Fatal("unsealed epoch accepted", e)
+			}
+			<-served
+			b, err := os.ReadFile(filepath.Join(group, "cgroup.kill"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (epoch != "matching") != (string(b) == "1") {
+				t.Fatal("wrong epoch did not stop host execution domain")
+			}
+		})
+	}
+}
+
+func TestPristineReadinessRetriesOnlyReadOnlyStateAndRejectsConsumedGate(t *testing.T) {
+	for _, phase := range []string{guestinit.Waiting, guestinit.Claimed, guestinit.Failed} {
+		t.Run(phase, func(t *testing.T) {
+			dir, e := os.MkdirTemp("/tmp", "xb-ready-")
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer os.RemoveAll(dir)
+			socket := filepath.Join(dir, "v.sock")
+			l, e := net.Listen("unix", socket)
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer l.Close()
+			served := make(chan struct{})
+			go func() {
+				defer close(served)
+				// First connection is deliberately lost before acknowledgement. It is
+				// safe to repeat state, never initialize with a replacement seed.
+				c, err := l.Accept()
+				if err != nil {
+					return
+				}
+				c.Close()
+				c, err = l.Accept()
+				if err != nil {
+					return
+				}
+				defer c.Close()
+				reader := bufio.NewReader(c)
+				line, err := reader.ReadString('\n')
+				if err != nil || line != "CONNECT 901\n" {
+					t.Error("wrong readiness port")
+					return
+				}
+				fmt.Fprint(c, "OK 1234\n")
+				var request guestinit.Request
+				if err = guestwire.Read(reader, guestinit.MaxRequest, &request); err != nil {
+					t.Error(err)
+					return
+				}
+				if request.Operation != "state" || len(request.Entropy) != 0 || request.Nonce != "" || request.Ref != (sandbox.Ref{}) {
+					t.Error("readiness probe consumed initialization")
+				}
+				response := guestinit.Response{Version: 1, Phase: phase}
+				if phase != guestinit.Waiting {
+					response.Digest = strings.Repeat("a", 64)
+				}
+				if phase == guestinit.Failed {
+					response.Error = "initialization failed"
+				}
+				if err = guestwire.Write(c, guestinit.MaxResponse, response); err != nil {
+					t.Error(err)
+				}
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			e = waitPristine(ctx, nil, socket)
+			if (phase == guestinit.Waiting) != (e == nil) {
+				t.Fatal("wrong pristine readiness outcome", phase, e)
+			}
+			<-served
+		})
+	}
+	done := make(chan struct{})
+	close(done)
+	if e := waitPristine(context.Background(), done, "unused"); e == nil {
+		t.Fatal("readiness survived exited supervisor")
 	}
 }

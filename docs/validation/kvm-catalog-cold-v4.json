@@ -1,0 +1,319 @@
+{
+  "validated_at_utc": "2026-10-22T16:15:04.603706+00:00",
+  "test": "experimental_sandboxd_firecracker_driver",
+  "production_ready": false,
+  "source_revision": "e292e4d63d83b3c1130c2df0a196e4394f041e7d",
+  "host_kernel": "6.8.0-136-generic",
+  "architecture": "x86_64",
+  "guest_memory_mib": 512,
+  "vcpus": 2,
+  "workspace_bytes": 134217728,
+  "guest_network_interfaces": 0,
+  "metrics_note": "Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; baseline RSS not measured. Only optional closed_loop_load has separately scoped sampled resources.",
+  "artifacts_sha256": {
+    "daemon": "87e6799c653cea11039a64c9e67b91c53a95cc34d80d48e026dd68baeab85125",
+    "warden": "b810afc53abd7a32c98c8a2845039e6397ab07779f2674d83a04a51b7a7a4be1",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "queue_test": "3e8113f2e0d023e855bd8d2c48b9829ae75969777628432946db6b110bf60969",
+    "session_test": "b35736eac010aa3cfa8ca6789ce4a8207e1a6a1c099882e0511ab6fd612ff17c",
+    "legacy_daemon": "6405f59fbd7a8e65793ba2bc8bb3b543ffe135add527e10a336ed0246239a783"
+  },
+  "checks": [
+    "real root rejects writable/foreign state ancestry and foreign private auth before state creation; offline migration cannot bypass ownership",
+    "noexec runtime rejected before any per-generation allocation",
+    "operator metrics are private host-UID UDS only, absent from tenant API, fixed labels and no credential/path/Ref projection",
+    "authenticated real-driver create and tenant quota",
+    "guest UID 65534 and no_new_privs",
+    "guest network loopback only",
+    "private workspace",
+    "stale generation rejected",
+    "actual KVM, jailer UID drop, default seccomp, private host netns and host cgroup limits",
+    "three accepted executions queue onto two guest slots without fencing healthy VM",
+    "controller SIGKILL stops a running guest via lifetime-pipe cgroup kill",
+    "changed backend locator rejected before ledger recovery",
+    "restart reclaim and UID/quota release",
+    "real guest Stop and durable cleanup succeed while operator metrics connection slots are saturated",
+    "new generation has fresh disk",
+    "concurrent exec/stop drains without deadlock and preserves explicit stop",
+    "host hard deadline fences and reclaims entire VM",
+    "partial prepare SIGKILL recovery releases capacity only after cleanup",
+    "healthy controller reconciliation renews across multiple guardian lease windows",
+    "controller_pause_lease host execution fenced and controller recovery reclaimed ownership",
+    "controller_pause_hard_ttl host execution fenced and controller recovery reclaimed ownership",
+    "guardian_sigkill host execution fenced and controller recovery reclaimed ownership",
+    "no owned VMM/cgroup/jail/UID manifest residue",
+    "actual old-daemon KVM SIGKILL ownership explicitly migrated then durably reclaimed at metadata capacity without key reuse",
+    "real cold session switch: scoped capability, fresh workspace, stale-version rejection and separate old stop/reclaim observations",
+    "real KVM concurrent session CAS publishes one next revision without duplicate preparation",
+    "bounded closed-loop real KVM switching with independent phase samples and external RSS/cgroup/FD observations",
+    "actual session-controller SIGKILL restart retains binding tombstone and reclaims underlying VMM without session revival",
+    "separate real KVM blocked session binding fsync/Close/recovery acceptance passed",
+    "separate real KVM controlled-fsync queue/recovery acceptance passed"
+  ],
+  "samples": {
+    "create_api_ready_ms": [
+      1428.764,
+      1443.703,
+      1562.817,
+      1523.395,
+      1570.126,
+      1545.828,
+      1585.318,
+      1465.024,
+      1415.651
+    ],
+    "controller_sigkill_to_empty_cgroup_ms": 38.23,
+    "restart_to_durable_reclaim_ms": 758.657,
+    "stop_api_confirmed_ms": 47.868,
+    "delete_phases": [
+      {
+        "from_state": "STOPPED",
+        "accepted_ms": 2.154,
+        "observed_stopped_ms": 2.444,
+        "durable_destroyed_ms": 88.226
+      },
+      {
+        "from_state": "READY",
+        "accepted_ms": 2.604,
+        "observed_stopped_ms": 45.877,
+        "durable_destroyed_ms": 146.013
+      },
+      {
+        "from_state": "READY",
+        "accepted_ms": 2.571,
+        "observed_stopped_ms": 24.315,
+        "durable_destroyed_ms": 111.906
+      }
+    ]
+  },
+  "workspace_template_sha256": "5d28d256c81b55688fbabc1898def64cecfe3aadcbf3a882903d84a2ce28e2a8",
+  "guardian_policy": {
+    "clock": "CLOCK_BOOTTIME",
+    "lease_window_ms": 5000,
+    "renew_interval_ms": 1000,
+    "wire_version": "XBL1"
+  },
+  "guardian_samples": [
+    {
+      "case": "controller_pause_lease",
+      "fault_to_empty_cgroup_ms": 4300.035
+    },
+    {
+      "case": "controller_pause_hard_ttl",
+      "fault_to_empty_cgroup_ms": 1544.818,
+      "hard_deadline_to_empty_observed_ms": 45.364
+    },
+    {
+      "case": "guardian_sigkill",
+      "fault_to_empty_cgroup_ms": 389.842
+    }
+  ],
+  "legacy_migration": {
+    "source_revision": "97196a59aa508348d9293e9f44c5fa5f2f3e0891",
+    "new_api_admission_at_capacity": "rejected; ownership/key retained",
+    "old_kvm_recovered": true
+  },
+  "session_samples": {
+    "cold_request_to_binding_response_ms": 1475.142,
+    "request_to_first_new_command_success_ms": 1482.677,
+    "request_to_new_commands_completed_ms": 1489.569,
+    "request_to_old_stopped_observed_ms": 1503.057,
+    "request_to_old_durable_destroyed_observed_ms": 1594.718,
+    "server_phase_observations": {
+      "admission_revoked_ms": 1472.133346,
+      "measured": true,
+      "candidate_ready_ms": 1471.214467,
+      "fence_to_commit_ms": 1.01142,
+      "total_ms": 1473.152405
+    }
+  },
+  "closed_loop_load": {
+    "test": "bounded_closed_loop_fresh_vm_switching",
+    "production_load_acceptance": false,
+    "cycles": 5,
+    "session_count": 1,
+    "maximum_live_generations": 2,
+    "duration_seconds": 8.596,
+    "quantile_method": "empirical nearest rank; P99 is max for fewer than100 samples, not a tail/SLO guarantee",
+    "conditions": "Fresh VM each time, no snapshot/prewarm; uncontrolled host load/page cache. Closed loop waits durable old GC before next switch; does NOT saturate queues or prove cross-tenant fairness. The private1ms diagnostic ledger scanner,5ms API polling and per-cycle metrics remain enabled; measured latency includes observer overhead.",
+    "resource_note": "20ms observer. RSS is sampled proc-status resident memory, not PSS; owned-process sums and cgroup-memory-current are non-transactional and can miss peaks. Cgroup memory includes page cache/kernel, NOT guest RSS alone. Tombstone metadata intentionally grows up to configured budget. This finite probe does not prove asymptotic memory stability.",
+    "summaries_ms": {
+      "request_to_binding_response_ms": {
+        "count": 5,
+        "min": 1452.544,
+        "max": 1576.227,
+        "p50": 1557.758,
+        "p95": 1576.227,
+        "p99": 1576.227
+      },
+      "request_to_first_new_command_success_ms": {
+        "count": 5,
+        "min": 1460.634,
+        "max": 1590.538,
+        "p50": 1566.948,
+        "p95": 1590.538,
+        "p99": 1590.538
+      },
+      "request_to_old_host_stopped_observed_ms": {
+        "count": 5,
+        "min": 1503.155,
+        "max": 1631.77,
+        "p50": 1604.115,
+        "p95": 1631.77,
+        "p99": 1631.77
+      },
+      "request_to_old_durable_destroyed_observed_ms": {
+        "count": 5,
+        "min": 1557.723,
+        "max": 1730.72,
+        "p50": 1698.088,
+        "p95": 1730.72,
+        "p99": 1730.72
+      },
+      "server_admission_revoked_ms": {
+        "count": 5,
+        "min": 1449.739174,
+        "max": 1573.014563,
+        "p50": 1555.074471,
+        "p95": 1573.014563,
+        "p99": 1573.014563
+      },
+      "server_candidate_ready_ms": {
+        "count": 5,
+        "min": 1448.509392,
+        "max": 1571.780597,
+        "p50": 1554.20986,
+        "p95": 1571.780597,
+        "p99": 1571.780597
+      },
+      "server_fence_to_commit_ms": {
+        "count": 5,
+        "min": 0.850676,
+        "max": 1.233123,
+        "p50": 1.188169,
+        "p95": 1.233123,
+        "p99": 1.233123
+      },
+      "server_total_ms": {
+        "count": 5,
+        "min": 1450.942425,
+        "max": 1574.252241,
+        "p50": 1555.928458,
+        "p95": 1574.252241,
+        "p99": 1574.252241
+      }
+    },
+    "samples_ms": [
+      {
+        "request_to_binding_response_ms": 1557.758,
+        "request_to_first_new_command_success_ms": 1566.948,
+        "request_to_old_host_stopped_observed_ms": 1604.115,
+        "request_to_old_durable_destroyed_observed_ms": 1698.088,
+        "server_admission_revoked_ms": 1555.074471,
+        "server_candidate_ready_ms": 1554.20986,
+        "server_fence_to_commit_ms": 0.850676,
+        "server_total_ms": 1555.928458
+      },
+      {
+        "request_to_binding_response_ms": 1452.544,
+        "request_to_first_new_command_success_ms": 1460.634,
+        "request_to_old_host_stopped_observed_ms": 1503.155,
+        "request_to_old_durable_destroyed_observed_ms": 1557.723,
+        "server_admission_revoked_ms": 1449.739174,
+        "server_candidate_ready_ms": 1448.509392,
+        "server_fence_to_commit_ms": 1.198498,
+        "server_total_ms": 1450.942425
+      },
+      {
+        "request_to_binding_response_ms": 1508.676,
+        "request_to_first_new_command_success_ms": 1517.268,
+        "request_to_old_host_stopped_observed_ms": 1558.372,
+        "request_to_old_durable_destroyed_observed_ms": 1650.861,
+        "server_admission_revoked_ms": 1505.980292,
+        "server_candidate_ready_ms": 1504.769894,
+        "server_fence_to_commit_ms": 1.18741,
+        "server_total_ms": 1507.171883
+      },
+      {
+        "request_to_binding_response_ms": 1576.227,
+        "request_to_first_new_command_success_ms": 1590.538,
+        "request_to_old_host_stopped_observed_ms": 1631.77,
+        "request_to_old_durable_destroyed_observed_ms": 1730.72,
+        "server_admission_revoked_ms": 1573.014563,
+        "server_candidate_ready_ms": 1571.780597,
+        "server_fence_to_commit_ms": 1.233123,
+        "server_total_ms": 1574.252241
+      },
+      {
+        "request_to_binding_response_ms": 1568.744,
+        "request_to_first_new_command_success_ms": 1577.423,
+        "request_to_old_host_stopped_observed_ms": 1605.476,
+        "request_to_old_durable_destroyed_observed_ms": 1700.341,
+        "server_admission_revoked_ms": 1566.150006,
+        "server_candidate_ready_ms": 1564.86515,
+        "server_fence_to_commit_ms": 1.188169,
+        "server_total_ms": 1567.342574
+      }
+    ],
+    "sampled_resource_peaks": {
+      "controller_rss_bytes": 16211968,
+      "owned_vm_process_rss_bytes": 164368384,
+      "owned_cgroup_memory_current_bytes": 167583744,
+      "controller_fds": 22
+    },
+    "post_old_gc_resources": [
+      {
+        "iteration": 1,
+        "controller_rss_bytes": 15364096,
+        "owned_vm_process_rss_bytes": 80113664,
+        "owned_cgroup_memory_current_bytes": 81137664,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 2,
+        "controller_rss_bytes": 16138240,
+        "owned_vm_process_rss_bytes": 82587648,
+        "owned_cgroup_memory_current_bytes": 83779584,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 3,
+        "controller_rss_bytes": 15720448,
+        "owned_vm_process_rss_bytes": 81915904,
+        "owned_cgroup_memory_current_bytes": 83103744,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 4,
+        "controller_rss_bytes": 15724544,
+        "owned_vm_process_rss_bytes": 82104320,
+        "owned_cgroup_memory_current_bytes": 83681280,
+        "controller_fds": 11
+      },
+      {
+        "iteration": 5,
+        "controller_rss_bytes": 15998976,
+        "owned_vm_process_rss_bytes": 80568320,
+        "owned_cgroup_memory_current_bytes": 81756160,
+        "controller_fds": 11
+      }
+    ],
+    "final_resources": {
+      "controller_rss_bytes": 15966208,
+      "owned_vm_process_rss_bytes": 0,
+      "owned_cgroup_memory_current_bytes": 0,
+      "controller_fds": 8
+    },
+    "checks": [
+      "every new VM has clean workspace and successful exact-revision guest execution",
+      "each old generation independently host-stopped then durably reclaimed before next switch",
+      "metrics scrapes remain available; per-pool queues drained at each iteration",
+      "final revoke reclaims last generation without VMM/cgroup residue"
+    ]
+  },
+  "session_acceptance_report": "kvm-catalog-cold-v4-session.json",
+  "queue_acceptance_report": "kvm-catalog-cold-v4-queue.json"
+}

@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest current-source service validation is current_status.latest_runtime_validation (pristine_cold_service_regression); snapshot bootstrap has a separate component pointer and is not a service capability. Historical reports, including the forty-switch observability sample, are not rewritten.",
+  "validation_history_note": "All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -126,7 +126,8 @@
     "goal_complete": false,
     "latest_runtime_validation": "pristine_cold_service_regression",
     "latest_component_validation": "pristine_bootstrap_component",
-    "snapshot_execution_enabled_in_service": false
+    "snapshot_execution_enabled_in_verified_baseline": false,
+    "snapshot_execution_enabled_by_default": false
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -682,6 +683,115 @@
       "shared-reference crash recovery and prewarm",
       "real-KVM partial guest initialization crash matrix",
       "production sustained mixed-load fairness, resource stability and tail/SLO"
+    ]
+  },
+  "snapshot_catalog_development": {
+    "production_ready": false,
+    "goal_complete": false,
+    "implemented_in_development_branch": true,
+    "enabled_by_default": false,
+    "actual_snapshot_service_runtime_validation": "passed finite same-host KVM service probe; not production acceptance",
+    "historical_report_scope": "Prior pristine component and cold-service reports validate only their named source revisions, not this development path.",
+    "documentation": "docs/CATALOG.md",
+    "metadata_tests": "synthetic 1MiB files and test-only child SIGKILL/flock; production policy still fixes512MiB/2vCPU; not KVM isolation/load proof",
+    "current_source_real_kvm_validation": "snapshot source c7d559e; independent cold source e292e4d; identical Go source/artifact hashes",
+    "source_revision": "c7d559e9d343ccd6ef308576437a33a8731aa924",
+    "service_report": "docs/validation/kvm-catalog-service-v6.json",
+    "builder_export_report": "docs/validation/kvm-catalog-builder-v3.json",
+    "cold_service_report": "docs/validation/kvm-catalog-cold-v4.json",
+    "cold_queue_report": "docs/validation/kvm-catalog-cold-v4-queue.json",
+    "cold_binding_fsync_report": "docs/validation/kvm-catalog-cold-v4-session.json",
+    "snapshot_service_assertion_groups": 10,
+    "closed_loop_snapshot_switches": 5,
+    "independent_cold_service_checks": 30,
+    "runner_exit_status": 0,
+    "owned_service_runtime_cleanup_confirmed": true,
+    "private_unassigned_builder_export_retained_for_followup_fault_tests": true,
+    "not_validated": [
+      "remaining real-KVM guest CLAIMED-to-marker crash, partial privileged initialization, fragmented/lost partial frames and READY-ledger write fault windows",
+      "cross-host/kernel upgrade compatibility or prewarm pool",
+      "physical disk failure, quotas, secure erase and long-term metadata retention",
+      "shared/private RAM accounting, sustained mixed load, fairness, true tails and production SLO"
+    ],
+    "toolchain": "go1.27.3",
+    "source_ci": {
+      "source_revision": "c7d559e9d343ccd6ef308576437a33a8731aa924",
+      "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39812725648",
+      "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39812735832",
+      "result": "success; separate from KVM acceptance"
+    }
+  },
+  "snapshot_initialization_faults": {
+    "validated_on": "2026-10-22",
+    "source_revision": "f9f47ecd026b60ba501d5e9a804907f3a2fb0054",
+    "report": "docs/validation/kvm-catalog-initialization-v2.json",
+    "production_ready": false,
+    "goal_complete": false,
+    "cases": 5,
+    "runner_exit_status": 0,
+    "cleanup_confirmed": true,
+    "toolchain": "go1.27.3",
+    "production_runtime_modified": false,
+    "production_daemon_sha256": "87e6799c653cea11039a64c9e67b91c53a95cc34d80d48e026dd68baeab85125",
+    "test_only_transport_injection": true,
+    "ordinary_daemon_recovery_and_same_key_rejection_in_all_cases": true,
+    "local_native_race_repeat_3": "passed; darwin does not execute Linux-only relay tests",
+    "ordinary_linux_ci": "new source jobs queued when last inspected; not counted as passed",
+    "not_validated": [
+      "guest-internal claim-to-marker crash and partial privileged initialization",
+      "fragmented/partial frame loss and READY-ledger write fault matrix",
+      "sustained mixed load, memory accounting, host/storage/power failures and production SLO"
+    ],
+    "creation_controller": "root Go test child uses real Manager/CreateScoped/Driver with12s PrepareTimeout; ordinary unmodified sandboxd handles restart and HTTP idempotency replay"
+  },
+  "snapshot_private_umask_regression": {
+    "source_revision": "547cd79a9c48f49b2410197db065419dcfff6bdf",
+    "production_ready": false,
+    "goal_complete": false,
+    "observed_failure": "Linux full race under077 exposed creation0444 filteredto0400; strict backing checks failed. A subsequent negative ledger fixture was actually0700 dueumask, not an implementation policy failure.",
+    "fix": "create0600; explicitly chmodsameFD0444 beforecatalogfsync/publication, and readonlycoldassetsafterdigest. Keepstrict0444checks. Explicit0755negativefixture. CIraceentiresuite077.",
+    "toolchain": "go1.27.3 linux/amd64 native",
+    "linux_race_repeat_3": "passed under077",
+    "linux_vet": "passed",
+    "runner_exit_status": 0,
+    "service_checks": 10,
+    "snapshot_switches": 5,
+    "initialization_fault_cases": 5,
+    "cold_service_checks": 30,
+    "service_report": "docs/validation/kvm-umask-service-v1.json",
+    "initialization_report": "docs/validation/kvm-umask-initialization-v1.json",
+    "cold_report": "docs/validation/kvm-umask-cold-v1.json",
+    "queue_report": "docs/validation/kvm-umask-cold-v1-queue.json",
+    "binding_report": "docs/validation/kvm-umask-cold-v1-session.json",
+    "current_controller_umask": "0077",
+    "historical_legacy_setup_umask": "0022; current recovery0077",
+    "runtime_daemon_sha256": "c57760c8c6f1ce5e013e51b8053015f367e55e5a29fd9ac064ba6602e32813f1",
+    "unassigned_builder_export_still_retained_private": true,
+    "scope": "Replaces prior runtime evidence for the changed production paths; not guest-internal marker/partial-privileged-init faults, sustainedload, RAMaccounting or productionSLO."
+  },
+  "guest_internal_fault_fixtures": {
+    "production_ready": false,
+    "goal_complete": false,
+    "normal_source": "52daaf63c85f4cf1509c58733c73048980936711",
+    "normal_transport_cases": 6,
+    "guest_fixture_source": "6c9a94c335146c65491fb07bcf22a64146147fab",
+    "guest_fixture_cases": 2,
+    "normal_report": "docs/validation/kvm-guest-internal-normal-v3.json",
+    "partial_privileged_report": "docs/validation/kvm-guest-machine-id-v4.json",
+    "pre_marker_injected_crash_report": "docs/validation/kvm-guest-before-marker-v4.json",
+    "fixture_provenance": "docs/validation/guest-fault-image-provenance-v4.json",
+    "guest_fixture_outer_runner_exit_status": 0,
+    "normal_case_stage_exit_status": 0,
+    "normal_outer_batch_later_exit_status": 1,
+    "normal_outer_failure": "later builder report-directory collision; not a normal-case failure",
+    "test_only_observer": true,
+    "production_agent_modified_in_partial_failure_case": false,
+    "compiler_overlay_used_for_exact_crash_case": true,
+    "production_runtime_code_changed": false,
+    "not_validated": [
+      "all remaining init syscall/failure windows or arbitrary memory attestation",
+      "partial frames and READY ledger-write faults",
+      "sustained mixed-load fairness, RAM accounting, prewarm and production SLO"
     ]
   }
 }

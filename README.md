@@ -14,15 +14,17 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 [前一轮真实后端验收](docs/validation/kvm-observability-2026-10-22.json) 已通过 30 项 KVM 检查：基础服务、控制器 SIGKILL/暂停、硬 TTL、guardian 失效、真实旧 VM 的账本升级恢复、root 创建前归属拒绝、会话冷切换/CAS/崩溃恢复、受控 fsync 阻塞、独立管理指标，以及40次新VM切换闭环。[绑定 fsync 专项](docs/validation/kvm-observability-binding-fsync-2026-10-22.json) 与 [停止/GC 分池专项](docs/validation/kvm-observability-queues-2026-10-22.json) 各9项断言是对应服务用例的展开，不再额外加18个独立场景。尚未覆盖完整生产故障矩阵或切换性能。
 
-[当前源码冷路径回归](docs/validation/kvm-pristine-cold-service-2026-10-22.json) 使用新agent/镜像再次通过30项服务检查，闭环缩为5次兼容性烟测；不是新的40次负载样本，也未启用服务端快照。对应停止/GC、绑定fsync的各9条断言只是现有用例展开，不额外计数。
+[已验收基线源码的冷路径回归](docs/validation/kvm-pristine-cold-service-2026-10-22.json) 使用新agent/镜像再次通过30项服务检查，闭环缩为5次兼容性烟测；不是新的40次负载样本，也未启用服务端快照。对应停止/GC、绑定fsync的各9条断言只是现有用例展开，不额外计数。
 
 目标是先验证：资源归属、停止与销毁的区别、异步回收、失败重试、并发栅栏，以及管理进程崩溃后的回收。
 
-新增实验性 [会话绑定与冷切换](docs/SESSIONS.md)：候选 READY 后以 revision 条件切换，旧环境撤权/停止/回收分离，普通 per-VM 执行接口不能绕过会话准入。已通过真实 KVM 新路径验收；仍无快照/预热加速，约1.45s到新命令首次成功的冷切换单样本不是生产百分位或SLO。
+新增实验性 [会话绑定与冷切换](docs/SESSIONS.md)：候选 READY 后以 revision 条件切换，旧环境撤权/停止/回收分离，普通 per-VM 执行接口不能绕过会话准入。已通过真实 KVM 冷路径验收；该历史报告不包含快照/预热，约1.45s到新命令首次成功的冷切换单样本不是生产百分位或SLO。
 
 实验性 [独立管理指标](docs/OBSERVABILITY.md) 使用显式开启的私有Unix socket、固定基数直方图与原子gauges；不作为可靠审计或停止/销毁证明。40次实机闭环的首命令成功P50/P95为1.53/1.62s；67秒有限测试不是长期稳定性或生产SLO。
 
-实验性 [干净模板初始化闸门](docs/PRISTINE.md) 将未分配模板与正常执行端口分离，恢复后必须重新注入身份/熵并完成封存健康检查。已通过真实KVM双克隆组件验证及新agent冷启动15项回归；当前未接入sandboxd快照调度、共享目录或预热池，服务仍为冷启动；不构成加速或生产验收。
+实验性 [干净模板初始化闸门](docs/PRISTINE.md) 将未分配模板与正常执行端口分离，恢复后必须重新注入身份/熵并完成封存健康检查。已通过真实KVM双克隆组件验证及新agent冷启动15项回归；该报告不覆盖新schema2 catalog/服务接入；新服务路径的有限同机验收见下文，仍无预热池，默认schema1仍为冷启动，不构成生产验收。
+
+开发分支新增 [schema2快照catalog/服务接入](docs/CATALOG.md)，[私有umask修正后真实服务报告](docs/validation/kvm-umask-service-v1.json) 已通过10条有限检查，含5次实际恢复切换、锁下Stop/阻塞GC、活引用退役、SIGKILL恢复与丢失ownership拒删。新首命令成功626–742ms、旧执行停止648–761ms、旧代持久销毁725–812ms，仅为这5次同机观测，不是百分位、加速比或SLO；独立Create的3个样本为662–2579ms，不应只挑暖路径。默认schema1仍冷启动，[修正后新源码冷路径](docs/validation/kvm-umask-cold-v1.json) 另通过30项回归；另有[修正后初始化故障实机报告](docs/validation/kvm-umask-initialization-v1.json)：两个精确宿主崩溃屏障及三类ACK/epoch故障通过，均验证普通daemon恢复、旧创建键拒绝和完整私有回收。另有[guest内部故障测试镜像证据](docs/CATALOG.md)：未修改agent的部分初始化失败，以及明确标记为compiler-overlay的认领后标记前崩溃，均拒绝候选并回收。它们不代表完整故障矩阵；共享内存记账、持续负载与生产验收仍未完成。
 
 ## 已实现
 

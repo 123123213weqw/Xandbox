@@ -1,0 +1,48 @@
+{
+  "production_ready": false,
+  "test_only": true,
+  "source_revision": "6c9a94c335146c65491fb07bcf22a64146147fab",
+  "production_initializer_source_sha256": "d794fc3b6b341fd7c507b32de646d93795e645a6096c87822a0f8e94f121ef42",
+  "patched_initializer_source_sha256": "e03dc2a248489645e1ab1a53cd2082048517d7bd7c3f33d6c2c8c38d331048f6",
+  "images": [
+    {
+      "test_only": true,
+      "fault_mode": "machine-id-directory",
+      "base_initrd_sha256": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+      "initrd_sha256": "1ce968d607dae8cf7e7b23efdca8d41a9b44f4c86f2c3d3e6eacc722751b32e3",
+      "observer_sha256": "53a468076095327e3242691c66320a71477b41eefac24e71c98137ff0dbda44a",
+      "agent_sha256": "78d26abea63f0a520d76e2fbe704148cec1b5043fcec41765f56b19d8eb4c2fd",
+      "production_agent_modified": false,
+      "not_production_image": true
+    },
+    {
+      "test_only": true,
+      "fault_mode": "crash-before-marker",
+      "base_initrd_sha256": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+      "initrd_sha256": "e928c0e627cd52631f151a5ecf231f39decfee25b1a7ffa95756c32683448014",
+      "observer_sha256": "53a468076095327e3242691c66320a71477b41eefac24e71c98137ff0dbda44a",
+      "agent_sha256": "2133bfea15eaaebee270167e9687111c546b1caba50bc7b46fe401c95a327202",
+      "production_agent_modified": true,
+      "not_production_image": true
+    }
+  ],
+  "private_unassigned_exports": [
+    {
+      "fault_mode": "machine-id-directory",
+      "source_revision": "6c9a94c335146c65491fb07bcf22a64146147fab",
+      "snapshot_memory_sha256": "971f15b058248a667d7b13a56b4fed1a01b264f6fed9a5e9d54cbffc922e0c7e",
+      "pristine_disk_sha256": "d942e6db49231328ffa5a11bf44acfec34543c3eb61d417e414624e075f3e4d4",
+      "private_report_sha256": "e54771ffeb7af713f77fc576cc93d3aa9d33b360d422f577376ed56ad3b98f47",
+      "positive_clone_acceptance": false
+    },
+    {
+      "fault_mode": "crash-before-marker",
+      "source_revision": "6c9a94c335146c65491fb07bcf22a64146147fab",
+      "snapshot_memory_sha256": "58899244823afb70d6c1ec4d38bc73f663d473cd053f084e3fc4b2abc75e2fba",
+      "pristine_disk_sha256": "8fa5fcba57714b45050437e7c94df2b2777c4e3af9578f7a64aff5a6b0e7d14d",
+      "private_report_sha256": "49495a50cb72cb17acc32d04a69070bb91112e581774f6c686944b49601d6167",
+      "positive_clone_acceptance": false
+    }
+  ],
+  "notes": "Selected metadata only from private export-only builder reports; no claim of positive clone initialization. Both images contain extra read-only fixture observer on902. Crash image uses fixed compiler overlay, not production agent. No image/memory/fixture/log published. Original export report wording only bootstrap did not describe this extra observer; do not use that wording as port enumeration proof."
+}
