@@ -29,6 +29,9 @@ var (
 	ErrTenantCapacity      = errors.New("tenant instance quota exhausted")
 	ErrIdempotencyConflict = errors.New("idempotency key was used with a different request")
 	ErrIdempotencyGone     = errors.New("idempotent creation is no longer usable; use a new key")
+	// ErrBackendFenced requires admission fencing and recovery. It does NOT
+	// certify stopped execution; Driver.Stop still has to prove that separately.
+	ErrBackendFenced = errors.New("backend execution domain fenced; recovery required")
 )
 
 var tenantPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`)

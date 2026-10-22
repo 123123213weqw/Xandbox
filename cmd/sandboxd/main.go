@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/access"
+	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
@@ -28,16 +29,20 @@ func main() {
 
 func run() (retErr error) {
 	stateDir := flag.String("state-dir", "", "required private state directory")
-	backend := flag.String("backend", "", "required: mock (simulation only)")
+	backend := flag.String("backend", "", "required: mock or firecracker (experimental Linux/KVM)")
+	firecrackerConfig := flag.String("firecracker-config", "", "private pinned-asset Firecracker configuration")
 	maxInstances := flag.Int("max-instances", 32, "maximum allocated, including unreclaimed instances")
 	authFile := flag.String("auth-file", "", "private digest-only authentication configuration")
 	insecureMock := flag.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
 	flag.Parse()
-	if *stateDir == "" || *backend != "mock" || *maxInstances < 1 || *maxInstances > 10_000 || flag.NArg() != 0 {
-		return fmt.Errorf("usage: sandboxd -backend mock -state-dir DIR [-max-instances 32]; mock provides NO isolation")
+	if *stateDir == "" || (*backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || flag.NArg() != 0 {
+		return fmt.Errorf("usage: sandboxd -backend mock|firecracker -state-dir DIR [-max-instances 32]; mock provides NO isolation")
 	}
 	if (*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock) {
 		return fmt.Errorf("choose exactly one of -auth-file PATH or -insecure-mock")
+	}
+	if (*backend == "mock" && *firecrackerConfig != "") || (*backend == "firecracker" && (*firecrackerConfig == "" || *insecureMock)) {
+		return errors.New("Firecracker requires -firecracker-config and -auth-file; insecure mode is mock-only")
 	}
 	var authenticator *access.Authenticator
 	if *authFile != "" {
@@ -70,11 +75,24 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
-	driver, err := sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
+	var driver sandbox.Driver
+	opts := sandbox.Options{MaxInstances: *maxInstances}
+	writeTimeout := 10 * time.Second
+	if *backend == "mock" {
+		driver, err = sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
+	} else {
+		var records []sandbox.Record
+		records, err = store.Load()
+		if err == nil {
+			driver, err = firecracker.New(absDir, *firecrackerConfig, records)
+		}
+		opts.PrepareTimeout, opts.StopTimeout, opts.CleanupTimeout = 30*time.Second, 5*time.Second, 10*time.Second
+		writeTimeout = 40 * time.Second
+	}
 	if err != nil {
 		return err
 	}
-	manager, err := sandbox.NewManager(store, driver, sandbox.Options{MaxInstances: *maxInstances})
+	manager, err := sandbox.NewManager(store, driver, opts)
 	if err != nil {
 		return err
 	}
@@ -112,14 +130,18 @@ func run() (retErr error) {
 	}
 	server := &http.Server{
 		Handler: handler, ReadHeaderTimeout: 2 * time.Second,
-		ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second,
+		ReadTimeout: 10 * time.Second, WriteTimeout: writeTimeout,
 		IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192,
 	}
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(listener) }()
 	signalCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
-	slog.Warn("MOCK BACKEND: lifecycle simulation only; no sandbox isolation or host shell", "socket", socket)
+	if *backend == "mock" {
+		slog.Warn("MOCK BACKEND: lifecycle simulation only; no sandbox isolation or host shell", "socket", socket)
+	} else {
+		slog.Warn("EXPERIMENTAL FIRECRACKER: production acceptance incomplete", "socket", socket)
+	}
 	select {
 	case err := <-serveErr:
 		if !errors.Is(err, http.ErrServerClosed) {

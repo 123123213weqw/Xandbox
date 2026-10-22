@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,6 +17,9 @@ import (
 type Options struct {
 	MaxInstances     int
 	OperationTimeout time.Duration
+	PrepareTimeout   time.Duration
+	StopTimeout      time.Duration
+	CleanupTimeout   time.Duration
 	ReapInterval     time.Duration
 	RetryDelay       time.Duration
 }
@@ -61,6 +65,15 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	}
 	if opts.OperationTimeout <= 0 {
 		opts.OperationTimeout = 2 * time.Second
+	}
+	if opts.PrepareTimeout <= 0 {
+		opts.PrepareTimeout = opts.OperationTimeout
+	}
+	if opts.StopTimeout <= 0 {
+		opts.StopTimeout = opts.OperationTimeout
+	}
+	if opts.CleanupTimeout <= 0 {
+		opts.CleanupTimeout = opts.OperationTimeout
 	}
 	if opts.ReapInterval <= 0 {
 		opts.ReapInterval = 100 * time.Millisecond
@@ -294,7 +307,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 		m.notify()
 		return Record{}, fmt.Errorf("persist ownership before prepare: %w", err)
 	}
-	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.OperationTimeout)
+	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.PrepareTimeout)
 	stopCancel := context.AfterFunc(ctx, cancel)
 	err = m.driver.Prepare(opCtx, ref, req.Limits)
 	stopCancel()
@@ -349,6 +362,9 @@ func (m *Manager) Exec(id string, req ExecRequest) (Job, error) {
 	}
 	size := 0
 	for _, arg := range req.Argv {
+		if strings.IndexByte(arg, 0) >= 0 {
+			return Job{}, fmt.Errorf("%w: argv contains NUL", ErrInvalid)
+		}
 		size += len(arg)
 	}
 	if size > 32_768 {
@@ -418,6 +434,17 @@ func (m *Manager) run(i *instance, e *execution, ctx context.Context, req ExecRe
 	}
 	i.mu.Lock()
 	defer i.mu.Unlock()
+	if errors.Is(err, ErrBackendFenced) && i.record.State == Ready {
+		next := i.record
+		next.State, next.DeleteRequested, next.LastError = Stopping, true, "backend requires recovery"
+		_ = m.fenceLocked(i, next)
+		for _, other := range i.jobs {
+			if other.job.Status == "RUNNING" {
+				other.cancel()
+			}
+		}
+		m.notify()
+	}
 	e.job.Output, e.job.FinishedAt = out, time.Now().UTC()
 	e.job.Status = "EXITED"
 	if err != nil {
@@ -496,7 +523,7 @@ func (m *Manager) stopLocked(ctx context.Context, i *instance) error {
 	if err != nil {
 		return err
 	}
-	opCtx, cancel := context.WithTimeout(ctx, m.opts.OperationTimeout)
+	opCtx, cancel := context.WithTimeout(ctx, m.opts.StopTimeout)
 	defer cancel()
 	if err := m.driver.Stop(opCtx, ref); err != nil {
 		return err
@@ -566,7 +593,7 @@ func (m *Manager) reclaim(i *instance) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(m.ctx, m.opts.OperationTimeout)
+	ctx, cancel := context.WithTimeout(m.ctx, m.opts.CleanupTimeout)
 	err = m.driver.Cleanup(ctx, ref)
 	cancel()
 	if err != nil {

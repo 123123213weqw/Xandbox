@@ -112,6 +112,64 @@
       "production image supply chain and reserved UID allocation",
       "guest cgroup cleanup-failure whole-VM fencing",
       "service API load, percentiles, snapshot or atomic switching"
-    ]
+    ],
+    "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
+  },
+  "validation_history_note": "Top-level mock/M0, M1 and guest_component entries are historical snapshots. Current integration status is in current_status and firecracker_driver; historical reports are not rewritten.",
+  "current_status": {
+    "updated_on": "2026-10-22",
+    "backends": [
+      "mock",
+      "experimental firecracker-linux-kvm"
+    ],
+    "production_ready": false,
+    "goal_complete": false
+  },
+  "firecracker_driver": {
+    "validated_on": "2026-10-22",
+    "integrated_into_sandboxd": true,
+    "production_ready": false,
+    "report": "docs/validation/kvm-driver-hardened-2026-10-22.json",
+    "source_revision": "254b269e8f5d982756f3e26a9f7a2de8df9cbc21",
+    "runtime_source_revision": "254b269e8f5d982756f3e26a9f7a2de8df9cbc21",
+    "controller_and_warden_toolchain": "go1.27.3 linux/amd64, cross-compiled on darwin/arm64 with CGO_ENABLED=0 -trimpath -buildvcs=false; exact SHA-256 verified before real KVM execution",
+    "checks": {
+      "real_kvm_service_acceptance_checks": 16,
+      "race_all_repeat_3": "passed",
+      "ownership_lifecycle_race_repeat_10": "passed",
+      "linux_source_packages_race_repeat_3": "passed (Go 1.26.4 compatibility, not the deployment security baseline)",
+      "go_vet": "passed",
+      "mock_auth_process_smoke": "passed",
+      "govulncheck_linux_target": "0 reachable vulnerabilities; 6 uncalled required-module findings remain",
+      "patched_toolchain_real_kvm_service_runs": 2,
+      "ttl_cleanup_regression_repeat_100": "passed"
+    },
+    "host_context": {
+      "cpu_model": "Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz",
+      "logical_cpus": 64,
+      "host_memory_kib": 263753640,
+      "runtime_filesystem": "ext4",
+      "cache_and_load": "uncontrolled",
+      "guest_rss": "not measured",
+      "disk_writes": "small test files, not a full 128 MiB dirty disk",
+      "concurrency": "one tenant/VM at a time; up to three accepted jobs queued onto two guest slots"
+    },
+    "not_validated": [
+      "host reboot and disk failure recovery",
+      "supervisor/controller double failure and independent lease expiry on controller hang",
+      "slow-GC priority, bounded GC queue and sustained load",
+      "metadata schema migration, capacity and tombstone retention",
+      "host disk project quota and physical/cryptographic erasure",
+      "production image maintenance and deployment upgrades",
+      "malicious guest completion authenticity (not promised by per-command RPC)",
+      "snapshot/prewarm/atomic switching and latency percentiles/SLO"
+    ],
+    "prior_report": "docs/validation/kvm-driver-2026-10-22.json",
+    "resolved_ci_regression": {
+      "run": "https://github.com/123123213weqw/Xandbox/actions/runs/39731963228",
+      "test": "TestCleanupRetriesAndTTL",
+      "cause": "30 ms creation TTL expired during fsync/scheduling; creation correctly failed before READY",
+      "fix": "deterministically expire durable ledger only after READY; no production TTL semantics changed"
+    }
   }
 }

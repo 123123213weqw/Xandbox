@@ -18,8 +18,8 @@ tokens.json
 *.rootfs
 *.ext4
 vmlinux*
-firecracker
-jailer
+/firecracker
+/jailer
 
 # Raw client credentials
 *.token
