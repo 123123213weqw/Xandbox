@@ -12,6 +12,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [双层I/O预算](docs/IO.md)：操作员绑定的Firecracker请求桶与每代cgroup块设备限制，cold/PAUSED快照均先设置、验证后才准入。新原生运行时及真实压力/拒绝/存储交叉回归通过；健康账本下活跃写盘的host停止观测29–47ms，持久销毁另测。缓冲写回与缓存口径不同，不把io.stat当完整计费；不是节点总预算、物理quota或生产SLO。
 
+新增 [独占虚拟宿主掉电恢复](docs/NESTED_HOST.md)：真实嵌套KVM的running/stopped/destroyed三个检查点通过；切断自己的L1服务宿主后，原磁盘冷启动、普通daemon回收旧代/旧key拒绝及新L2执行销毁均成功。共享L0从未重启；仅为各N=1的虚拟宿主故障实验，不代表物理SSD掉电、完整M2或生产SLO。
+
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
 停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。

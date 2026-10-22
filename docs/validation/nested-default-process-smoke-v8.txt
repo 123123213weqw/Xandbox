@@ -1,0 +1,93 @@
+mkdir -p "bin/nested-regression"
+go build -o "bin/nested-regression/sandboxd" ./cmd/sandboxd
+go build -o "bin/nested-regression/sandboxctl" ./cmd/sandboxctl
+go build -o "bin/nested-regression/xandbox-keygen" ./cmd/xandbox-keygen
+go build -o "bin/nested-regression/xandbox-guestctl" ./cmd/xandbox-guestctl
+go build -o "bin/nested-regression/xandbox-template" ./cmd/xandbox-template
+python3 scripts/smoke.py --daemon "bin/nested-regression/sandboxd" --cli "bin/nested-regression/sandboxctl"
+{
+  "backend": "mock",
+  "microvm_benchmark": false,
+  "cycles": 50,
+  "checks": [
+    "Unix-socket health explicitly reports mock / no isolation",
+    "second controller cannot acquire the same state directory",
+    "workspace separation, stale-generation fence, and host-shell rejection",
+    "stop drains execution; destroy is idempotent and separately observable",
+    "execution timeout and sandboxctl end-to-end command",
+    "SIGKILL + restart fences and reclaims the previous generation",
+    "50 create/execute/destroy cycles leave no private workspaces",
+    "graceful shutdown removes its socket"
+  ]
+}
+python3 scripts/auth_smoke.py --daemon "bin/nested-regression/sandboxd" --cli "bin/nested-regression/sandboxctl" --keygen "bin/nested-regression/xandbox-keygen"
+{
+  "backend": "mock",
+  "provides_microvm_isolation": false,
+  "checks": [
+    "keygen creates private files, stores only SHA-256 digests, and refuses overwrite",
+    "daemon fails closed without auth mode and refuses nonprivate configuration",
+    "authentication, all tenant resource boundaries, quota, and creation replay/conflict",
+    "token-file CLI performs authenticated creation replay and execution",
+    "SIGKILL + restart retains tenant ownership and idempotency tombstones without resurrection"
+  ]
+}
+python3 scripts/metadata_smoke.py --daemon "bin/nested-regression/sandboxd"
+{
+  "backend": "mock",
+  "production_ready": false,
+  "source_revision": null,
+  "test": "ledger_metadata_process_acceptance",
+  "migration_fault_records": 2048,
+  "actual_old_binary": false,
+  "checks": [
+    "tenant metadata saturation preserves live replay, tombstone and exclusive migration lock",
+    "node metadata cap survives restart and does not recycle destroyed keys",
+    "SIGKILL restart below old record budget reclaims every old generation without resurrection",
+    "legacy fixture requires explicit offline upgrade; rerun is idempotent and preserves key rejection",
+    "unknown schema rejects migration and service startup without modifying valid records",
+    "actual SIGKILL during 2048-record migration leaves mixed schema; resume preserves all identities and cleans orphan temps"
+  ],
+  "daemon_sha256": "f8ebc831b3a577b55a7de9f1eb73398ed41a0e1e6bcbb248b12613438d6c55b2"
+}
+python3 scripts/session_smoke.py --daemon "bin/nested-regression/sandboxd"
+{
+  "test": "experimental_session_switch_process_acceptance",
+  "backend": "mock",
+  "microvm_benchmark": false,
+  "production_ready": false,
+  "source_revision": null,
+  "runtime_platform": "Linux/x86_64",
+  "daemon_sha256": "f8ebc831b3a577b55a7de9f1eb73398ed41a0e1e6bcbb248b12613438d6c55b2",
+  "checks": [
+    "authenticated scoped session API; plain per-VM Exec cannot bypass managed admission",
+    "per-tenant and node session metadata budgets include retained session identities",
+    "conditional cold switch rejects old revision; new workspace clean; old VM lifecycle separately reclaimed; idempotent switch key",
+    "two concurrent expected-revision switches publish exactly one next binding; private hashes omitted",
+    "actual controller SIGKILL restart closes old session routes, retains keys and reclaims all underlying generations"
+  ],
+  "samples": {
+    "mock_switch_response_ms": 4.042,
+    "mock_request_to_first_new_command_success_ms": 4.652,
+    "mock_request_to_new_commands_completed_ms": 5.221,
+    "mock_server_phase_observations": {
+      "admission_revoked_ms": 2.917982,
+      "measured": true,
+      "candidate_ready_ms": 2.173469,
+      "fence_to_commit_ms": 0.769594,
+      "total_ms": 3.689421
+    }
+  }
+}
+python3 scripts/metrics_smoke.py --daemon "bin/nested-regression/sandboxd"
+{
+  "backend": "mock",
+  "production_ready": false,
+  "checks": [
+    "metrics socket disabled by default",
+    "startup refuses to replace regular metrics path",
+    "operator UDS0600 separate from authenticated tenant API and no sensitive labels",
+    "stop/reclaim succeed under offered metrics connection saturation; tombstone remains counted",
+    "restart resets process counters, rebuilds retained gauges and removes socket on shutdown"
+  ]
+}

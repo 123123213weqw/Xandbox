@@ -991,5 +991,25 @@
       "EIO/automatic readonly/whole-host/power loss, dual-supervisor failure or secure erase",
       "remaining initialization/prewarm, archival, open-loop fairness, audit/alerts/rollback and independent operator or production SLO"
     ]
+  },
+  "owned_virtual_host_power_cut": {
+    "production_ready": false,
+    "goal_complete": false,
+    "report": "docs/validation/kvm-nested-host-v8.json",
+    "provenance": "docs/validation/nested-host-provenance-v8.json",
+    "design": "docs/NESTED_HOST.md",
+    "harness_source": "10e1d450aecb4ad3ded3a87017110a654c3e5c1a",
+    "native_toolchain": "go1.27.3 linux/amd64",
+    "real_nested_kvm": true,
+    "completed_checkpoints": [
+      "running",
+      "stopped",
+      "destroyed"
+    ],
+    "l1_boots": 4,
+    "fresh_l0_execution_generations": 4,
+    "runner_exit_status": 0,
+    "cleanup_confirmed": true,
+    "scope": "Forced loss of owned L1 service-host VM with same-disk ordinary-daemon recovery and fresh L2 execution; NOT physical L0 media power failure, exhaustive fault windows, production SLO or complete M2."
   }
 }
