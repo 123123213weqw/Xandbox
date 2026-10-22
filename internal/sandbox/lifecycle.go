@@ -40,8 +40,9 @@ func (i *instance) cancelWork() {
 }
 
 // fenceIntent is an in-memory admission fence, not a durability acknowledgement.
-// Stop workers persist it before stopping, cleanup workers persist RECLAIMING
-// before deletion. Destroy's synchronous save still gates its HTTP 202.
+// Stop workers attempt to persist it, but a returned storage error still allows
+// a bounded best-effort physical Stop, never a durable acknowledgement. Cleanup
+// requires durable RECLAIMING. Destroy's synchronous save still gates HTTP 202.
 func (i *instance) fenceIntent(deleteResources bool) {
 	if i.record.State == Destroyed {
 		return

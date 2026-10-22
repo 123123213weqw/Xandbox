@@ -30,3 +30,6 @@ vmlinux*
 *.mem
 *.vmstate
 template.state
+
+# Private operator identity for recovering a failed hardware fixture.
+resource-receipt.json
