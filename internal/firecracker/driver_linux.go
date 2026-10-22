@@ -655,7 +655,7 @@ func copyAsset(ctx context.Context, asset Asset, path string) error {
 		return err
 	}
 	defer source.Close()
-	dest, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0444)
+	dest, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
@@ -681,6 +681,11 @@ func copyAsset(ctx context.Context, asset Asset, path string) error {
 	}
 	if hex.EncodeToString(h.Sum(nil)) != asset.SHA256 {
 		return errors.New("staged image digest mismatch")
+	}
+	// The reserved VMM UID must read cold kernel/initrd regardless of umask.
+	// Workspace callers subsequently restrict and chown their private copy.
+	if err := dest.Chmod(0444); err != nil {
+		return err
 	}
 	return dest.Close()
 }
