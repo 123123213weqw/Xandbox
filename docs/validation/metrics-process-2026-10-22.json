@@ -1,0 +1,16 @@
+{
+  "backend": "mock",
+  "production_ready": false,
+  "checks": [
+    "metrics socket disabled by default",
+    "startup refuses to replace regular metrics path",
+    "operator UDS0600 separate from authenticated tenant API and no sensitive labels",
+    "stop/reclaim succeed under offered metrics connection saturation; tombstone remains counted",
+    "restart resets process counters, rebuilds retained gauges and removes socket on shutdown"
+  ],
+  "test": "bounded_operator_metrics_process_acceptance",
+  "source_revision": "61496eb0e543d878b58599815c6914563a8b6237",
+  "daemon_sha256": "54943b1843ae21aa8b8cce014450a1f09e47692da32388f1f5e8c2f05e77508e",
+  "runtime_platform": "Darwin/arm64",
+  "microvm_benchmark": false
+}

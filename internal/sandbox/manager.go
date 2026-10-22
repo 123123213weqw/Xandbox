@@ -15,9 +15,11 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/hostclock"
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
 )
 
 type Options struct {
+	Metrics          *telemetry.Registry
 	MaxRecords       int
 	MaxTenantRecords int
 	MaxInstances     int
@@ -62,25 +64,27 @@ type instance struct {
 }
 
 type Manager struct {
-	mu             sync.Mutex
-	records        map[string]*instance
-	createKeys     map[string]*instance
-	active         map[string]*instance // Capacity is returned only after durable cleanup.
-	tenantRecords  map[string]int       // Includes permanent tombstones and uncertain writes.
-	closing        bool
-	driver         Driver
-	store          Store
-	opts           Options
-	ctx            context.Context
-	cancel         context.CancelFunc
-	wake           chan struct{}
-	workerDone     chan struct{}
-	workMu         sync.Mutex
-	workers        sync.WaitGroup
-	stopQueue      chan *instance
-	cleanupQueue   chan *instance
-	stopRunning    atomic.Int32
-	cleanupRunning atomic.Int32
+	metricRecords   atomic.Int64
+	metricAllocated atomic.Int64
+	mu              sync.Mutex
+	records         map[string]*instance
+	createKeys      map[string]*instance
+	active          map[string]*instance // Capacity is returned only after durable cleanup.
+	tenantRecords   map[string]int       // Includes permanent tombstones and uncertain writes.
+	closing         bool
+	driver          Driver
+	store           Store
+	opts            Options
+	ctx             context.Context
+	cancel          context.CancelFunc
+	wake            chan struct{}
+	workerDone      chan struct{}
+	workMu          sync.Mutex
+	workers         sync.WaitGroup
+	stopQueue       chan *instance
+	cleanupQueue    chan *instance
+	stopRunning     atomic.Int32
+	cleanupRunning  atomic.Int32
 }
 
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
@@ -194,6 +198,8 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 		i.publish()
 		m.active[r.ID] = i
 	}
+	m.metricRecords.Store(int64(len(m.records)))
+	m.metricAllocated.Store(int64(len(m.active)))
 	m.startWorkers()
 	m.notify()
 	return m, nil
@@ -272,7 +278,9 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	return m.createScoped(ctx, owner, key, req, nil, nil)
 }
 
-func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref)) (Record, error) {
+func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref)) (_ Record, retErr error) {
+	started := time.Now()
+	defer func() { m.opts.Metrics.Observe(telemetry.CreateCall, time.Since(started), retErr != nil) }()
 	if !owner.Valid() {
 		return Record{}, ErrInvalid
 	}
@@ -373,6 +381,8 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		return Record{}, errors.New("random identity collision")
 	}
 	m.records[id], m.active[id] = i, i
+	m.metricRecords.Add(1)
+	m.metricAllocated.Add(1)
 	m.tenantRecords[owner.TenantID]++
 	if keyHash != "" {
 		m.createKeys[index] = i
@@ -636,12 +646,14 @@ func (m *Manager) Stop(ctx context.Context, ref Ref) (Record, error) {
 
 // stopLocked is called with opMu held. Execution admission is fenced before the
 // driver is asked to stop; STOPPED is committed only after all calls are drained.
-func (m *Manager) stopLocked(ctx context.Context, i *instance) error {
+func (m *Manager) stopLocked(ctx context.Context, i *instance) (retErr error) {
+	started := time.Now()
 	i.mu.Lock()
 	if i.record.State == Stopped || i.record.State == Reclaiming || i.record.State == Destroyed {
 		i.mu.Unlock()
 		return nil
 	}
+	defer func() { m.opts.Metrics.Observe(telemetry.StopAttempt, time.Since(started), retErr != nil) }()
 	next := i.record
 	next.State = Stopping
 	i.cancelWork()
@@ -705,7 +717,8 @@ func (m *Manager) Destroy(ref Ref) (Record, error) {
 
 // cleanupLocked is called only by the cleanup pool with the generation gate held.
 // It never performs Stop; scarce cleanup slots cannot hold up other stops.
-func (m *Manager) cleanupLocked(i *instance) error {
+func (m *Manager) cleanupLocked(i *instance) (retErr error) {
+	started := time.Now()
 	i.mu.Lock()
 	if i.record.State == Destroyed {
 		i.mu.Unlock()
@@ -715,6 +728,7 @@ func (m *Manager) cleanupLocked(i *instance) error {
 		i.mu.Unlock()
 		return ErrNotReady
 	}
+	defer func() { m.opts.Metrics.Observe(telemetry.CleanupAttempt, time.Since(started), retErr != nil) }()
 	next := i.record
 	next.State = Reclaiming
 	err := m.saveLocked(i, next)
@@ -740,7 +754,10 @@ func (m *Manager) cleanupLocked(i *instance) error {
 	i.mu.Unlock()
 	if err == nil {
 		m.mu.Lock()
-		delete(m.active, ref.ID)
+		if _, exists := m.active[ref.ID]; exists {
+			delete(m.active, ref.ID)
+			m.metricAllocated.Add(-1)
+		}
 		m.mu.Unlock()
 	}
 	return err
@@ -843,4 +860,10 @@ func (m *Manager) Close(ctx context.Context) error {
 		case <-ticker.C:
 		}
 	}
+}
+
+// Metrics reads only atomics/channel lengths/immutable bounds, never lifecycle
+// mutexes, records, files, driver RPCs or runtime heap inspection.
+func (m *Manager) Metrics() telemetry.Gauges {
+	return telemetry.Gauges{Records: m.metricRecords.Load(), RecordCapacity: int64(m.opts.MaxRecords), Allocated: m.metricAllocated.Load(), Capacity: int64(m.opts.MaxInstances), StopQueued: int64(len(m.stopQueue)), CleanupQueued: int64(len(m.cleanupQueue)), StopRunning: int64(m.stopRunning.Load()), CleanupRunning: int64(m.cleanupRunning.Load()), StopWorkers: int64(m.opts.StopWorkers), CleanupWorkers: int64(m.opts.CleanupWorkers), QueueCapacity: int64(m.opts.WorkQueueSize)}
 }

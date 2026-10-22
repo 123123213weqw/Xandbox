@@ -18,9 +18,11 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
+	"github.com/123123213weqw/Xandbox/internal/observability"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
 )
 
 // Keep the exclusive state lock reachable until process exit if a worker is
@@ -59,11 +61,12 @@ func run() (retErr error) {
 	maxSessions := flag.Int("max-sessions", 1000, "maximum retained session records, including closed tombstones")
 	maxTenantSessions := flag.Int("max-tenant-sessions", 0, "retained sessions per tenant; 0 = min(100,max-sessions)")
 	sessionHistory := flag.Int("session-history", 64, "maximum retained attempts per session, including initial create; 1..64")
+	metricsEnabled := flag.Bool("metrics", false, "operator-only metrics on private state-dir/metrics.sock; never on tenant API or TCP")
 	flag.Parse()
 	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || *maxSessions < 1 || *maxSessions > session.MaxRecords || *maxTenantSessions < 0 || *maxTenantSessions > *maxSessions || *sessionHistory < 1 || *sessionHistory > session.MaxHistory || flag.NArg() != 0 {
 		return fmt.Errorf("usage: sandboxd -backend mock|firecracker -state-dir DIR [-max-instances 32]; mock provides NO isolation")
 	}
-	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "") {
+	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "" || *metricsEnabled) {
 		return errors.New("offline migration cannot be combined with backend or authentication options")
 	}
 	if !*migrateLedger && ((*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock)) {
@@ -120,7 +123,8 @@ func run() (retErr error) {
 		return json.NewEncoder(os.Stdout).Encode(report)
 	}
 	var driver sandbox.Driver
-	opts := sandbox.Options{MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxTenantRecords: *maxTenantRecords, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
+	metrics := &telemetry.Registry{}
+	opts := sandbox.Options{Metrics: metrics, MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxTenantRecords: *maxTenantRecords, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
 	writeTimeout := 10 * time.Second
 	if *backend == "mock" {
 		driver, err = sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
@@ -153,7 +157,7 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
-	sessions, err := session.New(manager, sessionStore, session.Options{MaxSessions: *maxSessions, MaxTenantSessions: *maxTenantSessions, MaxAttempts: *sessionHistory})
+	sessions, err := session.New(manager, sessionStore, session.Options{Metrics: metrics, MaxSessions: *maxSessions, MaxTenantSessions: *maxTenantSessions, MaxAttempts: *sessionHistory})
 	if err != nil {
 		return err
 	}
@@ -166,6 +170,20 @@ func run() (retErr error) {
 			slog.Error("session mutations unfinished; retain state ownership until process exit", "error", err)
 		}
 	}()
+
+	var metricsErrors <-chan error
+	if *metricsEnabled {
+		observer, err := observability.Start(absDir, metrics, func() telemetry.Gauges {
+			g := manager.Metrics()
+			g.Sessions, g.SessionCapacity = sessions.Metrics()
+			return g
+		})
+		if err != nil {
+			return err
+		}
+		defer observer.Close()
+		metricsErrors = observer.Errors()
+	}
 	socket := filepath.Join(absDir, "api.sock")
 	if info, err := os.Lstat(socket); err == nil {
 		if info.Mode()&os.ModeSocket == 0 {
@@ -204,7 +222,10 @@ func run() (retErr error) {
 	} else {
 		slog.Warn("EXPERIMENTAL FIRECRACKER: production acceptance incomplete", "socket", socket)
 	}
+	defer server.Close()
 	select {
+	case err := <-metricsErrors:
+		return fmt.Errorf("metrics listener failed: %w", err)
 	case err := <-serveErr:
 		if !errors.Is(err, http.ErrServerClosed) {
 			return err
