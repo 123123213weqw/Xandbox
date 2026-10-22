@@ -25,3 +25,8 @@ vmlinux*
 *.token
 *.cpio
 *.cpio.gz
+
+# Snapshot memory/state are private runtime material, never source artifacts.
+*.mem
+*.vmstate
+template.state

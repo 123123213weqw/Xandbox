@@ -115,7 +115,7 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest integration validation is current_status.latest_runtime_validation (observability_closed_loop). Historical reports are not rewritten.",
+  "validation_history_note": "Top-level mock/M0 and named component/milestone entries are source-specific historical snapshots. Latest current-source service validation is current_status.latest_runtime_validation (pristine_cold_service_regression); snapshot bootstrap has a separate component pointer and is not a service capability. Historical reports, including the forty-switch observability sample, are not rewritten.",
   "current_status": {
     "updated_on": "2026-10-22",
     "backends": [
@@ -124,7 +124,9 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "observability_closed_loop"
+    "latest_runtime_validation": "pristine_cold_service_regression",
+    "latest_component_validation": "pristine_bootstrap_component",
+    "snapshot_execution_enabled_in_service": false
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -618,5 +620,68 @@
       "production_ready": false,
       "scope": "Host context observed after the completed KVM runner, not a during-load resource trace."
     }
+  },
+  "pristine_bootstrap_component": {
+    "validated_on": "2026-10-22",
+    "source_revision": "ec4e56ef417c300d5a302ba245839de5093e7806",
+    "production_ready": false,
+    "sandboxd_driver_integrated": false,
+    "snapshot_catalog_implemented": false,
+    "goal_complete": false,
+    "report": "docs/validation/kvm-pristine-bootstrap-2026-10-22.json",
+    "cold_guest_regression_report": "docs/validation/kvm-pristine-cold-guest-2026-10-22.json",
+    "scope": "One real-KVM unassigned-template/two-restore component case with nine assertions; new agent also passes fifteen cold guest component checks. Not service snapshot integration, shared-reference crash recovery, prewarm or performance validation.",
+    "local": {
+      "toolchain": "go1.27.3",
+      "race_repeat_3": "passed",
+      "vet": "passed",
+      "mod_verify": "passed",
+      "process_smokes": 5,
+      "bootstrap_fuzz_seconds": 15,
+      "bootstrap_fuzz_executions": 589089,
+      "linux_amd64_cross_build": "passed; executed in named KVM proof",
+      "linux_arm64_agent_cross_build": "passed; not executed",
+      "patched_python_3_14_archive_tests": 3,
+      "govulncheck": {
+        "version": "v1.8.0",
+        "target": "linux/amd64",
+        "reachable": 0,
+        "imported_package": 0,
+        "uncalled_required_module_findings": 6
+      }
+    },
+    "source_ci": {
+      "push": "https://github.com/123123213weqw/Xandbox/actions/runs/39794025676",
+      "pull_request": "https://github.com/123123213weqw/Xandbox/actions/runs/39794046109",
+      "result": "success; all ten jobs"
+    },
+    "not_validated": [
+      "guest crash after claim and partial privileged initialization failure on real KVM",
+      "sandboxd snapshot catalog/restore admission and immutable reference reconstruction",
+      "prewarm, dirty-state denial and shared-reference crash matrix",
+      "snapshot service latency/load/SLO"
+    ]
+  },
+  "pristine_cold_service_regression": {
+    "validated_on": "2026-10-22",
+    "source_revision": "ec4e56ef417c300d5a302ba245839de5093e7806",
+    "production_ready": false,
+    "goal_complete": false,
+    "snapshot_execution_enabled_in_service": false,
+    "service_report": "docs/validation/kvm-pristine-cold-service-2026-10-22.json",
+    "binding_fsync_report": "docs/validation/kvm-pristine-cold-binding-fsync-2026-10-22.json",
+    "lifecycle_queue_report": "docs/validation/kvm-pristine-cold-queues-2026-10-22.json",
+    "service_checks": 30,
+    "closed_loop_cold_switches": 5,
+    "scope": "Current-source cold-path compatibility regression after adding a pristine-capable guest agent. Same thirty service cases, only five fresh-VM closed-loop switches (not the historical forty-switch load sample). Separate nine-assertion queue and nine-assertion binding reports expand existing service cases, not eighteen additional scenarios. No snapshot-mode sandboxd execution, performance comparison, sustained load or SLO acceptance.",
+    "runner_exit_status": 0,
+    "final_owned_driver_cgroups_remaining": 0,
+    "artifact_reproduction": "Current-tree agent/daemon rebuilt with Go1.27.3 CGO0 trimpath/buildvcs=false; exact accepted SHA256 match. Evidence changes do not modify Go source.",
+    "not_validated": [
+      "sandboxd snapshot/catalog/restore admission",
+      "shared-reference crash recovery and prewarm",
+      "real-KVM partial guest initialization crash matrix",
+      "production sustained mixed-load fairness, resource stability and tail/SLO"
+    ]
   }
 }

@@ -1,0 +1,82 @@
+{
+  "architecture": "amd64",
+  "artifacts_sha256": {
+    "agent": "78d26abea63f0a520d76e2fbe704148cec1b5043fcec41765f56b19d8eb4c2fd",
+    "component_test": "52cffe8bff77d7142af8474b9dc42cb14b6f7ab7f790c4085ce6a97aafee1b50",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "guestctl": "4ffb99c9fe5ee0f4ba85118bf6be099bfb5d01a2e3c1d845dfdc49092759e3f1",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "warden": "b810afc53abd7a32c98c8a2845039e6397ab07779f2674d83a04a51b7a7a4be1"
+  },
+  "checks": [
+    "unassigned pristine template exposes only one-shot bootstrap, never normal health/exec",
+    "full snapshot created only before assignment; creator terminated without tenant execution or resume",
+    "two actual restored KVM guests require new Ref/nonce/entropy and exact sealed normal-health hash before execution",
+    "entropy-add and explicit reseed ioctls succeeded before fresh agent exec replaces agent userspace RNG caches",
+    "per-clone proc boot ID, machine ID and guest-only clock rebound; host clock unchanged",
+    "bootstrap listener removed after handoff; no post-admission reset RPC",
+    "unprivileged tasks cannot read sealed initialization receipt; workspace markers isolated",
+    "read-only shared memory inode unchanged; removing one stopped clone cannot break another live clone",
+    "cross-clone Ref rejected; host cgroup execution stopped before private file removal"
+  ],
+  "guest_memory_mib": 512,
+  "guest_network_interfaces": 0,
+  "notes": "Two same-host restores of an unassigned template; private workspace copies and read-only memory hardlinks. Not a production catalog, shared-reference crash recovery, prewarm pool, load test or SLO. Samples include unoptimized staging/diagnostic commands; no latency claim.",
+  "pristine_disk_sha256": "0b818ef54460ecd3019c2a4bebcd1fc011b32b7cdbd72ef3eae12cda34729697",
+  "production_ready": false,
+  "samples": [
+    {
+      "private_staging_and_jailer_api_ms": 454.899626,
+      "staging_to_initialized_guest_commands_ms": 520.516092
+    },
+    {
+      "private_staging_and_jailer_api_ms": 420.62133,
+      "staging_to_initialized_guest_commands_ms": 480.519426
+    }
+  ],
+  "sandboxd_driver_integrated": false,
+  "snapshot_catalog_implemented": false,
+  "snapshot_memory_sha256": "5d1873cbdb92a2059e7978845cbec16ca53a508a0d0ff43dd729eb677291d0d8",
+  "snapshot_performance_benchmark": false,
+  "source_revision": "ec4e56ef417c300d5a302ba245839de5093e7806",
+  "test": "experimental_pristine_bootstrap_snapshot_component",
+  "toolchain": "go1.27.3",
+  "vcpus": 2,
+  "workspace_bytes": 134217728,
+  "validated_on": "2026-10-22",
+  "run_window_utc": {
+    "started": "2026-10-22T14:23:43.030159+00:00",
+    "finished": "2026-10-22T14:23:59Z"
+  },
+  "runner_exit_status": 0,
+  "final_cleanup": {
+    "owned_runtime_removed": true,
+    "owned_cgroup_removed": true
+  },
+  "goal_complete": false,
+  "build": {
+    "toolchain": "go1.27.3",
+    "target": "linux/amd64",
+    "CGO_ENABLED": "0",
+    "flags": [
+      "-trimpath",
+      "-buildvcs=false"
+    ],
+    "source_archive_sha256": "b0a12ef4598062c6c4bffcad9992cac1c4e0382eb6a85becfca5d87c8bdec2d0"
+  },
+  "environment_observation": {
+    "observed_at_utc": "2026-10-22T14:26:31.858365+00:00",
+    "host_kernel": "6.8.0-136-generic",
+    "host_architecture": "x86_64",
+    "logical_cpus": 64,
+    "cpu_model": "Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz",
+    "mem_total_kib": 263753640,
+    "kernel_config_sha256": "32f1d98d81e63d86b7f90c42ab7495ebd234f0999a24682843c2f9e46f6f2704",
+    "runtime_statfs_family": "ext2/ext3",
+    "runtime_filesystem_type": "ext4",
+    "filesystem_observed_at_utc": "2026-10-22T14:30:28.331495+00:00"
+  },
+  "evidence_scope": "Nine assertions in one two-clone same-host component test; not nine independent failure scenarios. Timings include private file staging, jailer, initialization and several diagnostic guest commands, not first-command switching latency or a performance comparison."
+}

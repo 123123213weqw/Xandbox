@@ -15,6 +15,8 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
 )
 
+var initializationPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
 var bootPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 func Call(ctx context.Context, socket string, request guestwire.Request) (guestwire.Response, error) {
@@ -56,6 +58,9 @@ func Call(ctx context.Context, socket string, request guestwire.Request) (guestw
 	}
 	if err := guestwire.Read(reader, guestwire.MaxResponse, &response); err != nil {
 		return response, err
+	}
+	if response.InitializationHash != "" && !initializationPattern.MatchString(response.InitializationHash) {
+		return guestwire.Response{}, errors.New("invalid guest initialization epoch")
 	}
 	if response.Version != guestwire.Version || response.Ref != request.Ref || response.ExecutionID != request.ExecutionID || !bootPattern.MatchString(response.BootID) {
 		return guestwire.Response{}, errors.New("guest response identity mismatch")

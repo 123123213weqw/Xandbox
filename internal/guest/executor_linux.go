@@ -19,7 +19,6 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
-	"github.com/mdlayher/vsock"
 	"golang.org/x/sys/unix"
 )
 
@@ -35,33 +34,12 @@ type Executor struct {
 // NewExecutor refuses to initialize on a normal host. These are accidental-host
 // execution guards, not a defense against a malicious guest kernel or host root.
 func NewExecutor() (*Executor, sandbox.Ref, string, error) {
-	var ref sandbox.Ref
-	stamp, err := os.ReadFile("/etc/xandbox-guest")
-	if err != nil || string(stamp) != "Xandbox guest image v1\n" || os.Geteuid() != 0 {
-		return nil, ref, "", errors.New("not an Xandbox guest image")
-	}
-	cmdline, err := os.ReadFile("/proc/cmdline")
+	ref, pristine, err := guardedBoot()
 	if err != nil {
 		return nil, ref, "", err
 	}
-	guestFlag := false
-	for _, field := range strings.Fields(string(cmdline)) {
-		if field == "xandbox.guest=1" {
-			guestFlag = true
-		}
-		if strings.HasPrefix(field, "xandbox.id=") {
-			ref.ID = strings.TrimPrefix(field, "xandbox.id=")
-		}
-		if strings.HasPrefix(field, "xandbox.generation=") {
-			ref.Generation = strings.TrimPrefix(field, "xandbox.generation=")
-		}
-	}
-	if !guestFlag || !(guestwire.Request{Version: 1, Operation: "health", Ref: ref}).Valid() {
-		return nil, ref, "", errors.New("missing guest boot identity")
-	}
-	cid, err := vsock.ContextID()
-	if err != nil || cid <= 2 {
-		return nil, ref, "", errors.New("guest vsock identity unavailable")
+	if pristine {
+		return nil, ref, "", errors.New("pristine guest requires sealed initialization")
 	}
 	boot, err := os.ReadFile("/proc/sys/kernel/random/boot_id")
 	if err != nil {

@@ -16,9 +16,10 @@ type Runner interface {
 }
 
 type Server struct {
-	Ref    sandbox.Ref
-	BootID string
-	Runner Runner
+	InitializationHash string
+	Ref                sandbox.Ref
+	BootID             string
+	Runner             Runner
 }
 
 // ServeConn serves exactly one bounded call. peerIsHost must come from the
@@ -35,7 +36,7 @@ func (s *Server) ServeConn(conn net.Conn, peerIsHost bool) {
 	if err := guestwire.Read(conn, guestwire.MaxRequest, &req); err != nil || !req.Valid() || req.Ref != s.Ref {
 		return
 	}
-	response := guestwire.Response{Version: guestwire.Version, Ref: s.Ref, ExecutionID: req.ExecutionID, BootID: s.BootID, Status: "READY"}
+	response := guestwire.Response{InitializationHash: s.InitializationHash, Version: guestwire.Version, Ref: s.Ref, ExecutionID: req.ExecutionID, BootID: s.BootID, Status: "READY"}
 	if readiness, ok := s.Runner.(interface{ Ready() bool }); ok && !readiness.Ready() {
 		response.Status = "FAILED"
 		response.Error = "guest executor fenced"

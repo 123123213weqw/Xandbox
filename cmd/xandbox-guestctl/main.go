@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
+	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
@@ -33,6 +34,30 @@ func run() error {
 	args := flag.Args()
 	if *socket == "" || len(args) < 1 {
 		return fmt.Errorf("usage: xandbox-guestctl -vsock-socket PATH -id ID -generation GENERATION {health|exec COMMAND [ARGS...]}")
+	}
+	if args[0] == "bootstrap-state" || args[0] == "initialize" {
+		if len(args) != 1 {
+			return fmt.Errorf("bootstrap diagnostics take no task arguments")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), *timeout+5*time.Second)
+		defer cancel()
+		if args[0] == "bootstrap-state" {
+			r, e := guestbridge.Bootstrap(ctx, *socket, guestinit.Request{Version: guestinit.Version, Operation: "state"})
+			if e != nil {
+				return e
+			}
+			return json.NewEncoder(os.Stdout).Encode(r)
+		}
+		r, e := guestinit.NewRequest(sandbox.Ref{ID: *id, Generation: *generation})
+		if e != nil {
+			return e
+		}
+		defer r.WipeEntropy()
+		out, e := guestbridge.Initialize(ctx, *socket, r)
+		if e != nil {
+			return e
+		}
+		return json.NewEncoder(os.Stdout).Encode(out)
 	}
 	req := guestwire.Request{Version: guestwire.Version, Operation: args[0], Ref: sandbox.Ref{ID: *id, Generation: *generation}}
 	if req.Operation == "exec" {

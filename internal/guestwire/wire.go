@@ -59,14 +59,15 @@ func (r Request) Valid() bool {
 }
 
 type Response struct {
-	Version      int            `json:"version"`
-	Ref          sandbox.Ref    `json:"ref"`
-	ExecutionID  string         `json:"execution_id,omitempty"`
-	Status       string         `json:"status"`
-	Output       sandbox.Output `json:"output"`
-	Error        string         `json:"error,omitempty"`
-	BootID       string         `json:"boot_id,omitempty"`
-	ActiveGroups *int           `json:"active_execution_groups,omitempty"`
+	InitializationHash string         `json:"initialization_hash,omitempty"`
+	Version            int            `json:"version"`
+	Ref                sandbox.Ref    `json:"ref"`
+	ExecutionID        string         `json:"execution_id,omitempty"`
+	Status             string         `json:"status"`
+	Output             sandbox.Output `json:"output"`
+	Error              string         `json:"error,omitempty"`
+	BootID             string         `json:"boot_id,omitempty"`
+	ActiveGroups       *int           `json:"active_execution_groups,omitempty"`
 }
 
 func Read(r io.Reader, limit uint32, out any) error {

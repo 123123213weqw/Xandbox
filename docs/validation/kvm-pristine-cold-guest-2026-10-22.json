@@ -1,0 +1,63 @@
+{
+  "validated_on": "2026-10-22",
+  "validated_at_utc": "2026-10-22T14:23:52.019511+00:00",
+  "test": "experimental_jailed_guest_agent",
+  "production_ready": false,
+  "sandboxd_driver_integrated": false,
+  "host_kernel": "6.8.0-136-generic",
+  "architecture": "x86_64",
+  "firecracker": "Firecracker v1.17.0",
+  "guest_memory_mib": 512,
+  "vcpus": 2,
+  "workspace_bytes": 134217728,
+  "guest_network_interfaces": 0,
+  "artifacts_sha256": {
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "guestctl": "4ffb99c9fe5ee0f4ba85118bf6be099bfb5d01a2e3c1d845dfdc49092759e3f1",
+    "agent": "78d26abea63f0a520d76e2fbe704148cec1b5043fcec41765f56b19d8eb4c2fd"
+  },
+  "agent_build": {
+    "go_version": "go1.27.3",
+    "pristine_bootstrap_protocol": 1,
+    "protocol": 1
+  },
+  "checks": [
+    "guest agent refuses direct host initialization",
+    "two distinct KVM guest boots with fresh private disks",
+    "live KVM VM descriptor verified",
+    "guest commands run as UID/GID 65534 without supplementary groups and with no_new_privs",
+    "stale generation rejected while current guest remains healthy",
+    "persistent workspace within one guest",
+    "total output bound",
+    "timeout kills a setsid-escaped process tree",
+    "host client death cancels execution; kernel execution cgroup count returns to zero",
+    "guest exposes only loopback network interface",
+    "VMM has a separate loopback-only host network namespace",
+    "host environment canary absent in guest",
+    "jailer drops VMM UID and default seccomp remains active",
+    "host memory/CPU/pids cgroup settings verified",
+    "VMM exit confirmed before private resource removal"
+  ],
+  "samples": [
+    {
+      "private_staging_ms": 46.021,
+      "jailer_spawn_to_guest_ready_ms": 683.398,
+      "staging_and_spawn_to_guest_ready_ms": 729.418,
+      "cgroup_kill_to_process_exit_ms": 41.407,
+      "private_files_and_cgroup_removal_ms": 15.492
+    },
+    {
+      "private_staging_ms": 61.886,
+      "jailer_spawn_to_guest_ready_ms": 679.229,
+      "staging_and_spawn_to_guest_ready_ms": 741.116,
+      "cgroup_kill_to_process_exit_ms": 39.642,
+      "private_files_and_cgroup_removal_ms": 34.207
+    }
+  ],
+  "source_revision": "ec4e56ef417c300d5a302ba245839de5093e7806",
+  "runner_exit_status": 0,
+  "evidence_scope": "Cold-boot guest-agent component compatibility for the new pristine-capable agent. Not the sandboxd service or snapshot restore test."
+}
