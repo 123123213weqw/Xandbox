@@ -26,6 +26,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 开发分支新增 [schema2快照catalog/服务接入](docs/CATALOG.md)，[私有umask修正后真实服务报告](docs/validation/kvm-umask-service-v1.json) 已通过10条有限检查，含5次实际恢复切换、锁下Stop/阻塞GC、活引用退役、SIGKILL恢复与丢失ownership拒删。新首命令成功626–742ms、旧执行停止648–761ms、旧代持久销毁725–812ms，仅为这5次同机观测，不是百分位、加速比或SLO；独立Create的3个样本为662–2579ms，不应只挑暖路径。默认schema1仍冷启动，[修正后新源码冷路径](docs/validation/kvm-umask-cold-v1.json) 另通过30项回归；另有[修正后初始化故障实机报告](docs/validation/kvm-umask-initialization-v1.json)：两个精确宿主崩溃屏障及三类ACK/epoch故障通过，均验证普通daemon恢复、旧创建键拒绝和完整私有回收。另有[guest内部故障测试镜像证据](docs/CATALOG.md)：未修改agent的部分初始化失败，以及明确标记为compiler-overlay的认领后标记前崩溃，均拒绝候选并回收。它们不代表完整故障矩阵；共享内存记账、持续负载与生产验收仍未完成。
 
+新增 [双租户快照负载与资源曲线](docs/MIXED_LOAD.md)：两租户各120次、246.267秒的有限混合闭环通过，分别观测首次新命令、旧host停止和持久回收；保留404个PSS/cgroup/mincore/私有盘样本及前次失败记录。共享驻留、映射和cgroup charge不能相加；这不是开放到达压测、公平调度、完整RAM计费或生产SLO，完整M4仍未完成。
+
 ## 已实现
 
 - HTTP 控制面使用 Go 标准库；Linux 宿主时钟/guardian 和实验性 guest 使用固定版本的 vsock/x/sys 依赖。要求 Go 1.25+，守护进程支持 macOS/Linux。

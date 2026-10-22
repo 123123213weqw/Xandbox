@@ -67,3 +67,9 @@ Gauges：累计Core records/预算、仍占实例配额allocated/预算、两个
 每轮旧GC后controller FD均为11；末轮controller RSS17,412,096 bytes，相对首轮15,310,848 bytes有所增加。最后撤销新代后owned进程RSS/cgroup memory.current均为0，controller FD8，controller仍在运行且保留17,162,240 bytes RSS及有限tombstone。没有据此宣布内存与历史完全无关：记录预算/归档、runtime高水位和长期曲线还需继续测量。
 
 Runner退出0，finally清理后再次核对本次cgroup无残留。网络观察连接中断没有重启runner：从其权威退出状态确认成功后，用压缩JSON读取方式恢复了报告传输；未把观察超时误记为测试失败或额外成功运行。原始含宿主路径的controller日志留在私有测试目录，没有上传public仓库。
+
+## 双租户快照实验：补充而非替代生产门槛
+
+[有限混合负载报告与口径](MIXED_LOAD.md) 新增两租户各120次、246.267秒的实际快照切换，原有10组catalog回归和最终清理通过。404个完整样本单列PSS、精确inode映射、共享源mincore驻留、cgroup charge及私有盘；不能相加为总RAM或计费。采样扫描最大149.229ms，实际平均间隔611.093ms，不是无开销观测或固定500ms原子快照。
+
+两租户分别完成固定工作量、等待旧GC且显式节拍；工作负载先完成再切换，不是繁忙旧任务终止风暴、开放到达饱和或公平性认证。队列采样峰值0不能证明压力下的最坏界。controller PSS仍随有限历史增长，长期稳定性门槛不变。前序147.934秒的失败报告完整保留，不从其中挑成功样本加入新运行；观察错误类型丢失与独立复现的ENODEV竞态边界也明确记录。
