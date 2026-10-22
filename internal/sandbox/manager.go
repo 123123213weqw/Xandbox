@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -22,6 +23,9 @@ type Options struct {
 	CleanupTimeout   time.Duration
 	ReapInterval     time.Duration
 	RetryDelay       time.Duration
+	StopWorkers      int
+	CleanupWorkers   int
+	WorkQueueSize    int
 }
 
 type execution struct {
@@ -30,30 +34,43 @@ type execution struct {
 }
 
 type instance struct {
-	opMu     sync.Mutex // Serializes preparation, stop, and cleanup, not execution.
-	mu       sync.Mutex
-	record   Record
-	tenantID string // Immutable after registration; safe under Manager.mu.
-	prepared chan struct{}
-	jobs     map[string]*execution
-	running  int
-	idle     chan struct{}
-	retryAt  time.Time
+	opMu          operationGate // Serializes one generation, never unrelated instances.
+	mu            sync.Mutex
+	ref           Ref // Immutable, even while the entire durable Record is replaced.
+	record        Record
+	tenantID      string // Immutable after registration; safe under Manager.mu.
+	prepared      chan struct{}
+	jobs          map[string]*execution
+	running       int
+	idle          chan struct{}
+	prepareCancel context.CancelFunc
+	stopped       chan struct{}
+	stopOnce      sync.Once
+	stoppedRecord Record // Immutable after stopped closes.
+	recovering    atomic.Bool
+	work          workStage // Protected by Manager.workMu, never held over I/O.
+	retryAt       time.Time // Protected by Manager.workMu.
 }
 
 type Manager struct {
-	mu         sync.Mutex
-	records    map[string]*instance
-	createKeys map[string]*instance
-	active     map[string]*instance // Capacity is returned only after durable cleanup.
-	closing    bool
-	driver     Driver
-	store      Store
-	opts       Options
-	ctx        context.Context
-	cancel     context.CancelFunc
-	wake       chan struct{}
-	workerDone chan struct{}
+	mu             sync.Mutex
+	records        map[string]*instance
+	createKeys     map[string]*instance
+	active         map[string]*instance // Capacity is returned only after durable cleanup.
+	closing        bool
+	driver         Driver
+	store          Store
+	opts           Options
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wake           chan struct{}
+	workerDone     chan struct{}
+	workMu         sync.Mutex
+	workers        sync.WaitGroup
+	stopQueue      chan *instance
+	cleanupQueue   chan *instance
+	stopRunning    atomic.Int32
+	cleanupRunning atomic.Int32
 }
 
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
@@ -81,6 +98,18 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	if opts.RetryDelay <= 0 {
 		opts.RetryDelay = 500 * time.Millisecond
 	}
+	if opts.StopWorkers == 0 {
+		opts.StopWorkers = min(4, opts.MaxInstances)
+	}
+	if opts.CleanupWorkers == 0 {
+		opts.CleanupWorkers = min(2, opts.MaxInstances)
+	}
+	if opts.WorkQueueSize == 0 {
+		opts.WorkQueueSize = min(32, opts.MaxInstances)
+	}
+	if opts.StopWorkers < 1 || opts.StopWorkers > 64 || opts.CleanupWorkers < 1 || opts.CleanupWorkers > 64 || opts.WorkQueueSize < 1 || opts.WorkQueueSize > 10000 {
+		return nil, errors.New("invalid lifecycle worker or queue bounds")
+	}
 	records, err := store.Load()
 	if err != nil {
 		return nil, err
@@ -91,6 +120,7 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 		createKeys: make(map[string]*instance),
 		driver:     driver, store: store, opts: opts, ctx: ctx, cancel: cancel,
 		wake: make(chan struct{}, 1), workerDone: make(chan struct{}),
+		stopQueue: make(chan *instance, opts.WorkQueueSize), cleanupQueue: make(chan *instance, opts.WorkQueueSize),
 	}
 	for _, r := range records {
 		if _, exists := m.records[r.ID]; exists {
@@ -134,9 +164,13 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 			return nil, fmt.Errorf("persist recovery fence: %w", err)
 		}
 		i.record = r
+		i.stopped = make(chan struct{})
+		i.stopOnce = sync.Once{}
+		i.stoppedRecord = Record{}
+		i.publish()
 		m.active[r.ID] = i
 	}
-	go m.reaper()
+	m.startWorkers()
 	m.notify()
 	return m, nil
 }
@@ -146,7 +180,9 @@ func newInstance(r Record) *instance {
 	close(idle)
 	prepared := make(chan struct{})
 	close(prepared)
-	return &instance{record: r, tenantID: r.TenantID, prepared: prepared, jobs: make(map[string]*execution), idle: idle}
+	i := &instance{ref: r.Ref, record: r, tenantID: r.TenantID, prepared: prepared, jobs: make(map[string]*execution), idle: idle, opMu: newOperationGate(), stopped: make(chan struct{})}
+	i.publish()
+	return i
 }
 
 func token() (string, error) {
@@ -240,8 +276,10 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	})
 	i.prepared = make(chan struct{})
 	defer close(i.prepared)
-	i.opMu.Lock()
-	defer i.opMu.Unlock()
+	if _, err := i.opMu.acquire(ctx, nil); err != nil {
+		return Record{}, err
+	}
+	defer i.opMu.release()
 	m.mu.Lock()
 	if m.closing {
 		m.mu.Unlock()
@@ -309,10 +347,19 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	}
 	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.PrepareTimeout)
 	stopCancel := context.AfterFunc(ctx, cancel)
-	err = m.driver.Prepare(opCtx, ref, req.Limits)
+	i.mu.Lock()
+	i.prepareCancel = cancel
+	if i.record.State != Creating || i.record.DeleteRequested || !time.Now().Before(i.record.ExpiresAt) {
+		cancel()
+	}
+	i.mu.Unlock()
+	if err = opCtx.Err(); err == nil {
+		err = m.driver.Prepare(opCtx, ref, req.Limits)
+	}
 	stopCancel()
 	cancel()
 	i.mu.Lock()
+	i.prepareCancel = nil
 	if err == nil && (i.record.DeleteRequested || !time.Now().Before(i.record.ExpiresAt)) {
 		err = fmt.Errorf("creation was fenced or expired")
 	}
@@ -323,7 +370,10 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	}
 	if err != nil {
 		next := i.record
-		next.State, next.DeleteRequested, next.LastError = Stopping, true, err.Error()
+		if next.State != Stopping {
+			next.DeleteRequested = true
+		}
+		next.State, next.LastError = Stopping, err.Error()
 		// Keep an in-memory fence even if persistence is temporarily failing.
 		m.fenceLocked(i, next)
 	}
@@ -331,7 +381,7 @@ func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req
 	i.mu.Unlock()
 	if err != nil {
 		m.notify()
-		return r, fmt.Errorf("create failed; cleanup scheduled: %w", err)
+		return r, fmt.Errorf("create failed; instance fenced: %w", err)
 	}
 	return r, nil
 }
@@ -483,22 +533,38 @@ func (m *Manager) Stop(ctx context.Context, ref Ref) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	i.opMu.Lock()
-	defer i.opMu.Unlock()
 	i.mu.Lock()
 	if ref.Generation != i.record.Generation {
 		i.mu.Unlock()
 		return Record{}, ErrStale
 	}
+	if stoppedState(i.record.State) {
+		r := i.record
+		i.mu.Unlock()
+		return r, nil
+	}
+	// Fence/cancel before waiting for preparation or another stop. A full
+	// background queue cannot defer admission revocation.
+	i.fenceIntent(false)
 	i.mu.Unlock()
+	m.notify()
+	locked, err := i.opMu.acquire(ctx, i.stopped)
+	if err != nil {
+		return Record{}, err
+	}
+	if !locked {
+		return i.stoppedRecord, nil
+	}
+	defer i.opMu.release()
 	err = m.stopLocked(ctx, i)
 	i.mu.Lock()
 	r := i.record
 	i.mu.Unlock()
 	if err != nil {
 		m.failed(i, err)
-		m.notify()
+		m.deferWork(i, m.opts.RetryDelay)
 	}
+	m.notify()
 	return r, err
 }
 
@@ -512,6 +578,7 @@ func (m *Manager) stopLocked(ctx context.Context, i *instance) error {
 	}
 	next := i.record
 	next.State = Stopping
+	i.cancelWork()
 	err := m.fenceLocked(i, next)
 	for _, e := range i.jobs {
 		if e.job.Status == "RUNNING" {
@@ -557,33 +624,25 @@ func (m *Manager) Destroy(ref Ref) (Record, error) {
 		i.mu.Unlock()
 		return r, nil
 	}
-	next := i.record
-	next.DeleteRequested = true
-	if next.State != Stopped && next.State != Reclaiming {
-		next.State = Stopping
-	}
-	err = m.fenceLocked(i, next)
-	for _, e := range i.jobs {
-		if e.job.Status == "RUNNING" {
-			e.cancel()
-		}
-	}
+	i.fenceIntent(true)
+	err = m.store.Save(i.record)
 	r := i.record
 	i.mu.Unlock()
 	m.notify()
 	return r, err
 }
 
-func (m *Manager) reclaim(i *instance) error {
-	i.opMu.Lock()
-	defer i.opMu.Unlock()
-	if err := m.stopLocked(m.ctx, i); err != nil {
-		return err
-	}
+// cleanupLocked is called only by the cleanup pool with the generation gate held.
+// It never performs Stop; scarce cleanup slots cannot hold up other stops.
+func (m *Manager) cleanupLocked(i *instance) error {
 	i.mu.Lock()
 	if i.record.State == Destroyed {
 		i.mu.Unlock()
 		return nil
+	}
+	if !i.record.DeleteRequested || (i.record.State != Stopped && i.record.State != Reclaiming) {
+		i.mu.Unlock()
+		return ErrNotReady
 	}
 	next := i.record
 	next.State = Reclaiming
@@ -621,19 +680,20 @@ func (m *Manager) saveLocked(i *instance, next Record) error {
 		return err
 	}
 	i.record = next
+	i.publish()
 	return nil
 }
 
 func (m *Manager) fenceLocked(i *instance, next Record) error {
 	next.UpdatedAt = time.Now().UTC()
 	i.record = next // Persistence failure must never reopen execution admission.
+	i.publish()
 	return m.store.Save(next)
 }
 
 func (m *Manager) failed(i *instance, err error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.retryAt = time.Now().Add(m.opts.RetryDelay)
 	next := i.record
 	next.LastError = err.Error()
 	m.fenceLocked(i, next)
@@ -656,59 +716,25 @@ func (m *Manager) notify() {
 	}
 }
 
-func (m *Manager) reaper() {
-	defer close(m.workerDone)
-	ticker := time.NewTicker(m.opts.ReapInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-m.ctx.Done():
-			return
-		case <-ticker.C:
-		case <-m.wake:
-		}
-		for _, i := range m.activeInstances() {
-			if m.ctx.Err() != nil {
-				return
-			}
-			i.mu.Lock()
-			r, retryAt := i.record, i.retryAt
-			i.mu.Unlock()
-			if time.Now().Before(retryAt) {
-				continue
-			}
-			if !r.DeleteRequested && !time.Now().Before(r.ExpiresAt) {
-				if _, err := m.Destroy(r.Ref); err != nil {
-					m.failed(i, err)
-					continue
-				}
-				r.DeleteRequested = true
-			}
-			var err error
-			if r.DeleteRequested {
-				err = m.reclaim(i)
-			} else if r.State == Stopping {
-				_, err = m.Stop(m.ctx, r.Ref)
-			}
-			if err != nil {
-				m.failed(i, err)
-			}
-		}
-	}
-}
-
 func (m *Manager) Stats() Stats {
 	items := m.activeInstances()
 	s := Stats{Backend: m.driver.Name(), Active: len(items), Capacity: m.opts.MaxInstances}
 	for _, i := range items {
-		i.mu.Lock()
-		if i.record.DeleteRequested || i.record.State == Stopping || i.record.State == Reclaiming {
+		if i.recovering.Load() {
 			s.Recovering++
 		}
-		i.mu.Unlock()
 	}
+	s.StopQueued, s.CleanupQueued = len(m.stopQueue), len(m.cleanupQueue)
+	s.StopRunning, s.CleanupRunning = int(m.stopRunning.Load()), int(m.cleanupRunning.Load())
+	s.StopWorkers, s.CleanupWorkers, s.QueueCapacity = m.opts.StopWorkers, m.opts.CleanupWorkers, m.opts.WorkQueueSize
 	return s
 }
+
+// LifecycleDone closes when the reconciler and lifecycle pools have exited.
+// It does not certify resource reclamation or termination of a misbehaving
+// Driver.Exec/Prepare. After a failed Close, retain exclusive state ownership
+// until all old callers have quiesced, or terminate the owning process.
+func (m *Manager) LifecycleDone() <-chan struct{} { return m.workerDone }
 
 // Close requests deletion of all active instances. If its deadline expires, the
 // ledger remains available for next-start recovery; it never reports success.
@@ -716,16 +742,14 @@ func (m *Manager) Close(ctx context.Context) error {
 	m.mu.Lock()
 	m.closing = true
 	m.mu.Unlock()
-	for _, i := range m.activeInstances() {
-		i.mu.Lock()
-		ref := i.record.Ref
-		i.mu.Unlock()
-		m.Destroy(ref)
-	}
+	m.notify() // Scheduler fences/cancels without serial storage I/O in Close.
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		if m.Stats().Active == 0 {
+		m.mu.Lock()
+		empty := len(m.active) == 0
+		m.mu.Unlock()
+		if empty {
 			m.cancel()
 			select {
 			case <-m.workerDone:

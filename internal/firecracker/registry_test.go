@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
@@ -162,5 +164,86 @@ func TestPolicyRejectsUnsafePathsAndIdentities(t *testing.T) {
 		if _, err := key(ref); err == nil {
 			t.Fatal("invalid resource identity accepted")
 		}
+	}
+}
+
+func TestOwnershipReadersDoNotWaitForOtherGenerationPersistence(t *testing.T) {
+	r, err := newRegistry(t.TempDir(), policy(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := r.reserve(reference("1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	one, _ := key(first.Ref)
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	defer once.Do(func() { close(release) })
+	r.persist = func(path string, value any) error { close(entered); <-release; return durableJSON(path, value) }
+	result := make(chan error, 1)
+	go func() { _, err := r.reserve(reference("2")); result <- err }()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("persist barrier not entered")
+	}
+	lookup := make(chan bool, 1)
+	go func() { lookup <- r.owns(one) }()
+	select {
+	case ok := <-lookup:
+		if !ok {
+			t.Fatal("lost existing ownership")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("ownership reader waited on fsync")
+	}
+	once.Do(func() { close(release) })
+	if err := <-result; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUIDRemainsReservedDuringDeletionFsyncWithoutBlockingReaders(t *testing.T) {
+	cfg := policy()
+	cfg.UIDCount = 3
+	r, err := newRegistry(t.TempDir(), cfg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := r.reserve(reference("1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	one, _ := key(first.Ref)
+	second, err := r.reserve(reference("2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	two, _ := key(second.Ref)
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	defer once.Do(func() { close(release) })
+	r.syncDirectory = func(path string) error { close(entered); <-release; return syncDir(path) }
+	result := make(chan error, 1)
+	go func() { result <- r.release(one) }()
+	<-entered
+	lookup := make(chan bool, 1)
+	go func() { lookup <- r.owns(one) && r.owns(two) }()
+	select {
+	case ok := <-lookup:
+		if !ok {
+			t.Fatal("UID released before fsync")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("stop lookup blocked behind deletion fsync")
+	}
+	third, err := r.reserve(reference("3"))
+	if err != nil || third.UID == first.UID || third.UID == second.UID {
+		t.Fatalf("early UID reuse / blocked admission: %+v %v", third, err)
+	}
+	once.Do(func() { close(release) })
+	if err := <-result; err != nil {
+		t.Fatal(err)
 	}
 }
