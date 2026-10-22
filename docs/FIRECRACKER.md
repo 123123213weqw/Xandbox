@@ -86,3 +86,11 @@ sudo -n python3 scripts/kvm_driver_smoke.py \
 普通 CI 不具备此 KVM/root 环境；编译、单元测试和 mock smoke 不能代替它。完整服务验收仍需：宿主重启/磁盘故障、监督进程与控制器同时失效、guest 回收故障注入、只停不 GC 的优先队列、metadata 容量/保留期、磁盘 quota、生产镜像更新链、持续负载/SLO、快照/预热/原子切换、可观测性和独立操作员复现。DESTROYED 目前表示逻辑资源回收，不代表物理介质安全擦除；加密擦除/存储擦除策略尚未验收。生命周期管道检测控制器死亡，不检测仍保留写端的控制器死锁；独立租约/看门狗仍是开放门槛。
 
 参考：[jailer v1.17.0 已存在 cgroup 的精确行为](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/docs/jailer.md)、[cgroup v2 内核契约](https://docs.kernel.org/admin-guide/cgroup-v2.html)。
+
+## 2026-10-22 服务实测
+
+[脱敏报告](validation/kvm-driver-2026-10-22.json) 来自源码 `6c4b947`，控制器/warden 均用 Go 1.27.3 构建并在真实 Linux/KVM 节点运行，16 项通过。机器为 Xeon Silver 4216、64 逻辑 CPU、约 251.5 GiB 系统内存，runtime 使用 ext4；只顺序测试单 VM，三个已接受任务在两个执行 slot 上排队。
+
+创建 READY 的 4 次样本约 1.41–1.51 秒。单次运行态 DELETE：接受约 1.8 ms、观测执行停止约 49.5 ms、持久 DESTROYED 约 141.6 ms；显式 Stop 的一个样本约 45.4 ms。控制器 SIGKILL 到 kernel cgroup 归零约 49.5 ms，重启到持久回收约 779 ms。这些是**顺序小样本验收，绝不是 P50/P95/P99、快照切换时间或 SLO**。缓存/负载未控制，驻留内存未测，磁盘仅写少量文件，未压满 128 MiB；具体观测点与原始精度见报告。
+
+初始化期间真实遇到 `/run` noexec 的失败，已增加前置拒绝并改用专属 `/srv` 目录，没有改变宿主挂载策略。另修复验收脚本把 Job 的字符串 error 当成 HTTP error 对象的断言错误；失败运行没有被计为通过。控制器及监督二进制摘要、镜像摘要均在报告中，重建修复脚本后的提交得到完全相同的控制器摘要。

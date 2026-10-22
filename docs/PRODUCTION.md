@@ -40,14 +40,14 @@
 
 ### M2：真实 Linux/KVM 执行
 
-- [ ] 固定版本、校验摘要的 Firecracker/jailer；保持默认 seccomp。
-- [ ] guest-agent 使用 vsock；执行、取消、文件工具位于同一 guest。
+- [x] 固定版本、校验摘要的 Firecracker/jailer；保持默认 seccomp（v1.17.0 实验规格）。
+- [x] guest-agent 使用 vsock；执行、取消、文件工具位于同一 guest（实验规格）。
 - [ ] cgroup v2、vCPU/内存/进程与磁盘预算；宿主资源归属可恢复。
 - [ ] guest 中的超时和进程树不会逃逸；STOPPED 必须等到执行单元退出。
 - [ ] 控制器崩溃、驱动错误、部分准备失败、宿主重启后的资源清理经过真实验收。
-- [ ] 未使用 mock 或宿主 shell 绕过实际验收。
+- [x] 未使用 mock 或宿主 shell 绕过实际验收。
 
-M2 的独立组件见 [GUEST.md](GUEST.md)，新增服务集成和监督/归属设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立 jailed KVM 验收](validation/kvm-guest-2026-10-22.json) 已通过，但不等同于 sandboxd 的端到端隔离、崩溃恢复或生产试运行验收，因此上述服务级门槛保持未完成。
+M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与新增 [sandboxd 真实 KVM 服务 16 项验收](validation/kvm-driver-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止和 host 超时整 VM 栅栏。宿主重启/磁盘故障、guest/监督故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
 ### M3：快速切换与容量管理
 
