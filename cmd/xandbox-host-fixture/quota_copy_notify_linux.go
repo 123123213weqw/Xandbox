@@ -102,16 +102,18 @@ func runCopyDaemon() error {
 }
 
 type copyBoundary struct {
-	Ref           sandbox.Ref
-	Owner         []byte
-	Project       uint32
-	Space, Inodes uint64
-	Size          int64
+	Ref                     sandbox.Ref
+	Owner                   []byte
+	Project                 uint32
+	Space, Inodes           uint64
+	NamedSpace, NamedInodes uint64
+	Size                    int64
 }
 type copyObserver struct {
 	mu                  sync.Mutex
 	once                sync.Once
 	armed               bool
+	cut                 bool
 	injected, continued int
 	err                 error
 	fd, pid             int
@@ -276,11 +278,13 @@ func (o *copyObserver) match(q quotaNotif) (copyBoundary, bool, error) {
 	defer qfs.file.Close()
 	// Healthy TEST checkpoint only: make this actual prefix/accounting stable
 	// before injecting the next write. This is not a commit latency measurement.
-	if e = qfs.sync(); e != nil {
-		return b, false, e
-	}
-	if e = unix.Syncfs(int(qfs.file.Fd())); e != nil {
-		return b, false, e
+	if !o.cut {
+		if e = qfs.sync(); e != nil {
+			return b, false, e
+		}
+		if e = unix.Syncfs(int(qfs.file.Fd())); e != nil {
+			return b, false, e
+		}
 	}
 	qr, e := driverQuotaRead(own.ProjectID)
 	if e != nil {
@@ -290,8 +294,14 @@ func (o *copyObserver) match(q quotaNotif) (copyBoundary, bool, error) {
 	if e != nil {
 		return b, false, e
 	}
-	if e = copyPartialAccounting(qr, blocks, inodes, entries); e != nil {
-		return b, false, e
+	if !o.cut {
+		if e = copyPartialAccounting(qr, blocks, inodes, entries); e != nil {
+			return b, false, e
+		}
+	} else {
+		if qr.BHard != 192<<10 || qr.IHard != 128 || qr.BSoft|qr.ISoft|qr.BTime|qr.ITime != 0 || qr.Space > 192<<20 || qr.Inodes != 3 || len(entries) != 3 || entries["root/workspace.ext4"].Size != copyPrefix {
+			return b, false, errors.New("live unsynced partial policy/namespace mismatch")
+		}
 	}
 	identity, e = processStart(o.pid)
 	if e != nil || identity != o.identity {
@@ -300,7 +310,7 @@ func (o *copyObserver) match(q quotaNotif) (copyBoundary, bool, error) {
 	if e = quotaNotifyIO(o.fd, quotaNotifIDValid, unsafe.Pointer(&q.ID)); e != nil {
 		return b, false, e
 	}
-	return copyBoundary{Ref: ref, Owner: owner, Project: own.ProjectID, Space: qr.Space, Inodes: qr.Inodes, Size: st.Size()}, true, nil
+	return copyBoundary{Ref: ref, Owner: owner, Project: own.ProjectID, Space: qr.Space, Inodes: qr.Inodes, Size: st.Size(), NamedSpace: blocks, NamedInodes: inodes}, true, nil
 }
 func (o *copyObserver) serve() {
 	defer close(o.done)
@@ -358,6 +368,17 @@ func (o *copyObserver) serve() {
 				o.armed = false
 				o.mu.Unlock()
 				o.held <- b
+				if o.cut {
+					timer := time.NewTimer(60 * time.Second)
+					select {
+					case <-o.stop:
+						timer.Stop()
+						return
+					case <-timer.C:
+						o.fail(errors.New("copy cut did not arrive before fixed hold deadline"))
+						return
+					}
+				}
 				timer := time.NewTimer(30 * time.Second)
 				select {
 				case <-o.release:
@@ -394,6 +415,9 @@ func (o *copyObserver) serve() {
 	}
 }
 func (n *node) startCopyObserved(ctx context.Context) (*copyObserver, error) {
+	return n.startCopyObservedOn(ctx, false)
+}
+func (n *node) startCopyObservedOn(ctx context.Context, cut bool) (*copyObserver, error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
@@ -457,7 +481,7 @@ func (n *node) startCopyObserved(ctx context.Context) (*copyObserver, error) {
 		n.process = nil
 		return nil, e
 	}
-	obs := &copyObserver{fd: fd, pid: cmd.Process.Pid, identity: identity, held: make(chan copyBoundary, 1), release: make(chan struct{}), stop: make(chan struct{}), done: make(chan struct{})}
+	obs := &copyObserver{cut: cut, fd: fd, pid: cmd.Process.Pid, identity: identity, held: make(chan copyBoundary, 1), release: make(chan struct{}), stop: make(chan struct{}), done: make(chan struct{})}
 	go obs.serve()
 	if e = waitNode(ctx, func() (bool, error) {
 		_, _, err := obs.snapshot()

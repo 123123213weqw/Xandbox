@@ -42,7 +42,7 @@ class JSONSocket:
         line = self.file.readline(bound+1)
         assert line and len(line) <= bound, 'bounded private control frame required'
         return json.loads(line)
-    def send(self, value): self.sock.sendall(json.dumps(value).encode() + b'\n')
+    def send(self, value): self.sock.sendall(json.dumps(value,separators=(',',':')).encode() + b'\n')
     def close(self): self.file.close(); self.sock.close()
 
 
@@ -274,6 +274,52 @@ def validate_quota_switch_recovery(value):
     for k in ('l1_boot_changed','two_exact_owners_policy_shared_backing_and_independent_quota_checked_before_daemon','two_old_execution_domains_absent','two_pins_retained_before_ordinary_recovery','old_sessions_closed_exec_and_create_keys410_no_old_job_resume','both_old_generations_destroyed_resources_absent','two_fresh_real_kvm_guest_uids_workspaces_and_boots_checked','all_eight_project_records_zero_and_active_template_pins_zero','controller_reaped_and_owned_cgroup_root_removed','no_assigned_guest_restored_or_exported'):assert value[k] is True
 
 
+
+COPY_CUT_RECEIPT_MAX = 7000
+COPY_CUT_CHECKPOINT_FLAGS = ('real_keeper_kvm_uid_data_and_filters_checked', 'attempted_uninitialized_victim_no_vmm_or_shared_links', 'two_durable_owner_pins_read_without_catalog_sync', 'durable_creating_and_request_still_pending', 'zero_selected_write_error_or_continue_reply', 'no_observer_l1_sync_or_receipt_write_after_prefix', 'keeper_baseline_synced_only_before_victim_creation', 'private_receipt_only_over_control_not_l1_disk', 'held_notification_not_actual_filesystem_D')
+COPY_CUT_RECOVERY_FLAGS = ('l1_boot_changed', 'private_control_receipt_revalidated_not_l1_disk_receipt', 'exact_attempted_owners_policy_and_pristine_abi_checked_before_daemon', 'old_execution_domains_absent_before_daemon', 'keeper_full_namespace_and_shared_inodes_accounted', 'partial_namespace_subset_policy_and_actual_kernel_quota_accounted', 'two_durable_template_pins_retained_before_recovery', 'ordinary_unobserved_recovery_both_destroyed_resources_absent_keys410_exec409', 'two_fresh_real_guest_uids_boots_and_workspaces_checked', 'retired_backing_two_then_one_pin_gc_and_surviving_exec_checked', 'last_pin_exact_gc_all_four_projects_zero_controller_reaped_parent_removed')
+
+
+def validate_quota_copy_cut_checkpoint(value):
+    setup=value['genuine_l1_snapshot_setup']
+    for k in ('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated'): assert setup[k] is True
+    assert setup['snapshot_memory_bytes']==512<<20
+    for k in COPY_CUT_CHECKPOINT_FLAGS: assert value[k] is True
+    assert type(value['actual_live_workspace_prefix_bytes']) is int and value['actual_live_workspace_prefix_bytes']==16<<20
+    for k in ('live_kernel_quota_space_bytes','live_named_allocated_bytes'):
+        assert type(value[k]) is int and 0<=value[k]<=192<<20
+    for k in ('live_quota_inodes','live_named_inodes'): assert type(value[k]) is int and value[k]==3
+    # Delayed allocation is not forced stable or compared to pre-cut quota.
+
+
+def validate_quota_copy_cut_recovery(value):
+    for k in COPY_CUT_RECOVERY_FLAGS: assert value[k] is True
+    for k,high in (('cold_partial_entries',3),('cold_partial_workspace_size_bytes',16<<20),('cold_partial_project_space_bytes',192<<20),('cold_partial_project_inodes',3)):
+        assert type(value[k]) is int and 0<=value[k]<=high
+    assert value['cold_partial_entries']==value['cold_partial_project_inodes']
+
+
+def copy_cut_recovery_packet(receipt):
+    assert type(receipt) is dict and type(receipt.get('version')) is int and receipt['version']==1
+    wire=json.dumps(receipt,separators=(',',':')).encode()
+    assert 0<len(wire)<=COPY_CUT_RECEIPT_MAX, 'private cut receipt must fit unchanged control scanner'
+    packet={'version':1,'operation':'quota-copy-cut-recover','receipt':receipt}
+    assert len(json.dumps(packet,separators=(',',':')).encode())+1<8192
+    return packet
+
+
+def detach_copy_cut_checkpoint(out,private_path):
+    # OUTER L0 storage only. Never write this receipt into the L1 disk, or
+    # attach it to the public result/report/archive. Exclusive0600 file.
+    assert out['ok'] is True
+    receipt=out.pop('private_receipt')
+    copy_cut_recovery_packet(receipt)
+    validate_quota_copy_cut_checkpoint(out['result'])
+    assert 'private_receipt' not in out['result']
+    private_json(private_path,receipt)
+    return out['result'],receipt
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
@@ -281,6 +327,7 @@ def main():
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument("--quota-partial-copy-cut",action="store_true",help="TEST ONLY: unsynced partial-copy held notification and same-disk cold recovery; private receipt on outer L0 only; not physical media error or filesystem D")
     profiles.add_argument("--quota-partial-copy",action="store_true",help="TEST ONLY: fixed partial workspace write errno with real keeper/pins; explicit3GiB/4GiB resource and4entry/2GiB catalog bounds; not physical EIO or cold-cut acceptance")
     profiles.add_argument("--quota-switch",action="store_true",help="TEST ONLY: explicit 3GiB RAM/4GiB disk profile, node4/tenant3/slots8, two tenants120 switches each with running old jobs, then cold recovery")
     for flag in LISTENER_PROFILES:
@@ -304,9 +351,10 @@ def main():
     losses=[v for flag,v in LISTENER_PROFILES.items() if getattr(args,flag)]
     listener_phase,listener_operation=losses[0] if losses else (None,None)
     listener_profile=bool(losses)
-    resources=nested_copy_resources() if args.quota_partial_copy else nested_resources(args.quota_switch)
+    copy_profile=args.quota_partial_copy or args.quota_partial_copy_cut
+    resources=nested_copy_resources() if copy_profile else nested_resources(args.quota_switch)
     disk_bytes=resources["disk_bytes"]
-    snapshot_profile = args.quota_snapshot or args.quota_clear_crash or args.quota_switch or args.quota_partial_copy
+    snapshot_profile = args.quota_snapshot or args.quota_clear_crash or args.quota_switch or copy_profile
     state_io_profile = args.state_io or args.quota_state_io
     driver_profile = args.quota_driver or snapshot_profile or args.quota_negatives or args.quota_syscalls or args.quota_unenforced or args.quota_state_io or args.quota_barrier_hang or commit_profile or listener_profile
     if snapshot_profile: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
@@ -321,8 +369,8 @@ def main():
     l1kernel = Path('/boot/vmlinuz-' + policy['l1_kernel_release'])
     assert digest(l1kernel) == policy['l1_kernel_sha256']
     assert Path('/sys/module/kvm_intel/parameters/nested').read_text().strip() in ('Y', '1')
-    assert os.statvfs('/srv').f_bavail * os.statvfs('/srv').f_frsize > (12 if (args.quota_switch or args.quota_partial_copy) else 8) << 30
-    if args.quota_switch or args.quota_partial_copy:
+    assert os.statvfs('/srv').f_bavail * os.statvfs('/srv').f_frsize > (12 if (args.quota_switch or copy_profile) else 8) << 30
+    if args.quota_switch or copy_profile:
         available=[int(line.split()[1])*1024 for line in Path('/proc/meminfo').read_text().splitlines() if line.startswith('MemAvailable:')]
         assert len(available)==1 and available[0]>=8<<30, 'explicit switch experiment needs8GiB L0 available before allocating owned4GiB cgroup'
     suffix = secrets.token_hex(3)
@@ -335,12 +383,12 @@ def main():
         seed=json.loads(Path(args.snapshot_seed_manifest).read_text())
         assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
         for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
-    phases = () if args.quota_partial_copy else ('quota-enabled-two-tenant-switching',) if args.quota_switch else (listener_phase,) if listener_profile else (commit_phase,) if commit_profile else ('reserve-quota-syncfs-held',) if args.quota_barrier_hang else ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_partial_workspace_write_errno_with_live_keeper' if args.quota_partial_copy else 'owned_l1_quota_two_tenant_busy_switching' if args.quota_switch else 'owned_l1_last_quota_listener_loss' if listener_profile else 'owned_l1_fixed_real_quota_commit_fault' if commit_profile else 'owned_l1_actual_quota_syncfs_hold_prefork_crash' if args.quota_barrier_hang else 'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+    phases = ('partial-copy-inflight-cut',) if args.quota_partial_copy_cut else () if args.quota_partial_copy else ('quota-enabled-two-tenant-switching',) if args.quota_switch else (listener_phase,) if listener_profile else (commit_phase,) if commit_profile else ('reserve-quota-syncfs-held',) if args.quota_barrier_hang else ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
+    result = {'test':'owned_l1_unsynced_partial_workspace_copy_cut_with_keeper' if args.quota_partial_copy_cut else 'owned_l1_partial_workspace_write_errno_with_live_keeper' if args.quota_partial_copy else 'owned_l1_quota_two_tenant_busy_switching' if args.quota_switch else 'owned_l1_last_quota_listener_loss' if listener_profile else 'owned_l1_fixed_real_quota_commit_fault' if commit_profile else 'owned_l1_actual_quota_syncfs_hold_prefork_crash' if args.quota_barrier_hang else 'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
         'production_ready':False,'passed':False,'state_io_profile':state_io_profile,'quota_state_io_profile':args.quota_state_io,'quota_prerequisite_profile':args.quota_probe,
         'production_driver_quota':driver_profile,'quota_snapshot_profile':snapshot_profile,'quota_clear_crash_profile':args.quota_clear_crash,'quota_negative_profile':args.quota_negatives,'quota_unenforced_profile':args.quota_unenforced,
         'quota_syscall_errno_profile':args.quota_syscalls,'quota_barrier_hang_profile':args.quota_barrier_hang,
-        'quota_commit_fault_phase':commit_phase,'quota_listener_loss_phase':listener_phase,'quota_switch_profile':args.quota_switch,'quota_partial_copy_profile':args.quota_partial_copy,
+        'quota_commit_fault_phase':commit_phase,'quota_listener_loss_phase':listener_phase,'quota_switch_profile':args.quota_switch,'quota_partial_copy_profile':args.quota_partial_copy,'quota_partial_copy_cut_profile':args.quota_partial_copy_cut,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -354,6 +402,8 @@ def main():
             'No TCG fallback, outer QEMU migration/snapshot save/restore, or shared L0 host reboot; this does not prohibit real L2 Firecracker snapshot operations.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
+    if args.quota_partial_copy_cut:
+        result['limitations'] += ['Fixed quota-copy-v1 resources and immutable catalog4 entries/2GiB before binding, not production aggregate admission.', 'No observer quota sync, syncfs, fsync, catalog-admin scan or receipt write in L1 after the16MiB target. Keeper baseline is synced BEFORE victim creation. Private receipt travels over control and is saved only on outer L0, outside the guest filesystem; natural background persistence is allowed.', 'Selected next128KiB WRITE remains a TEST notification wait without reply until owned outer cut, not actual filesystem D or physical media failure. No tracee buffers read. Cold prefix may disappear or truncate; actual namespace and kernel quota are independently checked before ordinary uninstrumented recovery.', 'One fixed partial-copy window only; arbitrary media errors, owner unlink/dirsync and other pin persistence windows, open-loop/fairness/SLO and independent operator remain incomplete.']
     if args.quota_partial_copy:
         result['limitations'][0]='One owned L1 isolates this TEST errno profile; no host cold-cut or physical media error is exercised.'
         result['limitations'] += ['Explicit fixed3GiB RAM/4GiB disk/4GiB outer cgroup/CPU4/pids128/noNIC/900s; immutable catalog4 retained entries/2GiB max bytes to republish a never-assigned declaration while old keeper pin remains. Not a production node budget.', 'Extra TEST ONLY inherited write notification/NNP layer holds the next128KiB write after actual16MiB prefix; healthy observer sync stabilizes prefix accounting before one EIO reply. This notification wait is NOT actual filesystem D-state or physical EIO. No tracee buffers read; other writes CONTINUE real kernel. Counts are successful reply submissions, not all write completions or latency.', 'Only stable partial Prepare failure/keeper pin/retirement/GC/slot-reuse is accepted here; arbitrary partial copies, in-flight host power cuts and owner unlink/dirfsync persistence windows remain incomplete.']
@@ -404,7 +454,7 @@ def main():
             if name!='daemon': backend[name]={'path':'/srv/assets/'+name,'sha256':digest(target)}
         if snapshot_profile:
             backend['version']=2
-            backend['snapshot']={'version':1,'agent_sha256':seed['agent_sha256'],'memory_mib':512,'vcpus':2,'max_entries':4 if args.quota_partial_copy else 2,'max_bytes':(2 if args.quota_partial_copy else 1)<<30}
+            backend['snapshot']={'version':1,'agent_sha256':seed['agent_sha256'],'memory_mib':512,'vcpus':2,'max_entries':4 if copy_profile else 2,'max_bytes':(2 if copy_profile else 1)<<30}
             for name,target_name in (('admin','admin'),('snapshot_builder','snapshot-builder')):
                 shutil.copyfile(sources[name],staging/'assets'/target_name);(staging/'assets'/target_name).chmod(0o555)
             private_json(staging/'config/snapshot-fixture.json',{'source_revision':args.source_revision,'agent_sha256':seed['agent_sha256'],'admin_sha256':digest(sources['admin']),'builder_sha256':digest(sources['snapshot_builder'])})
@@ -455,10 +505,18 @@ def main():
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
             assert disk.stat().st_size==disk_bytes
             result['l1_boots_completed']+=1
-        def request(operation,phase=None):
+        cut_receipt=None
+        def request(operation,phase=None,receipt=None):
+            nonlocal cut_receipt
             value={'version':1,'operation':operation}
             if phase:value['phase']=phase
+            if receipt is not None:
+                assert operation=='quota-copy-cut-recover' and phase is None
+                value=copy_cut_recovery_packet(receipt)
             channel.send(value); out=channel.read()
+            if operation=='quota-copy-cut-checkpoint':
+                summary,cut_receipt=detach_copy_cut_checkpoint(out,logs/'private-copy-cut-receipt.json')
+                return summary
             if not out['ok'] and driver_profile and operation=='recover' and 'quota_diagnostic' in out:
                 result['quota_coldboot_failure_diagnostic']=out['quota_diagnostic']
             if args.quota_switch and not out['ok'] and 'result' in out:result['switch_partial_result']=out['result']
@@ -487,7 +545,7 @@ def main():
             result['partial_copy_setup']=request('quota-copy-setup')
             validate_quota_copy_setup(result['partial_copy_setup'])
             result['cases'].append({'phase':'fixed-partial-workspace-write-eio-with-keeper','passed':True,'setup':result['partial_copy_setup']})
-        elif snapshot_profile: result['snapshot_setup']=request('quota-snapshot-setup')
+        elif snapshot_profile and not args.quota_partial_copy_cut: result['snapshot_setup']=request('quota-snapshot-setup')
         if args.quota_negatives:
             result['negative_setup']=request('quota-negative-setup')
             validate_negative_setup(result['negative_setup'])
@@ -498,8 +556,9 @@ def main():
             if args.quota_switch:
                 result['switch_load']=request('quota-switch-run')
                 validate_quota_switch_run(result['switch_load'])
-            checkpoint=request('quota-switch-checkpoint') if args.quota_switch else request(listener_operation+'-checkpoint') if listener_profile else request(commit_operation+'-checkpoint') if commit_profile else request('quota-barrier-checkpoint') if args.quota_barrier_hang else request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
-            if args.quota_switch: validate_quota_switch_checkpoint(checkpoint)
+            checkpoint=request('quota-copy-cut-checkpoint') if args.quota_partial_copy_cut else request('quota-switch-checkpoint') if args.quota_switch else request(listener_operation+'-checkpoint') if listener_profile else request(commit_operation+'-checkpoint') if commit_profile else request('quota-barrier-checkpoint') if args.quota_barrier_hang else request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
+            if args.quota_partial_copy_cut: validate_quota_copy_cut_checkpoint(checkpoint)
+            elif args.quota_switch: validate_quota_switch_checkpoint(checkpoint)
             elif listener_profile: validate_quota_listener_checkpoint(checkpoint,listener_phase)
             elif commit_profile: validate_quota_commit_checkpoint(checkpoint,commit_phase)
             elif args.quota_barrier_hang: validate_quota_barrier_checkpoint(checkpoint)
@@ -510,16 +569,22 @@ def main():
                 assert checkpoint['private_project_space_bytes']>=128<<20 and 0<checkpoint['private_project_inodes']<=128
                 assert checkpoint['quota_and_ownership_released_only_after_io_resumed' if phase.startswith('hang-') else 'quota_owner_retained_until_cold_recovery'] is True
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
+            cut_began=time.monotonic()
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
-            boot(); recovered=request('quota-switch-recover' if args.quota_switch else listener_operation+'-recover' if listener_profile else commit_operation+'-recover' if commit_profile else 'quota-barrier-recover' if args.quota_barrier_hang else 'quota-clear-recover' if args.quota_clear_crash else 'recover')
-            if args.quota_switch: validate_quota_switch_recovery(recovered)
+            if args.quota_partial_copy_cut:
+                elapsed=(time.monotonic()-cut_began)*1000
+                assert elapsed<15000, 'cut must arrive before fixed60s notification hold deadline'
+                progress['checkpoint_reply_to_outer_stop_observed_ms']=round(elapsed,3)
+            boot(); recovered=request('quota-copy-cut-recover',receipt=cut_receipt) if args.quota_partial_copy_cut else request('quota-switch-recover' if args.quota_switch else listener_operation+'-recover' if listener_profile else commit_operation+'-recover' if commit_profile else 'quota-barrier-recover' if args.quota_barrier_hang else 'quota-clear-recover' if args.quota_clear_crash else 'recover')
+            if args.quota_partial_copy_cut: validate_quota_copy_cut_recovery(recovered)
+            elif args.quota_switch: validate_quota_switch_recovery(recovered)
             elif listener_profile: validate_quota_listener_recovery(recovered,listener_phase)
             elif commit_profile: validate_quota_commit_recovery(recovered,commit_phase)
             elif args.quota_barrier_hang: validate_quota_barrier_recovery(recovered)
             else:
                 assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
                 assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
-            if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang or commit_profile or listener_profile or args.quota_switch): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
+            if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang or commit_profile or listener_profile or args.quota_switch or args.quota_partial_copy_cut): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
             if args.quota_clear_crash: validate_quota_clear_recovery(recovered)
             if args.quota_probe: assert recovered['quota_persisted_after_power_cut'] and recovered['all_fixture_project_records_cleared']
             guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if state_io_profile else True
