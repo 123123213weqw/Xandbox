@@ -1,6 +1,6 @@
 # 独立 TLS 接入与凭证边界（有限实机验收）
 
-Linux `xandbox-gateway` 已完成原生权限隔离、实际 TLS→KVM 与同盘冷恢复的有限验收，当前冻结源为 `0b4eb8cf…`（含持久lock使用标记修正）。**不是生产就绪、完整 TLS/PKI 或操作员部署验收声明**。普通 `sandboxd` 仍只监听私有 Unix socket；没有放宽其状态目录、operator/metrics socket 权限，也不增加 root 网络监听器。完整生产门槛仍见 [PRODUCTION.md](PRODUCTION.md)。
+Linux `xandbox-gateway` 已完成原生权限隔离、实际 TLS→KVM 与同盘冷恢复的有限验收；当前生产冻结源为 `c402ecc2…`、新ELF `555b9974…`，新增[有界策略库存与真实孤立文件回收](POLICY_METADATA.md)，并另行通过4scope/8次外层启动。**不是生产就绪、完整 TLS/PKI 或操作员部署验收声明**。普通 `sandboxd` 仍只监听私有 Unix socket；没有放宽其状态目录、operator/metrics socket 权限，也不增加 root 网络监听器。完整生产门槛仍见 [PRODUCTION.md](PRODUCTION.md)。
 
 ## 边界决策
 
@@ -34,11 +34,13 @@ SIGHUP重新读取完整root私有config/cert/key并传一份新snapshot；证�
 
 这些是实现的固定预算，不是已实测的最坏资源SLO、公平性或完整DoS防护。还需要单独的生产cgroup/日志预算、审计、长负载与真实operator/systemd验收；不允许在共享L0开放公网端口或修改系统服务来代替隔离测试。
 
-## 实际证据与测量边界
+## 此前0b基线证据与测量边界
 
 [最终原始报告](validation/kvm-tls-gateway-live-v4.json)、[普通node-budget回归](validation/kvm-tls-gateway-budget-v4.json)、[当前来源绑定](validation/tls-gateway-bootstrap-provenance-v4.json)、[独立清理核验](validation/tls-gateway-independent-cleanup-v4.json)；[前四个冻结阶段的来源绑定](validation/tls-gateway-provenance-v3.json)及全部原始报告原样保留：
 
 上述为0b生产基线的冻结证据。随后新增[83d测试源的策略提交挂起专项](TLS_POLICY_COMMIT.md)：未修改的同一gateway/普通程序通过pre-file和post-commit两窗口、入口watchdog/guest继续与各自原盘cold，并另做健康TLS及普通node-budget回归，共4scope/8次启动。新报告不改写本节0b数据；只有两个固定通知窗口，不是完整policy故障矩阵。
+
+再后的c402**改变gateway生产代码**，不能由83d/241ca代签：[新555b验收来源](validation/policy-metadata-provenance-v1.json)绑定11项/8KiB逻辑库存、CAS后已识别temp回收、实际SIGKILL产物/原盘cold、foreign/symlink/跳号拒绝及新程序pre/post/TLS/node-budget四scope。仅有逻辑预算与选定窗口，不是物理配额或全部介质恢复。
 
 - 冻结源`0b4eb8cf…`实际执行Linux Go1.27.3全量race×3/vet、tagged fixture race×10/vet、CGO0真实quota filter×3、root Python107项零skip、mock6对象；同冻结源Darwin race×3/vet通过。7个原生ELF与独立交叉构建SHA逐项相等，不把交叉编译当成执行。
 - 实际root broker无TCP listener；唯一listener属于UID/GID60001、无附加组/caps0/NNP的child；真实chroot/cwd同inode、rlimits及NodeControl归属核对。特意向root launcher传入外部目录FD10，确认child未继承外部目录能力；自根目录瞬时内部FD不误判成外部目录。
@@ -114,4 +116,4 @@ GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go build -trimpath -buildvcs=false \
 
 ## 仍需完成
 
-生产cgroup与日志/archive硬预算、真正operator/systemd部署验收、结构化持久审计/告警、issuer/续期/凭证分发及backend authority升级、其余policy逐提交故障/孤立临时元数据保留矩阵、长时间与开放到达饱和/公平性、升级备份回滚及其余M1–M4。不开生产就绪声明；PR保持Draft，Goal保持进行中。
+生产cgroup与日志/archive硬预算、真正operator/systemd部署验收、结构化持久审计/告警、issuer/续期/凭证分发及backend authority升级、其余policy逐提交故障与部分/损坏/超预算元数据的操作员恢复、长时间与开放到达饱和/公平性、升级备份回滚及其余M1–M4。不开生产就绪声明；PR保持Draft，Goal保持进行中。

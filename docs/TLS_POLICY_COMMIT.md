@@ -2,6 +2,8 @@
 
 本页只证明两个固定的真实内核通知窗口及同盘冷恢复，**不是文件系统 D-state、物理介质故障、所有策略提交窗口或生产就绪声明**。冻结测试源 `83d949ec…`；普通五个ELF及gateway `241ca933…` 与既有0b基线逐字节相同，没有生产hook、生产Go/mod/sum/workflow变更。
 
+这是83d/241ca的历史冻结范围。后续[有界策略库存与孤立文件回收](POLICY_METADATA.md)改变了gateway生产代码，新555b已另行完成两窗口和健康TLS/node-budget四scope复验；本页原始JSON与时间数据不改写、不改标为新程序认证。
+
 原始报告：[pre-file](validation/kvm-tls-policy-pre-v1.json)、[post-commit](validation/kvm-tls-policy-post-v1.json)、[未修改的健康TLS回归](validation/kvm-tls-policy-tls-v1.json)、[普通schema3回归](validation/kvm-tls-policy-budget-v1.json)；[完整来源绑定](validation/tls-policy-provenance-v1.json)、[独立清理核验](validation/tls-policy-independent-cleanup-v1.json)。前序TLS失败、bootstrap失败对照与各冻结阶段的报告不改写、不重新贴标签。
 
 ## 为什么选择这两个窗口
@@ -72,4 +74,4 @@ memfd名称只用于核对固定调用，不作为权限凭证；该系统调用
 
 ## 尚未完成
 
-其余bootstrap/identity/lock/rename/目录提交窗口、真实文件系统D/介质故障、policy孤立临时文件和长期元数据保留预算、PKI/backend authority生命周期、生产cgroup/日志/archive硬预算、持久审计/告警、operator/systemd独立部署、开放到达/长期公平性及备份升级回滚。完整[生产门槛](PRODUCTION.md)仍未通过，PR保持Draft，Goal保持进行中。
+本冻结阶段没有policy临时库存回收证据，后续新程序的有限实现与验收见[POLICY_METADATA.md](POLICY_METADATA.md)。其余bootstrap/identity/lock/rename/GC/目录提交窗口、真实文件系统D/介质故障、部分/损坏/超预算元数据恢复、PKI/backend authority生命周期、生产cgroup/日志/archive硬预算、持久审计/告警、operator/systemd独立部署、开放到达/长期公平性及备份升级回滚仍未完成。完整[生产门槛](PRODUCTION.md)仍未通过，PR保持Draft，Goal保持进行中。

@@ -20,6 +20,8 @@
 
 后续[固定policy提交窗口/入口watchdog有限验收](TLS_POLICY_COMMIT.md)已通过：83d为测试修改，同一生产ELF在pre-file FSYNC、post-durable pre-snapshot MEMFD_CREATE两入口实际hold；child在root仍挂起时退出，普通忙任务继续，冷恢复区分真实journal1与2，另有健康TLS/普通schema3回归，共4scope/8代独立审计。未覆盖其余policy介质/提交窗口、孤立临时元数据预算或完整M4，不用通知等待代替真实文件系统D。
 
+最新[有界policy库存与真实孤立文件回收](POLICY_METADATA.md)为**新的生产gateway**555b/c402：增加有界11项/8KiB逻辑库存、严格已识别temp的CAS后回收，新程序已另跑pre/post/TLS/普通schema3共4scope/8次启动与独立清理审计。原生19类非法库存和边界负例、实机foreign/symlink/跳号拒绝及真实SIGKILL temp的cold回收有限证据均保留；旧241ca不代签。不是全局物理磁盘、日志/审计预算、完整GC/介质窗口或完整M4。
+
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。
 - 一实例一独立 guest、写盘、进程资源组和执行代际；不把已使用实例直接交给另一租户。

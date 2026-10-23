@@ -1,0 +1,11 @@
+=== RUN   TestGatewayCollectsOrphanOnlyAfterAuthorizedPolicyCAS
+=== RUN   TestGatewayCollectsOrphanOnlyAfterAuthorizedPolicyCAS/exact-replay
+    state_orphan_linux_test.go:55: authorized commit retained orphan metadata
+=== RUN   TestGatewayCollectsOrphanOnlyAfterAuthorizedPolicyCAS/next-revision
+    state_orphan_linux_test.go:55: authorized commit retained orphan metadata
+--- FAIL: TestGatewayCollectsOrphanOnlyAfterAuthorizedPolicyCAS (0.01s)
+    --- FAIL: TestGatewayCollectsOrphanOnlyAfterAuthorizedPolicyCAS/exact-replay (0.01s)
+    --- FAIL: TestGatewayCollectsOrphanOnlyAfterAuthorizedPolicyCAS/next-revision (0.01s)
+FAIL
+FAIL	github.com/123123213weqw/Xandbox/internal/gateway	0.031s
+FAIL
