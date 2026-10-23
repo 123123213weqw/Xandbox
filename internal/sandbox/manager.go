@@ -19,6 +19,7 @@ import (
 )
 
 type Options struct {
+	AdmissionGate    *AdmissionGate
 	Metrics          *telemetry.Registry
 	MaxRecords       int
 	MaxTenantRecords int
@@ -88,6 +89,9 @@ type Manager struct {
 }
 
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
+	if opts.AdmissionGate == nil {
+		opts.AdmissionGate = NewAdmissionGate(true)
+	}
 	if opts.MaxRecords == 0 {
 		opts.MaxRecords = 10_000
 	}
@@ -291,10 +295,10 @@ func createHashes(key string, req CreateRequest) (string, string, error) {
 // CreateScoped reserves ownership, tenant quota, and idempotency atomically.
 // Completed tombstones retain keys: a retry never creates a fresh generation.
 func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req CreateRequest) (Record, error) {
-	return m.createScoped(ctx, owner, key, req, nil, nil)
+	return m.createScoped(ctx, owner, key, req, nil, nil, nil)
 }
 
-func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref)) (_ Record, retErr error) {
+func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref), ticket *CreationTicket) (_ Record, retErr error) {
 	started := time.Now()
 	defer func() { m.opts.Metrics.Observe(telemetry.CreateCall, time.Since(started), retErr != nil) }()
 	if !owner.Valid() {
@@ -370,6 +374,10 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 			return r, nil
 		}
 	}
+	if ticket == nil && !m.opts.AdmissionGate.Open() {
+		m.mu.Unlock()
+		return Record{}, ErrDraining
+	}
 	if len(m.records) >= m.opts.MaxRecords {
 		m.mu.Unlock()
 		return Record{}, ErrMetadataCapacity
@@ -396,12 +404,18 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		m.mu.Unlock()
 		return Record{}, errors.New("random identity collision")
 	}
-	m.records[id], m.active[id] = i, i
-	m.metricRecords.Add(1)
-	m.metricAllocated.Add(1)
-	m.tenantRecords[owner.TenantID]++
-	if keyHash != "" {
-		m.createKeys[index] = i
+	err = m.opts.AdmissionGate.reserve(ticket, func() {
+		m.records[id], m.active[id] = i, i
+		m.metricRecords.Add(1)
+		m.metricAllocated.Add(1)
+		m.tenantRecords[owner.TenantID]++
+		if keyHash != "" {
+			m.createKeys[index] = i
+		}
+	})
+	if err != nil {
+		m.mu.Unlock()
+		return Record{}, err
 	}
 	m.mu.Unlock()
 	if reserved != nil {

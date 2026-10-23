@@ -18,6 +18,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/access"
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
+	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/observability"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
@@ -122,9 +123,28 @@ func run() (retErr error) {
 		}
 		return json.NewEncoder(os.Stdout).Encode(report)
 	}
+	controlStore, err := nodecontrol.OpenStore(absDir)
+	if err != nil {
+		return fmt.Errorf("load node admission control: %w", err)
+	}
+	admissionGate := sandbox.NewAdmissionGate(false)
+	control, err := nodecontrol.New(controlStore, admissionGate)
+	if err != nil {
+		return err
+	}
+	// Registered before lifecycle defers: wait for any control writer only AFTER
+	// Stop/Cleanup have had their independent shutdown opportunity.
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if e := control.Close(ctx); e != nil {
+			unfinishedCleanup = true
+			retErr = errors.Join(retErr, fmt.Errorf("control mutation unfinished; retain state ownership: %w", e))
+		}
+	}()
 	var driver sandbox.Driver
 	metrics := &telemetry.Registry{}
-	opts := sandbox.Options{Metrics: metrics, MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxTenantRecords: *maxTenantRecords, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
+	opts := sandbox.Options{AdmissionGate: admissionGate, Metrics: metrics, MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxTenantRecords: *maxTenantRecords, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
 	writeTimeout := 10 * time.Second
 	if *backend == "mock" {
 		driver, err = sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
@@ -187,6 +207,11 @@ func run() (retErr error) {
 		defer observer.Close()
 		metricsErrors = observer.Errors()
 	}
+	operator, err := nodecontrol.Start(absDir, control, manager.Stats)
+	if err != nil {
+		return err
+	}
+	defer func() { retErr = errors.Join(retErr, operator.Stop()) }()
 	socket := filepath.Join(absDir, "api.sock")
 	if info, err := os.Lstat(socket); err == nil {
 		if info.Mode()&os.ModeSocket == 0 {
@@ -227,6 +252,8 @@ func run() (retErr error) {
 	}
 	defer server.Close()
 	select {
+	case err := <-operator.Errors():
+		return fmt.Errorf("operator listener failed: %w", err)
 	case err := <-metricsErrors:
 		return fmt.Errorf("metrics listener failed: %w", err)
 	case err := <-serveErr:

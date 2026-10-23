@@ -20,11 +20,13 @@ from smoke import UnixHTTP
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--daemon', required=True)
+    parser.add_argument('--node', required=True, help='same-UID operator CLI for explicit legacy-fixture resume')
     parser.add_argument('--legacy-daemon')
     parser.add_argument('--report')
     parser.add_argument('--source-revision')
     args = parser.parse_args()
     daemon = str(Path(args.daemon).resolve())
+    node = str(Path(args.node).resolve())
     checks = []
     with tempfile.TemporaryDirectory(prefix='xb-meta-') as temp:
         root = Path(temp)
@@ -190,9 +192,23 @@ def main():
                 assert len(list(ledger.glob('*.json'))) == count
                 assert not list(ledger.glob('.record-*'))
                 process = start(['-max-records', '1', '-max-tenant-records', '1'], directory=interrupted)
+                # Imported legacy state has no admission identity. It must
+                # start drained; explicitly authorize this disposable test
+                # root before measuring its independent metadata-cap error.
+                assert call('POST', '/v1/sandboxes', {}, key='new', status=503, directory=interrupted)['error']['code'] == 'NODE_DRAINING'
+                query = subprocess.run([node, '-state-dir', str(interrupted), 'status'], capture_output=True, timeout=10)
+                assert query.returncode == 0
+                control = json.loads(query.stdout)['control']
+                assert not control['admission_open'] and control['committed']['mode'] == 'drained'
+                committed = control['committed']
+                opened = subprocess.run([node, '-state-dir', str(interrupted), '-epoch', committed['epoch'],
+                    '-revision', str(committed['revision']), '-request-id', os.urandom(16).hex(), 'resume'],
+                    capture_output=True, timeout=10)
+                assert opened.returncode == 0 and json.loads(opened.stdout)['control']['admission_open']
                 assert call('POST', '/v1/sandboxes', {}, key='new', status=503, directory=interrupted)['error']['code'] == 'METADATA_CAPACITY'
                 stopped(process); process = None
                 checks.append('actual SIGKILL during 2048-record migration leaves mixed schema; resume preserves all identities and cleans orphan temps')
+                checks.append('imported legacy fixture remains drained until same-UID operator CAS resume; metadata cap still enforced')
 
                 if args.legacy_daemon:
                     old = str(Path(args.legacy_daemon).resolve())

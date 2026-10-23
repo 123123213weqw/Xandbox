@@ -6,6 +6,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 **状态：生产化开发中，尚未生产就绪。**
 
+开发分支新增 [节点持久准入控制](docs/NODE_CONTROL.md)：私有同宿主 UID 管理 socket 与 `xandbox-node status/drain/resume`，停止新预留但允许已接受操作、已有执行及独立 Stop/Cleanup 继续；包含 epoch/revision CAS、精确重试和重启保持。**这次修改了生产程序，新 Linux/KVM 完整复验尚未完成**；下面各报告仍只证明其冻结的历史源码/ELF，不能作为新程序验收。mock 进程及模拟持久化错误测试不代替真实故障窗口。
+
 新增 [持久化错误后的独立物理Stop](docs/EMERGENCY_STOP.md)：新Go1.27.3原生daemon通过5项ENOSPC故障及完整新运行时回归；idle故障停止两次观测为43.814/48.630ms，旧c577负对照约5016ms并按预期未过实验guard。仍返回存储错误、不假称持久STOPPED或提前清理/还容量；这不是线上SLO，也不覆盖尚未返回的卡死I/O。
 
 新增 [独立ledger只读/EROFS实机验收](docs/READONLY.md)：busy/idle两组分别39.017/47.907ms观察到host停止，DELETE仍500、无持久停止/销毁确认、容量保留；RO持续时普通重启拒绝，恢复自身小卷RW后同state回收。预先打开的directoryFD也验证真实EROFS；仅ledger只读，不代表介质EIO、整个state故障或生产SLO。

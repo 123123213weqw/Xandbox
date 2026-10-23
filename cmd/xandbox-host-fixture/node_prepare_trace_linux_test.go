@@ -86,12 +86,13 @@ func TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents(t *testing.T) {
 	for name, raw := range map[string][]byte{
 		"empty": nil, "oversize": bytes.Repeat([]byte("x"), prepareTraceMaxBytes+1),
 		"unknown":          bytes.Replace(valid, []byte("xbg_ok"), []byte("xbg_unknown"), 1),
+		"wrong-ip":         bytes.Replace(valid, []byte(fmt.Sprintf("(0x%x)", prepareProbes()[0].address)), []byte("(0x1)"), 1),
 		"bad-cpu":          bytes.Replace(valid, []byte("[000]"), []byte("[008]"), 1),
 		"zero-g":           bytes.Replace(valid, []byte("g=0x1"), []byte("g=0x0"), 1),
 		"missing-register": bytes.Replace(valid, []byte("value=0x0"), []byte("value=(fault)"), 1),
 		"invalid-tid":      bytes.Replace(valid, []byte("sandboxd-20"), []byte("sandboxd-0"), 1),
 		"backwards":        bytes.Replace(valid, []byte("1.000002"), []byte("0.000002"), 1),
-		"excess":           bytes.Repeat([]byte("a-1 [000] d... 1.000001: xbg_enter: (0x73ff72) g=0x1 value=0x1\n"), prepareTraceMaxEvents+1),
+		"excess":           bytes.Repeat([]byte(fmt.Sprintf("a-1 [000] d... 1.000001: xbg_enter: (0x%x) g=0x1 value=0x1\n", prepareProbes()[0].address)), prepareTraceMaxEvents+1),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if bytes.Equal(raw, valid) {

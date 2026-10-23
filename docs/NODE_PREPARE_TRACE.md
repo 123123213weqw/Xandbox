@@ -1,5 +1,7 @@
 # 准备许可的固定指令入口校准（TEST ONLY）
 
+当前分支的[节点准入控制](NODE_CONTROL.md)已改变生产 ELF；固定 probe 计划已为新程序重绑定，但新程序的实机校准尚未通过。下文和清单保持原冻结历史证据，不能用于新程序认证；复现历史用例须使用对应历史源码与资产。
+
 **本页仅记录两个真实并发创建的跟踪校准，不是排队取消、blocked-copy 下回收隔离、满载或生产验收。** 冻结源码 `1e7650af7ea031b13ef370ccaa9b8915156d94db`；普通 daemon/admin/warden/builder 与已验收 2e 的四个 ELF 字节完全一致，fixture 变为 `9297f982…`。来源及实际结果以[校准报告](validation/kvm-node-prepare-admission-v3.json)和[来源清单](validation/node-prepare-provenance-v3.json)为准，不重标旧 DEFAULT/quota240 测量。
 
 ## 为什么先校准，而不是从 503 或目录缺失推断

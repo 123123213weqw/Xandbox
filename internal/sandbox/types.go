@@ -22,6 +22,7 @@ var (
 	ErrNotFound                = errors.New("not found")
 	ErrStale                   = errors.New("stale generation")
 	ErrNotReady                = errors.New("sandbox is not ready")
+	ErrDraining                = errors.New("node admission is closed")
 	ErrClosing                 = errors.New("manager is closing")
 	ErrCapacity                = errors.New("capacity exhausted; unreclaimed instances still count")
 	ErrJobLimit                = errors.New("execution history limit reached; create a new sandbox")
