@@ -59,7 +59,7 @@
 
 [ext4 project quota 前置验收与协议设计](PROJECT_QUOTA.md)单独区分内核行为与普通驱动功能：root能力绕过、受限root的EDQUOT、共享硬链接/继承及原盘重启持久化已有有限测试；本分支已实现实验性每代projectID/驱动接入并打通cold/snapshot有限恢复、双实例共享pin检查，quota清零已移出catalog pin锁；普通daemon的block/inode EDQUOT、能力/UUID/未知记录/绑定变更/缺enforcement拒绝亦已有有限检查；quota启用的整state I/O、清零后owner/pin待释放的精确掉电窗口已有有限检查；另有6个固定quota syscall errno注入例通过，采用额外TEST ONLY启动层、不是物理介质故障；held/重复错误/逐syscall崩溃、节点预算、锁内owner元数据持久化与全部持久窗口验收仍未完成，不能勾选完整磁盘预算。
 
-最新普通daemon已更新为 `522da68e…`：quota同步增加runtime anchor上的显式syncfs提交屏障，真实内核D挂起/pre-fork掉电恢复已有有限证据。旧Q_SYNC-only负对照不构成已确认READY/DESTROYED不安全的证明；旧ab547/B8完整报告也不能代替新runtime全矩阵。syncfs实际EIO/EROFS、release及其余持久窗口与新native全矩阵仍未完成。
+最新普通daemon已更新为 `522da68e…`：quota同步增加runtime anchor上的显式syncfs提交屏障，真实内核D挂起/pre-fork掉电恢复已有有限证据。旧Q_SYNC-only负对照不构成已确认READY/DESTROYED不安全的证明；旧ab547/B8完整报告也不能代替新runtime全矩阵。新native默认服务兼容矩阵已另复验：cold30/load5、queue/binding展开、snapshot10及两租户各120次、初始化与存储/I/O均通过；但quota启用的完整切换/并发、syncfs实际EIO/EROFS、release及其余持久窗口仍未完成，不能勾选完整M2。
 
 M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。完整宿主重启窗口/物理介质故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 

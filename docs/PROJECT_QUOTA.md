@@ -133,7 +133,7 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 ### 显式filesystem提交屏障与真实内核挂起（最新有限证据）
 
-当前生产代码已变化：普通daemon为 `522da68e…`，不再是前轮 `ab547783…`；**完整新运行时矩阵尚未完成**，不能沿用旧报告认定新运行时已全部验收。新增[精确provenance与角色SHA](validation/quota-barrier-provenance-v1.json)、[原始目标报告](validation/kvm-quota-barrier-v1.json)。
+当前生产代码已变化：普通daemon为 `522da68e…`，不再是前轮 `ab547783…`；**quota完整故障/并发矩阵尚未完成**；最新默认服务兼容矩阵见下节，不能沿用旧报告认定全部quota模式已验收。新增[精确provenance与角色SHA](validation/quota-barrier-provenance-v1.json)、[原始目标报告](validation/kvm-quota-barrier-v1.json)。
 
 上游[Linux6.8 ext4](https://github.com/torvalds/linux/blob/v6.8/fs/ext4/super.c)启用内部quota时设置SYS_FILE/NOLIST_DIRTY；[dquot_quota_sync](https://github.com/torvalds/linux/blob/v6.8/fs/quota/dquot.c)在SYS_FILE路径可不调用sync_fs/sync_blockdev就返回。不能将Q_SYNC/GET成功直接等同于明确的filesystem提交边界。普通驱动现改为 `Q_SYNC → syncfs(已保留的runtime anchor FD)`，任一步出错均向上传递；Prepare和owner释放必须等待该屏障。根据[syncfs接口](https://man7.org/linux/man-pages/man2/syncfs.2.html)，它是**整个anchor所在文件系统**的提交，不是每project独立flush、有限时延或介质认证。quota I/O仍在catalog pin锁外，owner unlink/目录fsync仍在锁内。
 
@@ -147,7 +147,27 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 源码冻结 `a57f703d0c5ec9d3440430c573690df2856d39ae`；new native daemon/admin/builder/fixture及原warden五个ELF与独立交叉构建精确匹配，原guest initrd未变。native full race×3/vet、fixture race×10/vet、root Python47项、实际CGO0 kernel/exec filter×3与Darwin race×3/vet通过。新runtime还通过[6个errno及cold三检查点](validation/kvm-quota-barrier-syscalls-v1.json)、[post-clear owner/pin掉电](validation/kvm-quota-barrier-clear-v1.json)、[真正L1 snapshot/shared2+cold3](validation/kvm-quota-barrier-snapshot-v1.json)、[quota整盘I/O](validation/kvm-quota-barrier-io-v1.json)及[默认nil-quota I/O](validation/kvm-quota-barrier-default-io-v1.json)有限回归。[独立只读审计](validation/quota-barrier-independent-cleanup-v1.txt)含旧负对照共7个scope/23个外层执行代际，路径/执行域均无；quota证据来自删盘前L1实际读回。
 
-syncfs错误顺序/EIO/EROFS传播目前另有unit证明，**不是实际syncfs EIO/EROFS syscall故障验收**；release提交挂起/掉电、重复错误、listener失效、partial-copy Prepare、snapshot pin组合、owner元数据窗口、完整新522运行时矩阵、节点预算和最终exact-head CI仍待完成。目标与PR19继续未完成，不以本项通过勾选完整M2。
+syncfs错误顺序/EIO/EROFS传播目前另有unit证明，**不是实际syncfs EIO/EROFS syscall故障验收**；release提交挂起/掉电、重复错误、listener失效、partial-copy Prepare、snapshot pin组合、owner元数据窗口、完整quota启用的新522矩阵、节点预算和最终exact-head CI仍待完成；默认服务兼容矩阵已在下节另验。目标与PR19继续未完成，不以本项通过勾选完整M2。
+
+### 新522默认服务兼容矩阵（quota完整验收仍未完成）
+
+[精确provenance与角色SHA](validation/runtime-matrix-provenance-v1.json)记录本轮新原生默认服务矩阵。测试/构建源码冻结 `e021c70cab0c1e3047fbb95a57647529c9ae0c87`，与生产Go冻结 `a57f703…` 的cmd/internal/Go依赖逐字节相同；daemon仍 `522da68e…`、admin `7fb8d638…`。变化只是KVM测试脚本的早期私有资源清单、helper SHA与cleanup inode归属核对，不用旧ab547/B8结果冒充新runtime。
+
+| 本轮实际闸门 | 证据范围 |
+|---|---|
+| [进程验收](validation/runtime-matrix-process-smoke-derived-v1.json) | 5个Mock脚本；构建flags使其daemon与真实runtime522精确相同。只是控制面，不是VM隔离证明；JSON结果从私有make log原样解码为明确标注的derived artifact，未公开含绝对路径的原make log |
+| [默认cold服务](validation/kvm-runtime-default-cold-v1.json) | 30条检查、5次新VM切换烟测；[queue9](validation/kvm-runtime-default-cold-v1-queue.json)/[binding9](validation/kvm-runtime-default-cold-v1-session.json)是其中受控fsync用例展开，不再虚增18个独立场景 |
+| [默认snapshot/mixed](validation/kvm-runtime-default-snapshot-v1.json) | 10组catalog检查及每租户120次、两租户闭环切换；实际持续时间见原报告，不是开放环饱和、公平性、busy旧任务风暴或SLO |
+| [初始化6](validation/kvm-runtime-default-initialization-v1.json) | 另有历史[TEST machine-id](validation/kvm-runtime-default-machine-id-v1.json)/[TEST before-marker](validation/kvm-runtime-default-before-marker-v1.json)各1例；原guest和历史TEST镜像未改，不宣称新guest ELF崩溃认证 |
+| opt-in双层I/O | [cold7](validation/kvm-runtime-io-cold-v1.json)/[snapshot12](validation/kvm-runtime-io-snapshot-v1.json)/[ledgerRO5](validation/kvm-runtime-io-readonly-v1.json)：包含8MiB/s与4096ops/s读回、实际operator/guest direct I/O、活跃写盘Stop/GC及策略拒绝 |
+| 默认存储故障 | [ledgerRO3](validation/kvm-runtime-default-readonly-v1.json)/[ENOSPC5](validation/kvm-runtime-default-storage-v1.json)；只在各自私有mount namespace的64MiB专属loop文件上注入，不填满/改挂共享宿主文件系统 |
+| 普通L1恢复及quota前置负向 | [healthy power3](validation/kvm-runtime-default-power-v1.json)、[quota negative6+cold3](validation/kvm-runtime-quota-negative-v1.json)、[独立unenforced拒绝1](validation/kvm-runtime-quota-unenforced-v1.json)。最后一例0个L2 VM，不伪称执行/冷恢复/清零证据 |
+
+Cold及queue/binding原始报告没有顶层passed/cleanup布尔值，不能补造。通过依据为完整checklist、成功的Go子测试、strict finally、总runner退出0，以及[独立只读清理审计](validation/runtime-matrix-independent-cleanup-v1.txt)。本轮覆盖13个scope、4个专属loop绑定、9个实际L1执行代际；cold runtime/cgroup终于有早期私有receipt与实际controller路径交叉核对，不再仅凭finally成功。早期清单不是任意kill/detach授权；mkdir失败、原有对象、替换inode或symlink不能被当作本次创建的cgroup清理。
+
+Linux native full race×3/vet、fixture race×10/vet、root Python50项、实际CGO0 kernel/exec filter×3及Darwin race×3/vet通过。新native daemon/admin/FC-test/session-test与独立交叉构建精确匹配，复用的原native warden/host-fixture/builder也逐一核对SHA及相同Go源码。legacy旧daemon仅用于实际旧ledger升级的准备，历史TEST export仍是其原源码角色；不把这些旧角色结果当成新daemon验证。
+
+这完成的是**新runtime的默认nil-quota服务兼容矩阵**，以及有限IO-budget和quota负向/冷恢复子门槛。quota启用的会话切换/并发/全部持久故障、实际syncfs EIO/EROFS及release提交hold/crash、重复clear/listener-loss/partial-copy、owner unlink/dirfsync与shared pin组合、节点总预算、最终exact-head CI及M1–M4仍未完成。PSS、cgroup charge、source residency等视图重叠，不能相加制造unique RAM；闭环完成数量相等也不是公平性证明。PR19继续Draft。
 
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 

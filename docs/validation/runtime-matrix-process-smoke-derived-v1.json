@@ -1,0 +1,90 @@
+{
+  "derivation": "Decoded five original JSON outputs from private make smoke log; no fields within those result objects changed. Mock control-plane only, not microVM isolation/latency.",
+  "invoker_source_revision": "e021c70cab0c1e3047fbb95a57647529c9ae0c87",
+  "input_log_sha256": "4f6186e9749027a34a768840ff00640442210efe1c7d3c51b5992c9b25cfdaf2",
+  "exact_smoke_daemon_sha256": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+  "results": [
+    {
+      "backend": "mock",
+      "microvm_benchmark": false,
+      "cycles": 50,
+      "checks": [
+        "Unix-socket health explicitly reports mock / no isolation",
+        "second controller cannot acquire the same state directory",
+        "workspace separation, stale-generation fence, and host-shell rejection",
+        "stop drains execution; destroy is idempotent and separately observable",
+        "execution timeout and sandboxctl end-to-end command",
+        "SIGKILL + restart fences and reclaims the previous generation",
+        "50 create/execute/destroy cycles leave no private workspaces",
+        "graceful shutdown removes its socket"
+      ]
+    },
+    {
+      "backend": "mock",
+      "provides_microvm_isolation": false,
+      "checks": [
+        "keygen creates private files, stores only SHA-256 digests, and refuses overwrite",
+        "daemon fails closed without auth mode and refuses nonprivate configuration",
+        "authentication, all tenant resource boundaries, quota, and creation replay/conflict",
+        "token-file CLI performs authenticated creation replay and execution",
+        "SIGKILL + restart retains tenant ownership and idempotency tombstones without resurrection"
+      ]
+    },
+    {
+      "backend": "mock",
+      "production_ready": false,
+      "source_revision": null,
+      "test": "ledger_metadata_process_acceptance",
+      "migration_fault_records": 2048,
+      "actual_old_binary": false,
+      "checks": [
+        "tenant metadata saturation preserves live replay, tombstone and exclusive migration lock",
+        "node metadata cap survives restart and does not recycle destroyed keys",
+        "SIGKILL restart below old record budget reclaims every old generation without resurrection",
+        "legacy fixture requires explicit offline upgrade; rerun is idempotent and preserves key rejection",
+        "unknown schema rejects migration and service startup without modifying valid records",
+        "actual SIGKILL during 2048-record migration leaves mixed schema; resume preserves all identities and cleans orphan temps"
+      ],
+      "daemon_sha256": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d"
+    },
+    {
+      "test": "experimental_session_switch_process_acceptance",
+      "backend": "mock",
+      "microvm_benchmark": false,
+      "production_ready": false,
+      "source_revision": null,
+      "runtime_platform": "Linux/x86_64",
+      "daemon_sha256": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+      "checks": [
+        "authenticated scoped session API; plain per-VM Exec cannot bypass managed admission",
+        "per-tenant and node session metadata budgets include retained session identities",
+        "conditional cold switch rejects old revision; new workspace clean; old VM lifecycle separately reclaimed; idempotent switch key",
+        "two concurrent expected-revision switches publish exactly one next binding; private hashes omitted",
+        "actual controller SIGKILL restart closes old session routes, retains keys and reclaims all underlying generations"
+      ],
+      "samples": {
+        "mock_switch_response_ms": 3.727,
+        "mock_request_to_first_new_command_success_ms": 4.337,
+        "mock_request_to_new_commands_completed_ms": 4.887,
+        "mock_server_phase_observations": {
+          "admission_revoked_ms": 2.615748,
+          "measured": true,
+          "candidate_ready_ms": 1.954223,
+          "fence_to_commit_ms": 0.781958,
+          "total_ms": 3.399678
+        }
+      }
+    },
+    {
+      "backend": "mock",
+      "production_ready": false,
+      "checks": [
+        "metrics socket disabled by default",
+        "startup refuses to replace regular metrics path",
+        "operator UDS0600 separate from authenticated tenant API and no sensitive labels",
+        "stop/reclaim succeed under offered metrics connection saturation; tombstone remains counted",
+        "restart resets process counters, rebuilds retained gauges and removes socket on shutdown"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+work/runtime-matrix-source-v1.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+bin/sandboxd-lease-v2: 成功
+work/fixture-machine-id-v4.cpio.gz: 成功
+work/fixture-before-marker-v4.cpio.gz: 成功
+stage: native fullrace3/vet/fixture-race10/vet/rootPython50/CGO0kernel-filter3
+..................................................
+----------------------------------------------------------------------
+Ran 50 tests in 0.049s
+
+OK
+stage: native process5 with trimpath/buildvcsfalse; smoke daemon must equal real522 runtime
+bin/sandboxd-runtime-matrix-v1: 成功
+bin/runtime-matrix-smoke-v1/sandboxd: 成功
+bin/xandbox-template-runtime-matrix-v1: 成功
+bin/firecracker-runtime-matrix-v1.test: 成功
+bin/session-runtime-matrix-v1.test: 成功
+bin/xandbox-warden-quota-barrier-v1: 成功
+bin/fixture-quota-barrier-v1: 成功
+bin/builder-quota-barrier-v1: 成功
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-runtime-matrix-v1
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-runtime-matrix-v1
+2f4ae0fe9877c018f8b6467e0f5ec9f62aa006826a5af9e18bef3e34694c3d1b  bin/firecracker-runtime-matrix-v1.test
+313acb64e03b2bdb716f88b9edc648aef1bc39ec8ead84814ec31d3ef6ab0ba2  bin/session-runtime-matrix-v1.test
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-barrier-v1
+23e4badee4ad6c335b825ba573cde6a5edadfd4c3ccc8189802c14cd3e899548  bin/fixture-quota-barrier-v1
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-quota-barrier-v1
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/runtime-matrix-smoke-v1/sandboxd
+stage: NEW default cold30/load5/queue9/binding9; trusted legacy setup022 only
+{"passed": 30, "production_ready": false, "samples": {"create_api_ready_ms": [1515.895, 1628.86, 1403.516, 1484.595, 1546.377, 1474.533, 1543.881, 1429.542, 1571.709], "controller_sigkill_to_empty_cgroup_ms": 49.62, "restart_to_durable_reclaim_ms": 776.162, "stop_api_confirmed_ms": 58.343, "delete_phases": [{"from_state": "STOPPED", "accepted_ms": 2.443, "observed_stopped_ms": 2.727, "durable_destroyed_ms": 261.922}, {"from_state": "READY", "accepted_ms": 2.525, "observed_stopped_ms": 46.027, "durable_destroyed_ms": 103.994}, {"from_state": "READY", "accepted_ms": 2.985, "observed_stopped_ms": 45.501, "durable_destroyed_ms": 141.355}]}}
+stage: NEW default snapshot10 and mixed120 per tenant >=180sec
+{"passed": true, "checks": 10, "cleanup_confirmed": true}
+stage: NEW initialization6 + historical explicit TEST1 each
+{"passed": true, "cases": 6, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: NEW IO cold7 + paused-snapshot pressure/catalog12
+{"passed": true, "cases": 7, "cleanup_confirmed": true}
+{"passed": true, "checks": 12, "cleanup_confirmed": true}
+stage: NEW IO ledgerRO5 / default ledgerRO3 / default ENOSPC5
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+stage: NEW healthy L1 power3 / ordinary quota negatives6+cold3 / fresh unenforced rejection
+46589 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+46719 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+46719 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+ALL new522 native service matrix stages passed; other quota syscall/owner durability windows/full Goal remain
