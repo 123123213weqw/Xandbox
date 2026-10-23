@@ -247,3 +247,21 @@ func TestNodePrepareGateIsBoundedAndCanceledWaitersDoNotLeak(t *testing.T) {
 		t.Fatal("preparation parallelism not enforced", peak.Load(), len(g.tokens))
 	}
 }
+
+// This fixed fixture policy also appears in the TEST-only L1 pressure helper;
+// prove its exact guards against the real production planner, not a new credit.
+func TestNodeSnapshotFixtureGuardMatchesProductionPlanner(t *testing.T) {
+	c := nodeTestConfig()
+	c.UIDCount = 4
+	c.IO.BytesPerSecond = 16 << 20
+	c.IO.OperationsPerSecond = 1024
+	c.Snapshot = &SnapshotPolicy{Version: 1, AgentSHA256: strings.Repeat("b", 64), MemoryMiB: 512, VCPUs: 2, MaxEntries: 4, MaxBytes: 2 << 30}
+	c.Node = &NodePolicy{Version: 1, CgroupRoot: "/sys/fs/cgroup/xb-node", MaxInstances: 4, MaxRecords: 1024, MaxSessions: 32, PrepareWorkers: 1, MemoryMax: 7 << 30, ControllerMemoryMax: 1 << 30, HostMemoryReserve: 512 << 20, PidsMax: 384, ControllerPidsMax: 128, CPUQuota: 800000, IOBytesPerSecond: 256 << 20, IOOperationsPerSecond: 8192, DiskBytes: 10 << 30, DiskInodes: 100000, ExternalDiskBytes: 2 << 30, ExternalInodes: 2048, MinFreeBytes: 256 << 20, MinFreeInodes: 2048}
+	if e := c.validate(); e != nil {
+		t.Fatal(e)
+	}
+	r, e := c.Node.validate(c)
+	if e != nil || r.FreeDiskGuard != 3362619392 || r.FreeInodeGuard != 5776 {
+		t.Fatalf("fixture no longer matches real conservative planner %+v %v", r, e)
+	}
+}

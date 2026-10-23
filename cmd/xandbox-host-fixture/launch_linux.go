@@ -45,7 +45,7 @@ func (p launchPolicy) resources() (memoryMiB int, diskBytes int64, cgroupBytes u
 	switch p.Profile {
 	case "":
 		return 2048, 2 << 30, 3 << 30, nil
-	case "node-budget-v1":
+	case "node-budget-v1", "node-snapshot-v1":
 		return 8192, 12 << 30, 10 << 30, nil
 	case "quota-switch-v1", "quota-copy-v1":
 		return 3072, 4 << 30, 4 << 30, nil
@@ -103,13 +103,13 @@ func loadLaunch(path string) (launchPolicy, error) {
 }
 
 func (p launchPolicy) cpuCount() int {
-	if p.Profile == "node-budget-v1" {
+	if p.Profile == "node-budget-v1" || p.Profile == "node-snapshot-v1" {
 		return 8
 	}
 	return 4
 }
 func (p launchPolicy) pidCount() int {
-	if p.Profile == "node-budget-v1" {
+	if p.Profile == "node-budget-v1" || p.Profile == "node-snapshot-v1" {
 		return 256
 	}
 	return 128

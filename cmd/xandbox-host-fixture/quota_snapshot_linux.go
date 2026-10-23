@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
@@ -68,7 +69,14 @@ func (n *node) quotaSnapshotSetup(ctx context.Context) (map[string]any, error) {
 	if e = strictjson.Decode(b, &cfg); e != nil {
 		return nil, e
 	}
-	if cfg.Version != 2 || cfg.Snapshot == nil || cfg.Quota == nil || cfg.Snapshot.AgentSHA256 != p.AgentSHA256 || cfg.Snapshot.MemoryMiB != 512 || cfg.Snapshot.VCPUs != 2 {
+	if n.nodeSnapshot {
+		if _, e = fixedNodeSnapshotConfig(); e != nil {
+			return nil, e
+		}
+	} else if cfg.Version != 2 {
+		return nil, errors.New("fixed legacy snapshot backend policy required")
+	}
+	if cfg.Snapshot == nil || cfg.Quota == nil || cfg.Snapshot.AgentSHA256 != p.AgentSHA256 || cfg.Snapshot.MemoryMiB != 512 || cfg.Snapshot.VCPUs != 2 {
 		return nil, errors.New("fixed snapshot backend policy required")
 	}
 	pins := map[string]string{"agent": p.AgentSHA256, "workspace": cfg.Workspace.SHA256}
@@ -158,6 +166,14 @@ func (n *node) quotaSnapshotSetup(ctx context.Context) (map[string]any, error) {
 		args := append([]string{"-state-dir", "/srv/state", "-config", "/srv/config/backend.json"}, arguments...)
 		c := exec.CommandContext(ctx, "/srv/assets/admin", args...)
 		c.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
+		if n.nodeSnapshot {
+			cg, err := os.Open(nodeGroup + "/control")
+			if err != nil {
+				return nil, err
+			}
+			defer cg.Close()
+			c.SysProcAttr = &syscall.SysProcAttr{UseCgroupFD: true, CgroupFD: int(cg.Fd())}
+		}
 		c.Stderr = os.Stderr
 		var out bytes.Buffer
 		c.Stdout = &out
@@ -184,6 +200,10 @@ func (n *node) quotaSnapshotSetup(ctx context.Context) (map[string]any, error) {
 	}
 	if _, e = admin("activate", published.ID); e != nil {
 		return nil, e
+	}
+	if n.nodeSnapshot {
+		n.switchTemplate = published.ID
+		return map[string]any{"genuine_l1_unassigned_template_built": true, "l1_host_abi_checked": true, "builder_two_independent_clones_checked": true, "builder_runtime_reclaimed": true, "ordinary_catalog_published_and_activated": true, "publisher_inside_node_control": true, "snapshot_memory_bytes": 512 << 20, "offline_builder_outside_node_envelope_not_a_node_pressure_claim": true}, nil
 	}
 	sharing, e := n.quotaSnapshotSharing(ctx, admin, published.ID)
 	if e != nil {

@@ -20,6 +20,14 @@ func main() {
 		err = launch(*config)
 	case "qemu-child":
 		err = qemuChild(*config)
+	case "node-snapshot":
+		err = runNodeEnvelopeProfiles(false, false, false, false, false, false, false, true)
+	case "node-snapshot-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("node snapshot child accepts no arguments")
+		} else {
+			err = runNodeSnapshotDaemon()
+		}
 	case "node-budget":
 		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
 	case "node-budget-daemon", "node-budget-bad-limits":

@@ -52,6 +52,13 @@ func (n *node) initializeNodeBudget() error {
 	if e != nil {
 		return e
 	}
+	return n.initializeBudgetCgroups(c)
+}
+func (n *node) initializeBudgetCgroups(c firecracker.Config) error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	var e error
 	var st unix.Stat_t
 	if e = unix.Lstat("/dev/vda", &st); e != nil || st.Mode&unix.S_IFMT != unix.S_IFBLK {
 		return errors.New("own fixed budget disk required")
