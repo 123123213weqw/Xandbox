@@ -359,7 +359,7 @@ func (n *node) operatorProfile() error {
 	_, e := fixedBudgetConfig()
 	return e
 }
-func operatorGuest(ctx context.Context, n *node, api *switchAPI, ref sandbox.Ref, marker string) (string, error) {
+func operatorGuest(ctx context.Context, n *node, api *switchAPI, ref sandbox.Ref, marker string, binding *session.Result) (string, error) {
 	if e := budgetVM(ref); e != nil {
 		return "", e
 	}
@@ -374,7 +374,17 @@ func operatorGuest(ctx context.Context, n *node, api *switchAPI, ref sandbox.Ref
 	if marker != "raw" && marker != "session" && marker != "switched" && marker != "cold" {
 		return "", errors.New("unknown guest marker")
 	}
-	output, e := api.executeVM(ctx, ref, []string{"sh", "-c", "set -e; test ! -e operator-marker; printf '" + marker + "' > operator-marker; sync; id -u; cat /proc/sys/kernel/random/boot_id"})
+	argv := []string{"sh", "-c", "set -e; test ! -e operator-marker; printf '" + marker + "' > operator-marker; sync; id -u; cat /proc/sys/kernel/random/boot_id"}
+	var output sandbox.Output
+	if binding == nil {
+		output, e = api.executeVM(ctx, ref, argv)
+	} else {
+		if binding.Current != ref {
+			return "", errors.New("operator session guest route mismatch")
+		}
+		output, e = api.sessionExec(ctx, *binding, argv)
+	}
+
 	if e != nil {
 		return "", e
 	}
@@ -436,7 +446,7 @@ func (n *node) nodeOperatorCheckpoint(ctx context.Context) (map[string]any, erro
 	if e != nil {
 		return nil, e
 	}
-	rawBoot, e := operatorGuest(ctx, n, api, raw.Ref, "raw")
+	rawBoot, e := operatorGuest(ctx, n, api, raw.Ref, "raw", nil)
 	if e != nil {
 		return nil, e
 	}
@@ -448,9 +458,12 @@ func (n *node) nodeOperatorCheckpoint(ctx context.Context) (map[string]any, erro
 	if e != nil {
 		return nil, e
 	}
-	sessionBoot, e := operatorGuest(ctx, n, api, bound.Current, "session")
-	if e != nil || rawBoot == sessionBoot {
-		return nil, errors.New("independent real raw/session guests required")
+	sessionBoot, e := operatorGuest(ctx, n, api, bound.Current, "session", &bound)
+	if e != nil {
+		return nil, fmt.Errorf("operator session guest validation: %w", e)
+	}
+	if rawBoot == sessionBoot {
+		return nil, errors.New("independent real raw/session guest boots required")
 	}
 	busy, e := n.submit(ctx, raw.Ref, []string{"sh", "-c", "i=0; while :; do i=$((i+1)); printf '%s\\n' \"$i\" > operator-progress.tmp; mv operator-progress.tmp operator-progress; sleep 0.05; done"})
 	if e != nil {
@@ -598,7 +611,7 @@ func (n *node) nodeOperatorCheckpoint(ctx context.Context) (map[string]any, erro
 	if e != nil {
 		return nil, e
 	}
-	newRawBoot, e := operatorGuest(ctx, n, api, newRaw.Ref, "raw")
+	newRawBoot, e := operatorGuest(ctx, n, api, newRaw.Ref, "raw", nil)
 	if e != nil {
 		return nil, e
 	}
@@ -606,7 +619,7 @@ func (n *node) nodeOperatorCheckpoint(ctx context.Context) (map[string]any, erro
 	if e != nil {
 		return nil, e
 	}
-	newSessionBoot, e := operatorGuest(ctx, n, api, newSession.Current, "session")
+	newSessionBoot, e := operatorGuest(ctx, n, api, newSession.Current, "session", &newSession)
 	if e != nil {
 		return nil, e
 	}
@@ -614,7 +627,7 @@ func (n *node) nodeOperatorCheckpoint(ctx context.Context) (map[string]any, erro
 	if e = api.call(ctx, "POST", "/v1/sessions/"+bound.ID+"/switch", switchKey, switchRequest, &switched, 200); e != nil || switched.Revision != 2 || switched.Previous != bound.Current || switched.Current == bound.Current {
 		return nil, errors.New("previously rejected switch key not reusable")
 	}
-	liveBoot, e := operatorGuest(ctx, n, api, switched.Current, "switched")
+	liveBoot, e := operatorGuest(ctx, n, api, switched.Current, "switched", &switched)
 	if e != nil || liveBoot == sessionBoot {
 		return nil, errors.New("new switch guest not independent")
 	}
@@ -855,7 +868,7 @@ func (n *node) nodeOperatorRecover(ctx context.Context) (map[string]any, error) 
 	if e != nil {
 		return nil, e
 	}
-	boot, e := operatorGuest(ctx, n, api, fresh.Ref, "cold")
+	boot, e := operatorGuest(ctx, n, api, fresh.Ref, "cold", nil)
 	if e != nil {
 		return nil, e
 	}
