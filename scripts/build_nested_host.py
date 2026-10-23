@@ -34,8 +34,8 @@ def validate_manifest(manifest):
         if not re.fullmatch('[0-9a-f]{64}', value): raise ValueError('explicit artifact digest required')
 
 
-def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False):
-    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot))) > 1: raise ValueError('mutually exclusive L1 image profiles')
+def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False, quota_unenforced=False):
+    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot), bool(quota_unenforced))) > 1: raise ValueError('mutually exclusive L1 image profiles')
     # Linux 6.8 cannot pivot_root from its special initramfs rootfs. Move to
     # a bounded, ordinary tmpfs mount BEFORE starting the unmodified jailer.
     # Both scripts execute only as PID1 inside the owned L1, never on L0.
@@ -50,6 +50,8 @@ def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False,
     service += 'i=0\nwhile [ ! -b /dev/vda ]; do i=$((i+1)); [ "$i" -lt 100 ]; sleep 0.1; done\n'
     if state_io:
         service += 'exec /usr/bin/xandbox-host-fixture -mode node-io >/dev/console 2>&1\n'
+    elif quota_unenforced:
+        service += 'mount -t ext4 -o rw,nosuid /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-quota-unenforced >/dev/console 2>&1\n'
     elif quota_snapshot:
         service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-quota-snapshot >/dev/console 2>&1\n'
     elif quota_driver:
@@ -61,9 +63,9 @@ def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False,
     return bootstrap, service
 
 
-def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False):
+def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False, quota_unenforced=False):
     validate_manifest(manifest)
-    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot))) > 1: raise ValueError('mutually exclusive L1 image profiles')
+    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot), bool(quota_unenforced))) > 1: raise ValueError('mutually exclusive L1 image profiles')
     assert os.geteuid() == 0 and not output.exists()
     assert digest(alpine) == ALPINE_SHA256
     static_elf(fixture.read_bytes())
@@ -85,13 +87,13 @@ def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_pro
         (root / 'etc/xandbox-host-fixture').chmod(0o600)
         modules = []
         selected_modules = dict(manifest['modules_sha256'])
-        if quota_probe or quota_driver or quota_snapshot: selected_modules.update(manifest['quota_modules_sha256'])
+        if quota_probe or quota_driver or quota_snapshot or quota_unenforced: selected_modules.update(manifest['quota_modules_sha256'])
         for name, wanted in selected_modules.items():
             source = Path('/lib/modules', release, name)
             assert source.is_file() and not source.is_symlink() and source.stat().st_size <= 8<<20 and digest(source) == wanted
             target = root / 'lib/fixture' / source.name
             shutil.copyfile(source, target); target.chmod(0o444); modules.append(target.name)
-        bootstrap, service = init_scripts(modules, state_io, quota_probe, quota_driver, quota_snapshot)
+        bootstrap, service = init_scripts(modules, state_io, quota_probe, quota_driver, quota_snapshot, quota_unenforced)
         (root / 'init').write_text(bootstrap); (root / 'init').chmod(0o755)
         (root / 'sbin/xandbox-host-init').write_text(service); (root / 'sbin/xandbox-host-init').chmod(0o755)
         for name, major, minor in (('console', 5, 1), ('null', 1, 3), ('tty', 5, 0)):

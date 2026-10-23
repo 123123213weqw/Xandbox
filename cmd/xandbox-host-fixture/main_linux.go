@@ -24,7 +24,7 @@ func main() {
 		err = runNode()
 	case "node-quota-snapshot":
 		err = runNodeAllProfiles(false, false, false, true)
-	case "node-quota-driver":
+	case "node-quota-driver", "node-quota-unenforced":
 		err = runNodeProfiles(false, false, true)
 	case "quota-daemon-drop", "quota-snapshot-daemon-drop":
 		if *config != "" || flag.NArg() != 0 {

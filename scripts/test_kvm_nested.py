@@ -7,10 +7,26 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_unenforced_profile_is_fresh_ext4_not_quotaoff_or_fake_kvm_acceptance(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_unenforced=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid /dev/vda /srv',service)
+        self.assertNotIn('prjquota',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-unenforced >/dev/console 2>&1\n'))
+        for other in ('state_io','quota_probe','quota_driver','quota_snapshot'):
+            with self.assertRaises(ValueError):init_scripts([],quota_unenforced=True,**{other:True})
+        good={key:True for key in ('ordinary_daemon','fresh_writable_ext4_without_project_enforcement','specific_enforcement_startup_rejection_checked','no_api_or_backend_ownership_or_generation_domain','fixed_child_reaped','no_quota_on_off_or_mount_policy_mutation')}
+        good['l2_vms_started']=0
+        validate_unenforced_setup(good)
+        variants=[{},dict(good,l2_vms_started=False),dict(good,l2_vms_started=1)]
+        for key,value in good.items():
+            if value is True:variants.append(dict(good,**{key:False}))
+        for bad in variants:
+            with self.assertRaises(AssertionError):validate_unenforced_setup(bad)
+
     def test_negative_report_requires_every_case_and_no_false_success(self):
         rows=[]
         for name in ('cap','uuid','unknown','binding','block','inode'):

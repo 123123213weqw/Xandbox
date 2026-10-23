@@ -267,3 +267,17 @@ func TestNegativeLedgerInspectionIsReadOnlyBoundedAndExact(t *testing.T) {
 		t.Fatal("oversized private envelope accepted")
 	}
 }
+
+func TestUnenforcedQuotaProbeCannotRunOnL0AndHasNoParameters(t *testing.T) {
+	if _, e := (&node{quotaDriver: true}).quotaUnenforced(context.Background()); e == nil {
+		t.Fatal("unenforced fixture escaped L1 PID1 guard")
+	}
+	if e := (nodeRequest{Version: 1, Operation: "quota-unenforced"}).validate(); e != nil {
+		t.Fatal(e)
+	}
+	for _, phase := range []string{"off", "/dev/vda", "running"} {
+		if e := (nodeRequest{Version: 1, Operation: "quota-unenforced", Phase: phase}).validate(); e == nil {
+			t.Fatal("arbitrary quota mutation accepted")
+		}
+	}
+}

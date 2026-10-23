@@ -51,7 +51,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-unenforced":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -548,6 +548,8 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 				} else {
 					result, e = n.quotaSnapshotSetup(ctx)
 				}
+			case "quota-unenforced":
+				result, e = n.quotaUnenforced(ctx)
 			case "quota-negative-setup":
 				result, e = n.quotaNegativeSetup(ctx)
 			case "quota-checkpoint":
