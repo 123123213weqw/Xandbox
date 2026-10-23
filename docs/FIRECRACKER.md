@@ -30,7 +30,9 @@
 - 创建预算 30 秒，Stop 5 秒，Cleanup 10 秒；HTTP 写预算 40 秒。CLI 创建请使用 `-deadline 40s`（默认客户端预算仍为 10 秒）。预算到期不是资源已经清理完毕的证明。
 - 服务不保留任务 console；仅在 READY 前暂存最多 4 KiB 初始化 stderr，启动失败时可进入私有账本错误及操作员日志，绝不经普通 API 回传，READY 前会清空并禁用；执行结果仍为内存历史，销毁/重启后不保证可查询。执行不会因响应丢失而自动重试。
 
-## 固定规格与操作员准备
+## 固定规格与操作员准备（下文示例为legacy schema1/2）
+
+schema3的节点/control/instances层级、完整服务计数及systemd委派边界另见[节点预算](NODE_BUDGET.md)和[部署恢复契约](OPERATIONS.md)；不能直接把下文legacy空根当schema3 NodeRoot。
 
 仅在隔离的 Linux/KVM 节点试验。要求 root、可用 `/dev/kvm`、cgroup v2、clone3/newnet、足够磁盘与内存。真实驱动状态目录、配置、资产及所有父路径必须 root 所有、不可由 group/other 写入且不含 symlink；私有目录 0700，配置 0600。不支持直接从用户可写工作目录或 `/tmp` 启动特权资产。
 

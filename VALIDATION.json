@@ -124,12 +124,12 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "node_aggregate_admission_foundation",
+    "latest_runtime_validation": "new_runtime_default_io_requalification",
     "latest_component_validation": "pristine_bootstrap_component",
     "snapshot_execution_enabled_in_verified_baseline": false,
     "snapshot_execution_enabled_by_default": false,
     "latest_frozen_runtime_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
-    "full_new_runtime_requalification": "pending_separate_default_quota240_dual_cold_and_failure_reports"
+    "full_new_runtime_requalification": "default_io_passed_quota240_dual_live_cold_and_remaining_fault_submatrix_pending"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -1204,7 +1204,37 @@
     "failed_outer_execution_generations": 0,
     "failed_attempted_group_independently_absent": 1,
     "runner_exit_status": 0,
-    "new_production_full_requalification": "Pending separately named DEFAULT/quota240/dual-live-cold/failure reports, historical522 does not certify new3ea.",
+    "new_production_full_requalification": "DEFAULT/IO separately passed; quota240/dual-live-cold/remaining fault submatrix pending. Historical522 does not certify new3ea.",
     "scope": "Immutable schema3 node envelope/complete service limits/owned parent-control placement and conservative resource planning, real cold4guests/capacity503/safe4KiB drift with newPrepare500 but liveStopCleanupExec/healthy synced originaldisk cold recovery. NOT full512MiB saturation/OOM, nodewide disk quota, physical media, uniqueRAM billing, schema3 snapshot, longduration/fairness/SLO or production certification."
+  },
+  "new_runtime_default_io_requalification": {
+    "production_ready": false,
+    "goal_complete": false,
+    "complete_pr19_acceptance": false,
+    "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+    "daemon_sha256": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "design": "docs/RUNTIME_REQUALIFICATION.md",
+    "provenance": "docs/validation/node-runtime-provenance-v1.json",
+    "default_cold_report": "docs/validation/kvm-node-runtime-default-cold-v1.json",
+    "snapshot_report": "docs/validation/kvm-node-runtime-default-snapshot-v1.json",
+    "passing_scopes": 13,
+    "raw_json_reports": 15,
+    "independently_absent_loop_bindings": 4,
+    "independently_absent_outer_l1_execution_generations": 9,
+    "mixed_tenants": 2,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_duration_seconds": 247.812,
+    "mixed_resource_sample_rows": 404,
+    "mixed_overlapping_switch_interval_pairs": 93,
+    "runtime_runner_exit_status": 0,
+    "quota_submatrix_completed": false,
+    "scope": "Frozen new3ea schema1/2 nilNode default compatibility and IO plus limited quota-negative/unenforced recovery. Not schema3snapshot/full nodepressure or quota240 busy switching/failure acceptance. Native full tests separately bound to same-source foundation; mock5 explicitly derived and not KVM evidence."
+  },
+  "operator_deployment_contract": {
+    "design": "docs/OPERATIONS.md",
+    "status": "documented_current_contract_and_unimplemented_release_gates_not_independent_operator_acceptance",
+    "systemd_unit_or_installer_tested": false,
+    "production_backup_restore_rollback_implemented": false,
+    "goal_complete": false
   }
 }

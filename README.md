@@ -26,7 +26,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [quota双租户忙任务切换与双活cold有限验收](docs/QUOTA_SWITCH_FIXTURE.md)：明确3GiB/4GiB实验规格，各120次真实writer进度、pre-timeout独立Stop/持久回收与随后同盘双session冷恢复已通过。生产ELF未改；新12 scope/34代际及4个false前序5代际独立核验清理。仍非节点总预算、持续公平性或生产通过。
 
-新增 [Version3节点总资源准入](docs/NODE_BUDGET.md)：新生产ELF `3ea1e247…` 的4真实KVM/第5拒绝、父限制漂移下继续Stop/Cleanup/Exec、原盘cold回收有限门槛通过；7个相关scope/17个外层代际已独立核验清理，CPU/pids错误的零boot前序保留。默认路径/quota240完整新程序复验仍须单独完成；不是节点满载、uniqueRAM计费或生产就绪，历史522报告不替代新ELF证明。
+新增 [Version3节点总资源准入](docs/NODE_BUDGET.md)：新生产ELF `3ea1e247…` 的4真实KVM/第5拒绝、父限制漂移下继续Stop/Cleanup/Exec、原盘cold回收有限门槛通过；7个相关scope/17个外层代际已独立核验清理，CPU/pids错误的零boot前序保留。[新程序默认/IO兼容复验](docs/RUNTIME_REQUALIFICATION.md)已另通过13个scope（含两租户各120次）；quota240/双活cold完整新程序复验仍单独运行。不是节点满载、uniqueRAM计费或生产就绪，历史522报告不替代新ELF证明。
 
 新增 [owner删除后目录提交未返回的冷恢复](docs/OWNER_COMMIT_FIXTURE.md)：断电前owner名已消失，冷后原owner字节重新出现而quota清零保留；RECLAIMING/capacity503及普通回收/新真实guest/pins/GC通过。失败前序保留；不是全局catalog不阻塞或完整生产验收。
 
