@@ -1,5 +1,7 @@
 # 新3ea运行时的默认路径与IO兼容复验
 
+> 本页保留3ea程序的历史冻结证据。准入控制变更后的4ee程序已另行完成[新命名矩阵复验](RUNTIME4EE_REQUALIFICATION.md)，没有重标本页报告。
+
 **有限冻结源码验收，不是生产认证。** schema3节点策略改变了生产代码，不能用旧daemon `522da68e…` 的报告证明新程序。本文记录新daemon `3ea1e247…`、admin `19bbd460…` 对已有默认路径/IO/有限quota拒绝恢复的重新运行；[quota240忙任务/双活cold/故障矩阵](QUOTA_REQUALIFICATION.md)现已另完成；不由本页的默认路径报告替代证明。
 
 冻结源码`2e514fe9d0b0ce8097b4baca67c9761afdfdbf48`；完整来源、19个公开输入文件SHA与范围见[provenance](validation/node-runtime-provenance-v1.json)。[节点schema3基础门槛](NODE_BUDGET.md)是另一个独立报告；这里的默认snapshot/IO配置仍是schema1/2、nilNode，不能替代schema3 snapshot或完整节点压力。

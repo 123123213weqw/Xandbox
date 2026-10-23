@@ -1,0 +1,1 @@
+Before NEW4ee quota hardware result: 136 negative validators rejected invalid bounds, types, shape and receipt binding; 8 valid alternate physical-allocation/PID combinations accepted. Live frozen source compares actual kernel accounting to actual namespace; no historical allocation substituted as policy.

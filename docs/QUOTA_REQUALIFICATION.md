@@ -1,5 +1,7 @@
 # 新3ea运行时：quota忙切换、双活cold与故障矩阵复验
 
+> 本页保留3ea程序的历史冻结证据。准入控制变更后的4ee程序已另行完成[新命名矩阵复验](RUNTIME4EE_REQUALIFICATION.md)，没有重标本页报告。
+
 **有限冻结源码复验通过，不是完整节点或生产验收。** 冻结`2e514fe9d0b0ce8097b4baca67c9761afdfdbf48`、普通daemon `3ea1e247…`；没有生产故障开关、假guest、宿主执行回退或历史522结果改名。[完整来源/16个公开输入SHA](validation/node-quota-provenance-v1.json)绑定本次新原始报告。当前quota规格使用schema2/nilNode，不替代schema3 snapshot/节点压力；[节点基础](NODE_BUDGET.md)与[默认/IO复验](RUNTIME_REQUALIFICATION.md)分别保留自己的证据。
 
 ## 完整工作负载，四个不同的观测点

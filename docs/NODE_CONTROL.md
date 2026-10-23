@@ -85,3 +85,5 @@ python3 scripts/node_control_smoke.py \
 开发阶段的 umask 负例构造、首版脚本执行状态枚举及旧根 metadata 测试预期曾失败，原因与修正保留在来源清单；未将失败改写为通过，也未放宽旧根 drained 默认。冻结源上述测试没有失败；这批预验收没有启动新的 L1/KVM 用例。当时尚未验证 operator 的异 UID 内核拒绝、实际状态盘故障/掉电及新 KVM 矩阵；后续有限实机证据按上方链接单独绑定，真实提交故障窗口与完整矩阵仍未完成。
 
 后续[实际 FileStore 的两个 fsync TEST errno 窗口](NODE_OPERATOR_STORE.md)已单独验证 pre-rename 与 post-admission-directory 的 pending、caller 取消、一次 EIO、内存 fence 与不同 cold namespace 结果。它执行真实 Store 而非模拟对象，但不是实际 filesystem D/介质故障或全部提交窗口验收；旧预验收与前轮健康 ACK 报告仍保持冻结范围。
+
+后续[新4ee默认/IO与quota240、双活cold和命名故障复验](RUNTIME4EE_REQUALIFICATION.md)已实际完成25个scope，并独立核验43个外层执行代际和4个专属loop绑定无残留。它另绑冻结源及新原始报告，不回写本页旧预验收false字段；新4ee schema3 prepare/cancel/trace/完整节点压力、pre-Core reservation与未完成control writer的shutdown锁窗口仍未完成。

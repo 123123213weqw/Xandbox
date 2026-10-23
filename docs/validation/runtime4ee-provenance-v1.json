@@ -1,0 +1,429 @@
+{
+  "status": "finite_new4ee_default_io_and_quota240_dual_live_cold_named_fault_matrix_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source_revision": "ab048ed65b12fc806cba9d16eecd1c830c37fa93",
+  "source_archive_sha256": "6c733ba3ed9c1fd047abf512563c44a2e4a4ff5c24179d6711b5c25cb1a229ac",
+  "source_archive_bytes": 1619242,
+  "changed_test_inputs": {
+    "scripts/kvm_driver_smoke.py": {
+      "sha256": "96f40814ea9a5e35e90b5d678ab03cc6b1da1164b2b19629bc3bbe295418330d"
+    },
+    "scripts/test_kvm_driver_legacy.py": {
+      "sha256": "f2deaee6b16f27d6a280051567e3c12ac31e6ed04ce682ea9152cbce3aa28909"
+    }
+  },
+  "production_go_changed_this_turn": false,
+  "ordinary_elf_requalified_not_reused_old3ea_claims": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native8_independent_cross_exact": true,
+  "native_artifacts_sha256": {
+    "builder-runtime4ee-v1": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36",
+    "fixture-runtime4ee-v1": "f7c712bb64914c2bddcaaf2d0ebb9d6fab7fd7435c940f966a4a8a99a43fffa5",
+    "sandboxd-runtime4ee-v1": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-node-runtime4ee-v1": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "xandbox-template-runtime4ee-v1": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden-runtime4ee-v1": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker-runtime4ee-v1.test": "b167f2722c3e220e0ab009ff4b963ba8e1abc6b2d8a51cb29e02288f748eb459",
+    "session-runtime4ee-v1.test": "638f16a5e871d8299a38686519d7d9e208e7eb5838fb5965c97483527e340161",
+    "smoke/sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a"
+  },
+  "native_tests_actually_rerun": {
+    "full_race_count": 3,
+    "full_vet": true,
+    "fixture_race_count": 10,
+    "fixture_vet": true,
+    "root_python_tests": 95,
+    "root_python_skips": 0,
+    "cgo_free_actual_kernel_filter_repetitions": 3,
+    "mock_process_result_objects": 6,
+    "mock_not_microvm_evidence": true
+  },
+  "darwin_race3_vet_actually_completed": true,
+  "darwin_log_sha256": "7f515a65e466697424a3e782baaa4cf4e0d64911fdc6cc2cca5048633b96c146",
+  "test_harness_change": "Only the real historical legacy upgrade fixture now supplies a pinned/copied/hashed same-UID node CLI, preserves initial drained revision1 and original epoch, checks NODE_DRAINING then explicit CAS resume/requery/durable state and unchanged METADATA_CAPACITY with one destroyed record/key410. Generic start, cold recovery, production used-root semantics, capacities and runtime policy were not changed. CLI IDs/epoch remain private.",
+  "default_matrix": {
+    "scopes": 13,
+    "outer_execution_generations": 9,
+    "own_loop_bindings": 4,
+    "cold_checks": 30,
+    "queue_checks": 9,
+    "session_checks": 9,
+    "closed_loop_new_vm_cycles": 5,
+    "snapshot_checks": 10,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_duration_seconds": 245.468,
+    "mixed_resource_rows": 407,
+    "mixed_overlap_pairs": 89,
+    "initialization_cases": 6,
+    "explicit_historical_test_guest_cases": 2,
+    "io_cold_checks": 7,
+    "io_snapshot_checks": 12,
+    "io_ledger_ro_checks": 5,
+    "default_ledger_ro_checks": 3,
+    "default_enospc_checks": 5,
+    "default_snapshot_schema": "2/nilNode, not schema3 node pressure"
+  },
+  "quota_matrix": {
+    "scopes": 12,
+    "outer_execution_generations": 34,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_duration_seconds": 602.085530545,
+    "mixed_resource_rows": 1194,
+    "mixed_overlap_pairs": 150,
+    "busy_progress_and_stopped_before_earliest_job_deadline_each_switch": true,
+    "two_live_tenant_original_disk_cold_recovery": true,
+    "final_all8_projects_and_pins_zero": true,
+    "schema": "2/nilNode, fixed historical quota-switch L1 bounds, not full schema3 node policy"
+  },
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "scope_count": 25,
+    "outer_execution_generations_absent": 43,
+    "own_loop_bindings_absent": 4,
+    "root_runtime_control_parent_and_all_exact_groups_absent": true,
+    "runner_terminal_exit": 0,
+    "exact_runner_absent": true,
+    "no_supplemental_cleanup_actions": true,
+    "quota_witnessed_in_live_l1_not_inferred_from_disk_deletion": true
+  },
+  "predeclared_offline_allocation_validation": {
+    "negative_checks": 136,
+    "executed_before_quota_hardware_result": true,
+    "fixed_previous_run_physical_allocation_constants_not_policy": true,
+    "hard_bytes_128_to192MiB_alignment_inodes14or16_receipt_binding_checked": true,
+    "non_authoritative_pid_file_may_be_empty_or_nonempty_boolean": true,
+    "frozen_l1_current_kernel_charge_equals_current_namespace_and_exact_logical_identity_guards_unchanged": true
+  },
+  "fault_boundaries": "Whole-state dm suspend/error are actual bounded filesystem D/EIO in owned L1; ledger-only RO and ENOSPC use private mount namespace and own64MiB autoclear loops. Not real underlying physical-media failure, secure erasure, all operator FileStore commit windows, or unresolved shutdown writer. CONTINUE submission is never counted as completed I/O.",
+  "offline_verifier_correction": {
+    "kind": "offline_verifier_correction_not_hardware_failure",
+    "exception": "KeyError: quota_charge_after_cold_boot_bytes",
+    "initial_verifier_sha256": "9380b687f3af42ef8378acf6ce6656d2699a81152342cc2803701fa2022a29e1",
+    "initial_stdout_sha256": "33e00b0017ac475fb6cb0adcaefbad1012a6c92a9070956a708e848d350032f9",
+    "cause": "Private verifier applied live-owner cold fields to quota state-IO hang cases. Frozen fixture first resumes mapper, waits actual Destroyed, checks quota all clear, and saves Phase destroyed receipt; cold recovery correctly has no live charge/PID fields. EIO cases retain exact owner until cold and still require recovered-charge checks.",
+    "correction": "Validate live pre-fault charge hard bounds/shape, require hang completed allclear and absence of fabricated live recovery fields; retain cold charge/receipt/identity validation for live/EIO cases.",
+    "source_and_hardware_acceptance_unchanged": true,
+    "raw_reports_unchanged": true,
+    "hardware_rerun": false,
+    "hardware_runner_exit_status": 0,
+    "additional_live_negative_tests": 8,
+    "predeclared_allocation_negative_tests_retained": 136,
+    "not_physical_failure_or_false_hardware_predecessor": true,
+    "corrected_verifier_sha256": "ff18f45e5131eed490939d3c5ad95550cb3fae4e056bdafe39c81f9eae69beb8"
+  },
+  "historical_boundaries": {
+    "old3ea_default_provenance": "node-runtime-provenance-v1.json",
+    "old3ea_quota_provenance": "node-quota-provenance-v1.json",
+    "old_reports_and_false_predecessors_unchanged": true,
+    "old_rows_spliced_into_current_measurements": false,
+    "current_matrix_hardware_false_predecessors": 0
+  },
+  "raw_private_archive": {
+    "sha256": "58cf707c435c0e53b2294d23725cd4add13fa5189427af0d2dfe6b7cc9a4a605",
+    "regular_allowlisted_member_count": 38,
+    "manifest": {
+      "kvm-runtime4ee-default-before-marker-v1.json": {
+        "sha256": "4cddc6e321027dd04709dbb85bb0e5e479f333f278336aa5c2918df5cdf7e398",
+        "bytes": 3218
+      },
+      "kvm-runtime4ee-default-cold-v1-queue.json": {
+        "sha256": "897e7a9c61eb408da503668b567cfa9daabb9b3dfceb9eccd708dbe71effad97",
+        "bytes": 1081
+      },
+      "kvm-runtime4ee-default-cold-v1-session.json": {
+        "sha256": "d173133b387b472a83f809eae282acce0af7ff9e0dec2ba739866874c34115b8",
+        "bytes": 1112
+      },
+      "kvm-runtime4ee-default-cold-v1.json": {
+        "sha256": "92491321910b046a1ddd252857ddb52dd5d6eb19afe149fa07eb1c403c973513",
+        "bytes": 13611
+      },
+      "kvm-runtime4ee-default-initialization-v1.json": {
+        "sha256": "afb601a1ff8c35ec2923da663a6430f81268753e604b133b0e799052576bbe6c",
+        "bytes": 6076
+      },
+      "kvm-runtime4ee-default-machine-id-v1.json": {
+        "sha256": "ae6117e13084902d1e9ee3f878d0ecf53650e46fe2809160ccdc93c22ec1f546",
+        "bytes": 3218
+      },
+      "kvm-runtime4ee-default-power-v1.json": {
+        "sha256": "5199a142958a669ec8f5354061ef7f9c7b11c75a3cfb04428a0d628782b2ffca",
+        "bytes": 5620
+      },
+      "kvm-runtime4ee-default-readonly-v1.json": {
+        "sha256": "171ecb0e965b6f3d6ed4f3bb3e2ee53440415d9068cfc1f8690b104a4a5e893e",
+        "bytes": 4825
+      },
+      "kvm-runtime4ee-default-snapshot-v1.json": {
+        "sha256": "dea8fb97f32156496bd0fab0be698b056d0bbb93261d6d8a6b7b9cee4f0dea65",
+        "bytes": 523110
+      },
+      "kvm-runtime4ee-default-storage-v1.json": {
+        "sha256": "ea2fcb848ec453cfae99c25f257eccac8b20df2401426e17f8d6383085a9bf0d",
+        "bytes": 6592
+      },
+      "kvm-runtime4ee-io-cold-v1.json": {
+        "sha256": "88f432cec20b41306a5bdd8ef37b6e613ea417d3f0f370df7a989b5da55f103b",
+        "bytes": 8249
+      },
+      "kvm-runtime4ee-io-readonly-v1.json": {
+        "sha256": "bed48ac29b78cd5a3f450d167b94814e44f036612ec9ba92ee400ef512d3f070",
+        "bytes": 6480
+      },
+      "kvm-runtime4ee-io-snapshot-v1.json": {
+        "sha256": "0fc12b123a9d77ac74e344fc0a56bd3d72bfaa3491c823bbdbf397aa0969e291",
+        "bytes": 7276
+      },
+      "kvm-runtime4ee-quota-clear-v1.json": {
+        "sha256": "1c9ba4cabc887c4d05cd957886395d6de2fc4a4cc8da4f6426be45bed1692397",
+        "bytes": 7202
+      },
+      "kvm-runtime4ee-quota-default-io-v1.json": {
+        "sha256": "8bc3cc569e6fbc67db84ef585f3b089754ca166a05c304640b8d28158ce9b659",
+        "bytes": 10314
+      },
+      "kvm-runtime4ee-quota-eio-v1.json": {
+        "sha256": "fa1b86e84b354df77a8649f068aa40cba35c7b2e318dd1572f69b8c454fe915b",
+        "bytes": 6879
+      },
+      "kvm-runtime4ee-quota-io-v1.json": {
+        "sha256": "4c030456c16ffb01ca4f103eee7c0a346d29c706293902dcd17634a21f4d86a8",
+        "bytes": 15067
+      },
+      "kvm-runtime4ee-quota-loss-release-v1.json": {
+        "sha256": "6db8d3c5bd99e95cf2a795fbc82b3f1b887ca3bb17d52f7d9d9609c64cc04062",
+        "bytes": 6752
+      },
+      "kvm-runtime4ee-quota-loss-reserve-v1.json": {
+        "sha256": "614bc8bbf28737bfe68dd61d3f859e04cfc50acdc7761ab41ceb4183811e53b1",
+        "bytes": 6752
+      },
+      "kvm-runtime4ee-quota-mixed-v1.json": {
+        "sha256": "dccc45592435cd2b2e2e87e7571197a5171632ea55c5fe41adb0f386e0808f0e",
+        "bytes": 773996
+      },
+      "kvm-runtime4ee-quota-negative-v1.json": {
+        "sha256": "8abe4c7c6316a80298f42e693662ee55b099447f2b9df8915a3a081f2c30ca3b",
+        "bytes": 9952
+      },
+      "kvm-runtime4ee-quota-postclear-v1.json": {
+        "sha256": "ace943cd2ca4145bbb30f328343fc446a86d6e9d71d58aca61754ab5d5f6c352",
+        "bytes": 7007
+      },
+      "kvm-runtime4ee-quota-preclear-v1.json": {
+        "sha256": "9d91201da0edc5b9f519d6f70f4a9dbc1dbc643e5234e6dcd7c7e7829987e1df",
+        "bytes": 7001
+      },
+      "kvm-runtime4ee-quota-reserve-v1.json": {
+        "sha256": "f2d35876874f5c94d007beaa7a1e21c23bb72d8bb24e49e2ef712239f98775a6",
+        "bytes": 6413
+      },
+      "kvm-runtime4ee-quota-snapshot-v1.json": {
+        "sha256": "5a6787a7058a3e9bf410e95071a09bbfcb9d4328eb60b3df28296f0b8a5314fb",
+        "bytes": 9400
+      },
+      "kvm-runtime4ee-quota-syscalls-v1.json": {
+        "sha256": "85c6fb70a9401bd771e545212ba21f3a9d4e1c32d5ee8ee593819e8f34e181d0",
+        "bytes": 13837
+      },
+      "kvm-runtime4ee-quota-unenforced-v1.json": {
+        "sha256": "3a504d47186dfe16305524a9ed2ce11718eefea25c6494bf1afe4a3dbbc2a11b",
+        "bytes": 4414
+      },
+      "run-runtime4ee-v1.sh": {
+        "sha256": "1005dce68aff36cdecf1a69b69e882c1ab0f03b70b368a51571eff64e7ba5ba7",
+        "bytes": 11349
+      },
+      "runtime4ee-artifacts-v1.sha256": {
+        "sha256": "12090d1bae36dca8b6b3fafc152dde234db91b5cea01aae09676038ed65c46a4",
+        "bytes": 871
+      },
+      "runtime4ee-filter-v1.log": {
+        "sha256": "3b25e04cfe62e602ef517da3519a5d7d1d451781aeda43afccc4cfa389e7c641",
+        "bytes": 846
+      },
+      "runtime4ee-fixture-v1.log": {
+        "sha256": "20e1ada1e1de3bcc3f01852e2453fd221c7e25476d1e8a5235b0729d22f77ffb",
+        "bytes": 70
+      },
+      "runtime4ee-fixture-vet-v1.log": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "runtime4ee-python-v1.log": {
+        "sha256": "37cce8f9f49a8bba4cbf472f79ba21f86841aeda97905a76d69c8de482761860",
+        "bytes": 194
+      },
+      "runtime4ee-race-v1.log": {
+        "sha256": "b927aef956a043288bbc13a9e41572f3edb95f4ceead0fcdc61067b8d90a1215",
+        "bytes": 1767
+      },
+      "runtime4ee-smoke-v1.log": {
+        "sha256": "23f260417954776c035720767e9fed01e7384feb90caa51229cc2617929555d5",
+        "bytes": 6662
+      },
+      "runtime4ee-v1.pipeline.log": {
+        "sha256": "ffccf42faeca33ede334c32936a341a3c8f4992bfeee23c7dd3e8bec4ba153db",
+        "bytes": 4884
+      },
+      "runtime4ee-v1.status": {
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      "runtime4ee-vet-v1.log": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "audit_stdout_separately_captured_not_tar_member": true
+  },
+  "private_data_boundary": "No raw controller/inner console, private receipts, runtime paths/identities, operator epoch/request IDs, tokens, keys or images exported. Public reports retain exact bytes, derived mock objects explicitly named, safe text separately scanned.",
+  "not_completed": [
+    "Actual session reservation accepted BEFORE Core reservation while concurrent drain closes the gate; TEST Store pending cases do not prove this window.",
+    "Actual unresolved operator persistence writer on shutdown retaining controller.lock until process exit; current errno cases resolved their writer first.",
+    "NEW4ee schema3 snapshot/prepare/cancel/trace and whole-node pressure requalification; older3ea source-specific results remain historical.",
+    "Open-loop/fairness/long-duration/SLO and unique RAM accounting; finite paced closed-loop samples are not these.",
+    "Production TLS gateway/credential lifecycle/network boundaries, independently tested operator/systemd installer, persistent audit/alerts/log export budgets, archive/rotation/backups/upgrade/rollback.",
+    "Other metadata/catalog-lock/commit windows, physical media and secure erase, dual-supervisor/prewarm/full initialization, full M1–M4/final acceptance/main merge/archive/Goal completion."
+  ],
+  "files": {
+    "kvm-runtime4ee-default-before-marker-v1.json": {
+      "sha256": "4cddc6e321027dd04709dbb85bb0e5e479f333f278336aa5c2918df5cdf7e398",
+      "bytes": 3218
+    },
+    "kvm-runtime4ee-default-cold-v1-queue.json": {
+      "sha256": "897e7a9c61eb408da503668b567cfa9daabb9b3dfceb9eccd708dbe71effad97",
+      "bytes": 1081
+    },
+    "kvm-runtime4ee-default-cold-v1-session.json": {
+      "sha256": "d173133b387b472a83f809eae282acce0af7ff9e0dec2ba739866874c34115b8",
+      "bytes": 1112
+    },
+    "kvm-runtime4ee-default-cold-v1.json": {
+      "sha256": "92491321910b046a1ddd252857ddb52dd5d6eb19afe149fa07eb1c403c973513",
+      "bytes": 13611
+    },
+    "kvm-runtime4ee-default-initialization-v1.json": {
+      "sha256": "afb601a1ff8c35ec2923da663a6430f81268753e604b133b0e799052576bbe6c",
+      "bytes": 6076
+    },
+    "kvm-runtime4ee-default-machine-id-v1.json": {
+      "sha256": "ae6117e13084902d1e9ee3f878d0ecf53650e46fe2809160ccdc93c22ec1f546",
+      "bytes": 3218
+    },
+    "kvm-runtime4ee-default-power-v1.json": {
+      "sha256": "5199a142958a669ec8f5354061ef7f9c7b11c75a3cfb04428a0d628782b2ffca",
+      "bytes": 5620
+    },
+    "kvm-runtime4ee-default-readonly-v1.json": {
+      "sha256": "171ecb0e965b6f3d6ed4f3bb3e2ee53440415d9068cfc1f8690b104a4a5e893e",
+      "bytes": 4825
+    },
+    "kvm-runtime4ee-default-snapshot-v1.json": {
+      "sha256": "dea8fb97f32156496bd0fab0be698b056d0bbb93261d6d8a6b7b9cee4f0dea65",
+      "bytes": 523110
+    },
+    "kvm-runtime4ee-default-storage-v1.json": {
+      "sha256": "ea2fcb848ec453cfae99c25f257eccac8b20df2401426e17f8d6383085a9bf0d",
+      "bytes": 6592
+    },
+    "kvm-runtime4ee-io-cold-v1.json": {
+      "sha256": "88f432cec20b41306a5bdd8ef37b6e613ea417d3f0f370df7a989b5da55f103b",
+      "bytes": 8249
+    },
+    "kvm-runtime4ee-io-readonly-v1.json": {
+      "sha256": "bed48ac29b78cd5a3f450d167b94814e44f036612ec9ba92ee400ef512d3f070",
+      "bytes": 6480
+    },
+    "kvm-runtime4ee-io-snapshot-v1.json": {
+      "sha256": "0fc12b123a9d77ac74e344fc0a56bd3d72bfaa3491c823bbdbf397aa0969e291",
+      "bytes": 7276
+    },
+    "kvm-runtime4ee-quota-clear-v1.json": {
+      "sha256": "1c9ba4cabc887c4d05cd957886395d6de2fc4a4cc8da4f6426be45bed1692397",
+      "bytes": 7202
+    },
+    "kvm-runtime4ee-quota-default-io-v1.json": {
+      "sha256": "8bc3cc569e6fbc67db84ef585f3b089754ca166a05c304640b8d28158ce9b659",
+      "bytes": 10314
+    },
+    "kvm-runtime4ee-quota-eio-v1.json": {
+      "sha256": "fa1b86e84b354df77a8649f068aa40cba35c7b2e318dd1572f69b8c454fe915b",
+      "bytes": 6879
+    },
+    "kvm-runtime4ee-quota-io-v1.json": {
+      "sha256": "4c030456c16ffb01ca4f103eee7c0a346d29c706293902dcd17634a21f4d86a8",
+      "bytes": 15067
+    },
+    "kvm-runtime4ee-quota-loss-release-v1.json": {
+      "sha256": "6db8d3c5bd99e95cf2a795fbc82b3f1b887ca3bb17d52f7d9d9609c64cc04062",
+      "bytes": 6752
+    },
+    "kvm-runtime4ee-quota-loss-reserve-v1.json": {
+      "sha256": "614bc8bbf28737bfe68dd61d3f859e04cfc50acdc7761ab41ceb4183811e53b1",
+      "bytes": 6752
+    },
+    "kvm-runtime4ee-quota-mixed-v1.json": {
+      "sha256": "dccc45592435cd2b2e2e87e7571197a5171632ea55c5fe41adb0f386e0808f0e",
+      "bytes": 773996
+    },
+    "kvm-runtime4ee-quota-negative-v1.json": {
+      "sha256": "8abe4c7c6316a80298f42e693662ee55b099447f2b9df8915a3a081f2c30ca3b",
+      "bytes": 9952
+    },
+    "kvm-runtime4ee-quota-postclear-v1.json": {
+      "sha256": "ace943cd2ca4145bbb30f328343fc446a86d6e9d71d58aca61754ab5d5f6c352",
+      "bytes": 7007
+    },
+    "kvm-runtime4ee-quota-preclear-v1.json": {
+      "sha256": "9d91201da0edc5b9f519d6f70f4a9dbc1dbc643e5234e6dcd7c7e7829987e1df",
+      "bytes": 7001
+    },
+    "kvm-runtime4ee-quota-reserve-v1.json": {
+      "sha256": "f2d35876874f5c94d007beaa7a1e21c23bb72d8bb24e49e2ef712239f98775a6",
+      "bytes": 6413
+    },
+    "kvm-runtime4ee-quota-snapshot-v1.json": {
+      "sha256": "5a6787a7058a3e9bf410e95071a09bbfcb9d4328eb60b3df28296f0b8a5314fb",
+      "bytes": 9400
+    },
+    "kvm-runtime4ee-quota-syscalls-v1.json": {
+      "sha256": "85c6fb70a9401bd771e545212ba21f3a9d4e1c32d5ee8ee593819e8f34e181d0",
+      "bytes": 13837
+    },
+    "kvm-runtime4ee-quota-unenforced-v1.json": {
+      "sha256": "3a504d47186dfe16305524a9ed2ce11718eefea25c6494bf1afe4a3dbbc2a11b",
+      "bytes": 4414
+    },
+    "runtime4ee-native-artifacts-v1.txt": {
+      "sha256": "12090d1bae36dca8b6b3fafc152dde234db91b5cea01aae09676038ed65c46a4",
+      "bytes": 871
+    },
+    "runtime4ee-pipeline-v1.txt": {
+      "sha256": "ffccf42faeca33ede334c32936a341a3c8f4992bfeee23c7dd3e8bec4ba153db",
+      "bytes": 4884
+    },
+    "runtime4ee-independent-cleanup-v1.txt": {
+      "sha256": "fdfe228e1d2a838af3b9efe1c080750d16d73a35e94fd1afd3a5961066fbe5cf",
+      "bytes": 3722
+    },
+    "runtime4ee-process-smoke-derived-v1.json": {
+      "sha256": "2482bbe994e764a0077288251e59a67df94d0cd08e8deed3689d4a2d471c6d0f",
+      "bytes": 5591
+    },
+    "runtime4ee-allocation-predeclared-v1.txt": {
+      "sha256": "166ebec5b8071681b5a5f87f6ed8ef8353d2830df2ee2a249dbcdb6b704406c6",
+      "bytes": 307
+    },
+    "runtime4ee-offline-correction-v1.json": {
+      "sha256": "3b14d5279ea7a042f687d1ba4df5dff9e82f982f49f0cc40bc9178690d6e59c2",
+      "bytes": 1291
+    }
+  }
+}

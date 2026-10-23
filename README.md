@@ -6,11 +6,13 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 **状态：生产化开发中，尚未生产就绪。**
 
-开发分支新增 [节点持久准入控制](docs/NODE_CONTROL.md)：私有同宿主 UID 管理 socket 与 `xandbox-node status/drain/resume`，停止新预留但允许已接受操作、已有执行及独立 Stop/Cleanup 继续；包含 epoch/revision CAS、精确重试和重启保持。**这次修改了生产程序，新 Linux/KVM 完整复验尚未完成**；下面各报告仍只证明其冻结的历史源码/ELF，不能作为新程序验收。mock 进程及模拟持久化错误测试不代替真实故障窗口。
+开发分支新增 [节点持久准入控制](docs/NODE_CONTROL.md)：私有同宿主 UID 管理 socket 与 `xandbox-node status/drain/resume`，停止新预留但允许已接受操作、已有执行及独立 Stop/Cleanup 继续；包含 epoch/revision CAS、精确重试和重启保持。**这次修改了生产程序；新 ELF 的 DEFAULT/IO 与 quota 命名兼容子矩阵现已另行复验，但完整节点压力、取消及剩余 operator 窗口尚未完成**。下面各报告只证明其自身冻结的源码/ELF，不能相互替代。mock 进程及模拟持久化错误测试不代替真实故障窗口。
 
-新增 [operator 有限 KVM 与同盘冷恢复验收](docs/NODE_OPERATOR_KVM.md)：新生产 ELF `4ee09d0a…` 的实际异 UID 连接在 HTTP 前被拒绝、drain 下真实 raw/session 执行与私有回收、ACK drain 的 cold 保持均通过；同一新程序的 node-budget 有限兼容用例亦通过。4 个 scope/6 个外层代际（4通过＋2失败）独立核验清理，失败及零 boot 前序保留。N=1 约16ms执行域停止、370ms私有回收，不是物理擦除或SLO；这一批健康测试未覆盖提交故障窗口，后续有限补充见下方，完整新运行时矩阵仍未验收。
+新增 [operator 有限 KVM 与同盘冷恢复验收](docs/NODE_OPERATOR_KVM.md)：新生产 ELF `4ee09d0a…` 的实际异 UID 连接在 HTTP 前被拒绝、drain 下真实 raw/session 执行与私有回收、ACK drain 的 cold 保持均通过；同一新程序的 node-budget 有限兼容用例亦通过。4 个 scope/6 个外层代际（4通过＋2失败）独立核验清理，失败及零 boot 前序保留。N=1 约16ms执行域停止、370ms私有回收，不是物理擦除或SLO；这一批健康测试未覆盖提交故障窗口，后续有限补充及新运行时兼容子矩阵见下方，不作为其余窗口或完整生产验收。
 
 新增 [实际 FileStore 的 pre/post fsync TEST EIO 窗口](docs/NODE_OPERATOR_STORE.md)：相同普通 ELF 下，真实控制写入挂起/客户端取消后，status/BUSY、旧 guest 执行与私有回收继续；一次 EIO 令原进程 fenced。冷恢复分别读回旧 open 与已提交 drained，明确未 ACK 的失败意图不一定持久。2 scope/4代际独立审计通过；这是 syscall TEST errno，不是 filesystem D、介质 EIO、完整新运行时矩阵或生产验收。
+
+新增 [新4ee DEFAULT/IO、quota240/双活cold及命名故障完整复验](docs/RUNTIME4EE_REQUALIFICATION.md)：普通新 ELF 实际重新执行25个scope，两种规格各完成两租户×120次切换，43个外层执行代际及4个专属loop绑定独立只读审计无残留。实际 whole-state filesystem D/EIO、只读、ENOSPC和恢复按各自范围记录；不复用旧3ea结果，不混合负载算加速比，也不代表schema3全节点压力、全部operator窗口或生产就绪。
 
 新增 [持久化错误后的独立物理Stop](docs/EMERGENCY_STOP.md)：新Go1.27.3原生daemon通过5项ENOSPC故障及完整新运行时回归；idle故障停止两次观测为43.814/48.630ms，旧c577负对照约5016ms并按预期未过实验guard。仍返回存储错误、不假称持久STOPPED或提前清理/还容量；这不是线上SLO，也不覆盖尚未返回的卡死I/O。
 
