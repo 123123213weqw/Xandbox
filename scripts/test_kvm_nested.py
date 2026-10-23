@@ -7,10 +7,36 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_quota_syscall_setup_requires_each_exact_errno_and_ordinary_recovery_proof(self):
+        common=('test_only_seccomp_errno','fixed_child_thread_and_anchor_verified','durable_attempted_owner_before_injection','kernel_limits_and_zero_usage_checked_at_boundary','no_execution_namespace_at_injected_boundary','real_kernel_continue_not_emulated_success','durable_destroyed_resources_absent_key410','capacity_reused_fresh_real_kvm_guest_uid_exec_destroy','all_thread_caps_nnp_observer_and_ordinary_vmm_filters_checked','all_fixed_projects_cleared','owned_cgroup_root_removed')
+        good={k:True for k in ('test_only_syscall_errno_injection','ordinary_daemon_elf_unchanged','not_physical_media_fault','all_fixed_projects_cleared')}
+        good['all_fixed_syscall_cases']=[]
+        for name in ('reserve-set-eio','reserve-read-erofs','reserve-sync-eio','clear-set-eio','clear-sync-erofs','clear-read-eio'):
+            r={'case':name,'injected_calls':1,'continued_kernel_calls':20,**{k:True for k in common}}
+            if name.startswith('reserve-'):r['prepare_refused500']=True
+            else:r.update(reclaiming_owner_and_capacity_retained_while_errno_armed=True,new_create_refused503_during_clear_failure=True)
+            good['all_fixed_syscall_cases'].append(r)
+        validate_quota_syscall_setup(good)
+        for i,r in enumerate(good['all_fixed_syscall_cases']):
+            for k,v in r.items():
+                if v is True:
+                    bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=False
+                    with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad)
+                    bad=copy.deepcopy(good);del bad['all_fixed_syscall_cases'][i][k]
+                    with self.assertRaises(KeyError):validate_quota_syscall_setup(bad)
+            for k in ('injected_calls','continued_kernel_calls'):
+                for value in (0,False,-1):
+                    bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=value
+                    with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad)
+        for records in ([],good['all_fixed_syscall_cases'][:-1],list(reversed(good['all_fixed_syscall_cases']))):
+            with self.assertRaises(AssertionError):validate_quota_syscall_setup(dict(good,all_fixed_syscall_cases=records))
+        bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][0]['injected_calls']=2
+        with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad)
+
     def test_quota_clear_report_rejects_every_missing_boundary_or_recovery_proof(self):
         checkpoint=('real_nested_kvm','guest_uid_checked','checkpoint_receipt_fsynced','two_simultaneous_ordinary_snapshot_clones','private_projects_distinct','catalog_pins_two_checked_before_barrier','ordinary_post_quota_sync_catalog_fd_observed','victim_quota_zero_namespace_absent_owner_retained','victim_durable_reclaiming_not_destroyed','zero_quota_did_not_release_capacity_503','keeper_real_vm_data_execution_survived','only_two_known_shared_links_removed','no_observer_quota_sync_after_clear_boundary','pid1_lock_retained_until_l1_power_cut')
         recovery=('l1_boot_changed','old_durable_destroyed','old_resources_absent','old_key_refused_410','fresh_real_kvm_exec_destroy','fresh_guest_boot_changed','cleared_victim_quota_zero_before_daemon_recovery','both_durable_owners_and_two_pins_retained_across_cold_boot','keeper_quota_namespace_and_shared_content_checked_before_recovery','keeper_old_destroyed_resources_absent_key410','both_old_pins_released_active_template_unchanged','all_private_project_ids_cleared')

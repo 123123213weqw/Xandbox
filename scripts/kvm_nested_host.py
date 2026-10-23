@@ -108,6 +108,20 @@ def validate_quota_clear_recovery(value):
     for key in ('l1_boot_changed','old_durable_destroyed','old_resources_absent','old_key_refused_410','fresh_real_kvm_exec_destroy','fresh_guest_boot_changed','cleared_victim_quota_zero_before_daemon_recovery','both_durable_owners_and_two_pins_retained_across_cold_boot','keeper_quota_namespace_and_shared_content_checked_before_recovery','keeper_old_destroyed_resources_absent_key410','both_old_pins_released_active_template_unchanged','all_private_project_ids_cleared'): assert value[key] is True
 
 
+def validate_quota_syscall_setup(value):
+    for key in ('test_only_syscall_errno_injection','ordinary_daemon_elf_unchanged','not_physical_media_fault','all_fixed_projects_cleared'): assert value[key] is True
+    cases=value['all_fixed_syscall_cases']
+    assert [r['case'] for r in cases]==['reserve-set-eio','reserve-read-erofs','reserve-sync-eio','clear-set-eio','clear-sync-erofs','clear-read-eio']
+    for r in cases:
+        for key in ('test_only_seccomp_errno','fixed_child_thread_and_anchor_verified','durable_attempted_owner_before_injection','kernel_limits_and_zero_usage_checked_at_boundary','no_execution_namespace_at_injected_boundary','real_kernel_continue_not_emulated_success','durable_destroyed_resources_absent_key410','capacity_reused_fresh_real_kvm_guest_uid_exec_destroy','all_thread_caps_nnp_observer_and_ordinary_vmm_filters_checked','all_fixed_projects_cleared','owned_cgroup_root_removed'): assert r[key] is True
+        assert type(r['injected_calls']) is int and r['injected_calls']>=1
+        assert type(r['continued_kernel_calls']) is int and r['continued_kernel_calls']>=1
+        if r['case'].startswith('reserve-'): assert r['prepare_refused500'] is True and r['injected_calls']==1
+        else:
+            assert r['reclaiming_owner_and_capacity_retained_while_errno_armed'] is True
+            assert r['new_create_refused503_during_clear_failure'] is True
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
@@ -115,6 +129,7 @@ def main():
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument('--quota-syscalls', action='store_true', help='TEST ONLY: fixed own-child quotactl_fd errno injection, NOT physical media failure')
     profiles.add_argument('--quota-clear-crash', action='store_true', help='TEST ONLY: power cut after ordinary quota clear, before durable owner/pin release')
     profiles.add_argument('--quota-state-io', action='store_true', help='TEST ONLY: whole owned state disk EIO/held I/O with ordinary driver quota enabled')
     profiles.add_argument('--quota-unenforced', action='store_true', help='TEST ONLY: fresh ext4 without project quota must reject startup; no L2 VM expected')
@@ -126,7 +141,7 @@ def main():
     args = parser.parse_args(); os.umask(0o077)
     snapshot_profile = args.quota_snapshot or args.quota_clear_crash
     state_io_profile = args.state_io or args.quota_state_io
-    driver_profile = args.quota_driver or snapshot_profile or args.quota_negatives or args.quota_unenforced or args.quota_state_io
+    driver_profile = args.quota_driver or snapshot_profile or args.quota_negatives or args.quota_syscalls or args.quota_unenforced or args.quota_state_io
     if snapshot_profile: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
     else: assert not args.admin and not args.snapshot_builder and not args.snapshot_seed_manifest
     assert os.geteuid() == 0 and os.uname().sysname == 'Linux' and os.uname().machine == 'x86_64'
@@ -151,9 +166,10 @@ def main():
         assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
         for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
     phases = ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+    result = {'test':'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
         'production_ready':False,'passed':False,'state_io_profile':state_io_profile,'quota_state_io_profile':args.quota_state_io,'quota_prerequisite_profile':args.quota_probe,
         'production_driver_quota':driver_profile,'quota_snapshot_profile':snapshot_profile,'quota_clear_crash_profile':args.quota_clear_crash,'quota_negative_profile':args.quota_negatives,'quota_unenforced_profile':args.quota_unenforced,
+        'quota_syscall_errno_profile':args.quota_syscalls,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -171,6 +187,8 @@ def main():
         result['quota_modules_sha256'] = policy['quota_modules_sha256']
     if args.quota_clear_crash:
         result['limitations'].append('Healthy catalog lock is deliberately held by L1 PID1 after ordinary quota clear, until outer L1 power cut. This tests that precise clear-before-owner-delete window, not arbitrary quota syscall errors or latency under a held catalog lock.')
+    if args.quota_syscalls:
+        result['limitations'].append('ELF-unchanged ordinary child has an additional inherited TEST ONLY seccomp notification/NNP launch layer. Six fixed errno cases, not physical media EIO/EROFS, held Q_SYNC, in-flight crash or snapshot pin acceptance. Other calls execute the real kernel via CONTINUE; no synthetic successful quota response.')
     if args.quota_state_io:
         result['limitations'].append('Quota enabled during whole-filesystem faults. The injected blocking point is state fsync, not a claim of every Q_SET/Q_SYNC/readback/clear syscall persistence window.')
     if args.quota_unenforced:
@@ -191,7 +209,7 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives),quota_snapshot=snapshot_profile,quota_unenforced=args.quota_unenforced,quota_state_io=args.quota_state_io)
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls),quota_snapshot=snapshot_profile,quota_unenforced=args.quota_unenforced,quota_state_io=args.quota_state_io)
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
@@ -249,7 +267,7 @@ def main():
                 return console.exists() and b'XANDBOX_NESTED_HOST_READY' in console.read_bytes()
             wait(ready,'L1 fixture boot',seconds=90)
             qmp_probe(root/'qmp.sock')
-            channel=JSONSocket(root/'control.sock',210 if (snapshot_profile or args.quota_negatives) else 90)
+            channel=JSONSocket(root/'control.sock',210 if (snapshot_profile or args.quota_negatives or args.quota_syscalls) else 90)
             channel.send({'version':1,'operation':'probe'}); reply=channel.read()
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
             assert disk.stat().st_size==DISK_BYTES
@@ -282,6 +300,9 @@ def main():
         if args.quota_negatives:
             result['negative_setup']=request('quota-negative-setup')
             validate_negative_setup(result['negative_setup'])
+        if args.quota_syscalls:
+            result['syscall_setup']=request('quota-syscall-setup')
+            validate_quota_syscall_setup(result['syscall_setup'])
         for phase in phases:
             checkpoint=request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
             assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']

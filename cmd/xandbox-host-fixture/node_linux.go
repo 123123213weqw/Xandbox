@@ -54,7 +54,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -540,7 +540,7 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 		}
 		if e == nil {
 			timeout := 70 * time.Second
-			if q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" {
+			if q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -567,6 +567,8 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 				result, e = n.quotaUnenforced(ctx)
 			case "quota-negative-setup":
 				result, e = n.quotaNegativeSetup(ctx)
+			case "quota-syscall-setup":
+				result, e = n.quotaSyscallSetup(ctx)
 			case "quota-checkpoint":
 				if !quotaDriver {
 					e = errors.New("ordinary driver quota image profile required")
