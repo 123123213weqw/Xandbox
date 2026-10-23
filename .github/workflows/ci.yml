@@ -62,6 +62,7 @@ jobs:
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
           python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
+          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
