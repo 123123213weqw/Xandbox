@@ -20,6 +20,14 @@ func main() {
 		err = launch(*config)
 	case "qemu-child":
 		err = qemuChild(*config)
+	case "node-budget":
+		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
+	case "node-budget-daemon", "node-budget-bad-limits":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("node-budget child accepts no arguments")
+		} else {
+			err = runNodeBudgetDaemon(*mode == "node-budget-bad-limits")
+		}
 	case "node":
 		err = runNode()
 	case "node-quota-switch":

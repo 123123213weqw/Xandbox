@@ -133,12 +133,28 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	if opts.StopWorkers < 1 || opts.StopWorkers > 64 || opts.CleanupWorkers < 1 || opts.CleanupWorkers > 64 || opts.WorkQueueSize < 1 || opts.WorkQueueSize > 10000 {
 		return nil, errors.New("invalid lifecycle worker or queue bounds")
 	}
+	if policy, ok := driver.(ResourceAdmission); ok {
+		if err := policy.CheckAdmission(AdmissionLimits{MaxInstances: opts.MaxInstances, MaxRecords: opts.MaxRecords}); err != nil {
+			return nil, err
+		}
+	}
 	records, err := store.Load()
 	if err != nil {
 		return nil, err
 	}
 	if len(records) > MaxLedgerRecords {
 		return nil, errors.New("ledger exceeds hard record limit")
+	}
+	allocated := 0
+	for _, record := range records {
+		if record.State != Destroyed {
+			allocated++
+		}
+	}
+	if policy, ok := driver.(ResourceAdmission); ok {
+		if err := policy.CheckAdmission(AdmissionLimits{RetainedRecords: len(records), AllocatedInstances: allocated}); err != nil {
+			return nil, err
+		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{

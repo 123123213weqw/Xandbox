@@ -45,6 +45,8 @@ func (p launchPolicy) resources() (memoryMiB int, diskBytes int64, cgroupBytes u
 	switch p.Profile {
 	case "":
 		return 2048, 2 << 30, 3 << 30, nil
+	case "node-budget-v1":
+		return 8192, 12 << 30, 10 << 30, nil
 	case "quota-switch-v1", "quota-copy-v1":
 		return 3072, 4 << 30, 4 << 30, nil
 	}
@@ -100,13 +102,25 @@ func loadLaunch(path string) (launchPolicy, error) {
 	return p, p.validate()
 }
 
+func (p launchPolicy) cpuCount() int {
+	if p.Profile == "node-budget-v1" {
+		return 8
+	}
+	return 4
+}
+func (p launchPolicy) pidCount() int {
+	if p.Profile == "node-budget-v1" {
+		return 256
+	}
+	return 128
+}
 func (p launchPolicy) arguments() []string {
 	memory, _, _, e := p.resources()
 	if e != nil {
 		return nil
 	}
 	return []string{"-no-user-config", "-nodefaults", "-machine", "pc-q35-6.2,accel=kvm,dump-guest-core=off,mem-merge=off",
-		"-cpu", "host,vmx=on", "-smp", "4", "-m", fmt.Sprint(memory), "-display", "none", "-monitor", "none", "-nic", "none", "-no-reboot",
+		"-cpu", "host,vmx=on", "-smp", fmt.Sprint(p.cpuCount()), "-m", fmt.Sprint(memory), "-display", "none", "-monitor", "none", "-nic", "none", "-no-reboot",
 		"-serial", "file:" + p.Root + "/console.log",
 		"-chardev", "socket,id=control,path=" + p.Root + "/control.sock,server=on,wait=off", "-device", "isa-serial,chardev=control,index=1",
 		"-qmp", "unix:" + p.Root + "/qmp.sock,server=on,wait=off",
@@ -156,7 +170,7 @@ func launch(path string) error {
 	if e != nil {
 		return e
 	}
-	for name, want := range map[string]string{"memory.max": fmt.Sprint(memory), "memory.swap.max": "0", "memory.oom.group": "1", "pids.max": "128", "cpu.max": "400000 100000"} {
+	for name, want := range map[string]string{"memory.max": fmt.Sprint(memory), "memory.swap.max": "0", "memory.oom.group": "1", "pids.max": fmt.Sprint(p.pidCount()), "cpu.max": fmt.Sprintf("%d 100000", p.cpuCount()*100000)} {
 		b, e := os.ReadFile(p.Cgroup + "/" + name)
 		if e != nil || strings.TrimSpace(string(b)) != want {
 			return errors.New("owned launch resource controls mismatch")

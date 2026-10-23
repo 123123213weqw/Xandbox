@@ -132,7 +132,10 @@ func run() (retErr error) {
 		var records []sandbox.Record
 		records, err = store.Load()
 		if err == nil {
-			driver, err = firecracker.New(absDir, *firecrackerConfig, records)
+			limits := sandbox.AdmissionLimits{MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxSessions: *maxSessions}
+			if err = firecracker.ValidateAdmissionConfig(*firecrackerConfig, limits); err == nil {
+				driver, err = firecracker.NewWithAdmission(absDir, *firecrackerConfig, records, limits)
+			}
 		}
 		opts.PrepareTimeout, opts.StopTimeout, opts.CleanupTimeout = 30*time.Second, 5*time.Second, 10*time.Second
 		writeTimeout = 40 * time.Second

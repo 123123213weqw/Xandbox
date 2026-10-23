@@ -49,6 +49,7 @@ type catalog struct {
 	cfg           Config
 	persist       func(string, any) error
 	syncDirectory func(string) error
+	beforePublish func() error // Optional version3 node envelope, never used by Stop/GC.
 	cacheMu       sync.Mutex
 	verified      map[string]verifiedCatalogFile
 }
@@ -614,6 +615,11 @@ func (c *catalog) publish(ctx context.Context, m SnapshotManifest, memory, state
 		}
 		if used+m.bytes() > c.cfg.Snapshot.MaxBytes {
 			return errors.New("catalog storage budget reached")
+		}
+		if c.beforePublish != nil {
+			if e = c.beforePublish(); e != nil {
+				return e
+			}
 		}
 		token, e := newCatalogToken()
 		if e != nil {

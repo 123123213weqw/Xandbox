@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/client"
@@ -40,6 +41,7 @@ type nodeReceipt struct {
 }
 type node struct {
 	quotaDriver     bool
+	nodeBudget      bool
 	quotaSnapshot   bool
 	quotaSwitch     bool
 	switchTokenB    string
@@ -72,7 +74,7 @@ func (q nodeRequest) validate() error {
 	}
 
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -187,6 +189,9 @@ func (n *node) initialize() error {
 	if n.quotaSnapshot {
 		capacity = 2
 	}
+	if n.nodeBudget {
+		capacity = 4
+	}
 	h := sha256.Sum256([]byte(n.token))
 	if _, e = os.Stat("/srv/config/auth.json"); os.IsNotExist(e) {
 		if e = privateWrite("/srv/config/auth.json", map[string]any{"version": 1, "keys": []any{map[string]any{"tenant_id": "nested-fixture", "max_instances": capacity, "token_sha256": hex.EncodeToString(h[:])}}}); e != nil {
@@ -201,6 +206,11 @@ func (n *node) initialize() error {
 	}
 	if e = os.WriteFile(nodeGroup+"/cgroup.subtree_control", []byte("+memory +pids +cpu"), 0); e != nil {
 		return e
+	}
+	if n.nodeBudget {
+		if e = n.initializeNodeBudget(); e != nil {
+			return e
+		}
 	}
 	n.api = client.NewWithToken("/srv/state/api.sock", n.token)
 	return nil
@@ -242,7 +252,18 @@ func (n *node) start(ctx context.Context) error {
 		if n.quotaSwitch {
 			mode = "quota-switch-daemon-drop"
 		}
+		if n.nodeBudget {
+			mode = "node-budget-daemon"
+		}
 		n.process = exec.Command("/usr/bin/xandbox-host-fixture", "-mode", mode)
+	}
+	if n.nodeBudget {
+		cg, err := os.Open(nodeGroup + "/control")
+		if err != nil {
+			return err
+		}
+		defer cg.Close()
+		n.process.SysProcAttr = &syscall.SysProcAttr{UseCgroupFD: true, CgroupFD: int(cg.Fd())}
 	}
 	n.process.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	n.process.Stdout, n.process.Stderr = log, log
@@ -505,6 +526,12 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 	return runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, false)
 }
 func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch bool) error {
+	return runNodeBudgetProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, false)
+}
+func runNodeBudgetProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget bool) error {
+	if nodeBudget && (stateIO || quotaProbe || quotaSnapshot || quotaStateIO || quotaSwitch || !quotaDriver) {
+		return errors.New("exclusive node-budget driver profile required")
+	}
 	count := 0
 	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch} {
 		if enabled {
@@ -554,7 +581,7 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, quotaSwitch: quotaSwitch, mapper: mapper}
+	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, quotaSwitch: quotaSwitch, mapper: mapper, nodeBudget: nodeBudget}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -570,7 +597,7 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 		}
 		if e == nil {
 			timeout := 70 * time.Second
-			if q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
+			if q.Operation == "node-budget-checkpoint" || q.Operation == "node-budget-recover" || q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
 			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
@@ -597,6 +624,10 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 				}
 			case "quota-copy-setup":
 				result, e = n.quotaCopySetup(ctx)
+			case "node-budget-checkpoint":
+				result, e = n.nodeBudgetCheckpoint(ctx)
+			case "node-budget-recover":
+				result, e = n.nodeBudgetRecover(ctx)
 			case "quota-owner-cut-checkpoint":
 				var private []byte
 				result, private, e = n.quotaOwnerCutCheckpoint(ctx)

@@ -54,11 +54,18 @@ type driver struct {
 	cfg      Config
 	procs    map[string]*process
 	quota    *projectQuota
+	node     *nodeEnvelope
 }
 
 // New requires root and a pre-delegated empty cgroup-v2 root. Its caller must
 // hold the exclusive state lock throughout the driver's lifetime.
 func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver, error) {
+	return newDriver(stateDir, configPath, records, nil)
+}
+func NewWithAdmission(stateDir, configPath string, records []sandbox.Record, limits sandbox.AdmissionLimits) (sandbox.Driver, error) {
+	return newDriver(stateDir, configPath, records, &limits)
+}
+func newDriver(stateDir, configPath string, records []sandbox.Record, limits *sandbox.AdmissionLimits) (sandbox.Driver, error) {
 	if os.Geteuid() != 0 {
 		return nil, errors.New("Firecracker driver requires privileged Linux controller")
 	}
@@ -71,6 +78,23 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 	cfg, err := loadConfig(configPath)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.Node != nil {
+		if limits == nil {
+			return nil, errors.New("version3 requires complete bound admission limits")
+		}
+		if err = cfg.Node.match(*limits, true); err != nil {
+			return nil, err
+		}
+		allocated := 0
+		for _, r := range records {
+			if r.State != sandbox.Destroyed {
+				allocated++
+			}
+		}
+		if err = cfg.Node.match(sandbox.AdmissionLimits{RetainedRecords: len(records), AllocatedInstances: allocated}, false); err != nil {
+			return nil, err
+		}
 	}
 	for _, asset := range cfg.assets() {
 		if err := checkAsset(asset); err != nil {
@@ -125,6 +149,16 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 			return nil, err
 		}
 	}
+	node, err := openNodeEnvelope(cfg, stateDir)
+	if err != nil {
+		return nil, err
+	}
+	keepNode := false
+	defer func() {
+		if node != nil && !keepNode {
+			node.close()
+		}
+	}()
 	quota, err := openProjectQuota(cfg)
 	if err != nil {
 		return nil, err
@@ -184,7 +218,8 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 		}
 	}
 	keepQuota = true
-	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process), quota: quota}, nil
+	keepNode = true
+	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process), quota: quota, node: node}, nil
 }
 
 func (*driver) Name() string { return "firecracker" }
@@ -213,6 +248,12 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		if err := checkRuntimeIO(d.cfg.RuntimeRoot, *d.cfg.IO); err != nil {
 			return err
 		}
+	}
+	if d.node != nil {
+		if err := d.node.acquirePrepare(ctx); err != nil {
+			return err
+		}
+		defer d.node.preparing.release()
 	}
 	group, jail := d.paths(k)
 	for _, p := range []string{group, jail} {
@@ -245,8 +286,8 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		return err
 	}
 	for file, value := range map[string]string{
-		"memory.max": "805306368", "memory.swap.max": "0", "memory.oom.group": "1",
-		"pids.max": "64", "cpu.max": "200000 100000",
+		"memory.max": strconv.FormatUint(instanceMemoryMax, 10), "memory.swap.max": "0", "memory.oom.group": "1",
+		"pids.max": strconv.FormatUint(instancePidsMax, 10), "cpu.max": fmt.Sprintf("%d %d", instanceCPUQuota, nodeCPUPeriod),
 	} {
 		if err := os.WriteFile(filepath.Join(group, file), []byte(value), 0); err != nil {
 			return err
@@ -810,6 +851,13 @@ func waitPristine(ctx context.Context, done <-chan struct{}, socket string) erro
 	}
 	if phase != guestinit.Waiting {
 		return errors.New("restored template is not unassigned; initialization retry is forbidden")
+	}
+	return nil
+}
+
+func (d *driver) CheckAdmission(l sandbox.AdmissionLimits) error {
+	if d.cfg.Node != nil {
+		return d.cfg.Node.match(l, false)
 	}
 	return nil
 }

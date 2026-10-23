@@ -6,13 +6,38 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from kvm_nested_host import (OWNER_CUT_CHECKPOINT_FLAGS, OWNER_CUT_RECOVERY_FLAGS, validate_quota_owner_cut_checkpoint, validate_quota_owner_cut_recovery, owner_cut_recovery_packet, detach_owner_cut_checkpoint, nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
+from kvm_nested_host import (NODE_BUDGET_CHECKPOINT_FLAGS,NODE_BUDGET_RECOVERY_FLAGS,nested_node_resources,node_budget_policy,validate_node_budget_checkpoint,validate_node_budget_recovery,OWNER_CUT_CHECKPOINT_FLAGS, OWNER_CUT_RECOVERY_FLAGS, validate_quota_owner_cut_checkpoint, validate_quota_owner_cut_recovery, owner_cut_recovery_packet, detach_owner_cut_checkpoint, nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
 
 from build_nested_host import init_scripts, validate_manifest
 from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, QUOTA_SWITCH_MAX_FRAME, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_node_budget_profile_never_expands_legacy_memory_cpu_or_disk(self):
+        self.assertEqual(nested_node_resources(),{'profile':'node-budget-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30})
+        self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
+        self.assertEqual(nested_copy_resources()['memory_mib'],3072)
+        _,service=init_scripts([],node_budget=True)
+        self.assertIn('node-budget',service);self.assertIn('prjquota',service)
+        with self.assertRaises(ValueError):init_scripts([],node_budget=True,quota_driver=True)
+        p=node_budget_policy();self.assertEqual(p['max_instances'],4);self.assertEqual(p['prepare_workers'],1);self.assertEqual(p['cpu_quota'],800000)
+
+    def test_node_budget_checkpoint_requires_all_refusal_cleanup_and_real_guest_proofs(self):
+        good={**{k:True for k in NODE_BUDGET_CHECKPOINT_FLAGS},'guest_memory_touched_bytes_each':8<<20,'node_memory_max_bytes':7<<30,'controller_memory_max_bytes':1<<30,'node_cpu_quota_us':800000,'node_pids_max':384,'prepare_workers':1,'node_io_bytes_per_second':256<<20,'node_io_operations_per_second':8192}
+        validate_node_budget_checkpoint(good)
+        for k in NODE_BUDGET_CHECKPOINT_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_node_budget_checkpoint(bad)
+        for k,v in [('prepare_workers',True),('node_memory_max_bytes',8<<30),('node_pids_max',385),('guest_memory_touched_bytes_each',512<<20)]:
+            bad=copy.deepcopy(good);bad[k]=v
+            with self.assertRaises(AssertionError):validate_node_budget_checkpoint(bad)
+
+    def test_node_budget_cold_recovery_is_not_proved_by_only_parent_cleanup(self):
+        good={k:True for k in NODE_BUDGET_RECOVERY_FLAGS};validate_node_budget_recovery(good)
+        for k in NODE_BUDGET_RECOVERY_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_node_budget_recovery(bad)
+
     def owner_cut_checkpoint(self):
         value={k:True for k in OWNER_CUT_CHECKPOINT_FLAGS}
         value['genuine_l1_snapshot_setup']=self.copy_cut_checkpoint()['genuine_l1_snapshot_setup']

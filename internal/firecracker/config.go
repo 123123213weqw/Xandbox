@@ -35,6 +35,7 @@ type Config struct {
 	Snapshot         *SnapshotPolicy `json:"snapshot,omitempty"`
 	Quota            *QuotaPolicy    `json:"quota,omitempty"`
 	IO               *IOPolicy       `json:"io,omitempty"`
+	Node             *NodePolicy     `json:"node,omitempty"`
 }
 
 const diskBytes = 128 << 20
@@ -42,6 +43,7 @@ const diskBytes = 128 << 20
 var hex32 = regexp.MustCompile(`^[0-9a-f]{32}$`)
 var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var cgName = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+var nodeCGName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$`)
 
 func key(ref sandbox.Ref) (string, error) {
 	if !hex32.MatchString(ref.ID) || !hex32.MatchString(ref.Generation) {
@@ -51,7 +53,7 @@ func key(ref sandbox.Ref) (string, error) {
 }
 
 func (c Config) validate() error {
-	if (c.Version != 1 && c.Version != 2) || (c.Version == 1 && c.Snapshot != nil) || (c.Version == 2 && c.Snapshot == nil) || !c.ReservedUIDRange || c.UIDStart < 65536 || c.UIDCount < 1 || c.UIDCount > 10000 || int64(c.UIDStart) > (int64(1)<<31)-int64(c.UIDCount) {
+	if (c.Version != 1 && c.Version != 2 && c.Version != 3) || (c.Version == 1 && c.Snapshot != nil) || (c.Version == 2 && c.Snapshot == nil) || (c.Version == 3) != (c.Node != nil) || !c.ReservedUIDRange || c.UIDStart < 65536 || c.UIDCount < 1 || c.UIDCount > 10000 || int64(c.UIDStart) > (int64(1)<<31)-int64(c.UIDCount) {
 		return errors.New("invalid Firecracker version or reserved UID range")
 	}
 	if !cleanAbsolute(c.RuntimeRoot) || (!strings.HasPrefix(c.RuntimeRoot, "/run/") && !strings.HasPrefix(c.RuntimeRoot, "/srv/")) || len(filepath.Join(c.RuntimeRoot, "j/firecracker", strings.Repeat("0", 64), "root/api.sock")) > 107 {
@@ -61,7 +63,7 @@ func (c Config) validate() error {
 		return errors.New("cgroup root must be below /sys/fs/cgroup")
 	}
 	for _, part := range strings.Split(strings.TrimPrefix(c.CgroupRoot, "/sys/fs/cgroup/"), "/") {
-		if !cgName.MatchString(part) {
+		if (c.Version != 3 && !cgName.MatchString(part)) || (c.Version == 3 && !nodeCGName.MatchString(part)) {
 			return errors.New("invalid cgroup root component")
 		}
 	}
@@ -84,7 +86,13 @@ func (c Config) validate() error {
 		}
 	}
 	if c.IO != nil {
-		return c.IO.validate()
+		if err := c.IO.validate(); err != nil {
+			return err
+		}
+	}
+	if c.Node != nil {
+		_, err := c.Node.validate(c)
+		return err
 	}
 	return nil
 }

@@ -85,8 +85,14 @@ func New(core *sandbox.Manager, store Store, opts Options) (*Broker, error) {
 	if opts.MaxSessions < 1 || opts.MaxSessions > MaxRecords || opts.MaxTenantSessions < 1 || opts.MaxTenantSessions > opts.MaxSessions || opts.MaxAttempts < 1 || opts.MaxAttempts > MaxHistory || opts.RetryInterval < time.Millisecond {
 		return nil, errors.New("invalid session bounds")
 	}
+	if err := core.CheckResourceAdmission(sandbox.AdmissionLimits{MaxSessions: opts.MaxSessions}); err != nil {
+		return nil, err
+	}
 	rows, err := store.Load()
 	if err != nil {
+		return nil, err
+	}
+	if err := core.CheckResourceAdmission(sandbox.AdmissionLimits{RetainedSessions: len(rows)}); err != nil {
 		return nil, err
 	}
 	if len(rows) > MaxRecords {

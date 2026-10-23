@@ -147,6 +147,10 @@ func (r *registry) reserveOwner(ref sandbox.Ref, template string) (ownership, er
 		r.mu.Unlock()
 		return ownership{}, errors.New("generation already has ownership; cannot prepare again")
 	}
+	if r.cfg.Node != nil && len(r.owners) >= r.cfg.Node.MaxInstances {
+		r.mu.Unlock()
+		return ownership{}, sandbox.ErrCapacity
+	}
 	used := make(map[int]bool)
 	for _, owner := range r.owners {
 		used[owner.UID] = true
