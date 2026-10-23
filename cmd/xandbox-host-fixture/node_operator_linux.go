@@ -44,9 +44,19 @@ type operatorForeignReport struct {
 // It connects AFTER setuid; passing an already-connected root FD would not test
 // SO_PEERCRED. Failure at pathname DAC is NOT accepted as a peer-filter result.
 func runOperatorForeignChild() error {
-	marker, e := os.ReadFile("/etc/xandbox-host-fixture")
-	if e != nil || string(marker) != fixtureMarker || os.Getuid() != operatorForeignUID || os.Geteuid() != operatorForeignUID || os.Getgid() != operatorForeignUID || os.Getegid() != operatorForeignUID || os.Getppid() != 1 || os.Getpid() == 1 {
+	if os.Getuid() != operatorForeignUID || os.Geteuid() != operatorForeignUID || os.Getgid() != operatorForeignUID || os.Getegid() != operatorForeignUID || os.Getppid() != 1 || os.Getpid() == 1 {
 		return errors.New("fixed isolated L1 foreign child required")
+	}
+	// The image marker is root0600. PID1 passes ONLY its read-only marker FD,
+	// never a connected operator FD or tenant credential. Socket connect below
+	// still occurs after setuid, so SO_PEERCRED observes the foreign UID.
+	marker := os.NewFile(3, "fixed-l1-marker")
+	if marker == nil {
+		return errors.New("read-only L1 marker descriptor required")
+	}
+	defer marker.Close()
+	if e := operatorMarkerDescriptor(marker); e != nil {
+		return e
 	}
 	groups, e := os.Getgroups()
 	if e != nil || len(groups) != 0 {
@@ -109,6 +119,23 @@ func runOperatorForeignChild() error {
 		return errors.New("unexpected foreign write failure")
 	}
 	return json.NewEncoder(os.Stdout).Encode(operatorForeignReport{Connected: true, NoHTTPBytes: true, PeerPID: peer.Pid, PeerUID: peer.Uid})
+}
+
+func operatorMarkerDescriptor(marker *os.File) error {
+	info, e := marker.Stat()
+	if e != nil {
+		return e
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	flags, e := unix.FcntlInt(marker.Fd(), unix.F_GETFL, 0)
+	if e != nil || !ok || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 || st.Uid != 0 || st.Nlink != 1 || info.Size() != int64(len(fixtureMarker)) || flags&unix.O_ACCMODE != unix.O_RDONLY {
+		return errors.New("invalid read-only root L1 marker descriptor")
+	}
+	data, e := io.ReadAll(io.LimitReader(marker, 64))
+	if e != nil || string(data) != fixtureMarker {
+		return errors.New("invalid inherited L1 marker contents")
+	}
+	return nil
 }
 
 func operatorForeignCapabilities(status string) error {
@@ -257,6 +284,18 @@ func (n *node) operatorForeign(ctx context.Context, c *nodecontrol.Client, drain
 	childCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	child := exec.CommandContext(childCtx, "/usr/bin/xandbox-host-fixture", "-mode", "node-operator-foreign")
+	marker, e := os.Open("/etc/xandbox-host-fixture")
+	if e != nil {
+		return e
+	}
+	defer marker.Close()
+	if e = operatorMarkerDescriptor(marker); e != nil {
+		return e
+	}
+	if _, e = marker.Seek(0, io.SeekStart); e != nil {
+		return e
+	}
+	child.ExtraFiles = []*os.File{marker}
 	child.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	child.Stdin = bytes.NewReader(data)
 	child.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: operatorForeignUID, Gid: operatorForeignUID, Groups: []uint32{}}}
