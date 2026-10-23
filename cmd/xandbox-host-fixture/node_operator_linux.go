@@ -194,9 +194,8 @@ func (n *node) operatorForeign(ctx context.Context, c *nodecontrol.Client, drain
 	if n.process == nil {
 		return errors.New("ordinary operator daemon required")
 	}
-	entries, e := os.ReadDir(nodeBudgetInstances)
-	if e != nil || len(entries) != 0 {
-		return errors.New("foreign UID test requires zero execution domains")
+	if e := operatorEmptyInstances(nodeBudgetInstances); e != nil {
+		return e
 	}
 	view, e := c.Status(ctx)
 	if e != nil || view.Control.Committed != drained || view.Control.AdmissionOpen || view.ResourceObservation.Active != 0 || view.ResourceObservation.Records != 0 {
@@ -274,6 +273,25 @@ func (n *node) operatorForeign(ctx context.Context, c *nodecontrol.Client, drain
 	var result operatorForeignReport
 	if e = strictjson.Decode(output.Bytes(), &result); e != nil || !result.Connected || !result.NoHTTPBytes || result.PeerUID != 0 || int(result.PeerPID) != n.process.Process.Pid {
 		return errors.New("foreign UID kernel peer witness invalid")
+	}
+	return nil
+}
+
+func operatorEmptyInstances(root string) error {
+	entries, e := os.ReadDir(root)
+	if e != nil {
+		return e
+	}
+	// Empty cgroup2 directories still contain their kernel control FILES.
+	// Only descendant directories represent possible execution domains.
+	for _, entry := range entries {
+		if entry.IsDir() {
+			return errors.New("foreign UID test requires zero descendant execution domains")
+		}
+	}
+	procs, e := os.ReadFile(root + "/cgroup.procs")
+	if e != nil || len(bytes.TrimSpace(procs)) != 0 {
+		return errors.New("foreign UID test requires empty instance parent")
 	}
 	return nil
 }

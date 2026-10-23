@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,6 +13,33 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
 )
+
+func TestForeignOperatorEmptyCgroupIgnoresKernelFilesNotDirectoriesOrProcesses(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"cgroup.procs", "memory.max", "pids.max", "cgroup.events"} {
+		if e := os.WriteFile(filepath.Join(root, name), nil, 0600); e != nil {
+			t.Fatal(e)
+		}
+	}
+	if e := operatorEmptyInstances(root); e != nil {
+		t.Fatal("kernel files counted as VMs", e)
+	}
+	if e := os.WriteFile(filepath.Join(root, "cgroup.procs"), []byte("12\n"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	if operatorEmptyInstances(root) == nil {
+		t.Fatal("instance parent process ignored")
+	}
+	if e := os.WriteFile(filepath.Join(root, "cgroup.procs"), nil, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.Mkdir(filepath.Join(root, "unexpected-domain"), 0700); e != nil {
+		t.Fatal(e)
+	}
+	if operatorEmptyInstances(root) == nil {
+		t.Fatal("possible execution domain ignored")
+	}
+}
 
 func TestOperatorFixtureAndForeignChildCannotOperateOnL0(t *testing.T) {
 	n := &node{nodeBudget: true, quotaDriver: true}
