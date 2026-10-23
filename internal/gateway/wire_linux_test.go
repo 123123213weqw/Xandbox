@@ -245,3 +245,16 @@ func TestGatewayInvalidHeartbeatEpochFailsClosed(t *testing.T) {
 		t.Fatal("wrong policy heartbeat survived")
 	}
 }
+
+func TestGatewayChildExecMustChdirIntoNewRootAndPassOnlyCapabilities(t *testing.T) {
+	cfg := Config{UID: 60001, GID: 60001, EmptyRoot: "/operator/private/root"}
+	cmd := childCommand(cfg, nil, nil)
+	if cmd.Path != "/gateway" || cmd.Dir != "/" || cmd.SysProcAttr.Chroot != cfg.EmptyRoot || cmd.SysProcAttr.Credential == nil || cmd.SysProcAttr.Credential.Uid != 60001 || cmd.SysProcAttr.Credential.Gid != 60001 || len(cmd.SysProcAttr.Credential.Groups) != 0 || len(cmd.ExtraFiles) != 2 {
+		t.Fatal("outside cwd/privileged exec or descriptor capability contract widened")
+	}
+	for _, arg := range cmd.Args {
+		if arg == cfg.EmptyRoot || arg == testBackend {
+			t.Fatal("parent-only path or secret in child argv")
+		}
+	}
+}

@@ -27,7 +27,7 @@ func FailureCode(err error) string {
 		return "CAPABILITY_LOST"
 	case "unprivileged gateway identity required", "gateway supplemental groups forbidden", "gateway capabilities must be empty", "cannot verify gateway capabilities", "cannot set gateway no-new-privileges", "cannot bound gateway resource limits":
 		return "CHILD_PRIVILEGES"
-	case "gateway executable-only root required":
+	case "gateway executable-only root required", "gateway working directory outside executable root":
 		return "CHILD_ROOT"
 	case "gateway TLS listen failed", "gateway TLS server ended":
 		return "TLS_LISTENER"

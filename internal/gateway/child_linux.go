@@ -46,6 +46,11 @@ func childPrivileges(s Snapshot) error {
 			return errors.New("cannot bound gateway resource limits")
 		}
 	}
+	cwd, e := os.Stat(".")
+	root, re := os.Stat("/")
+	if e != nil || re != nil || !os.SameFile(cwd, root) {
+		return errors.New("gateway working directory outside executable root")
+	}
 	// The child can see only /gateway. No proc/dev/config/state mounts or files.
 	entries, e := os.ReadDir("/")
 	if e != nil || len(entries) != 1 || entries[0].Name() != "gateway" {

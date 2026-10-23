@@ -100,6 +100,16 @@ func leaseID(active map[uint64]lease) (uint64, error) {
 	return 0, errors.New("lease entropy collision")
 }
 
+func childCommand(c Config, childFD, policyFD *os.File) *exec.Cmd {
+	cmd := exec.Command("/gateway", "-child")
+	cmd.Dir = "/" // chroot does not change cwd; never inherit an outside directory.
+	cmd.Env = []string{"PATH=/", "GOMAXPROCS=2", "GOTRACEBACK=none"}
+	cmd.ExtraFiles = []*os.File{childFD, policyFD}
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: c.EmptyRoot, Credential: &syscall.Credential{Uid: c.UID, Gid: c.GID, Groups: []uint32{}}, Pdeathsig: syscall.SIGKILL}
+	return cmd
+}
+
 // RunRoot is a fixed connector supervisor, NOT an HTTP/TLS listener. Its child
 // runs after setuid/setgid inside a root-owned read-only executable-only chroot.
 // No controller changes or state-directory DAC delegation are needed.
@@ -158,11 +168,7 @@ func RunRoot(configPath string) error {
 		return e
 	}
 	defer childFD.Close()
-	cmd := exec.Command("/gateway", "-child")
-	cmd.Env = []string{"PATH=/", "GOMAXPROCS=2", "GOTRACEBACK=none"}
-	cmd.ExtraFiles = []*os.File{childFD, policyFD}
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: c.EmptyRoot, Credential: &syscall.Credential{Uid: c.UID, Gid: c.GID, Groups: []uint32{}}, Pdeathsig: syscall.SIGKILL}
+	cmd := childCommand(c, childFD, policyFD)
 	if e = cmd.Start(); e != nil {
 		return errors.New("cannot start unprivileged gateway child")
 	}
