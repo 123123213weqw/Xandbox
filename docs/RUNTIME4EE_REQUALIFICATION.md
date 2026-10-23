@@ -51,3 +51,6 @@ Linux native full race×3/vet、fixture race×10/vet、root Python95（0 skip）
 新4ee命名的schema3 snapshot空间/prepare entry trace/原始排队取消与owner、复制窗口已另行[实际复验](NODE4EE_REQUALIFICATION.md)，其原始报告和有限范围不回写本页测量；仍需完整最坏节点资源压力、shutdown期间未完成control writer保持锁窗口、unique RAM/open-loop/fairness/长期SLO、生产TLS网关与凭证生命周期、独立operator/systemd安装恢复、持久审计/告警/外部日志预算、archive/rotation/备份/升级/回滚及其余M1–M4。PR19保持Draft，main和主分支ZIP不变；`production_ready`与Goal不标完成。
 
 后续[实际pre-Core session ticket跨ACK drain](SESSION_TICKET_DRAIN.md)另绑新TEST冻结源和3scope/6代际原始报告；普通五个产物仍精确4ee集合。本页旧测量不改，不代替该窗口或未完成shutdown writer验收。
+
+
+后续[未完成control writer跨真实shutdown/run返回/进程退出的锁窗口](OPERATOR_SHUTDOWN.md)已另绑新冻结TEST源与实机证据：两个通知同时有效时第二个同普通daemon仍被kernel锁拒绝，仅CONTINUE退出、实际reap1后旧写入通知失效；原盘oldopen1恢复和三项共享回归完成。4个通过scope/8代及失败1代均独立只读审计无残留。上述历史scope/false字段不回写；这不代表其他metadata窗口、生产operator/TLS/凭证/networking、资源压力或完整Goal验收。

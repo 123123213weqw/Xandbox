@@ -1,0 +1,26 @@
+work/operator-shutdown-source-v2.tar.gz: 成功
+FROZEN_SOURCE=10eb001ab48b4fa886bf23fb4a34ec66632ac816 archivecae14d44 TESTonly source; ordinary4ee unchanged
+stage native full race3/vet/fixture race10/vet/Python103/kernelfilter3
+stage native6 and independent cross equality
+bin/sandboxd-operator-shutdown-v3: 成功
+bin/xandbox-template-operator-shutdown-v3: 成功
+bin/xandbox-warden-operator-shutdown-v3: 成功
+bin/xandbox-node-operator-shutdown-v3: 成功
+bin/fixture-operator-shutdown-v3: 成功
+bin/builder-operator-shutdown-v3: 成功
+bin/operator-shutdown-smoke-v3/sandboxd: 成功
+/srv/xb-template-cv3/workspace.ext4: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage actual operator shutdown validation lock
+50089 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage actual operator shutdown validation ticket
+50089 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage actual operator shutdown validation store-pre
+50089 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage actual operator shutdown validation store-post
+50089 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+COMPLETE actual unresolved control shutdown lock until real exit and three shared regressions4scopes8generations original4ee; NOT full Goal or production acceptance

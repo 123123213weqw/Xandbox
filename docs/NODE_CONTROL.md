@@ -87,3 +87,6 @@ python3 scripts/node_control_smoke.py \
 后续[实际 FileStore 的两个 fsync TEST errno 窗口](NODE_OPERATOR_STORE.md)已单独验证 pre-rename 与 post-admission-directory 的 pending、caller 取消、一次 EIO、内存 fence 与不同 cold namespace 结果。它执行真实 Store 而非模拟对象，但不是实际 filesystem D/介质故障或全部提交窗口验收；旧预验收与前轮健康 ACK 报告仍保持冻结范围。
 
 后续[新4ee默认/IO与quota240、双活cold和命名故障复验](RUNTIME4EE_REQUALIFICATION.md)已实际完成25个scope，并独立核验43个外层执行代际和4个专属loop绑定无残留。它另绑冻结源及新原始报告，不回写本页旧预验收false字段；新4ee schema3空间/prepare entry trace/原始排队取消与复制、owner有限窗口已另行[实际复验](NODE4EE_REQUALIFICATION.md)；完整最坏节点资源压力与未完成control writer的shutdown锁窗口仍未完成。后续[实际session pre-Core ticket跨ACK drain](SESSION_TICKET_DRAIN.md)已单独完成真实Store.Sync持有、旧执行/回收独立、一次ticket在closed gate后消费及ACK drained原盘cold；不回写旧预验收报告的false字段。
+
+
+后续[未完成control writer跨真实shutdown/run返回/进程退出的锁窗口](OPERATOR_SHUTDOWN.md)已另绑新冻结TEST源与实机证据：两个通知同时有效时第二个同普通daemon仍被kernel锁拒绝，仅CONTINUE退出、实际reap1后旧写入通知失效；原盘oldopen1恢复和三项共享回归完成。4个通过scope/8代及失败1代均独立只读审计无残留。上述历史scope/false字段不回写；这不代表其他metadata窗口、生产operator/TLS/凭证/networking、资源压力或完整Goal验收。

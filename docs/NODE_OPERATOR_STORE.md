@@ -64,3 +64,6 @@
 **仍待完成：** 真正的 filesystem D/介质 EIO、新程序完整 DEFAULT/IO、quota240/双活cold/故障及 snapshot/prepare/cancel 矩阵、实际 drain 下 pre-Core session ticket、更多提交/中断/关闭窗口与长期尾部，以及独立部署/网关/审计/备份回滚等生产门槛。健康 ACK 的持久性另见[前轮有限 operator KVM](NODE_OPERATOR_KVM.md)，不与本页的未 ACK 错误结果混用。Goal 与 Draft PR 保持未完成。
 
 后续[实际session pre-Core ticket](SESSION_TICKET_DRAIN.md)扩展了TEST观察器的固定selector，并用新fixture实际重跑本页pre-file/post-root两组窗口，原始报告另绑98e9576冻结源；本页c49冻结结果和计数保持不变。新增CONTINUE分支只用于session目标，原operator目标仍各一次TEST EIO；都不冒充未完成writer的shutdown锁证明。
+
+
+后续[未完成control writer跨真实shutdown/run返回/进程退出的锁窗口](OPERATOR_SHUTDOWN.md)已另绑新冻结TEST源与实机证据：两个通知同时有效时第二个同普通daemon仍被kernel锁拒绝，仅CONTINUE退出、实际reap1后旧写入通知失效；原盘oldopen1恢复和三项共享回归完成。4个通过scope/8代及失败1代均独立只读审计无残留。上述历史scope/false字段不回写；这不代表其他metadata窗口、生产operator/TLS/凭证/networking、资源压力或完整Goal验收。

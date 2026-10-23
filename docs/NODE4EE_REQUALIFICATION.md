@@ -52,3 +52,6 @@ owner窗口cold本次实际owner存在 `True`、durable owner pins `2`；不把�
 [上一轮ab源码实际native/cross及全量测试](RUNTIME4EE_REQUALIFICATION.md)被精确SHA复核复用，**不是本轮又编译/测试一遍**：原生/交叉8产物逐字节相同，race×3/vet、fixture×10/vet、rootPython95零skip、实际kernel filter×3、mock6和Darwin race×3/vet仍属其原执行。当前4个scope全是新的实际KVM执行；本批没有硬件或离线核验失败前序，旧项目失败报告/来源清单原样按SHA引用，未拼入本轮数据。
 
 实际session已接受pre-Core ticket跨ACK drain已另行[有限实机验收](SESSION_TICKET_DRAIN.md)，不由本页raw取消代替证明。仍需未完成control writer在shutdown期间保持state lock、最坏RAM/ancestor/affinity/uniqueRAM/全资源节点压力、open-loop/fairness/长期SLO，以及生产TLS网关/凭证生命周期、独立operator/systemd、持久审计/告警/日志预算、archive/rotation/备份/升级/回滚及其余M1–M4。PR19保持Draft、main和主分支ZIP不变，Goal ACTIVE且`production_ready=false`。
+
+
+后续[未完成control writer跨真实shutdown/run返回/进程退出的锁窗口](OPERATOR_SHUTDOWN.md)已另绑新冻结TEST源与实机证据：两个通知同时有效时第二个同普通daemon仍被kernel锁拒绝，仅CONTINUE退出、实际reap1后旧写入通知失效；原盘oldopen1恢复和三项共享回归完成。4个通过scope/8代及失败1代均独立只读审计无残留。上述历史scope/false字段不回写；这不代表其他metadata窗口、生产operator/TLS/凭证/networking、资源压力或完整Goal验收。

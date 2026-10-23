@@ -48,3 +48,6 @@
 ## 尚未完成
 
 本例最终完成原始request及writer后才干净Stop，**尚未证明未完成control writer在shutdown/run返回后保持state lock直到真正进程退出**；这与本例是不同窗口。其余metadata/catalog持久窗口、最坏RAM/ancestor/affinity/uniqueRAM/全资源压力、open-loop/fairness/长期SLO、生产TLS/凭证生命周期、真实operator/systemd、持久审计/告警/日志预算、archive/rotation/备份/升级/回滚及完整M1–M4仍未完成。PR19保持Draft、main/主分支ZIP不变、Goal ACTIVE且`production_ready=false`。
+
+
+后续[未完成control writer跨真实shutdown/run返回/进程退出的锁窗口](OPERATOR_SHUTDOWN.md)已另绑新冻结TEST源与实机证据：两个通知同时有效时第二个同普通daemon仍被kernel锁拒绝，仅CONTINUE退出、实际reap1后旧写入通知失效；原盘oldopen1恢复和三项共享回归完成。4个通过scope/8代及失败1代均独立只读审计无残留。上述历史scope/false字段不回写；这不代表其他metadata窗口、生产operator/TLS/凭证/networking、资源压力或完整Goal验收。

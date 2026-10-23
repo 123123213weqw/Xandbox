@@ -1,0 +1,6 @@
+lock 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+ticket 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+store-pre 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+store-post 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+Original sourcefe false checkpoint one owned L1 independently absent; original first runner input-name failure zero native/HW preserved. No false report retagged or supplemental cleanup.
+ALL4 accepted scopes/8outergenerations plus1failed generation independently audited; live quota evidence not inferred from outer deletion.

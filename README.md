@@ -74,6 +74,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [双租户快照负载与资源曲线](docs/MIXED_LOAD.md)：两租户各120次、246.267秒的有限混合闭环通过，分别观测首次新命令、旧host停止和持久回收；保留404个PSS/cgroup/mincore/私有盘样本及前次失败记录。共享驻留、映射和cgroup charge不能相加；这不是开放到达压测、公平调度、完整RAM计费或生产SLO，完整M4仍未完成。
 
+本轮新增[未完成control写入跨shutdown与实际退出的状态锁实机验收](docs/OPERATOR_SHUTDOWN.md)：两个旧guest分别观察host停止与private/quota0，真实5s控制关闭超时、run返回后第二个同普通daemon仍被kernel锁拒绝；仅放行退出后旧写入失效，原盘cold/fresh guest及三项共享回归通过。4个通过scope/8代，另保留1个失败L1与0硬件的runner输入错误；生产普通五个产物仍为4ee集合，Goal未完成、PR仍Draft。
+
 ## 已实现
 
 历史 [c577真实ext4 ENOSPC基线](docs/STORAGE.md)：guest写满128MiB工作盘，以及小卷数据块/inode耗尽×忙碌/空闲VM共5场景通过。小卷只在独占mount namespace内填充，未填满共享宿主盘；持久删除失败不假称成功、不提前还容量，释放空间后同state恢复并拒绝旧key。旧daemon空闲VM约4.3–5.0秒停止，不是当前D2dc的时延；当前程序的新回归见上方[物理Stop](docs/EMERGENCY_STOP.md)和[EROFS](docs/READONLY.md)。EIO、掉电、宿主配额和完整M2仍未完成。
