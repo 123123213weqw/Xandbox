@@ -22,6 +22,8 @@
 
 最新[有界policy库存与真实孤立文件回收](POLICY_METADATA.md)为**新的生产gateway**555b/c402：增加有界11项/8KiB逻辑库存、严格已识别temp的CAS后回收，新程序已另跑pre/post/TLS/普通schema3共4scope/8次启动与独立清理审计。原生19类非法库存和边界负例、实机foreign/symlink/跳号拒绝及真实SIGKILL temp的cold回收有限证据均保留；旧241ca不代签。不是全局物理磁盘、日志/审计预算、完整GC/介质窗口或完整M4。
 
+当前新增[有界异步诊断与固定写入挂起窗口](DIAGNOSTICS.md)：daemon29fe、fixture9ecc 的两个 ring FSYNC 窗口及四个共享 node 回归，共6scope/12次L1启动、独立清理审计与130项脱敏拒绝检查通过。不是可靠租户审计或完整生产验收；当前 template9eb8/node4579/gateway46d3/builder4d5d 等新产物不能沿用前述4ee/555b历史报告代签，全量 DEFAULT/IO/quota240/trace/TLS+metadata 重验仍待完成。旧负向测试的 raw stderr 断言还需迁移到闭集原因或独立真实故障/状态证据；本项不勾选完整M2/M4。
+
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。
 - 一实例一独立 guest、写盘、进程资源组和执行代际；不把已使用实例直接交给另一租户。
