@@ -7,8 +7,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
@@ -193,5 +196,80 @@ func TestDiagnosticPrivateReceiptRejectsConfusion(t *testing.T) {
 		if validateDiagnosticSaved(b, diagnosticData, boot) == nil {
 			t.Fatal("confused receipt", i)
 		}
+	}
+}
+
+// Regression for the first real d3 checkpoint failure: the already-CLOSED
+// session has a legitimate final shutdown write BEFORE EXIT_GROUP entry. The
+// refused contender must be compared to a snapshot AFTER that write.
+func TestDiagnosticContenderBaselineMustFollowOrdinarySessionClose(t *testing.T) {
+	root := t.TempDir()
+	store, e := sandbox.NewFileStore(filepath.Join(root, "ledger"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	driver, e := sandbox.NewMockDriver(filepath.Join(root, "instances"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	manager, e := sandbox.NewManager(store, driver, sandbox.Options{MaxInstances: 2})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if e := manager.Close(ctx); e != nil {
+			t.Error(e)
+		}
+	}()
+	journal, e := session.NewFileStore(filepath.Join(root, "sessions"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	broker, e := session.New(manager, journal, session.Options{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	defer broker.Close(ctx)
+	first, e := broker.Open(ctx, sandbox.Owner{TenantID: "diagnostic-unit", MaxInstances: 2}, strings.Repeat("a", 64), sandbox.CreateRequest{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = broker.CloseSession("diagnostic-unit", first.ID, first.Revision); e != nil {
+		t.Fatal(e)
+	}
+	var before session.Record
+	for {
+		records, e := journal.Load()
+		if e != nil {
+			t.Fatal(e)
+		}
+		if len(records) == 1 && records[0].State == session.Closed {
+			before = records[0]
+			break
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		case <-time.After(time.Millisecond):
+		}
+	}
+	if e = broker.Close(ctx); e != nil {
+		t.Fatal(e)
+	}
+	records, e := journal.Load()
+	if e != nil || len(records) != 1 {
+		t.Fatal(e)
+	}
+	after := records[0]
+	if !after.UpdatedAt.After(before.UpdatedAt) || after.State != session.Closed || after.Current != first.Current {
+		t.Fatal("normal final closed-session write not observed")
+	}
+	after.UpdatedAt = before.UpdatedAt
+	if !reflect.DeepEqual(after, before) {
+		t.Fatal("unexpected session authority mutation beyond ordinary shutdown timestamp")
 	}
 }
