@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -15,7 +17,7 @@ import (
 
 func testCopyCutReceipt(t *testing.T) copyCutReceipt {
 	t.Helper()
-	r := copyCutReceipt{Version: 1, Boot: "11111111-1111-4111-8111-111111111111", KeeperBoot: "22222222-2222-4222-8222-222222222222", Config: strings.Repeat("a", 64), Manifest: strings.Repeat("b", 64), Template: strings.Repeat("c", 64), Keeper: sandbox.Ref{ID: strings.Repeat("d", 32), Generation: strings.Repeat("e", 32)}, Victim: sandbox.Ref{ID: strings.Repeat("f", 32), Generation: strings.Repeat("1", 32)}, KeeperKey: strings.Repeat("2", 64), VictimKey: strings.Repeat("3", 64)}
+	r := copyCutReceipt{Version: 1, Boot: "11111111-1111-4111-8111-111111111111", KeeperBoot: "22222222-2222-4222-8222-222222222222", Config: strings.Repeat("a", 64), Manifest: strings.Repeat("b", 64), Index: strings.Repeat("7", 64), Template: strings.Repeat("c", 64), Keeper: sandbox.Ref{ID: strings.Repeat("d", 32), Generation: strings.Repeat("e", 32)}, Victim: sandbox.Ref{ID: strings.Repeat("f", 32), Generation: strings.Repeat("1", 32)}, KeeperKey: strings.Repeat("2", 64), VictimKey: strings.Repeat("3", 64)}
 	for i, ref := range []sandbox.Ref{r.Keeper, r.Victim} {
 		o := clearWindowOwner{Version: 4, Ref: ref, UID: 400000 + i, ProjectID: driverProjectFirst + uint32(i), TemplateID: r.Template, QuotaAttempted: true, InitializationAttempted: i == 0}
 		b, e := json.Marshal(o)
@@ -149,5 +151,35 @@ func TestCopyCutColdActualSubsetNotStablePrecutAccounting(t *testing.T) {
 		if _, e := validateColdPartialCopy(q, 12288, 3, entries); e == nil {
 			t.Fatal("wrong cold quota accepted")
 		}
+	}
+}
+
+func TestCopyCutReadOnlyIndexPinsExactBaselineIncludingRetiredTombstone(t *testing.T) {
+	r := testCopyCutReceipt(t)
+	index := map[string]any{"version": 1, "config_sha256": strings.Repeat("8", 64), "registry_sha256": strings.Repeat("9", 64), "active": r.Template, "entries": map[string]any{r.Template: map[string]any{"phase": "AVAILABLE", "bytes": 512 << 20}, strings.Repeat("6", 64): map[string]any{"phase": "RETIRED", "bytes": 512 << 20}}}
+	check := func() error {
+		b, e := json.Marshal(index)
+		if e != nil {
+			t.Fatal(e)
+		}
+		h := sha256.Sum256(b)
+		r.Index = hex.EncodeToString(h[:])
+		return validateCopyCutIndex(b, r)
+	}
+	if e := check(); e != nil {
+		t.Fatal("known retired tombstone rejected", e)
+	}
+	b, _ := json.Marshal(index)
+	if validateCopyCutIndex(append(b, ' '), r) == nil {
+		t.Fatal("pre-victim index byte drift accepted")
+	}
+	index["active"] = strings.Repeat("4", 64)
+	if check() == nil {
+		t.Fatal("active template drift accepted")
+	}
+	index["active"] = r.Template
+	index["entries"].(map[string]any)[strings.Repeat("6", 64)] = map[string]any{"phase": "AVAILABLE", "bytes": 512 << 20}
+	if check() == nil {
+		t.Fatal("unknown additional available entry accepted")
 	}
 }

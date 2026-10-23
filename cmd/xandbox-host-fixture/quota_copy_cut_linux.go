@@ -7,6 +7,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -24,12 +26,12 @@ import (
 const copyCutReceiptMax = 7000
 
 type copyCutReceipt struct {
-	Version                          int `json:"version"`
-	Boot, Config, Manifest, Template string
-	Keeper, Victim                   sandbox.Ref
-	KeeperKey, VictimKey, KeeperBoot string
-	KeeperOwner, VictimOwner         []byte
-	KeeperQuota                      driverQuotaReceipt
+	Version                                 int `json:"version"`
+	Boot, Config, Manifest, Template, Index string
+	Keeper, Victim                          sandbox.Ref
+	KeeperKey, VictimKey, KeeperBoot        string
+	KeeperOwner, VictimOwner                []byte
+	KeeperQuota                             driverQuotaReceipt
 }
 type copyCutLive struct {
 	observer *copyObserver
@@ -39,7 +41,7 @@ type copyCutLive struct {
 }
 
 func validateCopyCutReceipt(r copyCutReceipt) error {
-	if r.Version != 1 || !switchUUID(r.Boot) || !hashPattern.MatchString(r.Config) || !hashPattern.MatchString(r.Manifest) || !hashPattern.MatchString(r.Template) || !switchRefValid(r.Keeper) || !switchRefValid(r.Victim) || r.Keeper == r.Victim || !switchUUID(r.KeeperBoot) {
+	if r.Version != 1 || !switchUUID(r.Boot) || !hashPattern.MatchString(r.Config) || !hashPattern.MatchString(r.Manifest) || !hashPattern.MatchString(r.Template) || !hashPattern.MatchString(r.Index) || !switchRefValid(r.Keeper) || !switchRefValid(r.Victim) || r.Keeper == r.Victim || !switchUUID(r.KeeperBoot) {
 		return errors.New("invalid fixed private cut identity")
 	}
 	for _, s := range []string{r.KeeperKey, r.VictimKey} {
@@ -117,13 +119,10 @@ func captureCopyKeeper(ref sandbox.Ref, project uint32) (driverQuotaReceipt, err
 	}
 	return r, nil
 }
-func copyCutPinsReadOnly(r copyCutReceipt) error {
-	if e := requireNode(); e != nil {
-		return e
-	}
-	b, e := privatefile.Read("/srv/state/firecracker/catalog/index.json", 256<<10)
-	if e != nil {
-		return e
+func validateCopyCutIndex(b []byte, r copyCutReceipt) error {
+	sum := sha256.Sum256(b)
+	if hex.EncodeToString(sum[:]) != r.Index {
+		return errors.New("cut catalog index differs from pre-victim baseline")
 	}
 	var index struct {
 		Version  int    `json:"version"`
@@ -135,11 +134,29 @@ func copyCutPinsReadOnly(r copyCutReceipt) error {
 			Bytes int64  `json:"bytes"`
 		} `json:"entries"`
 	}
-	if e = strictjson.Decode(b, &index); e != nil {
+	if e := strictjson.Decode(b, &index); e != nil {
 		return e
 	}
-	if index.Version != 1 || !hashPattern.MatchString(index.Config) || !hashPattern.MatchString(index.Registry) || len(index.Entries) != 1 || index.Active != r.Template || index.Entries[r.Template].Phase != "AVAILABLE" || index.Entries[r.Template].Bytes < 1 || index.Entries[r.Template].Bytes > 2<<30 {
+	if index.Version != 1 || !hashPattern.MatchString(index.Config) || !hashPattern.MatchString(index.Registry) || len(index.Entries) == 0 || len(index.Entries) > 4 || index.Active != r.Template || index.Entries[r.Template].Phase != "AVAILABLE" || index.Entries[r.Template].Bytes < 1 || index.Entries[r.Template].Bytes > 2<<30 {
 		return errors.New("cut pristine active template changed")
+	}
+	for id, entry := range index.Entries {
+		if !hashPattern.MatchString(id) || entry.Bytes < 1 || entry.Bytes > 2<<30 || (id != r.Template && entry.Phase != "RETIRED") {
+			return errors.New("unknown retained cut catalog entry")
+		}
+	}
+	return nil
+}
+func copyCutPinsReadOnly(r copyCutReceipt) error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	b, e := privatefile.Read("/srv/state/firecracker/catalog/index.json", 256<<10)
+	if e != nil {
+		return e
+	}
+	if e = validateCopyCutIndex(b, r); e != nil {
+		return e
 	}
 	entries, e := os.ReadDir("/srv/state/firecracker")
 	if e != nil {
@@ -250,6 +267,10 @@ func (n *node) quotaCopyCutCheckpoint(ctx context.Context) (result map[string]an
 		return nil, nil, e
 	}
 	r.KeeperQuota, e = captureCopyKeeper(r.Keeper, ko.ProjectID)
+	if e != nil {
+		return nil, nil, e
+	}
+	r.Index, e = fileHash("/srv/state/firecracker/catalog/index.json")
 	if e != nil {
 		return nil, nil, e
 	}
