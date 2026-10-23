@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -159,5 +160,20 @@ func TestOwnerFsyncProgramPreservesArchitectureAndNeverTargetsOtherCalls(t *test
 		if got := run(row.arch, row.nr); got != row.want {
 			t.Fatal("wrong fsync BPF return", got, row.want)
 		}
+	}
+}
+
+func TestOwnerCutLockObservationAcceptsBusyWithoutAcquiring(t *testing.T) {
+	if e := ownerCutLockBusy(unix.EWOULDBLOCK); e != nil {
+		t.Fatal("expected held catalog lock treated as failure", e)
+	}
+	if ownerCutLockBusy(nil) == nil {
+		t.Fatal("unheld catalog accepted")
+	}
+	if e := ownerCutLockBusy(unix.EBADF); !errors.Is(e, unix.EBADF) {
+		t.Fatal("unrelated probe failure hidden", e)
+	}
+	if ownerCutCatalogLocked() == nil {
+		t.Fatal("lock inode probe escaped L1 guard")
 	}
 }

@@ -17,7 +17,6 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
-	"golang.org/x/sys/unix"
 )
 
 type ownerCutReceipt struct {
@@ -221,18 +220,7 @@ func (n *node) quotaOwnerCutCheckpoint(ctx context.Context) (result map[string]a
 	if e = actualNestedVM(r.Keeper); e != nil {
 		return nil, nil, e
 	}
-	lock, e := n.openClearLock()
-	if e != nil {
-		return nil, nil, e
-	}
-	e = unix.Flock(int(lock.Fd()), unix.LOCK_EX|unix.LOCK_NB)
-	if e == nil {
-		unix.Flock(int(lock.Fd()), unix.LOCK_UN)
-		lock.Close()
-		return nil, nil, errors.New("owner directory commit escaped catalog serialization")
-	}
-	lock.Close()
-	if !errors.Is(e, unix.EWOULDBLOCK) {
+	if e = ownerCutCatalogLocked(); e != nil {
 		return nil, nil, e
 	}
 	var current sandbox.Record

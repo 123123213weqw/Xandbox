@@ -429,3 +429,40 @@ func ownerCutOwners(r copyCutReceipt) (bool, error) {
 	}
 	return victim, nil
 }
+
+// openClearLock deliberately ACQUIRES the lock for the old clear fixture; it
+// cannot be reused here, where observing EWOULDBLOCK is the desired evidence.
+func ownerCutLockBusy(e error) error {
+	if errors.Is(e, unix.EWOULDBLOCK) {
+		return nil
+	}
+	if e == nil {
+		return errors.New("owner directory commit escaped catalog serialization")
+	}
+	return fmt.Errorf("owner catalog lock probe: %w", e)
+}
+func ownerCutCatalogLocked() error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	fd, e := unix.Open(quotaClearLock, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if e != nil {
+		return e
+	}
+	defer unix.Close(fd)
+	var st, raw unix.Stat_t
+	if e = unix.Fstat(fd, &st); e != nil {
+		return e
+	}
+	if e = unix.Lstat(quotaClearLock, &raw); e != nil {
+		return e
+	}
+	if st.Mode != unix.S_IFREG|0600 || st.Uid != 0 || st.Gid != 0 || st.Nlink != 1 || st.Dev != raw.Dev || st.Ino != raw.Ino {
+		return errors.New("owner-cut catalog lock inode changed")
+	}
+	e = unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB)
+	if e == nil {
+		unix.Flock(fd, unix.LOCK_UN)
+	}
+	return ownerCutLockBusy(e)
+}
