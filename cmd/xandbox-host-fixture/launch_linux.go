@@ -45,7 +45,7 @@ func (p launchPolicy) resources() (memoryMiB int, diskBytes int64, cgroupBytes u
 	switch p.Profile {
 	case "":
 		return 2048, 2 << 30, 3 << 30, nil
-	case "quota-switch-v1":
+	case "quota-switch-v1", "quota-copy-v1":
 		return 3072, 4 << 30, 4 << 30, nil
 	}
 	return 0, 0, 0, errors.New("unknown bounded launch profile")

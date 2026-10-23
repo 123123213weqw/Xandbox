@@ -6,11 +6,29 @@ import tempfile
 from pathlib import Path
 import unittest
 
+from kvm_nested_host import nested_copy_resources,validate_quota_copy_setup
+
 from build_nested_host import init_scripts, validate_manifest
 from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, QUOTA_SWITCH_MAX_FRAME, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_copy_resources_are_explicit_and_do_not_change_legacy_profiles(self):
+        self.assertEqual(nested_copy_resources(),{'profile':'quota-copy-v1','memory_mib':3072,'disk_bytes':4<<30,'cgroup_memory_max':4<<30})
+        self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
+
+    def test_partial_copy_requires_actual_prefix_keeper_pins_error_and_gc(self):
+        flags=('test_only_write_errno_not_physical_eio','exact_child_thread_fd_owner_and_project_checked','actual_positive_partial_prefix_before_shared_links_and_vmm_birth','healthy_observer_sync_for_stable_prefix_not_latency_measurement','independent_named_inode_quota_accounting','durable_creating_and_exec409_and_capacity503_while_held','retired_template_pins_two_and_gc_zero_at_partial_boundary','live_keeper_data_and_execution_survived','ordinary_prepare500_and_private_eio_diagnostic_checked','victim_destroyed_resources_absent_quota_zero_key410','same_uid_project_reused_only_after_clear_with_new_ref_template_and_clean_guest','new_declaration_only_from_never_assigned_export','retired_backing_survived_until_last_keeper_release','last_pin_gc_removed_exact_old_template','all_four_project_records_zero_controller_reaped_parent_removed')
+        setup={k:True for k in ('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated')};setup['snapshot_memory_bytes']=512<<20
+        good={'genuine_l1_snapshot_setup':setup,'partial_copy':{**{k:True for k in flags},'partial_workspace_bytes':16<<20,'partial_project_space_bytes':(16<<20)+8192,'partial_project_inodes':3,'fixed_write_error_replies':1,'real_kernel_write_continue_replies':2200}}
+        validate_quota_copy_setup(good)
+        for k in flags:
+            bad=copy.deepcopy(good);bad['partial_copy'][k]=False
+            with self.assertRaises(AssertionError):validate_quota_copy_setup(bad)
+        for k,v in [('partial_workspace_bytes',128<<20),('partial_project_space_bytes',128<<20),('partial_project_space_bytes',(16<<20)+1),('partial_project_inodes',4),('fixed_write_error_replies',True),('fixed_write_error_replies',0),('real_kernel_write_continue_replies',8192)]:
+            bad=copy.deepcopy(good);bad['partial_copy'][k]=v
+            with self.assertRaises(AssertionError):validate_quota_copy_setup(bad)
+
     def test_explicit_switch_resources_and_image_preserve_legacy_bounds(self):
         self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
         self.assertEqual(nested_resources(True),{'profile':'quota-switch-v1','memory_mib':3072,'disk_bytes':4<<30,'cgroup_memory_max':4<<30})

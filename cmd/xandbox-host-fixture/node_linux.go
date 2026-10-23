@@ -59,7 +59,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -557,7 +557,7 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 		}
 		if e == nil {
 			timeout := 70 * time.Second
-			if q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
+			if q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
 			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
@@ -582,6 +582,8 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 				} else {
 					result, e = n.quotaSnapshotSetup(ctx)
 				}
+			case "quota-copy-setup":
+				result, e = n.quotaCopySetup(ctx)
 			case "quota-switch-setup":
 				result, e = n.quotaSwitchSetup(ctx)
 			case "quota-switch-run":
