@@ -124,12 +124,13 @@
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "new_runtime_quota_requalification",
+    "latest_runtime_validation": "schema3_snapshot_space_admission_pressure",
     "latest_component_validation": "pristine_bootstrap_component",
     "snapshot_execution_enabled_in_verified_baseline": false,
     "snapshot_execution_enabled_by_default": false,
     "latest_frozen_runtime_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
-    "full_new_runtime_requalification": "frozen2e_new3ea_default_io_and_quota240_dual_live_cold_named_failure_matrices_passed_schema3_pressure_and_full_production_acceptance_remaining"
+    "full_new_runtime_requalification": "frozen2e_new3ea_default_io_and_quota240_dual_live_cold_named_failure_matrices_passed_schema3_pressure_and_full_production_acceptance_remaining",
+    "latest_frozen_fixture_source": "d432e091c3110c069efa0bf44839f958c97c81aa"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -1261,5 +1262,35 @@
     "correction_negative_tests_executed": 34,
     "hardware_rules_reports_or_ELFs_modified_for_verifier": false,
     "scope": "New3ea schema2 nilNode quota-enabled busy240/dual-live cold and named fault submatrix. Immutable raw reports, exact source/native/cross and independent cleanup. Old physical-allocation golden corrected to existing kernel/private-namespace contract with full disclosure. Not schema3snapshot/fullnodepressure/uniqueRAM/openloop/fairness/operator/SLO or production certification."
+  },
+  "schema3_snapshot_space_admission_pressure": {
+    "production_ready": false,
+    "goal_complete": false,
+    "complete_pr19_acceptance": false,
+    "production_implementation_changed": false,
+    "ordinary_production_ELFs_unchanged_from_2e": true,
+    "frozen_source": "d432e091c3110c069efa0bf44839f958c97c81aa",
+    "design": "docs/NODE_SNAPSHOT_PRESSURE.md",
+    "provenance": "docs/validation/node-snapshot-provenance-v2.json",
+    "report": "docs/validation/kvm-node-snapshot-admission-v2.json",
+    "schema": 3,
+    "node_capacity": 4,
+    "actual_live_snapshot_clones": 2,
+    "guest_memory_touched_bytes_each": 8388608,
+    "inode_filler_files": 126592,
+    "free_inodes_before_delete": 5163,
+    "free_inodes_after_delete": 5177,
+    "inode_guard": 5776,
+    "byte_fallocate_reserved_length": 8330301440,
+    "observed_free_bytes": 2825740288,
+    "byte_guard": 3362619392,
+    "low_free_ordinary_start_and_reclaim_passed": true,
+    "new_case_l1_boots": 2,
+    "passing_related_scopes_including_new": 8,
+    "independently_absent_outer_execution_generations": 19,
+    "runner_exit_status": 0,
+    "hardware_prepare_permit_trace_claim": false,
+    "offline_builder_outside_NodeRoot_not_a_physical_node_pressure_proof": true,
+    "scope": "TEST external consumer in owned L1, not normal admitted usage/enforced external budget/nodewide quota. Separate exact guards, ordinary control-placement daemon+admin, low-free originaldisk cold, no owner/guest restoration, fresh2guest/pinsGC/q0/reaped. Not fullN4 RAM/OOM, actual blocked-copy permit trace, uniqueRAM, longduration/fairness/operator/SLO or complete production."
   }
 }

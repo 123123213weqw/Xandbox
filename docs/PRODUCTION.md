@@ -10,6 +10,8 @@
 
 目标：用 Go 实现面向云端短生命周期任务的单节点执行服务，优先验证快速切换、可靠停止和完整回收。第一版不包含 GPU、桌面、跨节点迁移或通用集群调度。
 
+另有[schema3 snapshot/inode/字节压力与低free cold有限门槛](NODE_SNAPSHOT_PRESSURE.md)：生产ELF不变、新fixture实测及8scope/19外层代际独立审计通过；实际permit并发、全RAM/OOM、外部日志/export硬边界及完整节点/生产门槛仍未完成。
+
 部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。
 
 ## 信任与隔离边界

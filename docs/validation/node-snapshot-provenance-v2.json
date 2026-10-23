@@ -1,0 +1,261 @@
+{
+  "status": "finite_schema3_snapshot_byte_inode_admission_pressure_and_low_free_ordinary_cold_recovery_passed_not_full_node_or_production_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source": "d432e091c3110c069efa0bf44839f958c97c81aa",
+  "source_archive_sha256": "3e479ee786452189b8b3f04c495d4b4cd86c24587217194cba1a084fe85f1fef",
+  "raw_reports_archive_sha256": "44ebc40a61cab5d0e4c5c6a397c0dc0ed628ab5b711e95b8d279f160285e6cd2",
+  "raw_archive_regular_members": 16,
+  "production_implementation_changed": false,
+  "only_new_internal_file_change_is_test": "internal/firecracker/node_policy_test.go",
+  "ordinary_production_ELFs_byte_equal_to_verified_2e": true,
+  "original_production_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "597b0d5990f37cd53034046a150c1b50b6c910047b546406ed4d7dbe1c66a5ce",
+    "daemon": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "19bbd460b8cd526f55fe0fe892985c593b47f3f102f0e071f35e7c7cf071d613",
+    "snapshot_builder": "243dedf173271f269391a84375c561409082bba3ddcde6f09143646ba10f3a62"
+  },
+  "explicit_policy": {
+    "launch_profile": "node-snapshot-v1",
+    "l1_ram_mib": 8192,
+    "l1_disk_bytes": 12884901888,
+    "outer_cgroup_memory_max": 10737418240,
+    "vcpus": 8,
+    "pids_max": 256,
+    "swap_max": 0,
+    "business_nics": 0,
+    "hard_seconds": 900,
+    "l0_available_ram_minimum": 34359738368,
+    "l0_free_disk_minimum": 25769803776,
+    "requested_ext4_inodes": 131072,
+    "declared_ext4_rounding_files_min": 131072,
+    "declared_ext4_rounding_files_max": 135168,
+    "node_instances": 4,
+    "node_records": 1024,
+    "node_sessions": 32,
+    "prepare_workers": 1,
+    "uid_project_slots": 4,
+    "private_hard_bytes": 201326592,
+    "private_hard_inodes": 128,
+    "retained_catalog_entries": 4,
+    "catalog_max_bytes": 2147483648,
+    "node_memory_max": 7516192768,
+    "control_memory_max": 1073741824,
+    "host_memory_reserve": 536870912,
+    "node_pids_max": 384,
+    "control_pids_max": 128,
+    "node_cpu_quota_us": 800000,
+    "cpu_period_us": 100000,
+    "node_io_bytes_per_second": 268435456,
+    "node_io_operations_per_second": 8192,
+    "node_disk_bytes": 10737418240,
+    "node_disk_inodes": 100000,
+    "external_disk_bytes": 2147483648,
+    "external_inodes": 2048,
+    "min_free_bytes": 268435456,
+    "min_free_inodes": 2048,
+    "old_profiles_unchanged": true
+  },
+  "new_case": {
+    "count": 1,
+    "l1_boots": 2,
+    "phase": "node-snapshot-space-pressure-checkpoint",
+    "setup": {
+      "builder_runtime_reclaimed": true,
+      "builder_two_independent_clones_checked": true,
+      "genuine_l1_unassigned_template_built": true,
+      "l1_host_abi_checked": true,
+      "offline_builder_outside_node_envelope_not_a_node_pressure_claim": true,
+      "ordinary_catalog_published_and_activated": true,
+      "publisher_inside_node_control": true,
+      "snapshot_memory_bytes": 536870912
+    },
+    "checkpoint": {
+      "byte_filler_allocated_bytes": 8330301440,
+      "byte_pressure_refuses_prepare_publish_existing_exec_continues": true,
+      "checkpoint_receipt_fsynced": true,
+      "free_byte_guard": 3362619392,
+      "free_inode_guard": 5776,
+      "guest_memory_touched_bytes_each": 8388608,
+      "healthy_synced_low_free_checkpoint_not_inflight_fault": true,
+      "inode_filler_files": 126592,
+      "inode_filler_removed_and_headroom_restored": true,
+      "inode_pressure_free_after_delete": 5177,
+      "inode_pressure_free_before_delete": 5163,
+      "inode_pressure_refuses_prepare_publish_but_stop_cleanup_continues": true,
+      "observed_free_bytes": 2825740288,
+      "prepare_permit_hardware_trace_claim": false,
+      "publisher_and_daemon_inside_control": true,
+      "publisher_refusal_specific_and_catalog_unchanged": true,
+      "real_nested_kvm": true,
+      "schema3_snapshot_exact_node_policy": true,
+      "two_actual_snapshot_clones_private_quota_shared_inode_pins_checked": true
+    },
+    "recovery": {
+      "all_four_projects_zero_controller_reaped_entire_node_subtree_removed": true,
+      "exact_policy_owner_namespace_quota_shared_backing_before_daemon": true,
+      "fresh_two_actual_guests_clean_workspace_new_boots": true,
+      "l1_boot_changed": true,
+      "low_free_guard_survived_cold_and_ordinary_start_reclaims": true,
+      "no_assigned_guest_or_owner_restoration": true,
+      "old_keys410_all_four_projects_zero_before_reuse": true,
+      "only_exact_owned_filler_removed_headroom_restored": true,
+      "retire_pins_gc_survivor_exec_and_final_gc_checked": true,
+      "same_unassigned_declaration_publish_succeeds_after_restore": true
+    },
+    "outer_execution_domain_stop_observed_ms": 98.603,
+    "outer_stop_scope": "N1 owned L1 execution-domain loss, not production destroy/physical media/SLO.",
+    "inode_pressure": "Exclusive root-owned fixed generated tree; only135168max formatted inode capacity and150000max empty generated files, no shared L0 filling. Actual before/after ordinary DELETE free inode counts remain below5776 guard but>=1024, bytes still above byte guard. Prepare500/specific Publish reserve error/no index mutation/key410; failed Prepare asyncGC returns allocated/queues to baseline before continuing. Only generated verified regular0byte UID0 single-link names removed, no RemoveAll/adoption.",
+    "byte_pressure": "Exclusive0600 root-owned file, FALLOCATE reserved length<=10GiB; actual st_blocks*512 verified AT LEAST this length, not an exact total physical/media allocation bill. Free bytes below3362619392. Target guard minus512MiB leaves old private reclaim headroom without falsely rising above guard before ordinary recovery.",
+    "external_boundary": "Filler is an intentional TEST trusted external consumer exceeding normal declared2GiB external disk budget to test refusal/recovery. Not ordinary admitted tenant usage, an enforced node-wide ext4 quota, or proof external logs/export are bounded.",
+    "cold_recovery": "Healthy synced LOW-free checkpoint, not in-flight commit. Exact same config/index/actual L1-built UNASSIGNED export, known initialized owners and private quota/namespace/logical identities/shared inodes before ordinary daemon; old execution absent. Ordinary startup and old reclaim/key410/all4q0/pins0 BEFORE removing exact filler, still under guard. Only exact owned filler inode/uid/mode/nlink/size unlinked then headroom restored. The same next declaration of never-assigned export publishes; fresh2actual guestUID/new boots/clean markers, retired pins2->1/GC0/survivorExec/lastGC1/all4q0/reaped/node subtree removed.",
+    "sharing_order": "Both live clones Ready/pins2 BEFORE both full namespace/shared-inode receipts; exact common inode attributes/link counts preserved on cold boot. No normalized link comparison/owner restoration/assigned guest snapshot/HostABI retarget.",
+    "builder_and_memory_scope": "Genuine L1 offline builder/two independent builder clones are trusted setup outside NodeRoot, not claimed ordinary preparation or all-node physical-memory stress. Ordinary daemon and every catalogadmin command run inside control. Two live guests touch8MiB each, not all4slots/full512MiB/OOM; physical unique-RAM billing and hardware prepare-permit trace explicitly unclaimed."
+  },
+  "prehardware_revisions": {
+    "source": "7c0566caba16a7a8a5992836df00fe95dd9a95b1",
+    "source_archive_sha256": "ae81e1f2494d0336791c0464722fd8ca02d105c317bef8c0c451cd77714cc295",
+    "cross_fixture_sha256": "ba6a4ffbd9a7028fce5cba93bc5c5d062107694fc004497719f13bb8268acc6e",
+    "remotely_executed": false,
+    "l1_boots": 0,
+    "hardware_failed_predecessor": false,
+    "reason": "Before any native/L1 execution, code audit strengthened failed-key410 handling: it can precede asynchronous failedPrepare reclamation. Finald432 waits fixed operator allocated/pool gauges back to baseline before continuing/cut. No acceptance thresholds loosened."
+  },
+  "native_regressions": {
+    "full_race_count": 3,
+    "vet": true,
+    "fixture_race_count": 10,
+    "fixture_vet": true,
+    "root_python_tests": 76,
+    "actual_cgo0_kernel_exec_filter_count": 3,
+    "darwin_full_race_count": 3,
+    "darwin_vet": true,
+    "darwin_executed_source": "d432e091c3110c069efa0bf44839f958c97c81aa",
+    "new_fixture_go_tests": 2,
+    "new_production_planner_test_only_tests": 1,
+    "new_python_tests": 4,
+    "all_normal_production_ELFs_match_existing_3ea_19bb_b290_243": true
+  },
+  "related_hardware": {
+    "old_schema3_cold_node_boots": 2,
+    "owner_unlink_pending_commit_boots": 2,
+    "unsynced_partial_copy_boots": 2,
+    "stable_partial_EIO_boots": 1,
+    "legacy_genuine_snapshot_cold_boots": 4,
+    "clear_owner_pin_boots": 2,
+    "six_fixed_errno_repeated_clear_cold_boots": 4,
+    "new_snapshot_pressure_boots": 2,
+    "passing_scopes": 8,
+    "total_outer_execution_generations": 19,
+    "runner_terminal_status": 0
+  },
+  "independent_cleanup": {
+    "scopes": 8,
+    "outer_execution_generations_absent": 19,
+    "exact_root_control_cgroup_parent_children_absent": true,
+    "exact_runner_absent": true,
+    "read_only_no_cleanup_actions": true,
+    "private_cut_receipts_0600_excluded": true,
+    "quota_proof_from_inside_L1_before_disk_deletion": true
+  },
+  "prior_production_evidence": {
+    "node-budget-provenance-v2.json": {
+      "sha256": "3631506494adc4ec7ffae2db915b2205d9b5940d962bef7f06453b2f5875de5d",
+      "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+      "not_relabelled_as_new_execution": true
+    },
+    "node-runtime-provenance-v1.json": {
+      "sha256": "51d48d8a73b978154934f9d03277365139ebe088870e8c9d87192ef5e95a15c6",
+      "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+      "not_relabelled_as_new_execution": true
+    },
+    "node-quota-provenance-v1.json": {
+      "sha256": "6a82b58d46190edace1434ade271765e52afa9f4e96a1a8aa620dd831e56e00f",
+      "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+      "not_relabelled_as_new_execution": true
+    }
+  },
+  "privacy": "Whitelist16 raw regular members:8JSON+5native logs+pipeline/status/artifacts. Exact authenticated independent audit stdout captured separately. No raw console/private L1 filler or session/cut receipts/identities/credentials/images public.",
+  "not_completed": [
+    "Hardware prepare-permit concurrency trace, cancelled waiters and cleanup under actual blocked copy; full worst-case ancestor/affinity/physical memory/guest saturation/OOM matrix.",
+    "Unique-page attribution/cost billing, long-duration open-loop/fairness/operator/SLO; external logs/export bounds.",
+    "Other owner/catalog metadata windows and durable replacement of slow catalog-lock commits, physical media/secure erase/dual-supervisor.",
+    "Prewarm/complete initialization frames, tombstone archive/rotation, durable audit/alerts/backup/upgrade/rollback, fullM1-M4/finalPR19acceptance/merge/mainarchive/Goal/production readiness."
+  ],
+  "files": {
+    "kvm-node-snapshot-admission-v2.json": {
+      "sha256": "280e354ef0599d31fe7d5c1e3d075375ed941e510418fa563bcf3a2025acfab7",
+      "bytes": 8133
+    },
+    "kvm-node-snapshot-node-v2.json": {
+      "sha256": "d3b2e7422723b8bfcc1c0b9381bc24df33b86d85ee497a96f6313e4388723425",
+      "bytes": 7609
+    },
+    "kvm-node-snapshot-owner-v2.json": {
+      "sha256": "f7b2ddb3db8fbda543b2189c976577eff4db4d33ca534d2bd88889044802c182",
+      "bytes": 9775
+    },
+    "kvm-node-snapshot-inflight-v2.json": {
+      "sha256": "e1b34fdeee4b5498285fdb4c2d7279eee6f8ebdcc6d06317790370559c4a7acf",
+      "bytes": 8865
+    },
+    "kvm-node-snapshot-partial-v2.json": {
+      "sha256": "34bf94087b8cf6efb09e67cc059108a4c591a03ceca75c13dd33df88b8087dca",
+      "bytes": 8668
+    },
+    "kvm-node-snapshot-snapshot-v2.json": {
+      "sha256": "bc70a8364a2df1dcd20c34d0cf1015357fa56dc2427900fca9d90608719bea16",
+      "bytes": 9294
+    },
+    "kvm-node-snapshot-clear-v2.json": {
+      "sha256": "bc2cd115740643e9e9e18f5994073dbd05b5b53b3c1454afa4acf12d1a12ab2e",
+      "bytes": 7099
+    },
+    "kvm-node-snapshot-syscalls-v2.json": {
+      "sha256": "661d36a4e808c9a26ea0ae701a981de0f5fa04e83f7a9f9e9119dcc0c3172854",
+      "bytes": 13732
+    },
+    "node-snapshot-native-race-v2.txt": {
+      "sha256": "c995f989d0c11530892f21fd40af274e01e2bd501b3e0ce2d38fcb238e3ddb0b",
+      "bytes": 1639
+    },
+    "node-snapshot-fixture-native-race-v2.txt": {
+      "sha256": "1b70b36ec75c95e3a9cc4ae228e94449e7ff849e3e513daead5fbc7b72512b77",
+      "bytes": 70
+    },
+    "node-snapshot-cgo0-kernel-filter-v2.txt": {
+      "sha256": "4b14e234ee3e2735ea239e295457dc162f022529d4b5773fe3a5a761ce66109a",
+      "bytes": 846
+    },
+    "node-snapshot-native-artifacts-v2.txt": {
+      "sha256": "2ecb61e54d3561ec8433b334a57c7817e065a729be864e9881b485affef48b3f",
+      "bytes": 492
+    },
+    "node-snapshot-pipeline-v2.txt": {
+      "sha256": "e2682665bb6fb7ed294c337b1ec81f599773b7671a7cd330f2fcc45b9f7d0840",
+      "bytes": 1996
+    },
+    "node-snapshot-independent-cleanup-v2.txt": {
+      "sha256": "577f280a741d514eee2fd293535fe7ed50dd7cb1d88056831871c8aa802f1452",
+      "bytes": 1205
+    },
+    "node-snapshot-final-darwin-race-v2.txt": {
+      "sha256": "2a36c1a05ed21991b32f899851052c19e3b0b56281b123b04e22985e16a376de",
+      "bytes": 1532
+    }
+  }
+}

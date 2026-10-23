@@ -28,6 +28,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [Version3节点总资源准入](docs/NODE_BUDGET.md)：新生产ELF `3ea1e247…` 的4真实KVM/第5拒绝、父限制漂移下继续Stop/Cleanup/Exec、原盘cold回收有限门槛通过；7个相关scope/17个外层代际已独立核验清理，CPU/pids错误的零boot前序保留。[新程序默认/IO兼容复验](docs/RUNTIME_REQUALIFICATION.md)已另通过13个scope（含两租户各120次）；[新程序quota240/双活cold与故障矩阵](docs/QUOTA_REQUALIFICATION.md)也已另通过12个scope/34外层代际，保留离线核验器物理分配golden修正的完整说明。不是节点满载、uniqueRAM计费或生产就绪，历史522报告不替代新ELF证明。
 
+新增 [schema3快照与独立inode/字节压力](docs/NODE_SNAPSHOT_PRESSURE.md)：普通生产ELF不变，126592个空文件和8330301440字节预留分别触发准入拒绝，Stop/Cleanup与低free原盘cold普通回收通过；8相关scope/19外层代际独立核验清理。不是full RAM/OOM、硬件prepare并发轨迹或生产认证。
+
 新增 [owner删除后目录提交未返回的冷恢复](docs/OWNER_COMMIT_FIXTURE.md)：断电前owner名已消失，冷后原owner字节重新出现而quota清零保留；RECLAIMING/capacity503及普通回收/新真实guest/pins/GC通过。失败前序保留；不是全局catalog不阻塞或完整生产验收。
 
 新增 [未主动同步的部分复制宿主掉电](docs/PARTIAL_COPY_CUT_FIXTURE.md)：固定16MiB在途窗口原盘冷恢复通过；冷后workspace名消失、两目录8192字节/两inodes独立核账，普通回收/旧键拒绝/新真实guest与keeper pins通过。失败前序保留；不是介质错误或完整生产验收。
