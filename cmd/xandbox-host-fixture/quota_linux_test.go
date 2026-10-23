@@ -5,7 +5,11 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"strings"
+
 	"fmt"
+	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"os"
 	"path/filepath"
 	"testing"
@@ -193,5 +197,73 @@ func TestSharedSnapshotHashChecksWholeExactRegularFile(t *testing.T) {
 	}
 	if _, e = sharedQuotaHash(dir, int64(len(content))); e == nil {
 		t.Fatal("directory accepted")
+	}
+}
+
+func TestNegativeQuotaHelpersAreFixedAndNeverRunOnL0(t *testing.T) {
+	for _, name := range []string{"", "../block", "block/../../", "/srv", "shell"} {
+		if _, e := negativeBase(name); e == nil {
+			t.Fatal("arbitrary case path accepted")
+		}
+		if _, e := negativeDaemonArgs(name); e == nil {
+			t.Fatal("arbitrary daemon config accepted")
+		}
+	}
+	for _, name := range negativeQuotaCases {
+		args, e := negativeDaemonArgs(name)
+		if e != nil || len(args) != 11 {
+			t.Fatal("bad fixed daemon arguments", e, args)
+		}
+		if e = runNegativeQuotaDaemon(name); e == nil {
+			t.Fatal("negative helper escaped L1 guard")
+		}
+		if _, e = startNegativeDaemon(context.Background(), name, "first"); e == nil {
+			t.Fatal("negative daemon launched on L0")
+		}
+	}
+	if _, e := (&node{quotaDriver: true}).quotaNegativeSetup(context.Background()); e == nil {
+		t.Fatal("negative setup escaped L1 PID1 guard")
+	}
+	if e := (nodeRequest{Version: 1, Operation: "quota-negative-setup"}).validate(); e != nil {
+		t.Fatal(e)
+	}
+	if e := (nodeRequest{Version: 1, Operation: "quota-negative-setup", Phase: "block"}).validate(); e == nil {
+		t.Fatal("arbitrary negative protocol phase accepted")
+	}
+}
+
+func TestNegativeLedgerInspectionIsReadOnlyBoundedAndExact(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "s/ledger")
+	if e := os.MkdirAll(dir, 0700); e != nil {
+		t.Fatal(e)
+	}
+	refs := []sandbox.Ref{{ID: strings.Repeat("1", 32), Generation: strings.Repeat("2", 32)}, {ID: strings.Repeat("3", 32), Generation: strings.Repeat("4", 32)}}
+	write := func(ref sandbox.Ref) {
+		t.Helper()
+		b, e := json.Marshal(map[string]any{"version": 1, "record": sandbox.Record{Ref: ref}})
+		if e != nil {
+			t.Fatal(e)
+		}
+		if e = os.WriteFile(filepath.Join(dir, ref.ID+".json"), b, 0600); e != nil {
+			t.Fatal(e)
+		}
+	}
+	write(refs[0])
+	if r, e := negativeLedgerRef(base, sandbox.Ref{}); e != nil || r != refs[0] {
+		t.Fatal("single ref not read exactly", r, e)
+	}
+	write(refs[1])
+	if r, e := negativeLedgerRef(base, refs[0]); e != nil || r != refs[1] {
+		t.Fatal("second capacity attempt not distinct", r, e)
+	}
+	if _, e := negativeLedgerRef(base, sandbox.Ref{}); e == nil {
+		t.Fatal("unexpected multiple identities accepted")
+	}
+	if e := os.WriteFile(filepath.Join(dir, refs[1].ID+".json"), []byte(strings.Repeat("x", (64<<10)+1)), 0600); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := negativeLedgerRef(base, refs[0]); e == nil {
+		t.Fatal("oversized private envelope accepted")
 	}
 }

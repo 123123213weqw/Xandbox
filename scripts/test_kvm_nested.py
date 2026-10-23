@@ -7,10 +7,35 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_negative_report_requires_every_case_and_no_false_success(self):
+        rows=[]
+        for name in ('cap','uuid','unknown','binding','block','inode'):
+            row={'case':name,'ordinary_daemon':True,'all_fixed_project_records_cleared':True,'owned_cgroup_root_removed':True}
+            if name in ('cap','uuid','unknown'):row.update(specific_startup_rejection_checked=True,no_api_socket_after_rejection=True)
+            if name=='unknown':row['unknown_record_unchanged_before_owned_fixture_cleanup']=True
+            if name=='binding':row['changed_policy_rejected_original_binding_unchanged']=True
+            if name in ('block','inode'):
+                for key in ('actual_prepare_edquot_private_log_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned'):row[key]=True
+                row.update(hard_bytes=(16<<20 if name=='block' else 192<<20),hard_inodes=(128 if name=='block' else 1))
+            rows.append(row)
+        good={'all_fixed_negative_projects_cleared':True,'positive_backend_not_yet_bound':True,'ordinary_daemon_negative_cases':rows}
+        validate_negative_setup(good)
+        variants=[]
+        for key in ('all_fixed_negative_projects_cleared','positive_backend_not_yet_bound'):
+            bad=copy.deepcopy(good);bad[key]=False;variants.append(bad)
+        bad=copy.deepcopy(good);bad['ordinary_daemon_negative_cases'].pop();variants.append(bad)
+        for index,row in enumerate(rows):
+            for key,value in row.items():
+                if value is True:
+                    bad=copy.deepcopy(good);bad['ordinary_daemon_negative_cases'][index][key]=False;variants.append(bad)
+        bad=copy.deepcopy(good);bad['ordinary_daemon_negative_cases'][-1]['hard_inodes']=2;variants.append(bad)
+        for bad in variants:
+            with self.assertRaises(AssertionError):validate_negative_setup(bad)
+
     def test_snapshot_quota_profile_is_separate_from_cold_and_never_loads_on_l0(self):
         _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_snapshot=True)
         self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)

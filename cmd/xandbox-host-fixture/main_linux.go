@@ -36,6 +36,12 @@ func main() {
 				err = runQuotaDaemon()
 			}
 		}
+	case "quota-negative-cap", "quota-negative-uuid", "quota-negative-unknown", "quota-negative-binding", "quota-negative-block", "quota-negative-inode":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("negative daemon accepts no parameters")
+		} else {
+			err = runNegativeQuotaDaemon((*mode)[len("quota-negative-"):])
+		}
 	case "node-quota":
 		err = runNodeOptions(false, true)
 	case "quota-drop", "quota-limited":

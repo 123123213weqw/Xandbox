@@ -76,6 +76,21 @@ def replace_private_json(path, value):
         if temporary.exists(): temporary.unlink()
 
 
+def validate_negative_setup(value):
+    assert value['all_fixed_negative_projects_cleared'] is True and value['positive_backend_not_yet_bound'] is True
+    rows=value['ordinary_daemon_negative_cases']
+    assert [r['case'] for r in rows]==['cap','uuid','unknown','binding','block','inode']
+    for r in rows:
+        assert all(r[k] is True for k in ('ordinary_daemon','all_fixed_project_records_cleared','owned_cgroup_root_removed'))
+        if r['case'] in ('cap','uuid','unknown'):
+            assert r['specific_startup_rejection_checked'] is True and r['no_api_socket_after_rejection'] is True
+        if r['case']=='unknown': assert r['unknown_record_unchanged_before_owned_fixture_cleanup'] is True
+        if r['case']=='binding': assert r['changed_policy_rejected_original_binding_unchanged'] is True
+        if r['case'] in ('block','inode'):
+            assert all(r[k] is True for k in ('actual_prepare_edquot_private_log_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned'))
+            assert (r['hard_bytes'],r['hard_inodes'])==((16<<20,128) if r['case']=='block' else (192<<20,1))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
@@ -83,12 +98,13 @@ def main():
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument('--quota-negatives', action='store_true', help='TEST ONLY: ordinary driver EDQUOT and startup rejection cases before cold recovery')
     profiles.add_argument('--quota-snapshot', action='store_true', help='TEST ONLY: genuinely L1-built pristine snapshot with ordinary driver quota')
     profiles.add_argument('--quota-driver', action='store_true', help='TEST ONLY: ordinary-driver quota lifecycle and coldboot')
     profiles.add_argument('--quota-probe', action='store_true', help='TEST ONLY: ext4 project quota kernel prerequisites, NOT production enforcement')
     profiles.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
     args = parser.parse_args(); os.umask(0o077)
-    driver_profile = args.quota_driver or args.quota_snapshot
+    driver_profile = args.quota_driver or args.quota_snapshot or args.quota_negatives
     if args.quota_snapshot: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
     else: assert not args.admin and not args.snapshot_builder and not args.snapshot_seed_manifest
     assert os.geteuid() == 0 and os.uname().sysname == 'Linux' and os.uname().machine == 'x86_64'
@@ -113,9 +129,9 @@ def main():
         assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
         for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
     phases = ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if args.state_io else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+    result = {'test':'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
         'production_ready':False,'passed':False,'state_io_profile':args.state_io,'quota_prerequisite_profile':args.quota_probe,
-        'production_driver_quota':driver_profile,'quota_snapshot_profile':args.quota_snapshot,
+        'production_driver_quota':driver_profile,'quota_snapshot_profile':args.quota_snapshot,'quota_negative_profile':args.quota_negatives,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -126,7 +142,7 @@ def main():
         'outer_disk_format':'raw','outer_disk_cache':'none','outer_disk_aio':'native','cases':[],
         'l1_boots_completed':0,'checkpoint_progress':[],
         'limitations':['Forced loss of our isolated L1 service-host VM, not physical L0 power/media failure.',
-            'No TCG fallback, migration, snapshot save/restore or shared host reboot.',
+            'No TCG fallback, outer QEMU migration/snapshot save/restore, or shared L0 host reboot; this does not prohibit real L2 Firecracker snapshot operations.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
     if args.quota_probe or driver_profile:
@@ -146,7 +162,7 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=args.quota_driver,quota_snapshot=args.quota_snapshot)
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives),quota_snapshot=args.quota_snapshot)
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
@@ -204,7 +220,7 @@ def main():
                 return console.exists() and b'XANDBOX_NESTED_HOST_READY' in console.read_bytes()
             wait(ready,'L1 fixture boot',seconds=90)
             qmp_probe(root/'qmp.sock')
-            channel=JSONSocket(root/'control.sock',210 if args.quota_snapshot else 90)
+            channel=JSONSocket(root/'control.sock',210 if (args.quota_snapshot or args.quota_negatives) else 90)
             channel.send({'version':1,'operation':'probe'}); reply=channel.read()
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
             assert disk.stat().st_size==DISK_BYTES
@@ -230,6 +246,9 @@ def main():
             return elapsed
         boot()
         if args.quota_snapshot: result['snapshot_setup']=request('quota-snapshot-setup')
+        if args.quota_negatives:
+            result['negative_setup']=request('quota-negative-setup')
+            validate_negative_setup(result['negative_setup'])
         for phase in phases:
             checkpoint=request('quota-probe') if args.quota_probe else request('io-fault' if args.state_io else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
             assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
