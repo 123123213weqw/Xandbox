@@ -131,6 +131,24 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 仍未覆盖held-quota、listener失效、重复clear错误、逐syscall崩溃/重启、partial-copy Prepare与snapshot pin故障组合；owner unlink/目录fsync、完整新运行时回归、节点总预算、最终PR19 CI与M1–M4门槛也未完成。PR19继续Draft，不因此宣称生产就绪。
 
+### 显式filesystem提交屏障与真实内核挂起（最新有限证据）
+
+当前生产代码已变化：普通daemon为 `522da68e…`，不再是前轮 `ab547783…`；**完整新运行时矩阵尚未完成**，不能沿用旧报告认定新运行时已全部验收。新增[精确provenance与角色SHA](validation/quota-barrier-provenance-v1.json)、[原始目标报告](validation/kvm-quota-barrier-v1.json)。
+
+上游[Linux6.8 ext4](https://github.com/torvalds/linux/blob/v6.8/fs/ext4/super.c)启用内部quota时设置SYS_FILE/NOLIST_DIRTY；[dquot_quota_sync](https://github.com/torvalds/linux/blob/v6.8/fs/quota/dquot.c)在SYS_FILE路径可不调用sync_fs/sync_blockdev就返回。不能将Q_SYNC/GET成功直接等同于明确的filesystem提交边界。普通驱动现改为 `Q_SYNC → syncfs(已保留的runtime anchor FD)`，任一步出错均向上传递；Prepare和owner释放必须等待该屏障。根据[syncfs接口](https://man7.org/linux/man-pages/man2/syncfs.2.html)，它是**整个anchor所在文件系统**的提交，不是每project独立flush、有限时延或介质认证。quota I/O仍在catalog pin锁外，owner unlink/目录fsync仍在锁内。
+
+固定夹具在**SET之前**持久化attempt owner/ref/key/policy receipt并核对quota初始全空；随后CONTINUE真实SET/GET/Q_SYNC，在下一次实际syncfs通知处核对限额192MiB/128 inode、usage0及owner未变、尚无执行namespace。SET后观察器不做fsync/syncfs。然后向预先建立的固定project0文件写4MiB但不同步，暂停自己的L1 mapper（NOFLUSH/SKIP_LOCKFS），再CONTINUE，让普通syncfs**真正进入内核文件系统I/O**。
+
+验收要求同一daemon/通知线程的SYS_SYNCFS、确切anchor FD、D状态及同时含syncfs/sync_filesystem且**不含seccomp**的kernel stack，连续三次100ms间隔复核。仅D状态不足：WAIT_KILLABLE_RECV本身也可能D。此次真实内核挂起时Create无ACK、状态仍CREATING、新key503；之后不再读quota或新读写/sync `/srv`，保留所有句柄直到切断自己的L1。这个检查点是**pre-fork、没有旧L2 VM出生**，不伪造旧guest执行或boot变化。
+
+同盘冷启动先核对原owner字节、策略及空namespace，再观察到**quota记录全空**：故障前已装限额、Q_SYNC已返回，但未返回的filesystem提交并不保证这些限额落盘。普通恢复仍可依据durable attempted owner精确回收旧CREATING代至DESTROYED/旧key410，之后由**无测试通知器的普通启动方式**创建真实KVM/UID65534 guest、执行/销毁、所有三个固定project清零。只接受空或精确已知限额且usage0，不收养未知记录。该结果发生于Prepare未完成/未ACK窗口，**不是已确认READY实例丢失限额的证据**。
+
+[旧daemon负对照](validation/kvm-quota-barrier-old-v1.json)按预期passed=false、1次L1开机且清理成功：它未调用所选的显式syncfs，因此Prepare完成而未命中该屏障。旧daemon来自前轮 `9e0ddc9…` / `ab547783…`，测试fixture来自本轮，角色来源明确分开。由于旧例没有触发所选syncfs，夹具没有给它注入对应I/O暂停；**不能据此宣称旧READY/DESTROYED确认不安全、journal损坏或做同故障延迟对比**，其后续普通fsync也可能提交journal。原始失败保持不变。
+
+源码冻结 `a57f703d0c5ec9d3440430c573690df2856d39ae`；new native daemon/admin/builder/fixture及原warden五个ELF与独立交叉构建精确匹配，原guest initrd未变。native full race×3/vet、fixture race×10/vet、root Python47项、实际CGO0 kernel/exec filter×3与Darwin race×3/vet通过。新runtime还通过[6个errno及cold三检查点](validation/kvm-quota-barrier-syscalls-v1.json)、[post-clear owner/pin掉电](validation/kvm-quota-barrier-clear-v1.json)、[真正L1 snapshot/shared2+cold3](validation/kvm-quota-barrier-snapshot-v1.json)、[quota整盘I/O](validation/kvm-quota-barrier-io-v1.json)及[默认nil-quota I/O](validation/kvm-quota-barrier-default-io-v1.json)有限回归。[独立只读审计](validation/quota-barrier-independent-cleanup-v1.txt)含旧负对照共7个scope/23个外层执行代际，路径/执行域均无；quota证据来自删盘前L1实际读回。
+
+syncfs错误顺序/EIO/EROFS传播目前另有unit证明，**不是实际syncfs EIO/EROFS syscall故障验收**；release提交挂起/掉电、重复错误、listener失效、partial-copy Prepare、snapshot pin组合、owner元数据窗口、完整新522运行时矩阵、节点预算和最终exact-head CI仍待完成。目标与PR19继续未完成，不以本项通过勾选完整M2。
+
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 
 ## TEST ONLY 夹具的边界

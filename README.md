@@ -18,6 +18,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。本分支另有普通驱动quota的实验性接入，cold与真正L1-built snapshot的有限恢复、双实例共享pin/配额检查已通过；quota清零已移出catalog pin锁，普通daemon实际EDQUOT和启动拒绝亦已有有限检查；quota启用时的整state I/O及quota清零后owner/pin仍保留的精确掉电窗口也已有限通过；另有6个固定quota syscall errno注入例通过（额外TEST ONLY启动层，非物理介质故障）；held/重复错误/逐syscall崩溃窗口与完整新运行时验收尚未完成，不能按生产能力启用。
 
+新增quota显式filesystem提交屏障：普通daemon已更新为 `522da68e…`，真实syncfs内核挂起/pre-fork掉电恢复及有限回归通过；Q_SYNC返回不再被当作独立提交屏障。完整新运行时验收仍未完成，见[配额证据边界](docs/PROJECT_QUOTA.md)。
+
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
 停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。
