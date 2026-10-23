@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 )
 
@@ -33,14 +35,37 @@ func run(args []string, out, diagnostic io.Writer) error {
 		return e
 	}
 	if *dir == "" || f.NArg() != 1 || *timeout <= 0 || *timeout > time.Minute {
-		return errors.New("usage: xandbox-node -state-dir DIR [-epoch E -revision R -request-id ID] status|drain|resume")
+		return errors.New("usage: xandbox-node -state-dir DIR [-epoch E -revision R -request-id ID] status|drain|resume|diagnostics")
 	}
 	op := f.Arg(0)
-	if op != "status" && op != "drain" && op != "resume" {
+	if op != "status" && op != "drain" && op != "resume" && op != "diagnostics" {
 		return errors.New("unknown fixed operator command")
 	}
-	if op == "status" && (*epoch != "" || *revision != 0 || *id != "") {
-		return errors.New("status accepts no mutation fields")
+	if (op == "status" || op == "diagnostics") && (*epoch != "" || *revision != 0 || *id != "") {
+		return errors.New("read-only commands accept no mutation fields")
+	}
+	if op == "diagnostics" {
+		explicitTimeout := false
+		f.Visit(func(v *flag.Flag) {
+			if v.Name == "timeout" {
+				explicitTimeout = true
+			}
+		})
+		if explicitTimeout {
+			return errors.New("diagnostics accepts no RPC timeout; filesystem reads have no deadline guarantee")
+		}
+		// Independent read-only private view: no daemon, RPC, writer, directory
+		// creation, state-lock acquisition or authority repair. Bounded retry is
+		// not an I/O deadline and a live observation is not a durable audit ACK.
+		abs, e := filepath.Abs(*dir)
+		if e != nil {
+			return diagnostics.ErrWrite
+		}
+		view, e := diagnostics.Read(filepath.Join(abs, "diagnostics"))
+		if e != nil {
+			return diagnostics.ErrWrite
+		}
+		return json.NewEncoder(out).Encode(view)
 	}
 	var command nodecontrol.Command
 	if op != "status" {

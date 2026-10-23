@@ -143,7 +143,7 @@ func (n *node) shutdownContender(ctx context.Context, s *operatorShutdownObserve
 	cmd.Stdout, cmd.Stderr = &out, &out
 	e = cmd.Run()
 	var ex *exec.ExitError
-	if !errors.As(e, &ex) || ex.ExitCode() != 1 || short.Err() != nil || out.Len() > 16384 || !strings.Contains(out.String(), "state directory already locked by another controller") {
+	if !errors.As(e, &ex) || ex.ExitCode() != 1 || short.Err() != nil || out.Len() > 16384 || !strings.Contains(out.String(), "sandboxd: state directory already locked") {
 		return errors.New("same ordinary contender did not promptly fail actual state lock")
 	}
 	current, e := os.Lstat("/srv/state/controller.lock")

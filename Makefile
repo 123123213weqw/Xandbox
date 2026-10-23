@@ -28,3 +28,4 @@ smoke: build
 	python3 scripts/session_smoke.py --daemon "$(BIN_DIR)/sandboxd"
 	python3 scripts/metrics_smoke.py --daemon "$(BIN_DIR)/sandboxd"
 	python3 scripts/node_control_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"
+	python3 scripts/diagnostics_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"

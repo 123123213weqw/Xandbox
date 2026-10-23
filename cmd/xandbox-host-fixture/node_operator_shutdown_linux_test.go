@@ -4,9 +4,11 @@ package main
 
 import (
 	"context"
+	"testing"
+
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"golang.org/x/sys/unix"
-	"testing"
 )
 
 func TestOperatorShutdownNoL0OrGenericRPC(t *testing.T) {
@@ -62,14 +64,47 @@ func TestOperatorShutdownNoL0OrGenericRPC(t *testing.T) {
 		t.Fatal("shutdown cannot claim post-commit")
 	}
 }
-func TestOperatorShutdownErrorMustBeExactControlCloseNotOtherFailure(t *testing.T) {
-	good := []byte(`level=ERROR msg="sandboxd failed" error="control mutation unfinished; retain state ownership: context deadline exceeded"`)
-	if shutdownErrorLog(good) != nil {
-		t.Fatal("expected real exit diagnostic")
+func TestOperatorShutdownDiagnosticsRequireExactControlCloseAndCompletedDrain(t *testing.T) {
+	good := diagnostics.Snapshot{Version: 1, ObservedSequence: 4, RetainedCapacity: diagnostics.RetainedRecords, Records: []diagnostics.Record{
+		{Sequence: 1, Event: diagnostics.Event{Kind: diagnostics.ServiceKVM, TimeNS: 1}},
+		{Sequence: 2, Event: diagnostics.Event{Kind: diagnostics.ControlUnfinished, Reason: diagnostics.Deadline, TimeNS: 2}},
+		{Sequence: 3, Event: diagnostics.Event{Kind: diagnostics.ProcessFailed, Reason: diagnostics.Deadline, TimeNS: 3}},
+		{Sequence: 4, Event: diagnostics.Event{Kind: diagnostics.CollectorClosed, TimeNS: 4}},
+	}}
+	if e := shutdownDiagnostics(good); e != nil {
+		t.Fatal(e)
 	}
-	for _, bad := range [][]byte{nil, []byte("context deadline exceeded"), []byte("sandboxd failed"), append(append([]byte(nil), good...), []byte(" cleanup unfinished")...), append(append([]byte(nil), good...), []byte(" session mutations unfinished")...), append(append([]byte(nil), good...), []byte(" operator listener failed")...), make([]byte, 65537)} {
-		if shutdownErrorLog(bad) == nil {
-			t.Fatal("unrelated/fatal/bounded diagnostic accepted")
+	for i := 0; i < 12; i++ {
+		bad := good
+		bad.Records = append([]diagnostics.Record(nil), good.Records...)
+		switch i {
+		case 0:
+			bad.Version = 0
+		case 1:
+			bad.Overwritten = 1
+		case 2:
+			bad.ObservedSequence++
+		case 3:
+			bad.RetainedCapacity++
+		case 4:
+			bad.Records = bad.Records[:3]
+		case 5:
+			bad.Records[1].Event.Reason = diagnostics.Other
+		case 6:
+			bad.Records[1].Event.Kind = diagnostics.CleanupUnfinished
+		case 7:
+			bad.Records[1].Event.Kind = diagnostics.SessionUnfinished
+		case 8:
+			bad.Records[1].Event.Kind = diagnostics.OperatorUnfinished
+		case 9:
+			bad.Records[1].Event.Kind = diagnostics.ListenerFailed
+		case 10:
+			bad.Records[2].Event.DroppedBefore = 1
+		case 11:
+			bad.Records[3].Sequence = 3
+		}
+		if shutdownDiagnostics(bad) == nil {
+			t.Fatal("unrelated/gap/lost diagnostic accepted", i)
 		}
 	}
 }

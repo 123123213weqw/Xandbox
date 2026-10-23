@@ -13,7 +13,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/123123213weqw/Xandbox/internal/privatefile"
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"golang.org/x/sys/unix"
 )
 
@@ -125,10 +125,45 @@ func (s *operatorShutdownObserver) targetTGID(q quotaNotif) (bool, error) {
 	}
 	return true, nil
 }
-func shutdownErrorLog(data []byte) error {
-	text := string(data)
-	if len(data) == 0 || len(data) > 65536 || !strings.Contains(text, "sandboxd failed") || !strings.Contains(text, "control mutation unfinished; retain state ownership: context deadline exceeded") || strings.Contains(text, "cleanup unfinished") || strings.Contains(text, "session mutations unfinished") || strings.Contains(text, "operator listener failed") {
-		return errors.New("exact unfinished control Close error after lifecycle defers required")
+
+// The ordinary daemon no longer serializes raw errors to inherited stderr.
+// This test requires a completed bounded diagnostic drain after control.Close's
+// real deadline, and rejects unrelated lifecycle/listener/operator failures.
+// It is not durable tenant-operation audit coverage.
+func shutdownDiagnostics(v diagnostics.Snapshot) error {
+	if v.Version != 1 || v.RetainedCapacity != diagnostics.RetainedRecords || v.Overwritten != 0 || v.ObservedSequence == 0 || len(v.Records) < 4 || len(v.Records) > diagnostics.RetainedRecords || uint64(len(v.Records)) != v.ObservedSequence {
+		return errors.New("bounded complete shutdown diagnostic view required")
+	}
+	control, failed := 0, 0
+	for i, r := range v.Records {
+		if r.Sequence != uint64(i+1) || r.Event.DroppedBefore != 0 || r.Event.TimeNS <= 0 {
+			return errors.New("shutdown diagnostic gap/loss")
+		}
+		switch r.Event.Kind {
+		case diagnostics.ServiceKVM:
+			if i != 0 || r.Event.Reason != diagnostics.Other {
+				return errors.New("unexpected startup diagnostic")
+			}
+		case diagnostics.ControlUnfinished:
+			control++
+			if r.Event.Reason != diagnostics.Deadline || i != len(v.Records)-3 {
+				return errors.New("control Close deadline diagnostic required")
+			}
+		case diagnostics.ProcessFailed:
+			failed++
+			if r.Event.Reason != diagnostics.Deadline || i != len(v.Records)-2 {
+				return errors.New("exact failed shutdown diagnostic required")
+			}
+		case diagnostics.CollectorClosed:
+			if i != len(v.Records)-1 || r.Event.Reason != diagnostics.Other {
+				return errors.New("completed writer drain required")
+			}
+		default:
+			return errors.New("unrelated shutdown failure diagnostic")
+		}
+	}
+	if control != 1 || failed != 1 || v.Records[len(v.Records)-1].Event.Kind != diagnostics.CollectorClosed {
+		return errors.New("missing control shutdown diagnostic")
 	}
 	return nil
 }
@@ -147,11 +182,11 @@ func (s *operatorShutdownObserver) selectExit(q quotaNotif) (bool, error) {
 	if e = operatorStoreSequence(operatorStorePre, s.store.snapshot()); e != nil {
 		return false, e
 	}
-	b, e := privatefile.Read(operatorShutdownLog, 65536)
+	view, e := diagnostics.Read("/srv/state/diagnostics")
 	if e != nil {
 		return false, e
 	}
-	if e = shutdownErrorLog(b); e != nil {
+	if e = shutdownDiagnostics(view); e != nil {
 		return false, e
 	}
 	s.store.mu.Lock()

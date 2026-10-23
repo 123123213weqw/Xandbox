@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 )
 
 func TestFixedBinsAndInvalidObservations(t *testing.T) {
@@ -73,5 +75,18 @@ func TestObserverHasNoHeapAllocation(t *testing.T) {
 	r := &Registry{}
 	if n := testing.AllocsPerRun(1000, func() { r.Observe(StopAttempt, time.Millisecond, false) }); n != 0 {
 		t.Fatal("observer allocated", n)
+	}
+}
+
+func TestDiagnosticCountersAndQueueAreFixedAndBounded(t *testing.T) {
+	r := &Registry{}
+	raw := string(r.Render(Gauges{Diagnostics: diagnostics.Stats{Enqueued: 3, Dropped: 5, Written: 2, WriteErrors: 1, Queued: 1, Capacity: 64}}))
+	for _, want := range []string{"xandbox_diagnostics_enqueued_total 3\n", "xandbox_diagnostics_dropped_total 5\n", "xandbox_diagnostics_written_total 2\n", "xandbox_diagnostics_write_errors_total 1\n", "xandbox_diagnostics_queued 1\n", "xandbox_diagnostics_queue_capacity 64\n"} {
+		if !strings.Contains(raw, want) {
+			t.Fatal("missing closed counter", want)
+		}
+	}
+	if len(raw) > 65536 {
+		t.Fatal("exposition exceeded existing cap")
 	}
 }

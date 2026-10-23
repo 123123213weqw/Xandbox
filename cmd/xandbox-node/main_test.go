@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
@@ -81,5 +83,59 @@ func TestOperatorCLIRejectsNonFixedCommandsAndMutationConfusion(t *testing.T) {
 		if e := run(args, &out, &log); e == nil {
 			t.Fatal("invalid operator args accepted", args)
 		}
+	}
+}
+
+func TestDiagnosticsCLIReadOnlyOfflineAndRejectsMutationOrTimeout(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "diagnostics")
+	logger, e := diagnostics.Start(dir)
+	if e != nil {
+		t.Fatal(e)
+	}
+	logger.Emit(diagnostics.ServiceMock, diagnostics.Other)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if e = logger.Close(ctx); e != nil {
+		t.Fatal(e)
+	}
+	before, e := os.ReadFile(filepath.Join(dir, "events.ring"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var out, log bytes.Buffer
+	if e = run([]string{"-state-dir", root, "diagnostics"}, &out, &log); e != nil {
+		t.Fatal(e)
+	}
+	if log.Len() != 0 || out.Len() > 32768 || !strings.Contains(out.String(), `"kind":"service_mock"`) || strings.Contains(out.String(), root) {
+		t.Fatal("private bounded view")
+	}
+	for _, args := range [][]string{
+		{"-epoch", strings.Repeat("a", 32), "diagnostics"},
+		{"-revision", "1", "diagnostics"},
+		{"-request-id", strings.Repeat("b", 32), "diagnostics"},
+		{"-timeout", "5s", "diagnostics"},
+	} {
+		out.Reset()
+		log.Reset()
+		if e = run(append([]string{"-state-dir", root}, args...), &out, &log); e == nil || out.Len() != 0 {
+			t.Fatal("read-only confusion")
+		}
+	}
+	after, _ := os.ReadFile(filepath.Join(dir, "events.ring"))
+	if !bytes.Equal(before, after) {
+		t.Fatal("reader wrote state")
+	}
+	absent := filepath.Join(root, "absent")
+	out.Reset()
+	log.Reset()
+	if e = run([]string{"-state-dir", absent, "diagnostics"}, &out, &log); e == nil || out.Len() != 0 {
+		t.Fatal("missing view accepted")
+	}
+	if _, e = os.Stat(absent); !os.IsNotExist(e) {
+		t.Fatal("reader created directory")
+	}
+	if _, e = os.Stat(filepath.Join(root, "controller.lock")); !os.IsNotExist(e) {
+		t.Fatal("reader touched controller authority")
 	}
 }

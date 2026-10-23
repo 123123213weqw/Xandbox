@@ -1,5 +1,7 @@
 # Xandbox
 
+> 新的 daemon 有界诊断与只读观察正在开发/验收，见 [DIAGNOSTICS](docs/DIAGNOSTICS.md)；旧 ELF 报告不代表新版本通过硬件验收。
+
 [![CI](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml)
 
 Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。

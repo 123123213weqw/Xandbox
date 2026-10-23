@@ -6,6 +6,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -16,6 +18,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/access"
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/httpapi"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
@@ -41,37 +44,88 @@ func releaseStateLock(unlock func(), unfinished bool) {
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("sandboxd failed", "error", err)
+		// Only a closed bootstrap class may reach stderr. Once the diagnostic
+		// writer starts, even its failure must not fall back to a possibly blocked
+		// inherited pipe after lifecycle/control shutdown.
+		var bootstrap *bootstrapFailure
+		if errors.As(err, &bootstrap) {
+			fmt.Fprintln(os.Stderr, bootstrapMessage(bootstrap.reason))
+		}
 		os.Exit(1)
 	}
 }
 
-func run() (retErr error) {
-	stateDir := flag.String("state-dir", "", "required private state directory")
-	backend := flag.String("backend", "", "required: mock or firecracker (experimental Linux/KVM)")
-	firecrackerConfig := flag.String("firecracker-config", "", "private pinned-asset Firecracker configuration")
-	maxInstances := flag.Int("max-instances", 32, "maximum allocated, including unreclaimed instances")
-	maxRecords := flag.Int("max-records", 10_000, "maximum retained records, including tombstones; lowering does not block recovery")
-	maxTenantRecords := flag.Int("max-tenant-records", 0, "retained records per tenant; 0 = min(1000, max-records)")
-	migrateLedger := flag.Bool("migrate-ledger", false, "offline: validate and upgrade existing legacy ledger, then exit; no driver or API")
-	authFile := flag.String("auth-file", "", "private digest-only authentication configuration")
-	stopWorkers := flag.Int("stop-workers", 0, "background stop workers; 0 = min(4, instance capacity)")
-	cleanupWorkers := flag.Int("cleanup-workers", 0, "cleanup workers; 0 = min(2, instance capacity)")
-	workQueueSize := flag.Int("work-queue-size", 0, "queue slots PER pool; 0 = min(32, instance capacity)")
-	insecureMock := flag.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
-	maxSessions := flag.Int("max-sessions", 1000, "maximum retained session records, including closed tombstones")
-	maxTenantSessions := flag.Int("max-tenant-sessions", 0, "retained sessions per tenant; 0 = min(100,max-sessions)")
-	sessionHistory := flag.Int("session-history", 64, "maximum retained attempts per session, including initial create; 1..64")
-	metricsEnabled := flag.Bool("metrics", false, "operator-only metrics on private state-dir/metrics.sock; never on tenant API or TCP")
-	flag.Parse()
-	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || *maxSessions < 1 || *maxSessions > session.MaxRecords || *maxTenantSessions < 0 || *maxTenantSessions > *maxSessions || *sessionHistory < 1 || *sessionHistory > session.MaxHistory || flag.NArg() != 0 {
+// bootstrapFailure is deliberately not the underlying error's string.
+type bootstrapFailure struct {
+	reason diagnostics.Reason
+	cause  error
+}
+
+func (e *bootstrapFailure) Error() string { return bootstrapMessage(e.reason) }
+func (e *bootstrapFailure) Unwrap() error { return e.cause }
+func bootstrapMessage(r diagnostics.Reason) string {
+	switch r {
+	case diagnostics.StateLock:
+		return "sandboxd: state directory already locked"
+	case diagnostics.AuthMode:
+		return "sandboxd: choose exactly one authentication mode"
+	case diagnostics.DiagnosticsUnavailable:
+		return "sandboxd: private diagnostics unavailable"
+	default:
+		return "sandboxd: configuration or bootstrap failure"
+	}
+}
+
+func run() error { return runArgs(os.Args[1:]) }
+func runArgs(args []string) (retErr error) {
+	// Sanitize existing library slog producers from the start, including errors
+	// during bootstrap/recovery. Never restore an unsanitized handler while a
+	// retained worker may still be alive after run returns.
+	slog.SetDefault(slog.New(&diagnostics.Handler{}))
+	started := false
+	defer func() {
+		if retErr != nil && !started {
+			reason := diagnostics.FailureReason(retErr)
+			if reason == diagnostics.Other {
+				reason = diagnostics.Configuration
+			}
+			retErr = &bootstrapFailure{reason: reason, cause: retErr}
+		}
+	}()
+	flags := flag.NewFlagSet("sandboxd", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.Usage = func() {}
+	stateDir := flags.String("state-dir", "", "required private state directory")
+	backend := flags.String("backend", "", "required: mock or firecracker (experimental Linux/KVM)")
+	firecrackerConfig := flags.String("firecracker-config", "", "private pinned-asset Firecracker configuration")
+	maxInstances := flags.Int("max-instances", 32, "maximum allocated, including unreclaimed instances")
+	maxRecords := flags.Int("max-records", 10_000, "maximum retained records, including tombstones; lowering does not block recovery")
+	maxTenantRecords := flags.Int("max-tenant-records", 0, "retained records per tenant; 0 = min(1000, max-records)")
+	migrateLedger := flags.Bool("migrate-ledger", false, "offline: validate and upgrade existing legacy ledger, then exit; no driver or API")
+	authFile := flags.String("auth-file", "", "private digest-only authentication configuration")
+	stopWorkers := flags.Int("stop-workers", 0, "background stop workers; 0 = min(4, instance capacity)")
+	cleanupWorkers := flags.Int("cleanup-workers", 0, "cleanup workers; 0 = min(2, instance capacity)")
+	workQueueSize := flags.Int("work-queue-size", 0, "queue slots PER pool; 0 = min(32, instance capacity)")
+	insecureMock := flags.Bool("insecure-mock", false, "explicitly allow unauthenticated local mock simulation")
+	maxSessions := flags.Int("max-sessions", 1000, "maximum retained session records, including closed tombstones")
+	maxTenantSessions := flags.Int("max-tenant-sessions", 0, "retained sessions per tenant; 0 = min(100,max-sessions)")
+	sessionHistory := flags.Int("session-history", 64, "maximum retained attempts per session, including initial create; 1..64")
+	metricsEnabled := flags.Bool("metrics", false, "operator-only metrics on private state-dir/metrics.sock; never on tenant API or TCP")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fmt.Fprintln(os.Stdout, "usage: sandboxd -backend mock|firecracker -state-dir DIR [-auth-file PATH|-insecure-mock]; mock provides NO isolation")
+			return nil
+		}
+		return &diagnostics.Fault{Reason: diagnostics.Configuration, Cause: err}
+	}
+	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || *maxSessions < 1 || *maxSessions > session.MaxRecords || *maxTenantSessions < 0 || *maxTenantSessions > *maxSessions || *sessionHistory < 1 || *sessionHistory > session.MaxHistory || flags.NArg() != 0 {
 		return fmt.Errorf("usage: sandboxd -backend mock|firecracker -state-dir DIR [-max-instances 32]; mock provides NO isolation")
 	}
 	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "" || *metricsEnabled) {
 		return errors.New("offline migration cannot be combined with backend or authentication options")
 	}
 	if !*migrateLedger && ((*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock)) {
-		return fmt.Errorf("choose exactly one of -auth-file PATH or -insecure-mock")
+		return &diagnostics.Fault{Reason: diagnostics.AuthMode}
 	}
 	if (*backend == "mock" && *firecrackerConfig != "") || (*backend == "firecracker" && (*firecrackerConfig == "" || *insecureMock)) {
 		return errors.New("Firecracker requires -firecracker-config and -auth-file; insecure mode is mock-only")
@@ -106,10 +160,32 @@ func run() (retErr error) {
 	}
 	unlock, err := lockState(filepath.Join(absDir, "controller.lock"))
 	if err != nil {
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return &diagnostics.Fault{Reason: diagnostics.StateLock, Cause: err}
+		}
 		return err
 	}
 	unfinishedCleanup := false
 	defer func() { releaseStateLock(unlock, unfinishedCleanup) }()
+	var diagnostic *diagnostics.Logger
+	// Registered before control, session and manager defers: logging gets only
+	// its own bounded wait AFTER those independent shutdown opportunities.
+	defer func() {
+		if diagnostic == nil {
+			return
+		}
+		kind := diagnostics.ProcessStopped
+		if retErr != nil {
+			kind = diagnostics.ProcessFailed
+		}
+		diagnostic.Emit(kind, diagnostics.FailureReason(retErr))
+		ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+		defer cancel()
+		if e := diagnostic.Close(ctx); e != nil {
+			unfinishedCleanup = true
+			retErr = errors.Join(retErr, &diagnostics.Fault{Reason: diagnostics.DiagnosticsUnavailable, Cause: e})
+		}
+	}()
 	store, err := sandbox.NewFileStore(filepath.Join(absDir, "ledger"))
 	if err != nil {
 		return err
@@ -139,6 +215,7 @@ func run() (retErr error) {
 		defer cancel()
 		if e := control.Close(ctx); e != nil {
 			unfinishedCleanup = true
+			diagnostic.Emit(diagnostics.ControlUnfinished, diagnostics.ReasonFor(e))
 			retErr = errors.Join(retErr, fmt.Errorf("control mutation unfinished; retain state ownership: %w", e))
 		}
 	}()
@@ -163,6 +240,15 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
+	// No new API or lifecycle worker has started yet. Initialization validates
+	// a bounded private ring or fails closed; startup storage I/O has no deadline
+	// claim. Offline ledger migration never opens diagnostic state.
+	diagnostic, err = diagnostics.Start(filepath.Join(absDir, "diagnostics"))
+	if err != nil {
+		return &diagnostics.Fault{Reason: diagnostics.DiagnosticsUnavailable, Cause: err}
+	}
+	started = true
+	slog.SetDefault(slog.New(&diagnostics.Handler{Logger: diagnostic}))
 	manager, err := sandbox.NewManager(store, driver, opts)
 	if err != nil {
 		return err
@@ -172,7 +258,7 @@ func run() (retErr error) {
 		defer cancel()
 		if err := manager.Close(ctx); err != nil {
 			unfinishedCleanup = true
-			slog.Error("cleanup unfinished; restart with the same state directory to recover", "error", err)
+			diagnostic.Emit(diagnostics.CleanupUnfinished, diagnostics.ReasonFor(err))
 			retErr = errors.Join(retErr, fmt.Errorf("cleanup unfinished: %w", err))
 		}
 	}()
@@ -190,7 +276,7 @@ func run() (retErr error) {
 		if err := sessions.Close(ctx); err != nil {
 			unfinishedCleanup = true
 			retErr = errors.Join(retErr, err)
-			slog.Error("session mutations unfinished; retain state ownership until process exit", "error", err)
+			diagnostic.Emit(diagnostics.SessionUnfinished, diagnostics.ReasonFor(err))
 		}
 	}()
 
@@ -199,6 +285,7 @@ func run() (retErr error) {
 		observer, err := observability.Start(absDir, metrics, func() telemetry.Gauges {
 			g := manager.Metrics()
 			g.Sessions, g.SessionCapacity = sessions.Metrics()
+			g.Diagnostics = diagnostic.Stats()
 			return g
 		})
 		if err != nil {
@@ -211,7 +298,12 @@ func run() (retErr error) {
 	if err != nil {
 		return err
 	}
-	defer func() { retErr = errors.Join(retErr, operator.Stop()) }()
+	defer func() {
+		if e := operator.Stop(); e != nil {
+			diagnostic.Emit(diagnostics.OperatorUnfinished, diagnostics.ReasonFor(e))
+			retErr = errors.Join(retErr, e)
+		}
+	}()
 	socket := filepath.Join(absDir, "api.sock")
 	if info, err := os.Lstat(socket); err == nil {
 		if info.Mode()&os.ModeSocket == 0 {
@@ -238,6 +330,9 @@ func run() (retErr error) {
 	}
 	server := &http.Server{
 		Handler: handler, ReadHeaderTimeout: 2 * time.Second,
+		// net/http's default error logger otherwise writes raw request/stack data
+		// directly to inherited stderr, bypassing the closed diagnostic handler.
+		ErrorLog:    log.New(io.Discard, "", 0),
 		ReadTimeout: 10 * time.Second, WriteTimeout: writeTimeout,
 		IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192,
 	}
@@ -253,11 +348,14 @@ func run() (retErr error) {
 	defer server.Close()
 	select {
 	case err := <-operator.Errors():
+		diagnostic.Emit(diagnostics.ListenerFailed, diagnostics.ReasonFor(err))
 		return fmt.Errorf("operator listener failed: %w", err)
 	case err := <-metricsErrors:
+		diagnostic.Emit(diagnostics.ListenerFailed, diagnostics.ReasonFor(err))
 		return fmt.Errorf("metrics listener failed: %w", err)
 	case err := <-serveErr:
 		if !errors.Is(err, http.ErrServerClosed) {
+			diagnostic.Emit(diagnostics.ListenerFailed, diagnostics.ReasonFor(err))
 			return err
 		}
 	case <-signalCtx.Done():

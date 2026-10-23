@@ -397,7 +397,7 @@ PREPARE_CALIBRATION_FLAGS=('first_selected_token_observed_before_second_dispatch
 def validate_prepare_calibration(v):
     assert type(v) is dict
     for k in PREPARE_CALIBRATION_FLAGS:assert v[k] is True
-    assert v['exact_ordinary_elf_sha256']=='4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a'
+    assert v['exact_ordinary_elf_sha256']=='29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c'
     for k,want in {'instruction_entry_probes':9,'event_count':12,'completed_preparations':2}.items():assert type(v[k]) is int and v[k]==want
     for k in ('queued_request_cancellation_and_cleanup_isolation_claim','exact_channel_linearization_or_latency_slo_claim'):assert v[k] is False
     states={};held=0;entered_inside=False
@@ -435,7 +435,7 @@ def validate_node_prepare_cancel(v):
     for k in ('keeper_delete_to_execution_domain_empty_observed_ms','keeper_delete_to_full_reclaim_observed_ms','held_write_to_continue_reply_observed_ms','holder_request_to_ready_observed_ms','survivor_request_to_ready_observed_ms'):assert type(v[k]) in (int,float) and math.isfinite(v[k]) and 0<=v[k]<40000
     assert v['keeper_delete_to_execution_domain_empty_observed_ms']<=v['keeper_delete_to_full_reclaim_observed_ms']<v['held_write_to_continue_reply_observed_ms']<20000
     for k in ('filesystem_D_or_physical_media_fault_claim','exact_copy_stage_timing_scheduler_fairness_or_slo_claim'):assert v[k] is False
-    t=v['trace'];assert t['exact_ordinary_elf_sha256']=='4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a'
+    t=v['trace'];assert t['exact_ordinary_elf_sha256']=='29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c'
     for k,w in {'instruction_entry_probes':9,'event_count':15,'completed_preparations':2,'cancelled_waiters_without_token':1}.items():assert type(t[k]) is int and t[k]==w
     for k in ('all_eight_cpu_loss_counters_zero','all_nine_probe_hits_equal_trace','live_incarnation_inode_control_event_tgid_checked'):assert t[k] is True
     assert t['exact_channel_linearization_or_slo_claim'] is False
