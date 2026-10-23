@@ -13,7 +13,7 @@ from kvm_nested_host import JSONSocket, replace_private_json, quota_format_optio
 class NestedFixtureTests(unittest.TestCase):
     def test_real_commit_eio_requires_direct_kernel_errno_and_retained_owner(self):
         phase='reserve-quota-syncfs-real-eio'
-        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_retained_after_linear_restore','pre_fork_namespace_absent_after_eio','admission_new_create503','no_quota_query_after_eio','own_mapper_linear_restored_no_rw_remount','no_l2_vm_born_at_checkpoint')
+        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')
         good={'phase':phase,**{k:True for k in flags},'fixed_project_zero_dirty_bytes':4<<20,'selected_syncfs_kernel_errno':5,'selected_syncfs_exit_observations':1}
         validate_quota_commit_checkpoint(good,phase)
         for key in good:

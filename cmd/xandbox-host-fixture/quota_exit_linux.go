@@ -130,6 +130,14 @@ func (o *quotaNotifier) startExitTrace(q quotaNotif) (_ *quotaExitTrace, err err
 	}
 	license := []byte("GPL\x00")
 	log := make([]byte, 4096)
+	// Nested pointers are serialized in bpf_attr, not direct Syscall pointer
+	// arguments. Pin them before taking addresses: KeepAlive alone cannot
+	// prevent a stack relocation between encoding and the nested syscall.
+	var pinned runtime.Pinner
+	pinned.Pin(&program[0])
+	pinned.Pin(&license[0])
+	pinned.Pin(&log[0])
+	defer pinned.Unpin()
 	a = make([]byte, 72)
 	binary.LittleEndian.PutUint32(a[0:], unix.BPF_PROG_TYPE_RAW_TRACEPOINT)
 	binary.LittleEndian.PutUint32(a[4:], uint32(len(program)))
@@ -147,6 +155,7 @@ func (o *quotaNotifier) startExitTrace(q quotaNotif) (_ *quotaExitTrace, err err
 		return nil, fmt.Errorf("fixed exit observer load: %w: %s", e, strings.TrimRight(string(log), "\x00"))
 	}
 	name := []byte("sys_exit\x00")
+	pinned.Pin(&name[0])
 	a = make([]byte, 16)
 	binary.LittleEndian.PutUint64(a[0:], uint64(uintptr(unsafe.Pointer(&name[0]))))
 	binary.LittleEndian.PutUint32(a[8:], uint32(t.programFD))
@@ -166,6 +175,10 @@ func (t *quotaExitTrace) read() (quotaExitResult, error) {
 		return out, errors.New("owned exit observer is absent")
 	}
 	key := uint32(0)
+	var pinned runtime.Pinner
+	pinned.Pin(&key)
+	pinned.Pin(&out)
+	defer pinned.Unpin()
 	a := make([]byte, 32)
 	binary.LittleEndian.PutUint32(a[0:], uint32(t.mapFD))
 	binary.LittleEndian.PutUint64(a[8:], uint64(uintptr(unsafe.Pointer(&key))))

@@ -52,10 +52,19 @@ func (n *node) reserveCommitEIO(ctx context.Context, live *quotaBarrierLive, api
 		return nil, e
 	}
 	var createErr error
-	select {
-	case createErr = <-live.done:
-	case <-ctx.Done():
-		return nil, ctx.Err()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	for waiting := true; waiting; {
+		select {
+		case createErr = <-live.done:
+			waiting = false
+		case <-tick.C:
+			if e := live.o.snapshot().err; e != nil {
+				return nil, e
+			}
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 	if createErr == nil || !strings.Contains(createErr.Error(), "HTTP 500:") {
 		return nil, errors.New("real commit EIO did not refuse Create500")
@@ -79,19 +88,10 @@ func (n *node) reserveCommitEIO(ctx context.Context, live *quotaBarrierLive, api
 	if e != nil || len(log) > 65536 || !strings.Contains(string(log), "Firecracker preparation failed") || !strings.Contains(string(log), "input/output error") {
 		return nil, errors.New("ordinary Prepare EIO diagnostics not observed independently")
 	}
-	// Restore only our mapping for read-only owner inspection. Never remount
-	// an aborted filesystem RW: recovery requires a new owned-L1 cold boot.
-	if e = n.mapper.linear(); e != nil {
-		return nil, e
-	}
-	base, _ := quotaSyscallBase(quotaBarrierCase)
-	b, e := privatefile.Read(base+"/s/firecracker/"+s.ref.ID+s.ref.Generation+".json", 2048)
-	if e != nil || string(b) != string(s.owner) {
-		return nil, errors.New("EIO lost or changed exact durable quota owner")
-	}
-	if e = quotaBarrierNamespaceAbsent(s.ref); e != nil {
-		return nil, e
-	}
+	// Do not inspect an aborted ext4 namespace, even after restoring a
+	// linear table. Cached metadata can fail EIO independently of durable
+	// owner survival. Keep the fault until own L1 death; cold replay checks
+	// exact owner bytes before any ordinary daemon is allowed to reclaim.
 	var old sandbox.Record
 	if e = api.Do(ctx, "GET", nodePath(s.ref), nil, &old); e != nil {
 		return nil, e
@@ -108,7 +108,7 @@ func (n *node) reserveCommitEIO(ctx context.Context, live *quotaBarrierLive, api
 		return nil, errors.New("EIO opened new admission")
 	}
 	n.quotaHeld = live
-	return map[string]any{"phase": quotaReserveEIO.phase(), "checkpoint_receipt_fsynced_before_set": true, "durable_attempted_owner_before_set": true, "installed_limits_checked_before_fault": true, "ordinary_qsync_returned_before_syncfs": true, "notification_continued_no_errno_or_success_emulation": true, "selected_syncfs_kernel_exit_observed": true, "selected_syncfs_kernel_errno": int(unix.EIO), "selected_syncfs_exit_observations": exit.Seen, "ordinary_prepare_eio_diagnostic_in_tmpfs": true, "create_refused500": true, "no_false_ready_stop_destroy_confirmation": true, "exact_owner_retained_after_linear_restore": true, "pre_fork_namespace_absent_after_eio": true, "admission_new_create503": true, "no_quota_query_after_eio": true, "own_mapper_linear_restored_no_rw_remount": true, "fixed_project_zero_dirty_bytes": 4 << 20, "no_l2_vm_born_at_checkpoint": true}, nil
+	return map[string]any{"phase": quotaReserveEIO.phase(), "checkpoint_receipt_fsynced_before_set": true, "durable_attempted_owner_before_set": true, "installed_limits_checked_before_fault": true, "ordinary_qsync_returned_before_syncfs": true, "notification_continued_no_errno_or_success_emulation": true, "selected_syncfs_kernel_exit_observed": true, "selected_syncfs_kernel_errno": int(unix.EIO), "selected_syncfs_exit_observations": exit.Seen, "ordinary_prepare_eio_diagnostic_in_tmpfs": true, "create_refused500": true, "no_false_ready_stop_destroy_confirmation": true, "exact_owner_receipt_persisted_before_eio_for_cold_recheck": true, "admission_new_create503": true, "no_observer_quota_or_srv_reads_after_eio": true, "own_mapper_error_retained_until_power_cut_no_rw_remount": true, "fixed_project_zero_dirty_bytes": 4 << 20, "no_l2_vm_born_at_checkpoint": true}, nil
 }
 func (n *node) releaseCommitCheckpoint(ctx context.Context, mode quotaCommitMode, live *quotaBarrierLive, api *client.Client, cfg firecracker.Config) (map[string]any, error) {
 	if e := requireNode(); e != nil {
