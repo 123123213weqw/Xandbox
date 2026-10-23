@@ -1054,26 +1054,27 @@
     "state_io_regression_cases": 4
   },
   "quota_enabled_two_tenant_switching_pending": {
-    "status": "PENDING full new runtime acceptance; latest observed run FAILED",
+    "status": "PENDING full acceptance; measured LOAD240 passed but WHOLE PROFILE cold recovery FAILED",
     "production_ready": false,
     "goal_complete": false,
     "complete_pr19_acceptance": false,
     "design": "docs/QUOTA_SWITCH_FIXTURE.md",
-    "provenance": "docs/validation/quota-switch-pending-provenance-v4.json",
-    "latest_observed_report": "docs/validation/kvm-quota-switch-mixed-v3.json",
-    "latest_observed_source": "4653b08e5b80e2ed15be491849d8ad9427015295",
+    "provenance": "docs/validation/quota-switch-pending-provenance-v5.json",
+    "latest_observed_report": "docs/validation/kvm-quota-switch-mixed-v4.json",
+    "latest_observed_source": "599a6de3cd4ff759ed6cfbb84f020689fac2cb77",
     "latest_observed_passed": false,
-    "completed_rows": 239,
+    "completed_rows": 240,
     "required_rows": 240,
-    "latest_observed_operation_budget_seconds": 600,
-    "latest_observed_duration_seconds": 601.836897505,
-    "next_frozen_source": "599a6de3cd4ff759ed6cfbb84f020689fac2cb77",
+    "latest_observed_operation_budget_seconds": 720,
+    "latest_observed_duration_seconds": 601.476782212,
+    "next_frozen_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
     "next_operation_budget_seconds": 720,
     "guest_job_timeout_seconds_unchanged": 60,
     "cycles_per_tenant_unchanged": 120,
     "production_changed": false,
-    "false_reports_preserved": 3,
-    "independently_absent_outer_execution_generations": 3,
-    "scope": "Native checks on4653 passed. Actual new599a native/full-runtime/cold-recovery/shared-harness wave remains pending; no failed rows spliced, no single-switch SLO or complete goal/production claim."
+    "false_reports_preserved": 4,
+    "independently_absent_outer_execution_generations": 5,
+    "scope": "Frozen599a measured phase fully passed, then cold inode strict comparison failed. New3f9 resamples both receipts only after both Ready/pins2, retains strict cold equality, adds private diagnostics; native/full load/cold/shared-harness wave pending. No failed rows spliced or full M1-M4/production claim.",
+    "measured_load_passed": true
   }
 }
