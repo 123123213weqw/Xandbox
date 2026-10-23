@@ -27,7 +27,7 @@ func TestOperatorShutdownNoL0OrGenericRPC(t *testing.T) {
 	if shutdownDurable(storeTestReceipt(operatorStorePre).Raw) == nil {
 		t.Fatal("L0 ledger observation")
 	}
-	if _, e := shutdownInventory(); e == nil {
+	if _, e := shutdownInventory(""); e == nil {
 		t.Fatal("L0 inventory")
 	}
 	s := newOperatorShutdownObserver(&operatorStoreObserver{})
@@ -115,6 +115,25 @@ func TestOperatorShutdownProgramOnlyFsyncExitGroupAndSameArchitecture(t *testing
 	for _, row := range []struct{ arch, nr, want uint32 }{{unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_EXIT_GROUP), unix.SECCOMP_RET_USER_NOTIF}, {unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_EXIT), unix.SECCOMP_RET_ALLOW}, {unix.AUDIT_ARCH_X86_64, 0x40000000 | uint32(unix.SYS_EXIT_GROUP), unix.SECCOMP_RET_KILL_PROCESS}, {unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_FSYNC), unix.SECCOMP_RET_USER_NOTIF}, {unix.AUDIT_ARCH_I386, uint32(unix.SYS_FSYNC), unix.SECCOMP_RET_KILL_PROCESS}, {unix.AUDIT_ARCH_X86_64, 0x40000000 | uint32(unix.SYS_FSYNC), unix.SECCOMP_RET_KILL_PROCESS}, {unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_FDATASYNC), unix.SECCOMP_RET_ALLOW}, {unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_SYNCFS), unix.SECCOMP_RET_ALLOW}, {unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_QUOTACTL_FD), unix.SECCOMP_RET_ALLOW}, {unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_WRITE), unix.SECCOMP_RET_ALLOW}} {
 		if got := run(row.arch, row.nr); got != row.want {
 			t.Fatal("wrong fsync BPF return", got, row.want)
+		}
+	}
+}
+
+func TestOperatorShutdownInventoryAcceptsOnlyExactHeldTempAndFixedMetadata(t *testing.T) {
+	held := "/srv/state/admission/.state-123"
+	for _, name := range []string{"state.json", ".state-123"} {
+		if !shutdownInventoryName("/srv/state/admission", name, held) {
+			t.Fatal("fixed held control file rejected")
+		}
+	}
+	for _, name := range []string{".state-124", ".state-x", "state.json/other", "../.state-123", ".state-123 (deleted)", "config.json"} {
+		if shutdownInventoryName("/srv/state/admission", name, held) {
+			t.Fatal("foreign admission entry")
+		}
+	}
+	for _, row := range []struct{ dir, name string }{{"/srv/state/ledger", "bad.json"}, {"/srv/state/sessions", ".session-1"}, {"/srv/state/firecracker", "other.json"}, {"/srv/r/j/firecracker", "config.json"}, {"/other", "state.json"}} {
+		if shutdownInventoryName(row.dir, row.name, held) {
+			t.Fatal("foreign immutable inventory entry")
 		}
 	}
 }

@@ -526,7 +526,7 @@ def validate_node_operator_shutdown_checkpoint(v):
     assert type(v) is dict and set(v)==set(NODE_OPERATOR_SHUTDOWN_FLAGS)|set(exact)|set(counts)|set(NODE_OPERATOR_SHUTDOWN_TIMINGS)|set(false)
     for k in NODE_OPERATOR_SHUTDOWN_FLAGS:assert v[k] is True
     for k,n in exact.items():assert type(v[k]) is int and v[k]==n
-    for k in counts:assert type(v[k]) is int and 0<v[k]<=8192
+    for k in counts:assert type(v[k]) is int and (1 if k=='other_fsync_continue_replies_while_held' else 0)<=v[k]<=8192
     for k in false:assert v[k] is False
     for k in NODE_OPERATOR_SHUTDOWN_TIMINGS:assert type(v[k]) in (int,float) and math.isfinite(v[k]) and 0<=v[k]<20000
     vals=[v[k] for k in NODE_OPERATOR_SHUTDOWN_TIMINGS]

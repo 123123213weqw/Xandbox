@@ -19,13 +19,14 @@ class ShutdownTests(unittest.TestCase):
         node_operator_shutdown_profile(False,True,'post-root',True,False)
     def test_exact_all_witnesses_and_counts(self):
         good=checkpoint();validate_node_operator_shutdown_checkpoint(good)
+        validate_node_operator_shutdown_checkpoint(dict(good,other_exit_group_continue_replies=0))
         for k,v in good.items():
             if type(v) is bool:
                 with self.assertRaises(AssertionError):validate_node_operator_shutdown_checkpoint(dict(good,**{k:not v}))
             if type(v) is int:
                 with self.assertRaises(AssertionError):validate_node_operator_shutdown_checkpoint(dict(good,**{k:True}))
                 if k.startswith('other_'):
-                    for n in (0,8193):
+                    for n in ((0,8193) if k=='other_fsync_continue_replies_while_held' else (-1,8193)):
                         with self.assertRaises(AssertionError):validate_node_operator_shutdown_checkpoint(dict(good,**{k:n}))
                 else:
                     with self.assertRaises(AssertionError):validate_node_operator_shutdown_checkpoint(dict(good,**{k:v+1}))

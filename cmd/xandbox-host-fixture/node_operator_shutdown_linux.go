@@ -46,19 +46,41 @@ func shutdownDurable(ref sandbox.Ref) error {
 
 // Compare immutable bytes/names across the failed contender, not access times.
 // Do not call production Load while the original Store goroutine is pending.
-func shutdownInventory() (string, error) {
+func shutdownInventoryName(dir, name, held string) bool {
+	switch dir {
+	case "/srv/state/admission":
+		return name == "state.json" || (held != "" && name == filepath.Base(held))
+	case "/srv/state/ledger", "/srv/state/sessions":
+		return len(name) == 37 && name[32:] == ".json" && hex32Pattern(name[:32])
+	case "/srv/state/firecracker":
+		return name == "config.json"
+	}
+	return false
+}
+func shutdownInventory(held string) (string, error) {
 	if e := requireNode(); e != nil {
 		return "", e
 	}
+	if filepath.Clean(held) != held || filepath.Dir(held) != "/srv/state/admission" || !operatorTempPattern.MatchString(filepath.Base(held)) {
+		return "", errors.New("exact held control temp path required")
+	}
 	h := sha256.New()
 	for _, dir := range []string{"/srv/state/admission", "/srv/state/ledger", "/srv/state/sessions", "/srv/state/firecracker", "/srv/r/j/firecracker"} {
-		names, e := operatorFileNames(dir)
-		if os.IsNotExist(e) && (dir == "/srv/state/firecracker" || dir == "/srv/r/j/firecracker") {
+		entries, e := os.ReadDir(dir)
+		if os.IsNotExist(e) && dir == "/srv/r/j/firecracker" {
 			fmt.Fprintf(h, "%s:absent\n", dir)
 			continue
 		}
-		if e != nil {
-			return "", e
+		want := map[string]int{"/srv/state/admission": 2, "/srv/state/ledger": 2, "/srv/state/sessions": 1, "/srv/state/firecracker": 1, "/srv/r/j/firecracker": 0}[dir]
+		if e != nil || len(entries) != want {
+			return "", fmt.Errorf("exact shutdown metadata count required in %s", dir)
+		}
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			if !shutdownInventoryName(dir, entry.Name(), held) {
+				return "", errors.New("unexpected shutdown metadata name")
+			}
+			names = append(names, entry.Name())
 		}
 		for _, name := range names {
 			path := filepath.Join(dir, name)
@@ -102,7 +124,7 @@ func (n *node) shutdownContender(ctx context.Context, s *operatorShutdownObserve
 	if !ok || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 || st.Uid != 0 || st.Nlink != 1 {
 		return errors.New("private single-link controller lock required")
 	}
-	baseline, e := shutdownInventory()
+	baseline, e := shutdownInventory(s.store.tempPath)
 	if e != nil {
 		return e
 	}
@@ -128,7 +150,7 @@ func (n *node) shutdownContender(ctx context.Context, s *operatorShutdownObserve
 	if e != nil || !os.SameFile(info, current) || current.Mode() != info.Mode() {
 		return errors.New("contender changed state lock inode or mode")
 	}
-	after, e := shutdownInventory()
+	after, e := shutdownInventory(s.store.tempPath)
 	if e != nil || after != baseline {
 		return errors.New("failed contender changed stable metadata/backend inventory")
 	}
