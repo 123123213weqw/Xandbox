@@ -65,12 +65,15 @@ func TestOperatorShutdownNoL0OrGenericRPC(t *testing.T) {
 	}
 }
 func TestOperatorShutdownDiagnosticsRequireExactControlCloseAndCompletedDrain(t *testing.T) {
-	good := diagnostics.Snapshot{Version: 1, ObservedSequence: 4, RetainedCapacity: diagnostics.RetainedRecords, Records: []diagnostics.Record{
-		{Sequence: 1, Event: diagnostics.Event{Kind: diagnostics.ServiceKVM, TimeNS: 1}},
-		{Sequence: 2, Event: diagnostics.Event{Kind: diagnostics.ControlUnfinished, Reason: diagnostics.Deadline, TimeNS: 2}},
-		{Sequence: 3, Event: diagnostics.Event{Kind: diagnostics.ProcessFailed, Reason: diagnostics.Deadline, TimeNS: 3}},
-		{Sequence: 4, Event: diagnostics.Event{Kind: diagnostics.CollectorClosed, TimeNS: 4}},
-	}}
+	good := diagnostics.Snapshot{Version: 1, ObservedSequence: 7, RetainedCapacity: diagnostics.RetainedRecords}
+	kinds := []diagnostics.Kind{diagnostics.ServiceKVM, diagnostics.ProcessStopped, diagnostics.CollectorClosed, diagnostics.ServiceKVM, diagnostics.ControlUnfinished, diagnostics.ProcessFailed, diagnostics.CollectorClosed}
+	for i, k := range kinds {
+		r := diagnostics.Other
+		if i == 4 || i == 5 {
+			r = diagnostics.Deadline
+		}
+		good.Records = append(good.Records, diagnostics.Record{Sequence: uint64(i + 1), Event: diagnostics.Event{Kind: k, Reason: r, TimeNS: int64(i + 1)}})
+	}
 	if e := shutdownDiagnostics(good); e != nil {
 		t.Fatal(e)
 	}
@@ -89,19 +92,19 @@ func TestOperatorShutdownDiagnosticsRequireExactControlCloseAndCompletedDrain(t 
 		case 4:
 			bad.Records = bad.Records[:3]
 		case 5:
-			bad.Records[1].Event.Reason = diagnostics.Other
+			bad.Records[4].Event.Reason = diagnostics.Other
 		case 6:
-			bad.Records[1].Event.Kind = diagnostics.CleanupUnfinished
+			bad.Records[4].Event.Kind = diagnostics.CleanupUnfinished
 		case 7:
-			bad.Records[1].Event.Kind = diagnostics.SessionUnfinished
+			bad.Records[4].Event.Kind = diagnostics.SessionUnfinished
 		case 8:
-			bad.Records[1].Event.Kind = diagnostics.OperatorUnfinished
+			bad.Records[4].Event.Kind = diagnostics.OperatorUnfinished
 		case 9:
-			bad.Records[1].Event.Kind = diagnostics.ListenerFailed
+			bad.Records[4].Event.Kind = diagnostics.ListenerFailed
 		case 10:
-			bad.Records[2].Event.DroppedBefore = 1
+			bad.Records[5].Event.DroppedBefore = 1
 		case 11:
-			bad.Records[3].Sequence = 3
+			bad.Records[6].Sequence = 3
 		}
 		if shutdownDiagnostics(bad) == nil {
 			t.Fatal("unrelated/gap/lost diagnostic accepted", i)

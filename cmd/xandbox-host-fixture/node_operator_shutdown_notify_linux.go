@@ -131,39 +131,18 @@ func (s *operatorShutdownObserver) targetTGID(q quotaNotif) (bool, error) {
 // real deadline, and rejects unrelated lifecycle/listener/operator failures.
 // It is not durable tenant-operation audit coverage.
 func shutdownDiagnostics(v diagnostics.Snapshot) error {
-	if v.Version != 1 || v.RetainedCapacity != diagnostics.RetainedRecords || v.Overwritten != 0 || v.ObservedSequence == 0 || len(v.Records) < 4 || len(v.Records) > diagnostics.RetainedRecords || uint64(len(v.Records)) != v.ObservedSequence {
-		return errors.New("bounded complete shutdown diagnostic view required")
+	// This fixed checkpoint first starts and cleanly stops one healthy daemon,
+	// then starts the observed daemon against the SAME persistent ring. Require
+	// that prefix, rather than incorrectly treating a restart as an empty log.
+	kinds := [...]diagnostics.Kind{diagnostics.ServiceKVM, diagnostics.ProcessStopped, diagnostics.CollectorClosed, diagnostics.ServiceKVM, diagnostics.ControlUnfinished, diagnostics.ProcessFailed, diagnostics.CollectorClosed}
+	reasons := [...]diagnostics.Reason{diagnostics.Other, diagnostics.Other, diagnostics.Other, diagnostics.Other, diagnostics.Deadline, diagnostics.Deadline, diagnostics.Other}
+	if v.Version != 1 || v.RetainedCapacity != diagnostics.RetainedRecords || v.Overwritten != 0 || v.ObservedSequence != uint64(len(kinds)) || len(v.Records) != len(kinds) {
+		return errors.New("both-incarnation bounded shutdown diagnostic view required")
 	}
-	control, failed := 0, 0
 	for i, r := range v.Records {
-		if r.Sequence != uint64(i+1) || r.Event.DroppedBefore != 0 || r.Event.TimeNS <= 0 {
-			return errors.New("shutdown diagnostic gap/loss")
+		if r.Sequence != uint64(i+1) || r.Event.DroppedBefore != 0 || r.Event.TimeNS <= 0 || r.Event.Kind != kinds[i] || r.Event.Reason != reasons[i] {
+			return errors.New("exact healthy-prefix/control-deadline/drained diagnostic sequence required")
 		}
-		switch r.Event.Kind {
-		case diagnostics.ServiceKVM:
-			if i != 0 || r.Event.Reason != diagnostics.Other {
-				return errors.New("unexpected startup diagnostic")
-			}
-		case diagnostics.ControlUnfinished:
-			control++
-			if r.Event.Reason != diagnostics.Deadline || i != len(v.Records)-3 {
-				return errors.New("control Close deadline diagnostic required")
-			}
-		case diagnostics.ProcessFailed:
-			failed++
-			if r.Event.Reason != diagnostics.Deadline || i != len(v.Records)-2 {
-				return errors.New("exact failed shutdown diagnostic required")
-			}
-		case diagnostics.CollectorClosed:
-			if i != len(v.Records)-1 || r.Event.Reason != diagnostics.Other {
-				return errors.New("completed writer drain required")
-			}
-		default:
-			return errors.New("unrelated shutdown failure diagnostic")
-		}
-	}
-	if control != 1 || failed != 1 || v.Records[len(v.Records)-1].Event.Kind != diagnostics.CollectorClosed {
-		return errors.New("missing control shutdown diagnostic")
 	}
 	return nil
 }
