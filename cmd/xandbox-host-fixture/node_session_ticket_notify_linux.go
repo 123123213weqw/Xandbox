@@ -27,7 +27,7 @@ const sessionTicketMax = 128 << 10
 var sessionTicketTempPattern = regexp.MustCompile(`^\.session-[0-9]+$`)
 
 func sessionTicketPath(path string) bool {
-	return filepath.Dir(path) == "/srv/state/sessions" && sessionTicketTempPattern.MatchString(filepath.Base(path))
+	return filepath.Clean(path) == path && filepath.Dir(path) == "/srv/state/sessions" && sessionTicketTempPattern.MatchString(filepath.Base(path))
 }
 
 type sessionTicketBoundary struct {

@@ -73,7 +73,7 @@ func TestSessionTicketFixedPathsAndPrivateHashInputOnly(t *testing.T) {
 			t.Fatal(path)
 		}
 	}
-	for _, path := range []string{"/srv/state/admission/.state-1", "/srv/state/sessions/.session-x", "/srv/state/sessions/a.json", "/tmp/.session-1", "/srv/state/sessions/../sessions/.session-1", ".session-1"} {
+	for _, path := range []string{"/srv/state/admission/.state-1", "/srv/state/sessions/.session-x", "/srv/state/sessions/a.json", "/tmp/.session-1", "/srv/state/sessions//.session-1", "/srv/state/./sessions/.session-1", "/srv/state/sessions/../sessions/.session-1", ".session-1"} {
 		if sessionTicketPath(path) {
 			t.Fatal("foreign descriptor selected", path)
 		}
