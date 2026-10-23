@@ -40,7 +40,8 @@ type copyCutLive struct {
 	done     chan error
 }
 
-func validateCopyCutReceipt(r copyCutReceipt) error {
+func validateCopyCutReceipt(r copyCutReceipt) error { return validateCutReceiptOwners(r, false) }
+func validateCutReceiptOwners(r copyCutReceipt, victimInitialized bool) error {
 	if r.Version != 1 || !switchUUID(r.Boot) || !hashPattern.MatchString(r.Config) || !hashPattern.MatchString(r.Manifest) || !hashPattern.MatchString(r.Template) || !hashPattern.MatchString(r.Index) || !switchRefValid(r.Keeper) || !switchRefValid(r.Victim) || r.Keeper == r.Victim || !switchUUID(r.KeeperBoot) {
 		return errors.New("invalid fixed private cut identity")
 	}
@@ -61,7 +62,7 @@ func validateCopyCutReceipt(r copyCutReceipt) error {
 		if i == 1 {
 			ref = r.Victim
 		}
-		if o.Ref != ref || o.Version != 4 || !o.QuotaAttempted || o.InitializationAttempted != (i == 0) || o.TemplateID != r.Template || o.UID < 400000 || o.UID >= 400004 || o.ProjectID != driverProjectFirst+uint32(o.UID-400000) {
+		if o.Ref != ref || o.Version != 4 || !o.QuotaAttempted || o.InitializationAttempted != (i == 0 || victimInitialized) || o.TemplateID != r.Template || o.UID < 400000 || o.UID >= 400004 || o.ProjectID != driverProjectFirst+uint32(o.UID-400000) {
 			return errors.New("cut owner policy invalid")
 		}
 	}
@@ -88,6 +89,9 @@ func marshalCopyCutReceipt(r copyCutReceipt) ([]byte, error) {
 	return b, nil
 }
 func captureCopyKeeper(ref sandbox.Ref, project uint32) (driverQuotaReceipt, error) {
+	return captureCutKeeper(ref, project, true)
+}
+func captureCutKeeper(ref sandbox.Ref, project uint32, stable bool) (driverQuotaReceipt, error) {
 	var r driverQuotaReceipt
 	if e := requireNode(); e != nil {
 		return r, e
@@ -99,11 +103,13 @@ func captureCopyKeeper(ref sandbox.Ref, project uint32) (driverQuotaReceipt, err
 	defer q.file.Close()
 	// This occurs BEFORE starting the partial-copy request, never after its
 	// target write is held. The initialized keeper has a stable full baseline.
-	if e = q.sync(); e != nil {
-		return r, e
-	}
-	if e = unix.Syncfs(int(q.file.Fd())); e != nil {
-		return r, e
+	if stable {
+		if e = q.sync(); e != nil {
+			return r, e
+		}
+		if e = unix.Syncfs(int(q.file.Fd())); e != nil {
+			return r, e
+		}
 	}
 	qr, e := driverQuotaRead(project)
 	if e != nil {
@@ -508,111 +514,127 @@ func (n *node) quotaCopyCutRecover(ctx context.Context, private []byte) (map[str
 		}
 	}
 	coldSpace, coldInodes := qr.Space, qr.Inodes
+	if e = n.finishCutRecovery(ctx, r, ""); e != nil {
+		return nil, e
+	}
+	return map[string]any{"l1_boot_changed": true, "private_control_receipt_revalidated_not_l1_disk_receipt": true, "exact_attempted_owners_policy_and_pristine_abi_checked_before_daemon": true, "old_execution_domains_absent_before_daemon": true, "keeper_full_namespace_and_shared_inodes_accounted": true, "partial_namespace_subset_policy_and_actual_kernel_quota_accounted": true, "cold_partial_entries": len(entries), "cold_partial_workspace_size_bytes": coldSize, "cold_partial_project_space_bytes": coldSpace, "cold_partial_project_inodes": coldInodes, "two_durable_template_pins_retained_before_recovery": true, "ordinary_unobserved_recovery_both_destroyed_resources_absent_keys410_exec409": true, "two_fresh_real_guest_uids_boots_and_workspaces_checked": true, "retired_backing_two_then_one_pin_gc_and_surviving_exec_checked": true, "last_pin_exact_gc_all_four_projects_zero_controller_reaped_parent_removed": true}, nil
+}
+
+// Ordinary unobserved post-cut cleanup and fresh-generation checks shared by
+// the fixed partial-copy and owner-directory commit fixtures. No production hook.
+func (n *node) finishCutRecovery(ctx context.Context, r copyCutReceipt, otherBoot string) error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	var e error
 	// Only now may the ordinary uninstrumented daemon recover and reclaim.
 	if e = n.start(ctx); e != nil {
-		return nil, e
+		return e
 	}
 	api := newSwitchAPI("/srv/state/api.sock", n.token)
 	defer api.close()
 	for i, ref := range []sandbox.Ref{r.Keeper, r.Victim} {
 		if e = api.destroyed(ctx, ref); e != nil {
-			return nil, e
+			return e
 		}
 		key := r.KeeperKey
 		if i == 1 {
 			key = r.VictimKey
 		}
 		if e = api.call(ctx, "POST", "/v1/sandboxes", key, nodeSpec(), nil, 410); e != nil {
-			return nil, e
+			return e
 		}
 		if e = api.call(ctx, "POST", switchPath(ref)+"/exec", "", sandbox.ExecRequest{Generation: ref.Generation, Argv: []string{"true"}}, nil, 409); e != nil {
-			return nil, e
+			return e
 		}
 	}
 	if e = driverQuotaAllClear(); e != nil {
-		return nil, e
+		return e
 	}
 	if e = copyPins(ctx, r.Template, 0, true); e != nil {
-		return nil, e
+		return e
 	}
 	var fresh [2]sandbox.Record
 	boots := map[string]bool{r.KeeperBoot: true}
+	if otherBoot != "" {
+		boots[otherBoot] = true
+	}
 	cfg, e := fixedCopyConfig()
 	if e != nil {
-		return nil, e
+		return e
 	}
 	for i := range fresh {
 		key, e := randomKey()
 		if e != nil {
-			return nil, e
+			return e
 		}
 		fresh[i], e = api.create(ctx, key)
 		if e != nil {
-			return nil, e
+			return e
 		}
 		if fresh[i].Ref == r.Keeper || fresh[i].Ref == r.Victim {
-			return nil, errors.New("old cut generation reused")
+			return errors.New("old cut generation reused")
 		}
 		if e = actualNestedVM(fresh[i].Ref); e != nil {
-			return nil, e
+			return e
 		}
 		if e = syscallGuestBoundaryWithObserver(cfg, fresh[i].Ref, n.process.Process.Pid, false); e != nil {
-			return nil, e
+			return e
 		}
 		out, e := api.executeVM(ctx, fresh[i].Ref, []string{"sh", "-c", "set -e; test ! -e cut-marker; id -u; cat /proc/sys/kernel/random/boot_id"})
 		if e != nil {
-			return nil, e
+			return e
 		}
 		boot, e := switchGuestIdentity(out)
 		if e != nil || boots[boot] {
-			return nil, errors.New("assigned cut guest restored")
+			return errors.New("assigned cut guest restored")
 		}
 		boots[boot] = true
 	}
 	if e = copyPins(ctx, r.Template, 2, true); e != nil {
-		return nil, e
+		return e
 	}
 	if _, e = copyAdmin(ctx, "retire", r.Template); e != nil {
-		return nil, e
+		return e
 	}
 	if e = copyGC(ctx, r.Template, 0); e != nil {
-		return nil, e
+		return e
 	}
 	if e = api.remove(ctx, fresh[0].Ref); e != nil {
-		return nil, e
+		return e
 	}
 	if e = copyPins(ctx, r.Template, 1, false); e != nil {
-		return nil, e
+		return e
 	}
 	if e = copyGC(ctx, r.Template, 0); e != nil {
-		return nil, e
+		return e
 	}
 	if _, e = api.executeVM(ctx, fresh[1].Ref, []string{"true"}); e != nil {
-		return nil, e
+		return e
 	}
 	if e = api.remove(ctx, fresh[1].Ref); e != nil {
-		return nil, e
+		return e
 	}
 	if e = copyGC(ctx, r.Template, 1); e != nil {
-		return nil, e
+		return e
 	}
 	if e = driverQuotaAllClear(); e != nil {
-		return nil, e
+		return e
 	}
 	if e = n.process.Process.Signal(os.Interrupt); e != nil {
-		return nil, e
+		return e
 	}
 	select {
 	case e = <-n.exited:
 		if e != nil {
-			return nil, e
+			return e
 		}
 		n.process = nil
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return ctx.Err()
 	}
 	if e = os.Remove(nodeGroup); e != nil {
-		return nil, e
+		return e
 	}
-	return map[string]any{"l1_boot_changed": true, "private_control_receipt_revalidated_not_l1_disk_receipt": true, "exact_attempted_owners_policy_and_pristine_abi_checked_before_daemon": true, "old_execution_domains_absent_before_daemon": true, "keeper_full_namespace_and_shared_inodes_accounted": true, "partial_namespace_subset_policy_and_actual_kernel_quota_accounted": true, "cold_partial_entries": len(entries), "cold_partial_workspace_size_bytes": coldSize, "cold_partial_project_space_bytes": coldSpace, "cold_partial_project_inodes": coldInodes, "two_durable_template_pins_retained_before_recovery": true, "ordinary_unobserved_recovery_both_destroyed_resources_absent_keys410_exec409": true, "two_fresh_real_guest_uids_boots_and_workspaces_checked": true, "retired_backing_two_then_one_pin_gc_and_surviving_exec_checked": true, "last_pin_exact_gc_all_four_projects_zero_controller_reaped_parent_removed": true}, nil
+	return nil
 }

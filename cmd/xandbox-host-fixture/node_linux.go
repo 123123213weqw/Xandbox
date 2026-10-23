@@ -49,6 +49,7 @@ type node struct {
 	quotaHeld       *quotaBarrierLive
 	quotaLost       *quotaLossLive
 	copyCut         *copyCutLive
+	ownerCut        *ownerCutLive
 	mapper          *stateMapper
 	api             *client.Client
 	process         *exec.Cmd
@@ -60,18 +61,18 @@ func (q nodeRequest) validate() error {
 	if q.Version != 1 {
 		return errors.New("bad fixture protocol")
 	}
-	if q.Operation == "quota-copy-cut-recover" {
+	if q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-owner-cut-recover" {
 		if q.Phase != "" || len(q.Receipt) == 0 || len(q.Receipt) > copyCutReceiptMax {
 			return errors.New("bounded fixed private cut receipt required")
 		}
 		return nil
 	}
 	if len(q.Receipt) > 0 {
-		return errors.New("receipt only allowed on fixed copy cold recovery")
+		return errors.New("receipt only allowed on fixed private cold recovery")
 	}
 
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -569,7 +570,7 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 		}
 		if e == nil {
 			timeout := 70 * time.Second
-			if q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
+			if q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
 			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
@@ -596,6 +597,14 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 				}
 			case "quota-copy-setup":
 				result, e = n.quotaCopySetup(ctx)
+			case "quota-owner-cut-checkpoint":
+				var private []byte
+				result, private, e = n.quotaOwnerCutCheckpoint(ctx)
+				if e == nil {
+					out["private_receipt"] = json.RawMessage(private)
+				}
+			case "quota-owner-cut-recover":
+				result, e = n.quotaOwnerCutRecover(ctx, q.Receipt)
 			case "quota-copy-cut-checkpoint":
 				var private []byte
 				result, private, e = n.quotaCopyCutCheckpoint(ctx)

@@ -6,13 +6,55 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from kvm_nested_host import (nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
+from kvm_nested_host import (OWNER_CUT_CHECKPOINT_FLAGS, OWNER_CUT_RECOVERY_FLAGS, validate_quota_owner_cut_checkpoint, validate_quota_owner_cut_recovery, owner_cut_recovery_packet, detach_owner_cut_checkpoint, nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
 
 from build_nested_host import init_scripts, validate_manifest
 from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, QUOTA_SWITCH_MAX_FRAME, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def owner_cut_checkpoint(self):
+        value={k:True for k in OWNER_CUT_CHECKPOINT_FLAGS}
+        value['genuine_l1_snapshot_setup']=self.copy_cut_checkpoint()['genuine_l1_snapshot_setup']
+        value['other_fsync_continue_reply_submissions']=100
+        return value
+
+    def test_owner_cut_requires_exact_post_unlink_pending_commit_and_no_forcing(self):
+        good=self.owner_cut_checkpoint();validate_quota_owner_cut_checkpoint(good)
+        for k in OWNER_CUT_CHECKPOINT_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_checkpoint(bad)
+        for value in (0,8192,True):
+            bad=copy.deepcopy(good);bad['other_fsync_continue_reply_submissions']=value
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_checkpoint(bad)
+
+    def test_owner_cut_cold_may_retain_or_lose_owner_but_never_pin_accounting(self):
+        good={**{k:True for k in OWNER_CUT_RECOVERY_FLAGS},'cold_victim_owner_present':True,'cold_durable_owner_pins':2}
+        validate_quota_owner_cut_recovery(good)
+        good.update(cold_victim_owner_present=False,cold_durable_owner_pins=1);validate_quota_owner_cut_recovery(good)
+        for k in OWNER_CUT_RECOVERY_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_recovery(bad)
+        for key,value in [('cold_victim_owner_present',0),('cold_durable_owner_pins',True),('cold_durable_owner_pins',2)]:
+            bad=copy.deepcopy(good);bad[key]=value
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_recovery(bad)
+
+    def test_owner_cut_private_receipt_detached_exclusive0600_not_a_public_result(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target=Path(temporary)/'private-owner-cut-receipt.json'
+            out={'ok':True,'result':self.owner_cut_checkpoint(),'private_receipt':{'version':1,'private':'not-public'}}
+            public,receipt=detach_owner_cut_checkpoint(out,target)
+            self.assertNotIn('private_receipt',out);self.assertNotIn('not-public',json.dumps(public))
+            self.assertEqual(json.loads(target.read_text()),receipt);self.assertEqual(stat.S_IMODE(target.stat().st_mode),0o600)
+            with self.assertRaises(FileExistsError):detach_owner_cut_checkpoint({**out,'private_receipt':receipt},target)
+
+    def test_owner_cut_fixed_recovery_request_keeps_original_scanner_budget(self):
+        value=owner_cut_recovery_packet({'version':1,'x':'a'*6900})
+        self.assertEqual(value['operation'],'quota-owner-cut-recover');self.assertNotIn('phase',value)
+        self.assertLess(len(json.dumps(value,separators=(',',':')).encode())+1,8192)
+        for receipt in (None,[],{'version':True},{'version':2},{'version':1,'x':'a'*7000}):
+            with self.assertRaises(AssertionError):owner_cut_recovery_packet(receipt)
+
     def copy_cut_checkpoint(self):
         setup={k:True for k in ('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated')};setup['snapshot_memory_bytes']=512<<20
         return {**{k:True for k in COPY_CUT_CHECKPOINT_FLAGS},'genuine_l1_snapshot_setup':setup,'actual_live_workspace_prefix_bytes':16<<20,'live_kernel_quota_space_bytes':20<<20,'live_named_allocated_bytes':4096,'live_quota_inodes':3,'live_named_inodes':3}

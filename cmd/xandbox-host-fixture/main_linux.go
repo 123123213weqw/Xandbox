@@ -28,6 +28,12 @@ func main() {
 		err = runNodeAllProfiles(false, false, false, true)
 	case "node-quota-driver", "node-quota-unenforced":
 		err = runNodeProfiles(false, false, true)
+	case "quota-owner-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("owner daemon accepts no arguments")
+		} else {
+			err = runOwnerDaemon()
+		}
 	case "quota-copy-daemon":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("copy daemon accepts no arguments")
