@@ -1,6 +1,6 @@
 # Xandbox
 
-> 新的 daemon 有界诊断已通过有限日志挂起/退出锁/冷启动实验，见 [DIAGNOSTICS](docs/DIAGNOSTICS.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
+> 新 daemon 的闭集诊断原因与独立计数已通过12组有限故障回归，见 [DIAGNOSTICS](docs/DIAGNOSTICS.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 
 [![CI](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml)
 

@@ -3,7 +3,7 @@
 本组件是 **best-effort diagnostics，不是逐请求、逐租户可靠审计**。
 本次改变了 daemon、operator CLI 及其依赖；旧 `4ee` daemon 的硬件报告
 不能证明新版本。历史 `29fe` 版本已有两个固定日志写入挂起窗口及四个共享路径的真实 owned-L1 回归；
-新增闭集原因与 producer 计数的当前代码尚待新 ELF 实测，不能沿用这些历史通过结果。
+新增闭集原因与 producer 计数已完成下述独立的新 ELF 有限回归，不能沿用历史通过结果。
 完整 DEFAULT / IO / quota240 / dual-cold / failure / trace / TLS+metadata
 重验仍未完成，不能据此宣称生产就绪。
 
@@ -151,8 +151,38 @@ session.Close 会重写 CLOSED.UpdatedAt。修正是在真正 EXIT_GROUP 入口�
 新增单测曾错误地在 live writer 旁调用会回收临时文件的 startup Load；随后改为
 只读精确 named file，并实际通过100次 race 重复。旧失败未被改写成通过。
 
-**剩余门禁**：旧负向测试仍有解析 raw stderr 的断言，需要迁移到闭集原因/存储独立
-计数或独立真实故障与状态证据，不能恢复错误/路径泄露，也不能只凭任意非零退出通过。
-该项与全量 DEFAULT/IO/quota240/trace/TLS 等新 ELF 重验均尚未完成。
+## 新闭集原因与计数的有限回归
+
+冻结源码 `b462946`，普通 daemon `d163a628…`、fixture `98ae70a9…`；
+[脱敏摘要与原始归档指纹](validation/diagnostics-cause-v1.json)只包含固定名称、计数、
+已检查的摘要和有限观察，不发布原始错误、路径、进程/guest 身份或私有日志。
+新 ELF 的 3 个完整函数、132 条规范化指令与源相对行号已比较，9 个固定入口探针重新校准；
+随后在新 ELF 上实际通过并发准备及取消的两类 trace，而非仅替换 ELF hash。
+
+本次 12 组实测均通过，独立只读复核未使用补充清理：
+
+- 8 组 nested 共 **16 次 L1 启动**：配额6类负向及普通 cold、未启用 quota 的拒绝、
+  真实 kernel SYNCFS 返回 EIO、partial-copy 注入 WRITE EIO 与 live keeper、
+  schema3 node、实际准备/取消 trace、两个日志 FSYNC 挂起窗口。
+- EIO 测试在故障前打开唯一 metrics 连接，该观测连接在故障后禁止重新连接或查找 socket 路径；
+  独立的真实 syscall 返回与进程内 `io=1` 合用，不要求失败文件系统能落盘日志。
+  EDQUOT 两类各自首次及同绑定重启后均观察独立进程 `quota=1`。
+  启动负向要求 exit1 加精确闭集单行，不能用任意非零退出或诊断子串通过。
+- 4 组 DEFAULT/IO × ENOSPC/ledger-only EROFS，共12个故障恢复对：
+  restart 前后均探测实际 errno，原 authority inode/mode/bytes 不变、无 live tenant listener；
+  只释放同一个 owned 故障后，原 binary/config 正常恢复旧资源并完成新 KVM guest。
+  这是受控故障与同输入恢复的**因果推断**，不是已持久化的错误审计或 syscall 归因证书。
+- 独立复核确认全部16个 nested 执行代际和12组对应 root/cgroup（nested 另含 control/parent）、
+  4个 fault image/mountpoint/loop binding 均不存在。
+
+Linux full race×3、fixture race×10、5项特定回归 race×100、vet、116项 root Python
+（零 skip）、kernel quota×3、7组进程测试、9个 native/cross 逐字节一致；Darwin full
+race×3/vet 亦通过。源码提交的 push/PR 两组 CI 各5 jobs 全绿。
+首次 Linux 单测的两处测试期望错误及后续脚本把 v10 路径误改 v20 的失败均保留指纹；
+后者在错误资产检查处、任何 KVM 阶段前拒绝，随后只恢复原 SHA 校验的 v10 路径，
+未修改源码、资源或时间预算。摘要发布器实际拒绝了72个 source/ELF/状态/范围变体。
+
+**剩余门禁**：以上不是完整 DEFAULT/IO、quota240、dual-cold、全部 failure、
+operator/session、TLS+metadata 的新 ELF 验收；未重跑部分仍需独立完成。
 可靠租户审计、全局磁盘与内存压力、operator/systemd/恢复、PKI、长时 open-loop/fairness、
 备份升级回滚等仍属原 Goal 的未完成范围。

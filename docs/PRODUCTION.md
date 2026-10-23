@@ -22,7 +22,7 @@
 
 最新[有界policy库存与真实孤立文件回收](POLICY_METADATA.md)为**新的生产gateway**555b/c402：增加有界11项/8KiB逻辑库存、严格已识别temp的CAS后回收，新程序已另跑pre/post/TLS/普通schema3共4scope/8次启动与独立清理审计。原生19类非法库存和边界负例、实机foreign/symlink/跳号拒绝及真实SIGKILL temp的cold回收有限证据均保留；旧241ca不代签。不是全局物理磁盘、日志/审计预算、完整GC/介质窗口或完整M4。
 
-当前新增[有界异步诊断与固定写入挂起窗口](DIAGNOSTICS.md)：daemon29fe、fixture9ecc 的两个 ring FSYNC 窗口及四个共享 node 回归，共6scope/12次L1启动、独立清理审计与130项脱敏拒绝检查通过。不是可靠租户审计或完整生产验收；当前 template9eb8/node4579/gateway46d3/builder4d5d 等新产物不能沿用前述4ee/555b历史报告代签，全量 DEFAULT/IO/quota240/trace/TLS+metadata 重验仍待完成。旧负向测试的 raw stderr 断言还需迁移到闭集原因或独立真实故障/状态证据；本项不勾选完整M2/M4。
+当前新增[有界异步诊断与闭集原因计数](DIAGNOSTICS.md)：历史29fe的日志窗口证据保持原绑定；新 daemon d163、fixture98ae 已独立通过12scope（nested16次L1启动及4组 DEFAULT/IO×ENOSPC/EROFS）、真实EIO/EDQUOT/部分复制、准备/取消trace及两个日志窗口，并完成无补充清理的独立资源/loop复核。[脱敏摘要](validation/diagnostics-cause-v1.json)含原始归档指纹、native/cross9及72项拒绝检查。旧 raw stderr 负向已迁移到精确闭集启动行、独立 producer 计数或受控真实故障与同输入恢复证据，不恢复原始错误输出；这不是可靠租户审计、持久化根因证书或完整生产验收。新 template573e/nodeea48/gateway41e9/builder5ff7 仍不能沿用历史报告代签，剩余全量 DEFAULT/IO/quota240/dual-cold/failure/operator/session/TLS+metadata 重验待完成；本项不勾选完整M2/M4。
 
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。
