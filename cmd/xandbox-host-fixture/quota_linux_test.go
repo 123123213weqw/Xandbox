@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"fmt"
@@ -211,7 +212,8 @@ func TestNegativeQuotaHelpersAreFixedAndNeverRunOnL0(t *testing.T) {
 	}
 	for _, name := range negativeQuotaCases {
 		args, e := negativeDaemonArgs(name)
-		if e != nil || len(args) != 11 {
+		want := []string{"sandboxd", "-backend", "firecracker", "-state-dir", "/srv/nq/" + name + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/nq/" + name + "/backend.json", "-max-instances", "1", "-metrics"}
+		if e != nil || !slices.Equal(args, want) {
 			t.Fatal("bad fixed daemon arguments", e, args)
 		}
 		if e = runNegativeQuotaDaemon(name); e == nil {

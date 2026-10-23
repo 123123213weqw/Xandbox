@@ -126,7 +126,8 @@ func TestCauseSamplerInitialFailureClosesPreopenedConnection(t *testing.T) {
 	if s, e := samplePreopenedPrepareConnection(ctx, client); e == nil || s != nil {
 		t.Fatal("cancelled connection accepted")
 	}
-	if e := peer.SetReadDeadline(time.Now().Add(time.Second)); e != nil {
+	// net.Pipe may already report peer closure here, before the EOF read.
+	if e := peer.SetReadDeadline(time.Now().Add(time.Second)); e != nil && e != io.ErrClosedPipe {
 		t.Fatal(e)
 	}
 	if _, e := peer.Read(make([]byte, 1)); e != io.EOF {
