@@ -12,7 +12,7 @@
 
 另有[schema3 snapshot/inode/字节压力与低free cold有限门槛](NODE_SNAPSHOT_PRESSURE.md)：生产ELF不变、新fixture实测及8scope/19外层代际独立审计通过；实际permit并发、全RAM/OOM、外部日志/export硬边界及完整节点/生产门槛仍未完成。
 
-部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。
+部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。新增[systemd接口冲突与部署前置约束](DEPLOYMENT_CONSTRAINTS.md)记录 `.control` 与当前严格库存的冲突；不提供未验收的可运行 unit。
 
 ## 信任与隔离边界
 
@@ -20,11 +20,11 @@
 
 后续[固定policy提交窗口/入口watchdog有限验收](TLS_POLICY_COMMIT.md)已通过：83d为测试修改，同一生产ELF在pre-file FSYNC、post-durable pre-snapshot MEMFD_CREATE两入口实际hold；child在root仍挂起时退出，普通忙任务继续，冷恢复区分真实journal1与2，另有健康TLS/普通schema3回归，共4scope/8代独立审计。未覆盖其余policy介质/提交窗口、孤立临时元数据预算或完整M4，不用通知等待代替真实文件系统D。
 
-最新[有界policy库存与真实孤立文件回收](POLICY_METADATA.md)为**新的生产gateway**555b/c402：增加有界11项/8KiB逻辑库存、严格已识别temp的CAS后回收，新程序已另跑pre/post/TLS/普通schema3共4scope/8次启动与独立清理审计。原生19类非法库存和边界负例、实机foreign/symlink/跳号拒绝及真实SIGKILL temp的cold回收有限证据均保留；旧241ca不代签。不是全局物理磁盘、日志/审计预算、完整GC/介质窗口或完整M4。
+历史555b节点的[有界policy库存与真实孤立文件回收](POLICY_METADATA.md)为**新的生产gateway**555b/c402：增加有界11项/8KiB逻辑库存、严格已识别temp的CAS后回收，新程序已另跑pre/post/TLS/普通schema3共4scope/8次启动与独立清理审计。原生19类非法库存和边界负例、实机foreign/symlink/跳号拒绝及真实SIGKILL temp的cold回收有限证据均保留；旧241ca不代签。不是全局物理磁盘、日志/审计预算、完整GC/介质窗口或完整M4。
 
-当前新增[有界异步诊断与闭集原因计数](DIAGNOSTICS.md)：历史29fe的日志窗口证据保持原绑定；新 daemon d163、fixture98ae 已独立通过12scope（nested16次L1启动及4组 DEFAULT/IO×ENOSPC/EROFS）、真实EIO/EDQUOT/部分复制、准备/取消trace及两个日志窗口，并完成无补充清理的独立资源/loop复核。[脱敏摘要](validation/diagnostics-cause-v1.json)含原始归档指纹、native/cross9及72项拒绝检查。旧 raw stderr 负向已迁移到精确闭集启动行、独立 producer 计数或受控真实故障与同输入恢复证据，不恢复原始错误输出；这不是可靠租户审计、持久化根因证书或完整生产验收。新 template573e/nodeea48/gateway41e9/builder5ff7 仍不能沿用历史报告代签，剩余全量 DEFAULT/IO/quota240/dual-cold/failure/operator/session/TLS+metadata 重验待完成；本项不勾选完整M2/M4。
+当前新增[有界异步诊断与闭集原因计数](DIAGNOSTICS.md)：历史29fe的日志窗口证据保持原绑定；新 daemon d163、fixture98ae 已独立通过12scope（nested16次L1启动及4组 DEFAULT/IO×ENOSPC/EROFS）、真实EIO/EDQUOT/部分复制、准备/取消trace及两个日志窗口，并完成无补充清理的独立资源/loop复核。[脱敏摘要](validation/diagnostics-cause-v1.json)含原始归档指纹、native/cross9及72项拒绝检查。旧 raw stderr 负向已迁移到精确闭集启动行、独立 producer 计数或受控真实故障与同输入恢复证据，不恢复原始错误输出；这不是可靠租户审计、持久化根因证书或完整生产验收。新 template573e/nodeea48/gateway41e9/builder5ff7 不能沿用历史报告代签；后续具名矩阵与边界复验见下文，各自保留源绑定。本项不勾选完整M2/M4。
 
-随后另完成[d163 DEFAULT/IO/quota240命名兼容矩阵](D163_RUNTIME.md)：18个新scope与上述同源7个scope组成25组，分别保留原始来源，43个外层执行代际及4个loop绑定均有独立只读复核；冷30、DEFAULT/quota各双租户240次、双活cold及明确列出的故障通过，不重标历史ELF报告。此更新只完成该命名矩阵；owner/inflight、operator/session和TLS+metadata等独立门禁，以及饱和压力、可靠审计、独立部署与运营验收仍未完成。下文早期“最新”版本叙述为各自历史节点，以本段及对应源绑定报告区分当前证据，不勾选完整M1–M4。
+随后另完成[d163 DEFAULT/IO/quota240命名兼容矩阵](D163_RUNTIME.md)：18个新scope与上述同源7个scope组成25组，分别保留原始来源，43个外层执行代际及4个loop绑定均有独立只读复核；冷30、DEFAULT/quota各双租户240次、双活cold及明确列出的故障通过，不重标历史ELF报告。此更新只完成该命名矩阵。后续另有[十个命名边界复验](D163_BOUNDARIES.md)：7组旧fixture与3组新TLS fixture保留原始来源，普通8产物逐字节相同，20个合格代际及1个失败前序代际独立只读复核不存在。饱和压力、可靠审计、独立部署与运营验收仍未完成。下文早期“最新”版本叙述为各自历史节点，以本段及对应源绑定报告区分当前证据，不勾选完整M1–M4。
 
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。
@@ -107,7 +107,7 @@ M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FI
 - [x] 40次新VM切换闭环的独立阶段分布、外部RSS/cgroup/FD采样（67秒有限实验，不代表生产持续负载）。
 - [x] [双租户各120次快照切换](MIXED_LOAD.md) 的246.267秒有限混合闭环、租户配额隔离、404个资源视图样本及完整失败前序记录；不是完整共享RAM归属、公平性、开放到达饱和或生产持续负载。
 
-- [ ] CI 的静态分析、race、故障注入、依赖/秘密扫描通过。
+- [ ] CI 的静态分析、race、故障注入、依赖/秘密扫描通过。仓库级[固定秘密扫描门禁](SECRET_SCAN.md)已接入独立 job；当前提交结果须以实际 CI 为准，不替代真实 KVM/部署与完整 M4。
 - [ ] 真实 KVM 集成测试有可下载日志和固定环境参数。
 - [ ] 结构化审计、指标、告警建议、备份/恢复与升级回滚手册。
 - [ ] 持续负载期间回收队列有界，资源占用不会随销毁数量无限增长。

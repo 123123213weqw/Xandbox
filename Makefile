@@ -1,4 +1,4 @@
-.PHONY: test build vet smoke
+.PHONY: test build vet smoke secret-scan
 
 BIN_DIR ?= bin
 
@@ -29,3 +29,10 @@ smoke: build
 	python3 scripts/metrics_smoke.py --daemon "$(BIN_DIR)/sandboxd"
 	python3 scripts/node_control_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"
 	python3 scripts/diagnostics_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"
+
+# Install explicitly into a private directory first; never auto-install a tool.
+secret-scan:
+	@test -n "$(SECRET_SCANNER)" || (echo 'set SECRET_SCANNER to the pinned private executable' >&2; exit 1)
+	python3 -m unittest discover -s scripts -p test_secret_scan.py
+	python3 scripts/secret_scan_smoke.py --scanner "$(SECRET_SCANNER)"
+	python3 scripts/secret_scan.py --scanner "$(SECRET_SCANNER)"

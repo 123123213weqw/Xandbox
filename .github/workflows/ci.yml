@@ -106,3 +106,23 @@ jobs:
           cache: false
       - name: Scan reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  secret-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify fail-closed secret gate unit controls
+        run: python3 -m unittest discover -s scripts -p test_secret_scan.py
+      - name: Install hash-pinned scanner into private exclusive directory
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/xandbox-secret-tools"
+          python3 scripts/install_secret_scanner.py --destination "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"
+      - name: Verify actual positive, deleted-history, merge and redaction controls
+        run: python3 scripts/secret_scan_smoke.py --scanner "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"
+      - name: Scan all reachable non-shallow history without publishing raw findings
+        run: python3 scripts/secret_scan.py --scanner "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"

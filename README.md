@@ -1,6 +1,8 @@
 # Xandbox
 
-> 新 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)及[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
+> 新 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
+
+仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[systemd部署约束](docs/DEPLOYMENT_CONSTRAINTS.md)仍是设计审查，不是可用安装器或生产部署通过。
 
 [![CI](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml)
 
@@ -10,7 +12,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [独立TLS接入与外部凭证边界](docs/TLS_GATEWAY.md)：root固定连接broker无TCP listener，专用UID/caps0/NNP/chroot的网络child；真实TLS→KVM双租户、key/证书轮换不重启controller/guest、无效reload关闭入口、旧revision拒绝及同盘冷恢复有限验收通过。0b基线的cwd/继承FD与持久lock标记修正有独立2 scope/4次外层启动证据；首轮失败、原生bootstrap失败对照及各冻结阶段保留，普通4ee五个ELF不变。这不是完整PKI、DoS、operator部署或生产SLO验收。
 
-最新生产gateway `555b9974…` 新增[策略库存硬逻辑预算与已识别孤立文件回收](docs/POLICY_METADATA.md)：11项/8KiB准入、完整库存验证后且CAS通过才回收；真实中断产物在cold前保留、正常启动后被生产代码回收，foreign/symlink/跳号拒绝不删改authority。新源码另通过pre/post/TLS/node-budget共4scope/8次启动，旧241ca报告不代签。逻辑预算不是物理配额，日志/审计及完整生产门槛仍未完成。
+历史555b生产gateway `555b9974…` 新增[策略库存硬逻辑预算与已识别孤立文件回收](docs/POLICY_METADATA.md)：11项/8KiB准入、完整库存验证后且CAS通过才回收；真实中断产物在cold前保留、正常启动后被生产代码回收，foreign/symlink/跳号拒绝不删改authority。新源码另通过pre/post/TLS/node-budget共4scope/8次启动，旧241ca报告不代签。逻辑预算不是物理配额，日志/审计及完整生产门槛仍未完成。
 
 新增 [策略提交挂起与入口心跳专项](docs/TLS_POLICY_COMMIT.md)：同一生产程序在真实pre-file FSYNC与已完成Commit、尚未分配snapshot的MEMFD_CREATE入口受控暂停，child退出时root通知仍有效、已有忙guest/session继续；冷恢复分别验证未提交1→生产提交2和已提交2拒绝旧配置。两个窗口与健康TLS/普通node-budget回归共4scope/8次启动，独立清理核验通过；不是文件系统D、物理介质故障、全部策略窗口或生产就绪声明。
 

@@ -50,8 +50,9 @@ unique RAM计费或线上SLO。
 
 ## 仍待完成
 
-新d163/41e9的owner unlink、在途partial-copy、operator/session ticket/未完成writer退出/
-control提交，以及TLS/policy metadata为独立门禁，只有其自身新实测与独立复核才可通过。
+后续独立[十个命名边界复验](D163_BOUNDARIES.md)已实际完成 owner unlink、在途 partial-copy、
+operator/shutdown/session ticket、control pre/post 及 TLS/policy 三组；原始 7+3 保留各自来源，
+不把本矩阵重标为已执行这些场景。该通过仍不是其余所有故障窗口验收。
 节点级磁盘/RAM/CPU饱和、可靠租户审计/告警、独立operator/systemd安装恢复、PKI分发、
 open-loop/fairness/长时负载和备份/升级/回滚仍未完成。既不以通知挂起冒充filesystem D，
 也不把owned-L1的mapper错误等同于真实物理介质故障或安全擦除。

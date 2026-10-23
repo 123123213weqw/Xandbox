@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "production_ready": false,
+  "goal_complete": false,
+  "ordinary8_byte_identical": true,
+  "ordinary_artifacts_sha256": {
+    "sandboxd": "d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "report_bindings": {
+    "owner": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-owner-v1.json",
+      "report_sha256": "c48f45471788e2693105abd2a6c8c9bebeed4ca2f559991cf662d57a0d077f0e",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "inflight": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-inflight-v1.json",
+      "report_sha256": "fc2e280e77cab8251250f83a897ed8e9246dfcd0e77df90264d015339d183278",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "operator": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-operator-v1.json",
+      "report_sha256": "de0de21341b74946e290a1ec8d37ced9a853ecafbb189441ce1a11381c3f9889",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "shutdown": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-shutdown-v1.json",
+      "report_sha256": "7b9bed34079bf105ae68e45839c3dc476717382cd64c87440e0b0ef668279ffd",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "ticket": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-ticket-v1.json",
+      "report_sha256": "7f113ba710f2b2fd7b6de8fd1cb7395dc40f4fec4a4ab2a0491e9901f433b1e7",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "control-pre": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-control-pre-v1.json",
+      "report_sha256": "a61c4af38758b5426862468592dff7a0b264e848b8d24c26f7e1a082ce3ec586",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "control-post": {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "fixture_sha256": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+      "original_report_name": "kvm-d163-boundaries-control-post-v1.json",
+      "report_sha256": "2886529aa8f2b7a95e36cc17bb5e6c6d525d168b467ee5e9f9282c10d9227fcf",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "pre": {
+      "source_revision": "ecfe5b3bcd9279ce9835768fec8ed10459d89140",
+      "fixture_sha256": "b02d69ae99ede4363ad97f9a5713e2c5c0cbcefb2551eea85de304fb11eed0f5",
+      "original_report_name": "kvm-d163-tls-pre-v2.json",
+      "report_sha256": "097948adb19f1f4767f41687d3dfc4198533980120b806a937f8263b1b9a8add",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "post": {
+      "source_revision": "ecfe5b3bcd9279ce9835768fec8ed10459d89140",
+      "fixture_sha256": "b02d69ae99ede4363ad97f9a5713e2c5c0cbcefb2551eea85de304fb11eed0f5",
+      "original_report_name": "kvm-d163-tls-post-v2.json",
+      "report_sha256": "1c767da26102b71d797ee8a98d553fa376df1c4168410e08dbcd30c67520143d",
+      "l1_boots": 2,
+      "passed": true
+    },
+    "healthy": {
+      "source_revision": "ecfe5b3bcd9279ce9835768fec8ed10459d89140",
+      "fixture_sha256": "b02d69ae99ede4363ad97f9a5713e2c5c0cbcefb2551eea85de304fb11eed0f5",
+      "original_report_name": "kvm-d163-tls-healthy-v2.json",
+      "report_sha256": "8a0f4b892981545abcda95546218cdac98d017c07a31c87eedcd9d4f01fa9e85",
+      "l1_boots": 2,
+      "passed": true
+    }
+  },
+  "independent_read_only_audit": {
+    "actually_executed_read_only": true,
+    "all_three_runners_absent": true,
+    "no_supplemental_cleanup": true,
+    "passing_outer_generations_absent": 20,
+    "failed_predecessor_generations_absent": 1
+  },
+  "raw_archives_sha256": {
+    "boundary_v1_with_preserved_failure": "74556454babbc5a673f9f4ef7f3dae3bd5d0c74108a2ad29a7baf5c79e183bda",
+    "tls_v2_with_native_gates": "5743ead0125cb18834c390fae93a0bdcb8876c4261f94a8e400a6f806bf505b5"
+  },
+  "preserved_failures": [
+    {
+      "stage": "b2_push_ci_fixture_unit",
+      "log_sha256": "80e649e550829001f519b208c9f904162a8d71e1bfafb3e619ea67c147183fa8",
+      "correction": "Quiescent ordinary reopen before Close; require atomic inode replacement instead of UTC timestamp ordering; no sleep, production hook or budget increase."
+    },
+    {
+      "stage": "tls_pre_v1_before_target_hold",
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "correction": "Stale555b exact fixture pin rejected current41e; target source trees unchanged and actual new TLS3 repeated. No failed report retagging."
+    }
+  ],
+  "new_native_gates": {
+    "source_revision": "ecfe5b3bcd9279ce9835768fec8ed10459d89140",
+    "full_race_count": 3,
+    "full_vet": true,
+    "fixture_race_count": 10,
+    "fixture_vet": true,
+    "quiescent_baseline_race_count": 1000,
+    "root_python_tests": 116,
+    "root_python_skips": 0,
+    "kernel_quota_filter_repetitions": 3,
+    "process_suites": 7,
+    "native_cross_equal_artifacts": 9
+  },
+  "publisher_known_mutants_rejected": 50,
+  "source_ci_runs": [
+    {
+      "id": 40038966211,
+      "event": "pull_request",
+      "head_sha": "ecfe5b3bcd9279ce9835768fec8ed10459d89140",
+      "successful_jobs": 5,
+      "url": "https://github.com/123123213weqw/Xandbox/actions/runs/40038966211"
+    },
+    {
+      "id": 40038961409,
+      "event": "push",
+      "head_sha": "ecfe5b3bcd9279ce9835768fec8ed10459d89140",
+      "successful_jobs": 5,
+      "url": "https://github.com/123123213weqw/Xandbox/actions/runs/40038961409"
+    }
+  ],
+  "limitations": [
+    "Seven boundary cases retain sourceb462/fixture98ae; TLS3 retains sourceecfe/fixtureb02. Same ordinary8 bytes are not a claim of a single combined execution.",
+    "Notification-held syscalls and injected errors are not physical media faults or an absolute filesystem deadline.",
+    "No operator/systemd deployment, PKI distribution, global resource saturation, reliable tenant audit, open-loop fairness/long-term SLO or full Goal acceptance claim.",
+    "Raw receipts, console, runtime identities and private credentials are not published."
+  ]
+}

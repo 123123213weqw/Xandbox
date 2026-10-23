@@ -186,7 +186,8 @@ race×3/vet 亦通过。源码提交的 push/PR 两组 CI 各5 jobs 全绿。
 18个新scope与前批同源7个scope分别保留来源，共25个scope/43个外层执行代际，
 不将不同来源的原始报告重标为一次新执行。
 
-**剩余门禁**：上述有限矩阵不是全部 failure、owner/inflight、operator/session、
-TLS+metadata 的完整新 ELF 验收；各自未完成的门禁仍需独立实测及复核。
+后续另完成[十个命名边界复验](D163_BOUNDARIES.md)，含 owner/inflight、operator/shutdown/
+session ticket、control pre/post 及 TLS/policy 三组，保留 7+3 原始来源。
+**剩余门禁**：以上具名场景通过不是全部 failure/持久化窗口或完整生产验收。
 可靠租户审计、全局磁盘与内存压力、operator/systemd/恢复、PKI、长时 open-loop/fairness、
 备份升级回滚等仍属原 Goal 的未完成范围。
