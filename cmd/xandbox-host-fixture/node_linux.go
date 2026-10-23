@@ -43,6 +43,7 @@ type node struct {
 	quotaStateIO    bool
 	quotaWindowLock *os.File
 	quotaHeld       *quotaBarrierLive
+	quotaLost       *quotaLossLive
 	mapper          *stateMapper
 	api             *client.Client
 	process         *exec.Cmd
@@ -55,7 +56,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -570,6 +571,14 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 				result, e = n.quotaNegativeSetup(ctx)
 			case "quota-syscall-setup":
 				result, e = n.quotaSyscallSetup(ctx)
+			case "quota-listener-reserve-checkpoint":
+				result, e = n.quotaListenerCheckpoint(ctx, quotaLossReserve)
+			case "quota-listener-reserve-recover":
+				result, e = n.quotaListenerRecover(ctx, quotaLossReserve)
+			case "quota-listener-release-checkpoint":
+				result, e = n.quotaListenerCheckpoint(ctx, quotaLossRelease)
+			case "quota-listener-release-recover":
+				result, e = n.quotaListenerRecover(ctx, quotaLossRelease)
 			case "quota-barrier-checkpoint":
 				result, e = n.quotaBarrierCheckpoint(ctx)
 			case "quota-barrier-recover":

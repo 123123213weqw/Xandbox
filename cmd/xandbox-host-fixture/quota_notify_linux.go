@@ -50,6 +50,9 @@ const quotaBarrierCase = "reserve-barrier-hang"
 var quotaSyscallCases = [...]string{"reserve-set-eio", "reserve-read-erofs", "reserve-sync-eio", "clear-set-eio", "clear-sync-erofs", "clear-read-eio"}
 
 func quotaSyscallBase(name string) (string, error) {
+	if m, ok := quotaLossName(name); ok {
+		return m.base(), nil
+	}
 	if name == quotaBarrierCase {
 		return "/srv/sq/" + name, nil
 	}
@@ -61,6 +64,9 @@ func quotaSyscallBase(name string) (string, error) {
 	return "", errors.New("fixed quota syscall case required")
 }
 func quotaSyscallRuntime(name string) (string, error) {
+	if m, ok := quotaLossName(name); ok {
+		return m.runtimeRoot(), nil
+	}
 	if name == quotaBarrierCase {
 		return "/srv/sr/6", nil
 	}
@@ -159,6 +165,8 @@ type quotaNotifyState struct {
 	barrierFD                                 uint64
 	qsyncPassed, qsetPassed, syncfsPassed     int
 	boundarySpace, boundaryInodes             uint64
+	lossClosed                                bool
+	boundaryChecks                            int
 }
 
 // No tracee pointer is dereferenced. A subsequent syscall plus independent
@@ -191,6 +199,7 @@ func (s *quotaNotifyState) response(id uint64, inject bool) quotaNotifResponse {
 
 type quotaNotifier struct {
 	mu                          sync.Mutex
+	stopOnce                    sync.Once
 	state                       quotaNotifyState
 	fd, pid                     int
 	identity, base, runtimeRoot string
@@ -198,6 +207,7 @@ type quotaNotifier struct {
 	done                        chan struct{}
 	mapper                      *stateMapper
 	barrier                     *quotaBarrierPlan
+	loss                        *quotaLossPlan
 	exitTrace                   *quotaExitTrace
 }
 
@@ -318,6 +328,20 @@ func (o *quotaNotifier) serve() {
 			o.mu.Unlock()
 			return
 		}
+		// Closing our last listener FD, not replying with errno, lets the
+		// kernel resolve this pending notification and all future ones.
+		if o.loss != nil && o.state.armed && q.Data.Args[1] == 0x80000802 {
+			e = o.prepareListenerLoss(q)
+			if e != nil {
+				o.state.err = e
+				o.mu.Unlock()
+				return
+			}
+			o.state.lossClosed = true
+			o.state.armed = false
+			o.mu.Unlock()
+			return // deferred Close(fd), then Close(done); no NOTIF_SEND.
+		}
 		barrierTarget := o.state.name == quotaBarrierCase && o.state.armed && q.Data.NR == int32(unix.SYS_SYNCFS) && o.state.syncfsPassed+1 == o.barrier.Mode.ordinal()
 		if o.state.name == quotaBarrierCase && o.state.armed {
 			e = o.prepareBarrier(q)
@@ -345,6 +369,9 @@ func (o *quotaNotifier) serve() {
 			}
 			if inject {
 				o.state.injected++
+				if strings.HasPrefix(o.state.name, "clear-") {
+					o.state.seenSet = false
+				}
 				if strings.HasPrefix(o.state.name, "reserve-") {
 					o.state.armed = false
 				}
@@ -382,7 +409,7 @@ func (o *quotaNotifier) arm() {
 func (o *quotaNotifier) disarm()                    { o.mu.Lock(); o.state.armed = false; o.mu.Unlock() }
 func (o *quotaNotifier) snapshot() quotaNotifyState { o.mu.Lock(); defer o.mu.Unlock(); return o.state }
 func (o *quotaNotifier) close() error {
-	close(o.stop)
+	o.stopOnce.Do(func() { close(o.stop) })
 	select {
 	case <-o.done:
 		return o.snapshot().err
@@ -438,6 +465,9 @@ func startQuotaNotified(ctx context.Context, name, runtimeRoot string) (*negativ
 	return startQuotaNotifiedOn(ctx, name, runtimeRoot, nil, nil)
 }
 func startQuotaNotifiedOn(ctx context.Context, name, runtimeRoot string, mapper *stateMapper, barrier *quotaBarrierPlan) (*negativeDaemon, *quotaNotifier, error) {
+	return startQuotaNotifiedPlanned(ctx, name, runtimeRoot, mapper, barrier, nil)
+}
+func startQuotaNotifiedPlanned(ctx context.Context, name, runtimeRoot string, mapper *stateMapper, barrier *quotaBarrierPlan, loss *quotaLossPlan) (*negativeDaemon, *quotaNotifier, error) {
 	if e := requireNode(); e != nil {
 		return nil, nil, e
 	}
@@ -448,6 +478,10 @@ func startQuotaNotifiedOn(ctx context.Context, name, runtimeRoot string, mapper 
 	want, e := quotaSyscallRuntime(name)
 	if e != nil || runtimeRoot != want {
 		return nil, nil, errors.New("fixed observed runtime required")
+	}
+	_, isLoss := quotaLossName(name)
+	if isLoss != (loss != nil) || loss != nil && loss.Mode.name() != name {
+		return nil, nil, errors.New("fixed listener loss plan required")
 	}
 	if (name == quotaBarrierCase) != (mapper != nil && barrier != nil) {
 		return nil, nil, errors.New("fixed mapped barrier plan required")
@@ -496,7 +530,7 @@ func startQuotaNotifiedOn(ctx context.Context, name, runtimeRoot string, mapper 
 		<-p.done
 		return nil, nil, e
 	}
-	o := &quotaNotifier{mapper: mapper, barrier: barrier, state: quotaNotifyState{name: name}, fd: fd, pid: c.Process.Pid, identity: identity, base: base, runtimeRoot: runtimeRoot, stop: make(chan struct{}), done: make(chan struct{})}
+	o := &quotaNotifier{mapper: mapper, barrier: barrier, loss: loss, state: quotaNotifyState{name: name}, fd: fd, pid: c.Process.Pid, identity: identity, base: base, runtimeRoot: runtimeRoot, stop: make(chan struct{}), done: make(chan struct{})}
 	go o.serve()
 	return p, o, nil
 }

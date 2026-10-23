@@ -42,11 +42,21 @@ func main() {
 		} else {
 			err = runNegativeQuotaDaemon((*mode)[len("quota-negative-"):])
 		}
-	case "quota-syscall-reserve-barrier-hang", "quota-syscall-reserve-set-eio", "quota-syscall-reserve-read-erofs", "quota-syscall-reserve-sync-eio", "quota-syscall-clear-set-eio", "quota-syscall-clear-sync-erofs", "quota-syscall-clear-read-eio":
+	case "quota-syscall-listener-loss-reserve", "quota-syscall-listener-loss-release", "quota-syscall-reserve-barrier-hang", "quota-syscall-reserve-set-eio", "quota-syscall-reserve-read-erofs", "quota-syscall-reserve-sync-eio", "quota-syscall-clear-set-eio", "quota-syscall-clear-sync-erofs", "quota-syscall-clear-read-eio":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("syscall daemon accepts no parameters")
 		} else {
 			err = runQuotaSyscallDaemon((*mode)[len("quota-syscall-"):])
+		}
+	case "quota-listener-reserve-recover-daemon", "quota-listener-release-recover-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("listener recovery accepts no parameters")
+		} else {
+			m := quotaLossReserve
+			if *mode == "quota-listener-release-recover-daemon" {
+				m = quotaLossRelease
+			}
+			err = runQuotaListenerRecoveryDaemon(m)
 		}
 	case "quota-barrier-recover-daemon":
 		if *config != "" || flag.NArg() != 0 {

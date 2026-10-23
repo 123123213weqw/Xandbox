@@ -7,10 +7,58 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_listener_loss_requires_last_close_actual_enosys_and_retained_state(self):
+        common=('fixed_owned_thread_anchor_owner_checked','receipt_fsynced_before_target_set','last_listener_closed_without_notification_response','selected_quotactl_fd_kernel_exit_observed','target_set_not_continued_or_errno_emulated','quota_and_absent_namespace_checked_before_listener_close','durable_reclaiming_stopped_owner_and_admission503_rechecked_three_times','quota_unchanged_while_listener_absent','no_false_destroy_confirmation','listener_never_reattached_before_power_cut')
+        for phase,_ in LISTENER_PROFILES.values():
+            reserve=phase.startswith('reserve-')
+            good={'phase':phase,**{k:True for k in common},'selected_set_kernel_errno':38,'first_return_latch_seen':1,'prepare_refused500':reserve,'checkpoint_has_no_old_l2_vm':reserve,'old_real_kvm_uid_exec_quota_filters_checked':not reserve,'delete_acceptance_allowed_not_destroy_confirmation':not reserve}
+            validate_quota_listener_checkpoint(good,phase)
+            for k,v in good.items():
+                bad=dict(good);del bad[k]
+                with self.assertRaises(KeyError):validate_quota_listener_checkpoint(bad,phase)
+                values=(not v,0,'true') if type(v) is bool else ('running',) if k=='phase' else (0,False,-1,5,2)
+                for x in values:
+                    with self.assertRaises(AssertionError):validate_quota_listener_checkpoint(dict(good,**{k:x}),phase)
+            with self.assertRaises(AssertionError):validate_quota_listener_checkpoint(good,'untrusted')
+
+    def test_listener_cold_recovery_never_fabricates_old_reserve_guest(self):
+        common=('l1_boot_changed','exact_owner_bytes_policy_and_absent_namespace_before_daemon','unexecuted_set_quota_state_checked_before_daemon','old_durable_destroyed_resources_absent_key410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed','listener_not_recreated_for_recovery')
+        for phase,_ in LISTENER_PROFILES.values():
+            good={'phase':phase,**{k:True for k in common},'cold_quota_record_empty':phase.startswith('reserve-'),'old_real_guest_boot_changed':phase.startswith('release-')}
+            validate_quota_listener_recovery(good,phase)
+            for k,v in good.items():
+                bad=dict(good);del bad[k]
+                with self.assertRaises(KeyError):validate_quota_listener_recovery(bad,phase)
+                with self.assertRaises(AssertionError):validate_quota_listener_recovery(dict(good,**{k:('running' if k=='phase' else not v)}),phase)
+
+    def test_repeated_clear_requires_three_replies_and_distinct_post_set_attempts(self):
+        common=('test_only_seccomp_errno','fixed_child_thread_and_anchor_verified','durable_attempted_owner_before_injection','kernel_limits_and_zero_usage_checked_at_boundary','no_execution_namespace_at_injected_boundary','real_kernel_continue_not_emulated_success','durable_destroyed_resources_absent_key410','capacity_reused_fresh_real_kvm_guest_uid_exec_destroy','all_thread_caps_nnp_observer_and_ordinary_vmm_filters_checked','all_fixed_projects_cleared','owned_cgroup_root_removed')
+        repeat=('at_least_three_clear_error_replies_before_disarm','same_owner_namespace_and_kernel_record_checked_each_reply','clear_target_rearmed_each_cleanup_attempt','durable_reclaiming_ledger_checked_while_errors_armed')
+        good={k:True for k in ('test_only_syscall_errno_injection','ordinary_daemon_elf_unchanged','not_physical_media_fault','all_fixed_projects_cleared')};good.update(repeated_clear_minimum=3,all_fixed_syscall_cases=[])
+        for name in ('reserve-set-eio','reserve-read-erofs','reserve-sync-eio','clear-set-eio','clear-sync-erofs','clear-read-eio'):
+            r={'case':name,'continued_kernel_calls':20,'injected_calls':1 if name.startswith('reserve-') else 3,**{k:True for k in common}}
+            if name.startswith('reserve-'):r['prepare_refused500']=True
+            else:r.update({k:True for k in repeat},successful_set_continues_before_disarm=1 if name=='clear-set-eio' else 4,reclaiming_owner_and_capacity_retained_while_errno_armed=True,new_create_refused503_during_clear_failure=True)
+            good['all_fixed_syscall_cases'].append(r)
+        validate_quota_syscall_setup(good,require_repeated=True)
+        for v in (True,0,2,4):
+            with self.assertRaises(AssertionError):validate_quota_syscall_setup(dict(good,repeated_clear_minimum=v),require_repeated=True)
+        for i in range(3,6):
+            for k in repeat:
+                bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=False
+                with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad,require_repeated=True)
+            for k,v in [('injected_calls',2),('successful_set_continues_before_disarm',True),('successful_set_continues_before_disarm',2)]:
+                bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=v
+                with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad,require_repeated=True)
+        # Historical verifier defaults retain their original >=1 semantics.
+        old=copy.deepcopy(good);del old['repeated_clear_minimum']
+        for r in old['all_fixed_syscall_cases'][3:]:r['injected_calls']=1
+        validate_quota_syscall_setup(old)
+
     def test_real_commit_eio_requires_direct_kernel_errno_and_retained_owner(self):
         phase='reserve-quota-syncfs-real-eio'
         flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')

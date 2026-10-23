@@ -3,7 +3,7 @@
 package main
 
 // TEST ONLY. A fixed raw sys_exit observer, installed solely by owned L1 PID1
-// while its exact daemon thread is at the verified syncfs entry notification.
+// while its exact daemon thread is at a fixed verified entry notification.
 // It records only the first matching return code, never arguments/data/stacks.
 import (
 	"encoding/binary"
@@ -30,6 +30,9 @@ type quotaExitTrace struct{ mapFD, programFD, linkFD int }
 // Linux6.8 x86_64 pt_regs.orig_ax is the 16th u64. Raw sys_exit arguments
 // are pt_regs* and signed long return. No runtime BTF/compiler is required.
 func quotaExitProgram(mapFD, pid, tid int) ([]quotaBPFInstruction, error) {
+	return quotaExitProgramOn(mapFD, pid, tid, false)
+}
+func quotaExitProgramOn(mapFD, pid, tid int, loss bool) ([]quotaBPFInstruction, error) {
 	if runtime.GOARCH != "amd64" || mapFD < 0 || pid < 1 || tid < 1 || uint64(pid) > 1<<31-1 || uint64(tid) > 1<<31-1 {
 		return nil, errors.New("fixed amd64 owned exit observer required")
 	}
@@ -50,7 +53,11 @@ func quotaExitProgram(mapFD, pid, tid int) ([]quotaBPFInstruction, error) {
 	add(0x85, 0, 0, 0, 113) // bpf_probe_read_kernel, no unsafe direct kernel dereference
 	jump(0x55, 0, 0, 0)
 	add(0x79, 7, 10, -8, 0)
-	jump(0x55, 7, 0, int32(unix.SYS_SYNCFS))
+	nr := int32(unix.SYS_SYNCFS)
+	if loss {
+		nr = int32(unix.SYS_QUOTACTL_FD)
+	}
+	jump(0x55, 7, 0, nr)
 	add(0x18, 1, unix.BPF_PSEUDO_MAP_FD, 0, int32(mapFD))
 	add(0, 0, 0, 0, 0)
 	add(0x62, 10, 0, -4, 0)
@@ -107,6 +114,24 @@ func (o *quotaNotifier) startExitTrace(q quotaNotif) (_ *quotaExitTrace, err err
 	if e := o.inspect(q); e != nil {
 		return nil, e
 	}
+	return o.loadFixedExitTrace(q, false)
+}
+func (o *quotaNotifier) startListenerExitTrace(q quotaNotif) (*quotaExitTrace, error) {
+	if e := requireNode(); e != nil {
+		return nil, e
+	}
+	if o.loss == nil || o.loss.Mode.name() != o.state.name || q.Data.NR != int32(unix.SYS_QUOTACTL_FD) || q.Data.Args[1] != 0x80000802 {
+		return nil, errors.New("only fixed owned SET listener loss observation permitted")
+	}
+	if e := o.inspect(q); e != nil {
+		return nil, e
+	}
+	return o.loadFixedExitTrace(q, true)
+}
+func (o *quotaNotifier) loadFixedExitTrace(q quotaNotif, loss bool) (_ *quotaExitTrace, err error) {
+	if e := requireNode(); e != nil {
+		return nil, e
+	}
 	t := &quotaExitTrace{mapFD: -1, programFD: -1, linkFD: -1}
 	defer func() {
 		if err != nil {
@@ -118,13 +143,13 @@ func (o *quotaNotifier) startExitTrace(q quotaNotif) (_ *quotaExitTrace, err err
 	binary.LittleEndian.PutUint32(a[4:], 4)
 	binary.LittleEndian.PutUint32(a[8:], 16)
 	binary.LittleEndian.PutUint32(a[12:], 1)
-	copy(a[28:], "xb_syncfs_exit")
+	copy(a[28:], "xb_quota_exit")
 	var e error
 	t.mapFD, e = quotaBPF(unix.BPF_MAP_CREATE, a)
 	if e != nil {
 		return nil, e
 	}
-	program, e := quotaExitProgram(t.mapFD, o.pid, int(q.PID))
+	program, e := quotaExitProgramOn(t.mapFD, o.pid, int(q.PID), loss)
 	if e != nil {
 		return nil, e
 	}
@@ -146,7 +171,7 @@ func (o *quotaNotifier) startExitTrace(q quotaNotif) (_ *quotaExitTrace, err err
 	binary.LittleEndian.PutUint32(a[24:], 1)
 	binary.LittleEndian.PutUint32(a[28:], uint32(len(log)))
 	binary.LittleEndian.PutUint64(a[32:], uint64(uintptr(unsafe.Pointer(&log[0]))))
-	copy(a[48:], "xb_syncfs_exit")
+	copy(a[48:], "xb_quota_exit")
 	t.programFD, e = quotaBPF(unix.BPF_PROG_LOAD, a)
 	runtime.KeepAlive(program)
 	runtime.KeepAlive(license)

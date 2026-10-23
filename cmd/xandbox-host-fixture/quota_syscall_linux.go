@@ -79,6 +79,7 @@ func (o *quotaNotifier) boundary(q quotaNotif) error {
 		return errors.New("expected installed limits without usage at exact injected boundary")
 	}
 	o.state.ref = ref
+	o.state.boundaryChecks++
 	o.state.owner = append([]byte(nil), b...)
 	return nil
 }
@@ -217,7 +218,7 @@ func (n *node) quotaSyscallSetup(ctx context.Context) (map[string]any, error) {
 		}
 		results = append(results, result)
 	}
-	return map[string]any{"test_only_syscall_errno_injection": true, "ordinary_daemon_elf_unchanged": true, "not_physical_media_fault": true, "all_fixed_syscall_cases": results, "all_fixed_projects_cleared": true}, nil
+	return map[string]any{"test_only_syscall_errno_injection": true, "ordinary_daemon_elf_unchanged": true, "not_physical_media_fault": true, "all_fixed_syscall_cases": results, "all_fixed_projects_cleared": true, "repeated_clear_minimum": 3}, nil
 }
 func (n *node) quotaSyscallCase(ctx context.Context, q *quotaFS, seed firecracker.Config, index int, name string) (result map[string]any, err error) {
 	base, e := quotaSyscallBase(name)
@@ -312,10 +313,18 @@ func (n *node) quotaSyscallCase(ctx context.Context, q *quotaFS, seed firecracke
 			return nil, e
 		}
 	}
-	if e = waitNode(ctx, func() (bool, error) { state := o.snapshot(); return state.injected > 0, state.err }); e != nil {
+	if e = waitNode(ctx, func() (bool, error) {
+		state := o.snapshot()
+		minimum := 1
+		if !reserve {
+			minimum = 3
+		}
+		return state.injected >= minimum, state.err
+	}); e != nil {
 		return nil, e
 	}
 	state := o.snapshot()
+	clearSetContinues := 0
 	old.Ref = state.ref
 	if !reserve {
 		var held sandbox.Record
@@ -337,7 +346,20 @@ func (n *node) quotaSyscallCase(ctx context.Context, q *quotaFS, seed firecracke
 		if e = api.Create(ctx, newKey, nodeSpec(), &refused); e == nil || !strings.Contains(e.Error(), "HTTP 503:") {
 			return nil, errors.New("faulted quota clear released admission capacity")
 		}
-		// Keep errno injection armed throughout the assertions, including retries.
+		// Each selected clear failure is rearmed after that attempt's SET.
+		// Three replies are required; every reply rechecks the same owner,
+		// namespace and kernel record, not just a timer-based sleep.
+		clearSetContinues = state.qsetPassed
+		if (name == "clear-set-eio" && clearSetContinues != 1) || (name != "clear-set-eio" && clearSetContinues < 4) {
+			return nil, errors.New("clear target did not follow each attempt SET")
+		}
+		if state.injected < 3 || state.boundaryChecks < state.injected {
+			return nil, errors.New("three validated clear error replies missing")
+		}
+		if e = quotaRetainedReclaiming(ctx, api, cfg, base, old.Ref, state.owner); e != nil {
+			return nil, e
+		}
+		// Keep errno injection armed throughout all assertions, then CONTINUE.
 		o.disarm()
 	}
 	if e = waitNode(ctx, func() (bool, error) {
@@ -403,6 +425,11 @@ func (n *node) quotaSyscallCase(ctx context.Context, q *quotaFS, seed firecracke
 	} else {
 		result["reclaiming_owner_and_capacity_retained_while_errno_armed"] = true
 		result["new_create_refused503_during_clear_failure"] = true
+		result["successful_set_continues_before_disarm"] = clearSetContinues
+		result["at_least_three_clear_error_replies_before_disarm"] = true
+		result["same_owner_namespace_and_kernel_record_checked_each_reply"] = true
+		result["clear_target_rearmed_each_cleanup_attempt"] = true
+		result["durable_reclaiming_ledger_checked_while_errors_armed"] = true
 	}
 	return result, nil
 }
