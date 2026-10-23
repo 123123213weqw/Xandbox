@@ -78,7 +78,8 @@ def writer():
     count=0
     while True:
         count+=1
-        (RUN/'heartbeat').write_text(str(count))
+        (RUN/'heartbeat.next').write_text(str(count))
+        os.replace(RUN/'heartbeat.next',RUN/'heartbeat')
         time.sleep(0.05)
 
 
@@ -157,7 +158,7 @@ def reload_probe():
 def stop_restart():
     probe();old=json.loads((RUN/'ready.json').read_bytes())
     began=time.monotonic();run('systemctl','stop',UNIT);elapsed=round((time.monotonic()-began)*1000,3)
-    if identity(old['main_pid'])==old['main_start'] or identity(old['writer_pid'])==old['writer_start']:raise RuntimeError('old execution still present')
+    wait(lambda:identity(old['main_pid'])!=old['main_start'] and identity(old['writer_pid'])!=old['writer_start'])
     wait(lambda:not UNIT_ROOT.exists())
     (RUN/'ready.json').unlink();(RUN/'heartbeat').unlink()
     run('systemctl','reset-failed',UNIT);run('systemctl','start',UNIT)
