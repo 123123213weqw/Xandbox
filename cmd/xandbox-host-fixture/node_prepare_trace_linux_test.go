@@ -136,6 +136,35 @@ func TestPrepareProbeProfileMustAccountForEveryInstructionHit(t *testing.T) {
 		}
 	}
 }
+func TestPrepareFirstTokenObservationDoesNotAssumeBarrierOrder(t *testing.T) {
+	valid := calibrationEvents()[:4]
+	for n := 0; n <= 4; n++ {
+		ok, e := prepareFirstHeld(valid[:n])
+		if e != nil || ok != (n >= 2) {
+			t.Fatal("first permit prefix", n, ok, e)
+		}
+	}
+	for _, bad := range [][]prepareTraceEvent{
+		calibrationEvents()[:5],
+		{valid[0], {name: "enter", g: 2}},
+		{valid[0], {name: "selected", g: 1, ax: 1}},
+		{valid[0], {name: "selected", g: 2}},
+		{valid[0], valid[1], valid[2], valid[3], {name: "release", g: 1}},
+	} {
+		if _, e := prepareFirstHeld(bad); e == nil {
+			t.Fatal("unobserved, foreign, failed or already released first permit")
+		}
+	}
+	rows := normalizedPrepareTransitions(calibrationEvents())
+	if len(rows) != 12 {
+		t.Fatal("normalized trace incomplete")
+	}
+	for i, row := range rows {
+		if len(row) != 2 || row["point"] != calibrationEvents()[i].name || (row["goroutine_index"] != 1 && row["goroutine_index"] != 2) {
+			t.Fatal("private fields or invalid ordinal exported")
+		}
+	}
+}
 func TestPrepareTraceFixedELFAndL1Only(t *testing.T) {
 	for _, f := range []*elf.File{{}, {FileHeader: elf.FileHeader{Class: elf.ELFCLASS64, Data: elf.ELFDATA2LSB, Type: elf.ET_EXEC, Machine: elf.EM_X86_64}}} {
 		if _, e := prepareProbeOffsets(f, bytes.NewReader(nil)); e == nil {

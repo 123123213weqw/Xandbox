@@ -5,7 +5,7 @@ from kvm_nested_host import (nested_node_resources,nested_group_limits,node_snap
  validate_node_snapshot_setup,validate_node_snapshot_checkpoint,validate_node_snapshot_recovery,
  NODE_SNAPSHOT_CHECKPOINT_FLAGS,NODE_SNAPSHOT_RECOVERY_FLAGS,validate_prepare_calibration,PREPARE_CALIBRATION_FLAGS)
 def calibration():
- return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':'3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2','instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False}
+ return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':'3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2','instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False,'normalized_transitions':[{'point':p,'goroutine_index':g} for p,g in [('enter',1),('selected',1),('ok',1),('node_ok',1),('enter',2),('release',1),('selected',2),('released',1),('ok',2),('node_ok',2),('release',2),('released',2)]]}
 
 class NodeSnapshotTests(unittest.TestCase):
  def test_explicit_profile_and_inode_format_leave_old_modes_unchanged(self):
@@ -38,6 +38,18 @@ class NodeSnapshotTests(unittest.TestCase):
   for k in ('instruction_entry_probes','event_count','completed_preparations'):
    bad=dict(v);bad[k]=float(v[k])
    with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
+ def test_normalized_transitions_reject_missing_private_reordered_or_overlapping_rows(self):
+  v=calibration()
+  for i in range(12):
+   for mode in ('omit','duplicate','foreign','private'):
+    bad=copy.deepcopy(v);rows=bad['normalized_transitions']
+    if mode=='omit':rows.pop(i)
+    elif mode=='duplicate':rows.append(dict(rows[i]))
+    elif mode=='foreign':rows[i]['goroutine_index']=3
+    else:rows[i]['raw_pointer']='not-exportable'
+    with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
+  bad=copy.deepcopy(v);r=bad['normalized_transitions'];r[5],r[6]=r[6],r[5]
+  with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
  def test_recovery_requires_low_free_startup_and_ordinary_reclamation(self):
   v={k:True for k in NODE_SNAPSHOT_RECOVERY_FLAGS};validate_node_snapshot_recovery(v)
   for k in v:

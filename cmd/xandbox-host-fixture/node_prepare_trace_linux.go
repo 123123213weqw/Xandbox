@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"golang.org/x/sys/unix"
@@ -376,9 +377,37 @@ func validatePrepareCalibration(events []prepareTraceEvent) (bool, error) {
 		}
 	}
 	if len(events) != 12 || entered != 2 || completed != 2 || held != 0 || len(state) != 2 || !contendedEntry {
-		return false, errors.New("incomplete two-create contended entry calibration")
+		return false, fmt.Errorf("incomplete calibration events=%d entered=%d completed=%d held=%d goroutines=%d contended_entry=%t", len(events), entered, completed, held, len(state), contendedEntry)
 	}
 	return contendedEntry, nil
+}
+
+// A simultaneous HTTP barrier does not imply this order: both entry probes
+// can run before either goroutine reaches its channel select.
+func prepareFirstHeld(events []prepareTraceEvent) (bool, error) {
+	want := []string{"enter", "selected", "ok", "node_ok"}
+	if len(events) > len(want) {
+		return false, errors.New("first preparation released before second dispatch")
+	}
+	for i, ev := range events {
+		if ev.name != want[i] || ev.g != events[0].g || (ev.name == "selected" && ev.ax != 0) {
+			return false, errors.New("unexpected first preparation trace prefix")
+		}
+	}
+	return len(events) >= 2, nil
+}
+
+func normalizedPrepareTransitions(events []prepareTraceEvent) []map[string]any {
+	ordinals := make(map[uint64]int)
+	var out []map[string]any
+	for _, ev := range events {
+		if ordinals[ev.g] == 0 {
+			ordinals[ev.g] = len(ordinals) + 1
+		}
+		// No raw pointers, TID, PID, CPU, absolute timestamps or tenant identity.
+		out = append(out, map[string]any{"point": ev.name, "goroutine_index": ordinals[ev.g]})
+	}
+	return out
 }
 
 func validatePrepareTraceStats(raw []byte) error {
@@ -489,12 +518,12 @@ func (t *prepareTrace) finish() (map[string]any, error) {
 	}
 	contended, e := validatePrepareCalibration(events)
 	if e != nil {
-		return nil, e
+		return nil, fmt.Errorf("%w; normalized transitions=%v", e, normalizedPrepareTransitions(events))
 	}
 	if e = t.daemon(); e != nil {
 		return nil, e
 	}
-	return map[string]any{"calibration_only": true, "exact_ordinary_elf_sha256": prepareTraceELFSHA, "instruction_entry_probes": len(prepareProbes()), "event_count": len(events), "completed_preparations": 2, "second_actual_gate_entry_inside_first_held_interval": contended, "all_eight_cpu_loss_counters_zero": true, "live_daemon_incarnation_inode_control_and_event_tgid_checked": true, "entry_probe_only_no_uretprobe_or_user_memory_read": true, "queued_request_cancellation_and_cleanup_isolation_claim": false, "exact_channel_linearization_or_latency_slo_claim": false}, nil
+	return map[string]any{"normalized_transitions": normalizedPrepareTransitions(events), "first_selected_token_observed_before_second_dispatch": true, "calibration_only": true, "exact_ordinary_elf_sha256": prepareTraceELFSHA, "instruction_entry_probes": len(prepareProbes()), "event_count": len(events), "completed_preparations": 2, "second_actual_gate_entry_inside_first_held_interval": contended, "all_eight_cpu_loss_counters_zero": true, "live_daemon_incarnation_inode_control_and_event_tgid_checked": true, "entry_probe_only_no_uretprobe_or_user_memory_read": true, "queued_request_cancellation_and_cleanup_isolation_claim": false, "exact_channel_linearization_or_latency_slo_claim": false}, nil
 }
 
 func (n *node) nodePrepareCalibration(ctx context.Context, api *switchAPI) (a, b sandbox.Record, result map[string]any, err error) {
@@ -515,15 +544,32 @@ func (n *node) nodePrepareCalibration(ctx context.Context, api *switchAPI) (a, b
 		err  error
 	}
 	replies := make(chan reply, 2)
-	start := make(chan struct{})
-	for i := 0; i < 2; i++ {
-		go func() {
-			<-start
-			r, _, boot, err := n.nodeSnapshotGuest(ctx, api)
-			replies <- reply{r, boot, err}
-		}()
+	requestCtx, cancelRequests := context.WithCancel(ctx)
+	defer cancelRequests()
+	create := func() {
+		r, _, boot, err := n.nodeSnapshotGuest(requestCtx, api)
+		replies <- reply{r, boot, err}
 	}
-	close(start)
+	go create()
+	observeCtx, cancelObserve := context.WithTimeout(ctx, 5*time.Second)
+	e = waitNode(observeCtx, func() (bool, error) {
+		raw, e := traceRead(prepareTraceInstance + "/trace")
+		if e != nil {
+			return false, e
+		}
+		events, e := parsePrepareTrace(raw)
+		if e != nil {
+			return false, e
+		}
+		return prepareFirstHeld(events)
+	})
+	cancelObserve()
+	if e != nil {
+		cancelRequests()
+		x := <-replies
+		return x.r, b, nil, errors.Join(e, x.err)
+	}
+	go create()
 	x, y := <-replies, <-replies
 	if e = errors.Join(x.err, y.err); e != nil {
 		return x.r, y.r, nil, e
