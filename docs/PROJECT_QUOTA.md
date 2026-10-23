@@ -87,7 +87,26 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 同一新fixture还通过[普通quota cold3](validation/kvm-quota-io-cold-v1.json)、[真正L1-built snapshot/shared2与cold3](validation/kvm-quota-io-snapshot-v1.json)、[默认nil-quota I/O4](validation/kvm-quota-io-default-state-io-v1.json)回归；共享观察器的重构没有把旧profile放宽为任选设备。[native full race×3](validation/quota-io-native-race-v1.txt)/vet、[fixture race×10](validation/quota-io-fixture-native-race-v1.txt)/vet、root Python44、[CGO0实际filter proof×3](validation/quota-io-cgo0-kernel-filter-v1.txt)、Darwin race×3/vet通过。[runner原文](validation/quota-io-pipeline-v1.txt)退出0；[独立只读清理](validation/quota-io-independent-cleanup-v1.txt)复核4个scope、18个外层执行代际/root/control全部不存在。quota零值来自销盘前L1实际读回，不由事后路径消失冒充。
 
-**合并前还必须完成**：针对Q_SET/Q_SYNC/readback/clear确切窗口的EIO/EROFS/held syscall、quota已清但owner/pin/UID/project尚未durable释放等崩溃与并发；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。有限整state I/O、EDQUOT/拒绝/snapshot/cold通过，不等于这些要求、M2完整物理预算或生产验收完成。
+### 精确的quota已清、owner/pin仍保留的掉电窗口
+
+[新原始报告](validation/kvm-quota-clear-v1.json)通过一个明确窗口、两次L1开机；[完整provenance和SHA](validation/quota-clear-provenance-v1.json)固定测试源码 `ab8b21e…`。普通daemon/warden/guest均未改，没有生产fault hook、ptrace或syscall overlay；五个native ELF与独立交叉构建匹配。真正的L1未分配模板、初始共享/退役GC检查完成后，再创建两个普通snapshot VM作为victim/keeper。
+
+仅观察“quota为0”不能说明驱动已经完成Q_SYNC。该夹具先确认普通daemon没有打开catalog lock FD，由L1 PID1持有原来的私有`.lock` inode；删除victim后，观测这个**直接子进程新打开了指向同一kernel inode的独立FD**，前后检查proc start身份。固定源码中`registry.releaseContext`先执行`quota.release`（Q_SYNC/readback完成）再进入`catalog.withLock`打开此FD，因此将位置限定到clear返回后、owner删除前。这里是**FD观测加经SHA固定的源码顺序**，不是直接trace到了Q_SYNC返回事件。
+
+| 持锁后、掉电前 | 实际证据 |
+|---|---|
+| victim | durable RECLAIMING，已有停止确认、无销毁确认；精确jail/cgroup不存在，quota usage/limits/times全部为0，但原initialized v4 owner字节不变 |
+| 容量与保留 | victim和keeper占用两份实例容量；victim quota为0仍拒绝新key503，不把0当成可丢弃的owner/UID/project/pin reservation；不是在持锁时另调用allocator完成了一次分配 |
+| keeper | 真实VM仍能读取自己的marker并执行；只允许两个已知共享inode各少一个victim hardlink，其他名字/identity/metadata和独立quota统计仍核对，不整体忽略link变化 |
+| 崩溃定位 | clear边界后观察器只读quota，不再Q_SYNC/set/clear；PID1把原FD留在node字段，**成功RPC返回不释放锁**，直到外层切断自己的整个L1才由VM死亡释放 |
+
+同盘冷启动、普通daemon尚未启动前，独立读回victim quota仍为0且namespace仍不存在，**两份原owner字节与两个catalog pin均保留**；keeper硬限额/归属/继承、namespace实际用量及只读共享内容hash正确。随后普通daemon把两个旧Ref都恢复为durable DESTROYED，精确旧资源消失、两个旧key410；新实际VM有新boot并执行/销毁，四个private project记录清零，两个旧pin释放，原active pristine template仍在。不会恢复已分配guest，也不因quota空记录收养外部身份。
+
+这轮人为持有全局catalog锁是为了定位崩溃点，**不宣称锁内Prepare/switch延迟或SLO**。它覆盖这个post-clear/pre-owner-delete窗口，不替代任意Q_SET/Q_SYNC/readback错误、全部owner目录fsync或shared-reference崩溃场景。
+
+同一fixture还通过[普通snapshot/shared2与cold3](validation/kvm-quota-clear-snapshot-v1.json)、[quota整state I/O4](validation/kvm-quota-clear-io-v1.json)、[普通quota cold3](validation/kvm-quota-clear-cold-v1.json)、[默认nil-quota I/O4](validation/kvm-quota-clear-default-io-v1.json)；[native race×3](validation/quota-clear-native-race-v1.txt)/vet、[fixture race×10](validation/quota-clear-fixture-native-race-v1.txt)/vet、root Python45、[实际CGO0 filter proof×3](validation/quota-clear-cgo0-kernel-filter-v1.txt)及Darwin race×3/vet通过。[原样runner](validation/quota-clear-pipeline-v1.txt)退出0，首轮物理检查即通过；[独立只读复核](validation/quota-clear-independent-cleanup-v1.txt)确认5个scope、20个外层L1执行代际/root/control全部不存在。配额/owner/pin证据来自销盘前L1实际观察，不由最终路径消失推导。
+
+**合并前还必须完成**：其他Q_SET/Q_SYNC/readback/clear确切窗口的EIO/EROFS/held syscall、partial prepare及其余owner/pin/fsync崩溃与并发；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。这个精确窗口及有限整state I/O、EDQUOT/拒绝/snapshot/cold通过，不等于M2完整物理预算或生产验收完成。
 
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 
