@@ -24,6 +24,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [重复clear与TEST通知器失效检查](docs/QUOTA_LISTENER_FIXTURE.md)：三个clear errno子例各3次后才解除注入；两个最后listener关闭场景实际捕获内核ENOSYS并完成冷恢复。生产ELF不变，生产并不依赖该TEST listener；本轮32个执行代际已独立核验清理，仍不是完整quota并发或生产验收。
 
+新增 [quota双租户忙任务切换夹具与失败证据](docs/QUOTA_SWITCH_FIXTURE.md)：新固定3GiB/4GiB规格、实际旧guest写入进度与独立Stop/持久回收分离。最新一轮完整完成239/240行，最后一行被夹具600秒总deadline取消，原始false报告保留；新720秒有界重跑待验收，不能当作完整并发或生产通过。
+
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
 停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。

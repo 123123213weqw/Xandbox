@@ -1,0 +1,159 @@
+{
+  "status": "PENDING quota enabled full two-tenant busy-switch acceptance; three failed runs retained",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "latest_observed_runtime_source": "4653b08e5b80e2ed15be491849d8ad9427015295",
+  "frozen_next_source": "599a6de3cd4ff759ed6cfbb84f020689fac2cb77",
+  "frozen_next_source_archive_sha256": "2441950182036f5d707058f2b94589521b1707317e191920ccd451090787be93",
+  "production_changed": false,
+  "production_sources_equal_verified_revision": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+  "ordinary_daemon_sha256": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+  "failed_predecessors": [
+    {
+      "version": "v1",
+      "source_revision": "fb836bf59b484167dfbf5de4629dbf6fa8850034",
+      "report": "kvm-quota-switch-mixed-v1.json",
+      "passed": false,
+      "source_archive_sha256": "19c9d8de0898ce28197c96414c48de8779ecf2dd3619421f16214a75efa4c769",
+      "private_raw_archive_sha256": "3eea7184b361b3db83ab9fcb89f98208fc93f1940b579f417b90b2df587ffd3c",
+      "duration_seconds": 5.859808383,
+      "completed_rows_per_tenant": {
+        "alpha": 0,
+        "beta": 0
+      },
+      "total_rows_per_tenant": {
+        "alpha": 0,
+        "beta": 0
+      },
+      "resource_samples": 1,
+      "outer_cleanup_independently_checked": true,
+      "l1_execution_generations": 1
+    },
+    {
+      "version": "v2",
+      "source_revision": "5bda13804d22e29c3e21ca460e6aec548f6c948a",
+      "report": "kvm-quota-switch-mixed-v2.json",
+      "passed": false,
+      "source_archive_sha256": "c9b13875389d4c48331c1941646df1b3e58f1b2e98fa91f03012475e0d596a0b",
+      "private_raw_archive_sha256": "5b448dcc8dda348cfb213dda8e92c10603612ead1d79fb6f4623e46c9b1402b5",
+      "duration_seconds": 7.981799363,
+      "completed_rows_per_tenant": {
+        "alpha": 0,
+        "beta": 0
+      },
+      "total_rows_per_tenant": {
+        "alpha": 1,
+        "beta": 1
+      },
+      "resource_samples": 4,
+      "outer_cleanup_independently_checked": true,
+      "l1_execution_generations": 1
+    },
+    {
+      "version": "v3",
+      "source_revision": "4653b08e5b80e2ed15be491849d8ad9427015295",
+      "report": "kvm-quota-switch-mixed-v3.json",
+      "passed": false,
+      "source_archive_sha256": "0131c8d72c1cba38bdce05d3320dd662f0db1da88364982bbc0c9684c5a8a20e",
+      "private_raw_archive_sha256": "2730e2805334b885d1ebd2b5ef9420d04542b9f795598c6f3d98b99411e2fc00",
+      "duration_seconds": 601.836897505,
+      "completed_rows_per_tenant": {
+        "alpha": 119,
+        "beta": 120
+      },
+      "total_rows_per_tenant": {
+        "alpha": 120,
+        "beta": 120
+      },
+      "resource_samples": 1189,
+      "outer_cleanup_independently_checked": true,
+      "l1_execution_generations": 1
+    }
+  ],
+  "interpretation": {
+    "v1": "Fixture compared a missing decoded embedded sandbox ID: public Job.ID shadows Ref.ID. Initial failure; no complete rows. Fixed verified envelope/path reconstruction, no production wire change.",
+    "v2": "Fixture wrongly required post-durable-destroy job200, although ordinary manager drops ephemeral history and returns404. Both first rows incomplete. Fixed by real guest write-progress proof, conservative pre-timeout host-stop plus durable destruction/absent-resource prerequisites, explicit HISTORY_DROPPED_AFTER_RECLAIM rather than an invented terminal.",
+    "v3": "601.836897505 seconds; beta120 complete, alpha119 complete. Alpha last replay/CAS check was canceled by fixed600 second fixture operation context. All240 rows including incomplete one retained, no full-pass or per-switch SLO inference.",
+    "v2_launch": "Actual missing-script log retained; local generation assertion preceded absent script, outer shell continued. That attempt had no native/VM/source extraction; no unobserved process exit code fabricated. Corrected distinct runner used SHA-verified input and fresh handles."
+  },
+  "next_experiment_contract": {
+    "run_budget_seconds": 720,
+    "control_read_timeout_seconds": 770,
+    "control_reply_max_bytes": 2097152,
+    "max_resource_samples": 1452,
+    "outer_hard_lifetime_seconds_unchanged": 900,
+    "cycles_per_tenant_unchanged": 120,
+    "minimum_paced_seconds_unchanged": 180,
+    "guest_job_timeout_seconds_unchanged": 60,
+    "real_guest_progress_and_independent_pre_timeout_host_stop_checks_unchanged": true,
+    "legacy_profile_unchanged": true,
+    "not_a_single_switch_slo": true,
+    "no_failed_rows_spliced_into_new_run": true,
+    "runtime_result_not_yet_accepted": true
+  },
+  "native_checks_scope": "Native fullrace3/vet, fixturerace10/vet, rootPython59, actual CGO0 kernel/exec filter3 and Darwinfullrace3/vet passed on frozen4653 source. Five native CGO0 ELF roles match independent cross. New599a source only cross compiled before next native pipeline; no unobserved native/runtime pass claimed.",
+  "independent_cleanup": {
+    "failed_scopes": 3,
+    "exact_owned_outer_l1_generations_absent": 3,
+    "all_exact_owned_root_control_cgroup_parents_children_absent": true,
+    "read_only_no_cleanup_actions": true,
+    "not_a_claim_all_failed_L1_quota_records_zero": "Last partial resource rows remain nonzero where observed. Outer cleanup audit cannot read quota on deleted disks and does not imply durable per-generation reclamation."
+  },
+  "not_completed": [
+    "Full new quota load/checkpoint/cold-recovery profile and shared-harness compatibility wave; next run still pending.",
+    "Partial-copy/owner unlink/directory-fsync/shared-pin fault combinations and remaining persistence windows.",
+    "Node aggregate physical/unique-RAM/IO budgets, sustained open-loop saturation, fairness, independent operator/M1-M4/SLO/production acceptance."
+  ],
+  "files": {
+    "kvm-quota-switch-mixed-v1.json": {
+      "sha256": "cf75f4ab60837fdf930c5d416e0afc89932868753ebe2a46882ab30680e6df65",
+      "bytes": 6856
+    },
+    "quota-switch-failed-v1-audit.txt": {
+      "sha256": "591008bf0c0782a854dbee518a877285ef95c4088d744ea0adfd5939130a3b50",
+      "bytes": 271
+    },
+    "kvm-quota-switch-mixed-v2.json": {
+      "sha256": "3e4f1c245a6ab3f42c87529758c762bd2ffa0f0ee8131dfedf5ef257f2e38a57",
+      "bytes": 9470
+    },
+    "quota-switch-failed-v2-audit.txt": {
+      "sha256": "b8c0851ff55ee7af46bea7822b3811a797fb305f41f01e4fac3c135e15fd07a5",
+      "bytes": 230
+    },
+    "kvm-quota-switch-mixed-v3.json": {
+      "sha256": "4733b0b2614a379794701e0231e7d4ef475e7c20c1314f44c2ee4d30f6c0cf5a",
+      "bytes": 768398
+    },
+    "quota-switch-failed-v3-audit.txt": {
+      "sha256": "0039f0557d981a5a2c26e839daad103c21da0df6d6bd251ac85d269c2231fd41",
+      "bytes": 230
+    },
+    "quota-switch-native-race-v3.txt": {
+      "sha256": "4d1e90b3c3a1aa4d29b9dd33d6833687e4e5b221f7f4c540475cb08b1c1ab7fa",
+      "bytes": 1639
+    },
+    "quota-switch-fixture-native-race-v3.txt": {
+      "sha256": "43ee4e3a8d11fd6aceada4b34f330d22e33c38aca3cc09c619ba386fbae37856",
+      "bytes": 70
+    },
+    "quota-switch-cgo0-kernel-filter-v3.txt": {
+      "sha256": "e4a01480b7091388774ce036601f3ec27d30fa26feec22045207f216f39e0121",
+      "bytes": 846
+    },
+    "quota-switch-native-artifacts-v3.txt": {
+      "sha256": "5e7b054cfa174aeda133f1a0ce697b072982dd7098f4cce054fccea3025d702a",
+      "bytes": 487
+    },
+    "quota-switch-final-darwin-race-v3.txt": {
+      "sha256": "97152cbe12155572318e7e7d2d89bc85a33887b28370711359ab5d56850f0d7a",
+      "bytes": 1434
+    },
+    "quota-switch-launch-failure-v2.txt": {
+      "sha256": "0f3519babf4d886e6984a54f46d849a1c1c948aab5ac022a58234b5feef48e19",
+      "bytes": 63
+    }
+  }
+}

@@ -1,0 +1,2 @@
+FAILED v1 preserved; exact runner terminal1/absent; one owned L1 generation, roots/control/cgroups independently absent; read-only audit.
+Full setup/preflight passed; load failed at initial session job wire-binding assertion, no switch rows; not quota-switch acceptance.
