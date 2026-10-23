@@ -90,6 +90,7 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-warden-$arch" ./cmd/xandbox-warden
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-guestctl-$arch" ./cmd/xandbox-guestctl
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-template-$arch" ./cmd/xandbox-template
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-gateway-$arch" ./cmd/xandbox-gateway
           done
 
   vulnerability-scan:
