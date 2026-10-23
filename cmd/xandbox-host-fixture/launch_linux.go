@@ -24,6 +24,7 @@ import (
 
 type launchPolicy struct {
 	Version    int    `json:"version"`
+	Profile    string `json:"profile,omitempty"`
 	Root       string `json:"root"`
 	Cgroup     string `json:"cgroup"`
 	UID        uint32 `json:"uid"`
@@ -40,7 +41,19 @@ var runtimePattern = regexp.MustCompile(`^/srv/nh-[0-9a-f]{6}$`)
 var groupPattern = regexp.MustCompile(`^/sys/fs/cgroup/xandbox-nested-proof-([0-9a-f]{6})/[0-9a-f]{64}$`)
 var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
+func (p launchPolicy) resources() (memoryMiB int, diskBytes int64, cgroupBytes uint64, err error) {
+	switch p.Profile {
+	case "":
+		return 2048, 2 << 30, 3 << 30, nil
+	case "quota-switch-v1":
+		return 3072, 4 << 30, 4 << 30, nil
+	}
+	return 0, 0, 0, errors.New("unknown bounded launch profile")
+}
 func (p launchPolicy) validate() error {
+	if _, _, _, e := p.resources(); e != nil {
+		return e
+	}
 	m := groupPattern.FindStringSubmatch(p.Cgroup)
 	if p.Version != 1 || !runtimePattern.MatchString(p.Root) || len(m) != 2 || p.Root != "/srv/nh-"+m[1] || p.UID < 850000 || p.UID >= 880000 || p.KVMGroup == 0 || p.KVMGroup > 65535 ||
 		!filepath.IsAbs(p.Warden) || filepath.Clean(p.Warden) != p.Warden {
@@ -88,8 +101,12 @@ func loadLaunch(path string) (launchPolicy, error) {
 }
 
 func (p launchPolicy) arguments() []string {
+	memory, _, _, e := p.resources()
+	if e != nil {
+		return nil
+	}
 	return []string{"-no-user-config", "-nodefaults", "-machine", "pc-q35-6.2,accel=kvm,dump-guest-core=off,mem-merge=off",
-		"-cpu", "host,vmx=on", "-smp", "4", "-m", "2048", "-display", "none", "-monitor", "none", "-nic", "none", "-no-reboot",
+		"-cpu", "host,vmx=on", "-smp", "4", "-m", fmt.Sprint(memory), "-display", "none", "-monitor", "none", "-nic", "none", "-no-reboot",
 		"-serial", "file:" + p.Root + "/console.log",
 		"-chardev", "socket,id=control,path=" + p.Root + "/control.sock,server=on,wait=off", "-device", "isa-serial,chardev=control,index=1",
 		"-qmp", "unix:" + p.Root + "/qmp.sock,server=on,wait=off",
@@ -134,6 +151,16 @@ func launch(path string) error {
 	var fs unix.Statfs_t
 	if e = unix.Fstatfs(int(cg.Fd()), &fs); e != nil || fs.Type != unix.CGROUP2_SUPER_MAGIC {
 		return errors.New("cgroup2 FD required")
+	}
+	_, _, memory, e := p.resources()
+	if e != nil {
+		return e
+	}
+	for name, want := range map[string]string{"memory.max": fmt.Sprint(memory), "memory.swap.max": "0", "memory.oom.group": "1", "pids.max": "128", "cpu.max": "400000 100000"} {
+		b, e := os.ReadFile(p.Cgroup + "/" + name)
+		if e != nil || strings.TrimSpace(string(b)) != want {
+			return errors.New("owned launch resource controls mismatch")
+		}
 	}
 	procs, e := os.ReadFile(p.Cgroup + "/cgroup.procs")
 	if e != nil || strings.TrimSpace(string(procs)) != "" {
@@ -234,8 +261,12 @@ func qemuChild(path string) error {
 			return errors.New("QEMU input mismatch")
 		}
 	}
+	_, diskBytes, _, e := p.resources()
+	if e != nil {
+		return e
+	}
 	info, e := os.Lstat(p.Root + "/disk.raw")
-	if e != nil || !info.Mode().IsRegular() || info.Size() != 2<<30 {
+	if e != nil || !info.Mode().IsRegular() || info.Size() != diskBytes {
 		return errors.New("exclusive bounded raw disk required")
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
@@ -246,7 +277,7 @@ func qemuChild(path string) error {
 	if e = unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); e != nil {
 		return e
 	}
-	if e = unix.Setrlimit(unix.RLIMIT_FSIZE, &unix.Rlimit{Cur: 2 << 30, Max: 2 << 30}); e != nil {
+	if e = unix.Setrlimit(unix.RLIMIT_FSIZE, &unix.Rlimit{Cur: uint64(diskBytes), Max: uint64(diskBytes)}); e != nil {
 		return e
 	}
 	cmd := exec.Command("/usr/bin/qemu-system-x86_64", p.arguments()...)

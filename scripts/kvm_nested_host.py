@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import json
+import math
 import os
 from pathlib import Path
 import pwd
@@ -30,18 +31,21 @@ def quota_format_options(enabled):
 
 
 class JSONSocket:
-    def __init__(self, path, timeout=90):
+    def __init__(self, path, timeout=90, quota_switch=False):
+        assert type(quota_switch) is bool
+        self.max_frame=(1<<20) if quota_switch else 65536
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); self.sock.settimeout(timeout)
         self.sock.connect(str(path)); self.file = self.sock.makefile('rb')
     def read(self):
-        line = self.file.readline(65537)
-        assert line and len(line) <= 65536, 'bounded private control frame required'
+        bound=getattr(self,"max_frame",65536)
+        line = self.file.readline(bound+1)
+        assert line and len(line) <= bound, 'bounded private control frame required'
         return json.loads(line)
     def send(self, value): self.sock.sendall(json.dumps(value).encode() + b'\n')
     def close(self): self.file.close(); self.sock.close()
 
 
-def qmp_probe(path):
+def qmp_probe(path, memory_mib=None):
     conn = JSONSocket(path, 5)
     try:
         assert 'QMP' in conn.read()
@@ -55,6 +59,9 @@ def qmp_probe(path):
         command('qmp_capabilities')
         assert command('query-kvm') == {'enabled': True, 'present': True}
         assert command('query-status')['running']
+        if memory_mib is not None:
+            view=command('query-memory-size-summary')
+            assert view['base-memory']==memory_mib<<20 and view.get('plugged-memory',0)==0
     finally: conn.close()
 
 
@@ -193,6 +200,59 @@ def validate_quota_listener_recovery(value, phase):
     assert value['old_real_guest_boot_changed'] is phase.startswith('release-')
 
 
+def nested_resources(quota_switch):
+    assert type(quota_switch) is bool
+    return {'profile':'quota-switch-v1' if quota_switch else '', 'memory_mib':3072 if quota_switch else 2048,
+            'disk_bytes':(4 if quota_switch else 2)<<30,'cgroup_memory_max':4<<30 if quota_switch else 3<<30}
+
+
+def validate_quota_switch_setup(value):
+    assert (value['fixed_node_capacity'],value['fixed_tenant_capacity'],value['fixed_uid_project_slots'])==(4,3,8)
+    assert value['ordinary_production_no_test_observer'] is True
+    setup=value['genuine_l1_snapshot_setup']
+    for k in ('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated'):assert setup[k] is True
+    assert setup['snapshot_memory_bytes']==512<<20
+    for k in ('four_simultaneous_real_kvm_quota_guests','four_distinct_private_projects_and_shared_readonly_project_zero_inodes','independent_named_inode_accounting_before_benchmark','alpha_fourth429_with_spare_node_slot_beta_still_executes','node_fifth503_below_beta_tenant_quota','authentication401_and_cross_tenant404','old_key410_resources_absent_quota_zero_before_controlled_slot_reuse','same_uid_project_reused_only_as_fresh_ref_boot_and_workspace','beta_execution_and_data_survived_alpha_recycle','all_eight_projects_zero_and_active_catalog_pins_zero'):assert value['preflight'][k] is True
+
+
+def validate_quota_switch_run(value):
+    assert value['phase']=='quota-enabled-two-tenant-switching'
+    load=value['load'];assert load['passed'] is True and load['cycles_per_tenant']==120 and load['minimum_paced_seconds']==180 and load['duration_seconds']>=180
+    for k in ('busy_old_writer_each_switch','no_operator_quota_sync_during_measured_switches','same_initial_session_key_isolated_between_tenants'):assert load[k] is True
+    workers=load['workers'];assert [w['tenant'] for w in workers]==['alpha','beta']
+    fields={'binding':'request_to_binding_response_ms','first_new_command':'request_to_first_new_command_success_ms','old_host_stopped':'request_to_old_host_stopped_observed_ms','old_durable_destroyed':'request_to_old_durable_destroyed_observed_ms'}
+    for worker in workers:
+        rows=worker['samples'];assert len(rows)==120 and not worker.get('failure_stage')
+        for i,row in enumerate(rows):
+            assert row['iteration']==i+1 and row['session_ordinal']==i//48+1 and row['completed'] is True and row['busy_old_job_running_at_switch_request'] is True
+            assert row['old_job_terminal'] in ('CANCELLED','FAILED','EXITED')
+            assert 0<=row['workload_start_ms']<=row['workload_end_ms']<=row['switch_start_ms']<=row['switch_end_ms']
+            for k in fields.values():assert type(row[k]) in (int,float) and math.isfinite(row[k]) and row[k]>=0
+            assert row['request_to_first_new_command_success_ms']>=row['request_to_binding_response_ms']
+            assert row['request_to_old_durable_destroyed_observed_ms']>=row['request_to_old_host_stopped_observed_ms']
+            assert row['server_phase_observations']['measured'] is True
+        for label,key in fields.items():
+            vals=sorted(r[key] for r in rows);q=worker['summary_ms'][label];assert q['count']==120
+            for percentile in (50,95,99,100):assert q['p'+str(percentile)]==vals[math.ceil(120*percentile/100)-1]
+    overlaps=sum(a['switch_start_ms']<b['switch_end_ms'] and b['switch_start_ms']<a['switch_end_ms'] for a in workers[0]['samples'] for b in workers[1]['samples'])
+    assert load['cross_tenant_overlapping_switch_interval_pairs']==overlaps and overlaps>0
+    resources=load['resources'];assert 3<=len(resources)<=1252
+    for row in resources:
+        assert 0<=row['allocated']<=4 and 0<=row['nontransactional_nonempty_quota_slots']<=8 and row['l1_root_free_bytes']>=256<<20
+    final=resources[-1]
+    for k in ('allocated','stop_queued','cleanup_queued','stop_running','cleanup_running','owned_cgroup_count','durable_owner_files','nontransactional_nonempty_quota_slots','nontransactional_quota_space_bytes','nontransactional_quota_inodes'):assert final[k]==0
+
+
+def validate_quota_switch_checkpoint(value):
+    assert value['phase']=='quota-enabled-two-tenant-switching'
+    for k in ('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault'):assert value[k] is True
+
+
+def validate_quota_switch_recovery(value):
+    assert value['phase']=='quota-enabled-two-tenant-switching'
+    for k in ('l1_boot_changed','two_exact_owners_policy_shared_backing_and_independent_quota_checked_before_daemon','two_old_execution_domains_absent','two_pins_retained_before_ordinary_recovery','old_sessions_closed_exec_and_create_keys410_no_old_job_resume','both_old_generations_destroyed_resources_absent','two_fresh_real_kvm_guest_uids_workspaces_and_boots_checked','all_eight_project_records_zero_and_active_template_pins_zero','controller_reaped_and_owned_cgroup_root_removed','no_assigned_guest_restored_or_exported'):assert value[k] is True
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
@@ -200,6 +260,7 @@ def main():
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument("--quota-switch",action="store_true",help="TEST ONLY: explicit 3GiB RAM/4GiB disk profile, node4/tenant3/slots8, two tenants120 switches each with running old jobs, then cold recovery")
     for flag in LISTENER_PROFILES:
         profiles.add_argument("--"+flag.replace("_","-"),action="store_true",help="TEST ONLY: close last fixed own-child listener at reserve or clear SET; real ENOSYS and cold recovery")
     for flag in COMMIT_PROFILES:
@@ -221,7 +282,9 @@ def main():
     losses=[v for flag,v in LISTENER_PROFILES.items() if getattr(args,flag)]
     listener_phase,listener_operation=losses[0] if losses else (None,None)
     listener_profile=bool(losses)
-    snapshot_profile = args.quota_snapshot or args.quota_clear_crash
+    resources=nested_resources(args.quota_switch)
+    disk_bytes=resources["disk_bytes"]
+    snapshot_profile = args.quota_snapshot or args.quota_clear_crash or args.quota_switch
     state_io_profile = args.state_io or args.quota_state_io
     driver_profile = args.quota_driver or snapshot_profile or args.quota_negatives or args.quota_syscalls or args.quota_unenforced or args.quota_state_io or args.quota_barrier_hang or commit_profile or listener_profile
     if snapshot_profile: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
@@ -236,7 +299,10 @@ def main():
     l1kernel = Path('/boot/vmlinuz-' + policy['l1_kernel_release'])
     assert digest(l1kernel) == policy['l1_kernel_sha256']
     assert Path('/sys/module/kvm_intel/parameters/nested').read_text().strip() in ('Y', '1')
-    assert os.statvfs('/srv').f_bavail * os.statvfs('/srv').f_frsize > 8 << 30
+    assert os.statvfs('/srv').f_bavail * os.statvfs('/srv').f_frsize > (12 if args.quota_switch else 8) << 30
+    if args.quota_switch:
+        available=[int(line.split()[1])*1024 for line in Path('/proc/meminfo').read_text().splitlines() if line.startswith('MemAvailable:')]
+        assert len(available)==1 and available[0]>=8<<30, 'explicit switch experiment needs8GiB L0 available before allocating owned4GiB cgroup'
     suffix = secrets.token_hex(3)
     root = Path('/srv/nh-' + suffix); control = Path('/var/lib/xandbox-nested-proof-' + suffix)
     parent_group = Path('/sys/fs/cgroup/xandbox-nested-proof-' + suffix); group = parent_group / secrets.token_hex(32)
@@ -247,18 +313,18 @@ def main():
         seed=json.loads(Path(args.snapshot_seed_manifest).read_text())
         assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
         for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
-    phases = (listener_phase,) if listener_profile else (commit_phase,) if commit_profile else ('reserve-quota-syncfs-held',) if args.quota_barrier_hang else ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_last_quota_listener_loss' if listener_profile else 'owned_l1_fixed_real_quota_commit_fault' if commit_profile else 'owned_l1_actual_quota_syncfs_hold_prefork_crash' if args.quota_barrier_hang else 'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+    phases = ('quota-enabled-two-tenant-switching',) if args.quota_switch else (listener_phase,) if listener_profile else (commit_phase,) if commit_profile else ('reserve-quota-syncfs-held',) if args.quota_barrier_hang else ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
+    result = {'test':'owned_l1_quota_two_tenant_busy_switching' if args.quota_switch else 'owned_l1_last_quota_listener_loss' if listener_profile else 'owned_l1_fixed_real_quota_commit_fault' if commit_profile else 'owned_l1_actual_quota_syncfs_hold_prefork_crash' if args.quota_barrier_hang else 'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
         'production_ready':False,'passed':False,'state_io_profile':state_io_profile,'quota_state_io_profile':args.quota_state_io,'quota_prerequisite_profile':args.quota_probe,
         'production_driver_quota':driver_profile,'quota_snapshot_profile':snapshot_profile,'quota_clear_crash_profile':args.quota_clear_crash,'quota_negative_profile':args.quota_negatives,'quota_unenforced_profile':args.quota_unenforced,
         'quota_syscall_errno_profile':args.quota_syscalls,'quota_barrier_hang_profile':args.quota_barrier_hang,
-        'quota_commit_fault_phase':commit_phase,'quota_listener_loss_phase':listener_phase,
+        'quota_commit_fault_phase':commit_phase,'quota_listener_loss_phase':listener_phase,'quota_switch_profile':args.quota_switch,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
         'qemu_sha256':policy['qemu_sha256'],'l1_kernel_sha256':policy['l1_kernel_sha256'],
         'modules_sha256':policy['modules_sha256'],'artifacts_sha256':{n:digest(p) for n,p in sources.items()},
-        'l1_memory_mib':2048,'l0_cgroup_memory_max':3<<30,'l1_vcpus':4,'l1_disk_bytes':DISK_BYTES,
+        'l1_memory_mib':resources['memory_mib'],'l0_cgroup_memory_max':resources['cgroup_memory_max'],'l1_vcpus':4,'l1_disk_bytes':disk_bytes,'launch_profile':resources['profile'],
         'l1_business_network_interfaces':0,'l2_guest_memory_mib':512,'l2_vcpus':2,'l2_workspace_bytes':128<<20,
         'outer_disk_format':'raw','outer_disk_cache':'none','outer_disk_aio':'native','cases':[],
         'l1_boots_completed':0,'checkpoint_progress':[],
@@ -266,6 +332,8 @@ def main():
             'No TCG fallback, outer QEMU migration/snapshot save/restore, or shared L0 host reboot; this does not prohibit real L2 Firecracker snapshot operations.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
+    if args.quota_switch:
+        result['limitations'] += ['EXPLICIT larger fixed experiment:3GiB L1 RAM/4GiB disk/4GiB outer cgroup, CPU4/pids128/noNIC/hard15min; not the old2GiB resource profile or a production node-budget policy.', 'Two paced closed-loop workers120 each with a RUNNING old guest writer per switch; not open-loop saturation, scheduler fairness, unique-RAM billing, every failure window or a production SLO.', 'Resource samples500ms target are nontransactional and miss peaks; summed quota slots, cgroup memory and controller RSS are different overlapping views. No operator quota sync during measured switches; stable preflight/crash checkpoint may sync.']
     if args.quota_probe or driver_profile:
         result['quota_modules_sha256'] = policy['quota_modules_sha256']
     if args.quota_clear_crash:
@@ -298,10 +366,10 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls or listener_profile),quota_snapshot=snapshot_profile,quota_unenforced=args.quota_unenforced,quota_state_io=(args.quota_state_io or args.quota_barrier_hang or commit_profile))
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls or listener_profile),quota_snapshot=(snapshot_profile and not args.quota_switch),quota_switch=args.quota_switch,quota_unenforced=args.quota_unenforced,quota_state_io=(args.quota_state_io or args.quota_barrier_hang or commit_profile))
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
-        backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
+        backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':8 if args.quota_switch else 4,'reserved_uid_range':True}
         filesystem_uuid = uuid.uuid4()
         if driver_profile:
             backend['quota'] = {'version':1,'filesystem_uuid':filesystem_uuid.hex,'project_start':1300000,'max_bytes':192<<20,'max_inodes':128}
@@ -317,7 +385,7 @@ def main():
             private_json(staging/'config/snapshot-fixture.json',{'source_revision':args.source_revision,'agent_sha256':seed['agent_sha256'],'admin_sha256':digest(sources['admin']),'builder_sha256':digest(sources['snapshot_builder'])})
         private_json(staging/'config/backend.json',backend)
         disk=root/'disk.raw'
-        with disk.open('xb') as f: os.posix_fallocate(f.fileno(),0,DISK_BYTES); os.fsync(f.fileno())
+        with disk.open('xb') as f: os.posix_fallocate(f.fileno(),0,disk_bytes); os.fsync(f.fileno())
         format_options = quota_format_options(args.quota_probe or (driver_profile and not args.quota_unenforced))
         subprocess.run(['mkfs.ext4','-q','-F','-m','0','-E','root_owner=0:0',*format_options,*(['-U',str(filesystem_uuid)] if driver_profile else []),'-d',str(staging),str(disk)],check=True,timeout=120)
         with disk.open('rb') as f: os.fsync(f.fileno())
@@ -329,6 +397,7 @@ def main():
         launch_policy={'version':1,'root':str(root),'cgroup':str(group),'uid':uid,'kvm_group':os.stat('/dev/kvm').st_gid,
             'warden':str(warden),'warden_sha256':digest(warden),'fixture_sha256':digest(fixture),'qemu_sha256':policy['qemu_sha256'],
             'kernel_sha256':policy['l1_kernel_sha256'],'initrd_sha256':result['l1_initrd_sha256']}
+        if args.quota_switch: launch_policy['profile']='quota-switch-v1'
         boot_number=0
         def boot():
             nonlocal process,lifetime,channel,launcher_log,boot_number,group
@@ -338,7 +407,7 @@ def main():
             group.mkdir(mode=0o700);owned_groups.append(group)
             replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),
                 'cgroup_parent':str(parent_group),'cgroup':str(group),'all_cgroups':[str(p) for p in owned_groups]})
-            for name,value in {'memory.max':str(3<<30),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'128','cpu.max':'400000 100000'}.items():
+            for name,value in {'memory.max':str(resources['cgroup_memory_max']),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'128','cpu.max':'400000 100000'}.items():
                 (group/name).write_text(value); assert (group/name).read_text().strip()==value
             launch_policy['cgroup']=str(group);replace_private_json(cfg,launch_policy)
             boot_number+=1
@@ -355,11 +424,11 @@ def main():
                 if console.exists(): assert console.stat().st_size<=2<<20,'unexpected console flood'
                 return console.exists() and b'XANDBOX_NESTED_HOST_READY' in console.read_bytes()
             wait(ready,'L1 fixture boot',seconds=90)
-            qmp_probe(root/'qmp.sock')
-            channel=JSONSocket(root/'control.sock',210 if (snapshot_profile or args.quota_negatives or args.quota_syscalls) else 90)
+            qmp_probe(root/'qmp.sock',resources['memory_mib'] if args.quota_switch else None)
+            channel=JSONSocket(root/'control.sock',650 if args.quota_switch else 210 if (snapshot_profile or args.quota_negatives or args.quota_syscalls) else 90,quota_switch=args.quota_switch)
             channel.send({'version':1,'operation':'probe'}); reply=channel.read()
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
-            assert disk.stat().st_size==DISK_BYTES
+            assert disk.stat().st_size==disk_bytes
             result['l1_boots_completed']+=1
         def request(operation,phase=None):
             value={'version':1,'operation':operation}
@@ -367,6 +436,7 @@ def main():
             channel.send(value); out=channel.read()
             if not out['ok'] and driver_profile and operation=='recover' and 'quota_diagnostic' in out:
                 result['quota_coldboot_failure_diagnostic']=out['quota_diagnostic']
+            if args.quota_switch and not out['ok'] and 'result' in out:result['switch_partial_result']=out['result']
             assert out['ok'],'L1 fixed operation failed; inspect private console';return out['result']
         def power_cut():
             nonlocal process,lifetime,channel,launcher_log
@@ -385,7 +455,10 @@ def main():
             result['unenforced_startup']=request('quota-unenforced')
             validate_unenforced_setup(result['unenforced_startup'])
             result['cases'].append({'phase':'unenforced-ext4-startup','passed':True})
-        if snapshot_profile: result['snapshot_setup']=request('quota-snapshot-setup')
+        if args.quota_switch:
+            result['snapshot_setup']=request('quota-switch-setup')
+            validate_quota_switch_setup(result['snapshot_setup'])
+        elif snapshot_profile: result['snapshot_setup']=request('quota-snapshot-setup')
         if args.quota_negatives:
             result['negative_setup']=request('quota-negative-setup')
             validate_negative_setup(result['negative_setup'])
@@ -393,8 +466,12 @@ def main():
             result['syscall_setup']=request('quota-syscall-setup')
             validate_quota_syscall_setup(result['syscall_setup'],require_repeated=True)
         for phase in phases:
-            checkpoint=request(listener_operation+'-checkpoint') if listener_profile else request(commit_operation+'-checkpoint') if commit_profile else request('quota-barrier-checkpoint') if args.quota_barrier_hang else request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
-            if listener_profile: validate_quota_listener_checkpoint(checkpoint,listener_phase)
+            if args.quota_switch:
+                result['switch_load']=request('quota-switch-run')
+                validate_quota_switch_run(result['switch_load'])
+            checkpoint=request('quota-switch-checkpoint') if args.quota_switch else request(listener_operation+'-checkpoint') if listener_profile else request(commit_operation+'-checkpoint') if commit_profile else request('quota-barrier-checkpoint') if args.quota_barrier_hang else request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
+            if args.quota_switch: validate_quota_switch_checkpoint(checkpoint)
+            elif listener_profile: validate_quota_listener_checkpoint(checkpoint,listener_phase)
             elif commit_profile: validate_quota_commit_checkpoint(checkpoint,commit_phase)
             elif args.quota_barrier_hang: validate_quota_barrier_checkpoint(checkpoint)
             else: assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
@@ -405,14 +482,15 @@ def main():
                 assert checkpoint['quota_and_ownership_released_only_after_io_resumed' if phase.startswith('hang-') else 'quota_owner_retained_until_cold_recovery'] is True
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
-            boot(); recovered=request(listener_operation+'-recover' if listener_profile else commit_operation+'-recover' if commit_profile else 'quota-barrier-recover' if args.quota_barrier_hang else 'quota-clear-recover' if args.quota_clear_crash else 'recover')
-            if listener_profile: validate_quota_listener_recovery(recovered,listener_phase)
+            boot(); recovered=request('quota-switch-recover' if args.quota_switch else listener_operation+'-recover' if listener_profile else commit_operation+'-recover' if commit_profile else 'quota-barrier-recover' if args.quota_barrier_hang else 'quota-clear-recover' if args.quota_clear_crash else 'recover')
+            if args.quota_switch: validate_quota_switch_recovery(recovered)
+            elif listener_profile: validate_quota_listener_recovery(recovered,listener_phase)
             elif commit_profile: validate_quota_commit_recovery(recovered,commit_phase)
             elif args.quota_barrier_hang: validate_quota_barrier_recovery(recovered)
             else:
                 assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
                 assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
-            if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang or commit_profile or listener_profile): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
+            if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang or commit_profile or listener_profile or args.quota_switch): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
             if args.quota_clear_crash: validate_quota_clear_recovery(recovered)
             if args.quota_probe: assert recovered['quota_persisted_after_power_cut'] and recovered['all_fixture_project_records_cleared']
             guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if state_io_profile else True

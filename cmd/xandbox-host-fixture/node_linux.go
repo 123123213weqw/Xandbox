@@ -40,6 +40,9 @@ type nodeReceipt struct {
 type node struct {
 	quotaDriver     bool
 	quotaSnapshot   bool
+	quotaSwitch     bool
+	switchTokenB    string
+	switchTemplate  string
 	quotaStateIO    bool
 	quotaWindowLock *os.File
 	quotaHeld       *quotaBarrierLive
@@ -56,7 +59,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -162,6 +165,11 @@ func (n *node) initialize() error {
 	} else if e = json.Unmarshal(b, &n.token); e != nil {
 		return e
 	}
+	if n.quotaSwitch {
+		if e = n.initializeQuotaSwitch(); e != nil {
+			return e
+		}
+	}
 	capacity := 1
 	if n.quotaSnapshot {
 		capacity = 2
@@ -217,6 +225,9 @@ func (n *node) start(ctx context.Context) error {
 		mode := "quota-daemon-drop"
 		if n.quotaSnapshot {
 			mode = "quota-snapshot-daemon-drop"
+		}
+		if n.quotaSwitch {
+			mode = "quota-switch-daemon-drop"
 		}
 		n.process = exec.Command("/usr/bin/xandbox-host-fixture", "-mode", mode)
 	}
@@ -478,8 +489,11 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 	return runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, false)
 }
 func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO bool) error {
+	return runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, false)
+}
+func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch bool) error {
 	count := 0
-	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO} {
+	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch} {
 		if enabled {
 			count++
 		}
@@ -487,7 +501,8 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 	if count > 1 {
 		return errors.New("exclusive L1 image profile required")
 	}
-	quotaDriver = quotaDriver || quotaSnapshot || quotaStateIO
+	quotaDriver = quotaDriver || quotaSnapshot || quotaStateIO || quotaSwitch
+	quotaSnapshot = quotaSnapshot || quotaSwitch
 	stateIO = stateIO || quotaStateIO
 	if e := requireNode(); e != nil {
 		return e
@@ -526,7 +541,7 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, mapper: mapper}
+	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, quotaSwitch: quotaSwitch, mapper: mapper}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -545,6 +560,12 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 			if q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
+			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
+				timeout = 200 * time.Second
+			}
+			if q.Operation == "quota-switch-run" {
+				timeout = 600 * time.Second
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			var result map[string]any
 			switch q.Operation {
@@ -561,6 +582,17 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 				} else {
 					result, e = n.quotaSnapshotSetup(ctx)
 				}
+			case "quota-switch-setup":
+				result, e = n.quotaSwitchSetup(ctx)
+			case "quota-switch-run":
+				result, e = n.quotaSwitchRun(ctx)
+				if result != nil {
+					out["result"] = result
+				} // Retain bounded sanitized incomplete rows, too.
+			case "quota-switch-checkpoint":
+				result, e = n.quotaSwitchCheckpoint(ctx)
+			case "quota-switch-recover":
+				result, e = n.quotaSwitchRecover(ctx)
 			case "quota-clear-checkpoint":
 				result, e = n.quotaClearCheckpoint(ctx)
 			case "quota-clear-recover":

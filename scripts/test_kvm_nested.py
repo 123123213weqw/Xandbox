@@ -7,10 +7,71 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_explicit_switch_resources_and_image_preserve_legacy_bounds(self):
+        self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
+        self.assertEqual(nested_resources(True),{'profile':'quota-switch-v1','memory_mib':3072,'disk_bytes':4<<30,'cgroup_memory_max':4<<30})
+        for v in (1,None,'switch'):
+            with self.assertRaises(AssertionError):nested_resources(v)
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_switch=True)
+        self.assertIn('rw,nosuid,prjquota',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-switch >/dev/console 2>&1\n'))
+        for other in ('state_io','quota_probe','quota_driver','quota_snapshot','quota_unenforced','quota_state_io'):
+            with self.assertRaises(ValueError):init_scripts([],quota_switch=True,**{other:True})
+
+    def test_large_control_reply_is_opt_in_not_a_global_bound_change(self):
+        conn=JSONSocket.__new__(JSONSocket)
+        raw=json.dumps({'sample':'x'*70000}).encode()+b'\n';conn.file=io.BytesIO(raw)
+        with self.assertRaises(AssertionError):conn.read()
+        conn.max_frame=1<<20;conn.file=io.BytesIO(raw);self.assertEqual(len(conn.read()['sample']),70000)
+        conn.file=io.BytesIO(b'x'*((1<<20)+1))
+        with self.assertRaises(AssertionError):conn.read()
+
+    def test_switch_setup_and_cold_recovery_require_every_explicit_boundary(self):
+        pre=('four_simultaneous_real_kvm_quota_guests','four_distinct_private_projects_and_shared_readonly_project_zero_inodes','independent_named_inode_accounting_before_benchmark','alpha_fourth429_with_spare_node_slot_beta_still_executes','node_fifth503_below_beta_tenant_quota','authentication401_and_cross_tenant404','old_key410_resources_absent_quota_zero_before_controlled_slot_reuse','same_uid_project_reused_only_as_fresh_ref_boot_and_workspace','beta_execution_and_data_survived_alpha_recycle','all_eight_projects_zero_and_active_catalog_pins_zero')
+        base=('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated')
+        good={'fixed_node_capacity':4,'fixed_tenant_capacity':3,'fixed_uid_project_slots':8,'ordinary_production_no_test_observer':True,'genuine_l1_snapshot_setup':{**{k:True for k in base},'snapshot_memory_bytes':512<<20},'preflight':{k:True for k in pre}}
+        validate_quota_switch_setup(good)
+        for k in pre:
+            bad=copy.deepcopy(good);bad['preflight'][k]=False
+            with self.assertRaises(AssertionError):validate_quota_switch_setup(bad)
+        flags=('l1_boot_changed','two_exact_owners_policy_shared_backing_and_independent_quota_checked_before_daemon','two_old_execution_domains_absent','two_pins_retained_before_ordinary_recovery','old_sessions_closed_exec_and_create_keys410_no_old_job_resume','both_old_generations_destroyed_resources_absent','two_fresh_real_kvm_guest_uids_workspaces_and_boots_checked','all_eight_project_records_zero_and_active_template_pins_zero','controller_reaped_and_owned_cgroup_root_removed','no_assigned_guest_restored_or_exported')
+        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault')
+        cp={'phase':'quota-enabled-two-tenant-switching',**{k:True for k in checkpoint}};validate_quota_switch_checkpoint(cp)
+        for k in checkpoint:
+            with self.assertRaises(AssertionError):validate_quota_switch_checkpoint(dict(cp,**{k:False}))
+        rec={'phase':'quota-enabled-two-tenant-switching' ,**{k:True for k in flags}};validate_quota_switch_recovery(rec)
+        for k in flags:
+            with self.assertRaises(AssertionError):validate_quota_switch_recovery(dict(rec,**{k:False}))
+            with self.assertRaises(KeyError):validate_quota_switch_recovery({a:b for a,b in rec.items() if a!=k})
+
+    def test_full_switch_validator_cannot_pass_fewer_idle_or_unmeasured_rows(self):
+        keys=('request_to_binding_response_ms','request_to_first_new_command_success_ms','request_to_old_host_stopped_observed_ms','request_to_old_durable_destroyed_observed_ms')
+        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault')
+        resource={k:0 for k in ('allocated','stop_queued','cleanup_queued','stop_running','cleanup_running','owned_cgroup_count','durable_owner_files','nontransactional_nonempty_quota_slots','nontransactional_quota_space_bytes','nontransactional_quota_inodes')};resource['l1_root_free_bytes']=1<<30
+        workers=[]
+        labels=('binding','first_new_command','old_host_stopped','old_durable_destroyed')
+        for tenant in ('alpha','beta'):
+            rows=[{'iteration':i+1,'session_ordinal':i//48+1,'completed':True,'busy_old_job_running_at_switch_request':True,'old_job_terminal':'CANCELLED','workload_start_ms':i*1500,'workload_end_ms':i*1500+10,'switch_start_ms':i*1500+10,'switch_end_ms':i*1500+50,**{k:20 for k in keys},'server_phase_observations':{'measured':True}} for i in range(120)]
+            workers.append({'tenant':tenant,'samples':rows,'summary_ms':{label:{'count':120,'p50':20,'p95':20,'p99':20,'p100':20} for label in labels}})
+        good={'phase':'quota-enabled-two-tenant-switching','load':{'passed':True,'cycles_per_tenant':120,'minimum_paced_seconds':180,'duration_seconds':180.1,'busy_old_writer_each_switch':True,'no_operator_quota_sync_during_measured_switches':True,'same_initial_session_key_isolated_between_tenants':True,'workers':workers,'cross_tenant_overlapping_switch_interval_pairs':120,'resources':[dict(resource) for _ in range(3)],'checkpoint':{k:True for k in checkpoint}}}
+        validate_quota_switch_run(good)
+        for field,value in [('cycles_per_tenant',119),('duration_seconds',179),('cross_tenant_overlapping_switch_interval_pairs',0),('busy_old_writer_each_switch',False),('no_operator_quota_sync_during_measured_switches',False)]:
+            bad=copy.deepcopy(good);bad['load'][field]=value
+            with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        for field,value in [('completed',False),('busy_old_job_running_at_switch_request',False),('old_job_terminal','TIMED_OUT'),('request_to_first_new_command_success_ms',float('nan'))]:
+            bad=copy.deepcopy(good);bad['load']['workers'][0]['samples'][10][field]=value
+            with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        bad=copy.deepcopy(good);bad['load']['workers'][0]['samples'].pop()
+        with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        bad=copy.deepcopy(good);bad['load']['resources'][-1]['nontransactional_quota_space_bytes']=4096
+        with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        bad=copy.deepcopy(good);bad['load']['workers'][1]['summary_ms']['binding']['p99']=21
+        with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+
     def test_listener_loss_requires_last_close_actual_enosys_and_retained_state(self):
         common=('fixed_owned_thread_anchor_owner_checked','receipt_fsynced_before_target_set','last_listener_closed_without_notification_response','selected_quotactl_fd_kernel_exit_observed','target_set_not_continued_or_errno_emulated','quota_and_absent_namespace_checked_before_listener_close','durable_reclaiming_stopped_owner_and_admission503_rechecked_three_times','quota_unchanged_while_listener_absent','no_false_destroy_confirmation','listener_never_reattached_before_power_cut')
         for phase,_ in LISTENER_PROFILES.values():
