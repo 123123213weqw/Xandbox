@@ -7,10 +7,23 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_quota_clear_report_rejects_every_missing_boundary_or_recovery_proof(self):
+        checkpoint=('real_nested_kvm','guest_uid_checked','checkpoint_receipt_fsynced','two_simultaneous_ordinary_snapshot_clones','private_projects_distinct','catalog_pins_two_checked_before_barrier','ordinary_post_quota_sync_catalog_fd_observed','victim_quota_zero_namespace_absent_owner_retained','victim_durable_reclaiming_not_destroyed','zero_quota_did_not_release_capacity_503','keeper_real_vm_data_execution_survived','only_two_known_shared_links_removed','no_observer_quota_sync_after_clear_boundary','pid1_lock_retained_until_l1_power_cut')
+        recovery=('l1_boot_changed','old_durable_destroyed','old_resources_absent','old_key_refused_410','fresh_real_kvm_exec_destroy','fresh_guest_boot_changed','cleared_victim_quota_zero_before_daemon_recovery','both_durable_owners_and_two_pins_retained_across_cold_boot','keeper_quota_namespace_and_shared_content_checked_before_recovery','keeper_old_destroyed_resources_absent_key410','both_old_pins_released_active_template_unchanged','all_private_project_ids_cleared')
+        for function,keys in ((validate_quota_clear_checkpoint,checkpoint),(validate_quota_clear_recovery,recovery)):
+            good={'phase':'quota-cleared-owner-pinned',**{key:True for key in keys}}
+            function(good)
+            for key in keys:
+                bad=dict(good);bad[key]=False
+                with self.assertRaises(AssertionError):function(bad)
+                bad=dict(good);del bad[key]
+                with self.assertRaises(KeyError):function(bad)
+            with self.assertRaises(AssertionError):function(dict(good,phase='destroyed'))
+
     def test_quota_io_profile_loads_quota_but_never_mounts_backing_bypassing_mapper(self):
         _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_state_io=True)
         self.assertNotIn('mount -t ext4',service)

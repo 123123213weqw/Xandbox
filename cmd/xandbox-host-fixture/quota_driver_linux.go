@@ -272,6 +272,13 @@ func verifyDriverQuotaColdBootOn(mapper *stateMapper) (map[string]any, error) {
 	if e = strictjson.Decode(b, &old); e != nil {
 		return nil, e
 	}
+	return verifyDriverQuotaReceiptOn(old, mapper)
+}
+func verifyDriverQuotaReceiptOn(old driverQuotaReceipt, mapper *stateMapper) (map[string]any, error) {
+	var e error
+	if e := requireNode(); e != nil {
+		return nil, e
+	}
 	result := map[string]any{"quota_limits_and_ownership_survived_cold_boot": true, "quota_accounting_matches_recovered_namespace": true}
 	if old.Phase == "destroyed" {
 		if e = driverQuotaAllClearOn(mapper); e != nil {

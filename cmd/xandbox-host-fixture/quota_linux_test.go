@@ -306,3 +306,88 @@ func TestQuotaIOProfileAndMappedReadersCannotEscapeL1(t *testing.T) {
 		t.Fatal("quota IO checkpoint escaped L1 guard")
 	}
 }
+
+func TestQuotaClearWindowCannotOperateOutsideFixedL1(t *testing.T) {
+	n := &node{quotaDriver: true, quotaSnapshot: true}
+	if _, e := n.quotaClearCheckpoint(context.Background()); e == nil {
+		t.Fatal("window escaped L1 guard")
+	}
+	if _, e := n.recoverQuotaClear(context.Background()); e == nil {
+		t.Fatal("recovery escaped L1 guard")
+	}
+	if _, e := n.openClearLock(); e == nil {
+		t.Fatal("catalog lock escaped L1 guard")
+	}
+	if _, e := n.fixedCatalogStatus(context.Background()); e == nil {
+		t.Fatal("fixed admin escaped L1 guard")
+	}
+	if _, e := n.clearCatalogFDCount("", nil); e == nil {
+		t.Fatal("proc observer escaped L1 guard")
+	}
+	for _, operation := range []string{"quota-clear-checkpoint", "quota-clear-recover"} {
+		if e := (nodeRequest{Version: 1, Operation: operation}).validate(); e != nil {
+			t.Fatal(e)
+		}
+		if e := (nodeRequest{Version: 1, Operation: operation, Phase: "arbitrary"}).validate(); e == nil {
+			t.Fatal("window accepts arguments")
+		}
+	}
+}
+func TestClearWindowOwnerRequiresExactInitializedQuotaIdentity(t *testing.T) {
+	ref := sandbox.Ref{ID: strings.Repeat("1", 32), Generation: strings.Repeat("2", 32)}
+	good := clearWindowOwner{Version: 4, Ref: ref, UID: 400001, ProjectID: driverProjectFirst + 1, QuotaAttempted: true, InitializationAttempted: true, TemplateID: strings.Repeat("a", 64)}
+	encode := func(o clearWindowOwner) []byte {
+		b, e := json.Marshal(o)
+		if e != nil {
+			t.Fatal(e)
+		}
+		return b
+	}
+	if _, e := decodeClearWindowOwner(encode(good), ref); e != nil {
+		t.Fatal(e)
+	}
+	for _, change := range []func(*clearWindowOwner){
+		func(o *clearWindowOwner) { o.Version = 2 }, func(o *clearWindowOwner) { o.QuotaAttempted = false }, func(o *clearWindowOwner) { o.InitializationAttempted = false }, func(o *clearWindowOwner) { o.UID = 400004 }, func(o *clearWindowOwner) { o.ProjectID++ }, func(o *clearWindowOwner) { o.TemplateID = strings.Repeat("0", 64) }, func(o *clearWindowOwner) { o.Ref.Generation = strings.Repeat("3", 32) },
+	} {
+		bad := good
+		change(&bad)
+		if _, e := decodeClearWindowOwner(encode(bad), ref); e == nil {
+			t.Fatal("invalid owner accepted")
+		}
+	}
+}
+func TestClearKeeperOnlyDropsTheTwoKnownSharedLinks(t *testing.T) {
+	workspace := driverQuotaEntry{Inode: 1, Links: 1, Mode: 0100600, UID: 400001, GID: 400001, Size: 128 << 20, Blocks: 128 << 20}
+	shared := driverQuotaEntry{Shared: true, Inode: 2, Links: 3, Mode: 0100444, Size: 512 << 20, Blocks: 512 << 20}
+	state := shared
+	state.Inode = 3
+	state.Size = 8192
+	state.Blocks = 8192
+	before := driverQuotaReceipt{Snapshot: true, Phase: "running", Record: quotaRecord{BHard: 192 << 10, IHard: 128, Space: 128 << 20, Inodes: 1, Valid: 63}, Entries: map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/template.mem": shared, "root/template.state": state}}
+	shared.Links--
+	state.Links--
+	after := map[string]driverQuotaEntry{"root/workspace.ext4": workspace, "root/template.mem": shared, "root/template.state": state}
+	if _, e := adjustedKeeperQuota(before, before.Record, 128<<20, 1, after); e != nil {
+		t.Fatal("one victim unlink misclassified", e)
+	}
+	if before.Entries["root/template.mem"].Links != 3 {
+		t.Fatal("baseline map mutated")
+	}
+	for _, name := range []string{"root/workspace.ext4", "root/template.mem", "root/template.state"} {
+		bad := map[string]driverQuotaEntry{}
+		for k, v := range after {
+			bad[k] = v
+		}
+		entry := bad[name]
+		entry.Links++
+		bad[name] = entry
+		if _, e := adjustedKeeperQuota(before, before.Record, 128<<20, 1, bad); e == nil {
+			t.Fatal("unexpected link delta accepted")
+		}
+	}
+	bad := before.Record
+	bad.Space -= 4096
+	if _, e := adjustedKeeperQuota(before, bad, 128<<20, 1, after); e == nil {
+		t.Fatal("unaccounted quota accepted")
+	}
+}

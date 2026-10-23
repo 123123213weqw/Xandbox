@@ -38,14 +38,15 @@ type nodeReceipt struct {
 	Key, L1Boot, L2Boot string
 }
 type node struct {
-	quotaDriver   bool
-	quotaSnapshot bool
-	quotaStateIO  bool
-	mapper        *stateMapper
-	api           *client.Client
-	process       *exec.Cmd
-	exited        chan error
-	token, boot   string
+	quotaDriver     bool
+	quotaSnapshot   bool
+	quotaStateIO    bool
+	quotaWindowLock *os.File
+	mapper          *stateMapper
+	api             *client.Client
+	process         *exec.Cmd
+	exited          chan error
+	token, boot     string
 }
 
 func (q nodeRequest) validate() error {
@@ -53,7 +54,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-unenforced":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -558,6 +559,10 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 				} else {
 					result, e = n.quotaSnapshotSetup(ctx)
 				}
+			case "quota-clear-checkpoint":
+				result, e = n.quotaClearCheckpoint(ctx)
+			case "quota-clear-recover":
+				result, e = n.recoverQuotaClear(ctx)
 			case "quota-unenforced":
 				result, e = n.quotaUnenforced(ctx)
 			case "quota-negative-setup":
