@@ -16,6 +16,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [新4ee schema3 空间、真实排队取消与 owner/部分复制窗口](docs/NODE4EE_REQUALIFICATION.md)：4个scope/7个外层代际实际通过并独立只读核验无残留；9个固定ENTRY probe的12事件校准与15事件取消轨迹均在新普通ELF上实际执行。另条WRITE仍挂起时，keeper执行域停止/本代持久私有回收分别观测36.348/161.646ms（N=1，非SLO）；通知等待不是filesystem D，也不证明session pre-Core ticket跨drain或完整节点饱和。
 
+新增 [实际session pre-Core ticket跨ACK drain](docs/SESSION_TICKET_DRAIN.md)：真实初始session journal Sync仍挂起时，持久drain ACK与旧guest命令/独立回收继续；放行后原请求以旧一次性ticket完成真实KVM创建，新请求仍拒绝。原盘cold保持drained、旧key410/精确重试/显式resume与新guest通过；新增用例及共享pre/post观察器回归共3scope/6代际独立审计无残留。首版unit路径选择器失败保留；未完成writer的shutdown锁窗口仍未验收。
+
 新增 [持久化错误后的独立物理Stop](docs/EMERGENCY_STOP.md)：新Go1.27.3原生daemon通过5项ENOSPC故障及完整新运行时回归；idle故障停止两次观测为43.814/48.630ms，旧c577负对照约5016ms并按预期未过实验guard。仍返回存储错误、不假称持久STOPPED或提前清理/还容量；这不是线上SLO，也不覆盖尚未返回的卡死I/O。
 
 新增 [独立ledger只读/EROFS实机验收](docs/READONLY.md)：busy/idle两组分别39.017/47.907ms观察到host停止，DELETE仍500、无持久停止/销毁确认、容量保留；RO持续时普通重启拒绝，恢复自身小卷RW后同state回收。预先打开的directoryFD也验证真实EROFS；仅ledger只读，不代表介质EIO、整个state故障或生产SLO。

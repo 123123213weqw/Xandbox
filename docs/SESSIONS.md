@@ -104,3 +104,7 @@
 专项测试在两个实际VM均READY、旧路由仍可执行时冻结PREPARED写入，确认普通接口无法执行候选；继续到最终绑定Save的受控barrier后，旧VM仍独立停止（最新barrier到观测停止约47.6ms）。Close100ms返回未完成，候选也被独立停止，状态flock持续保留到旧写入者收敛；释放barrier后，迟到写入没有恢复路由，新controller/driver/broker也没有复活会话。barrier仅为测试代码，不是实际坏盘，不是生产RPC/环境开关。
 
 环境沿用 [guardian硬件说明](GUARDIAN.md)：Xeon Silver4216/64逻辑CPU、约251.5GiB系统RAM、runtime ext4，guest512MiB/2vCPU/128MiB私有盘，无NIC；只写少量文件。RSS未测、缓存/负载未控制、无持续吞吐/百分位/最坏延迟/物理擦除或生产SLO声明。两轮Runner均退出0，最终无本次VMM/cgroup/jail/UID manifest残留。SSH复用断开/临时端口超时期间使用有界重试，保留主机密钥校验，不关闭共享连接，也未重复启动或把未运行的尝试计为通过。
+
+## 实际已接受ticket跨节点drain
+
+[新的有限实机窗口](SESSION_TICKET_DRAIN.md)在初始真实session journal Sync、进入Core之前持有请求，确认pending1/既有两实例且无新增backend/配额；实际drain ACK后旧执行与独立回收继续，放行后原始请求用先前ticket完成一次Core创建，新的预留仍503。它不是取消原请求（取消会在Save后正确abort），不是先前raw排队取消的替代推断。原盘cold保持ACKdrained/旧key410等另有实际检查，详见命名来源和边界；未完成control writer的shutdown锁窗口仍未验收。
