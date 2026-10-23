@@ -1,0 +1,11 @@
+=== RUN   TestGatewayPersistentLockCannotBootstrapLostAuthority
+=== RUN   TestGatewayPersistentLockCannotBootstrapLostAuthority/interrupted-bootstrap
+    state_linux_test.go:153: persistent lock was treated as a fresh directory
+=== RUN   TestGatewayPersistentLockCannotBootstrapLostAuthority/both-records-lost
+    state_linux_test.go:153: persistent lock was treated as a fresh directory
+--- FAIL: TestGatewayPersistentLockCannotBootstrapLostAuthority (0.01s)
+    --- FAIL: TestGatewayPersistentLockCannotBootstrapLostAuthority/interrupted-bootstrap (0.00s)
+    --- FAIL: TestGatewayPersistentLockCannotBootstrapLostAuthority/both-records-lost (0.01s)
+FAIL
+FAIL	github.com/123123213weqw/Xandbox/internal/gateway	0.030s
+FAIL

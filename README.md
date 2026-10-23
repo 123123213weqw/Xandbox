@@ -6,7 +6,7 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 **状态：生产化开发中，尚未生产就绪。**
 
-新增 [独立TLS接入与外部凭证边界](docs/TLS_GATEWAY.md)：root固定连接broker无TCP listener，专用UID/caps0/NNP/chroot的网络child；真实TLS→KVM双租户、key/证书轮换不重启controller/guest、无效reload关闭入口、旧revision拒绝及同盘冷恢复有限验收通过。最终2 scope/4次外层启动，原首轮失败及两项真实cwd/继承FD修正分别保留；普通4ee五个ELF不变。这不是完整PKI、DoS、operator部署或生产SLO验收。
+新增 [独立TLS接入与外部凭证边界](docs/TLS_GATEWAY.md)：root固定连接broker无TCP listener，专用UID/caps0/NNP/chroot的网络child；真实TLS→KVM双租户、key/证书轮换不重启controller/guest、无效reload关闭入口、旧revision拒绝及同盘冷恢复有限验收通过。当前0b源含cwd/继承FD与持久lock标记修正，另行通过2 scope/4次外层启动；首轮失败、原生bootstrap失败对照及各冻结阶段分别保留，普通4ee五个ELF不变。这不是完整PKI、DoS、operator部署或生产SLO验收。
 
 开发分支新增 [节点持久准入控制](docs/NODE_CONTROL.md)：私有同宿主 UID 管理 socket 与 `xandbox-node status/drain/resume`，停止新预留但允许已接受操作、已有执行及独立 Stop/Cleanup 继续；包含 epoch/revision CAS、精确重试和重启保持。**这次修改了生产程序；新 ELF 的 DEFAULT/IO 与 quota 命名兼容子矩阵现已另行复验，但最坏节点资源压力及剩余 operator 窗口尚未完成**。下面各报告只证明其自身冻结的源码/ELF，不能相互替代。mock 进程及模拟持久化错误测试不代替真实故障窗口。
 
