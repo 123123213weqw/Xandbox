@@ -86,4 +86,4 @@ python3 scripts/node_control_smoke.py \
 
 后续[实际 FileStore 的两个 fsync TEST errno 窗口](NODE_OPERATOR_STORE.md)已单独验证 pre-rename 与 post-admission-directory 的 pending、caller 取消、一次 EIO、内存 fence 与不同 cold namespace 结果。它执行真实 Store 而非模拟对象，但不是实际 filesystem D/介质故障或全部提交窗口验收；旧预验收与前轮健康 ACK 报告仍保持冻结范围。
 
-后续[新4ee默认/IO与quota240、双活cold和命名故障复验](RUNTIME4EE_REQUALIFICATION.md)已实际完成25个scope，并独立核验43个外层执行代际和4个专属loop绑定无残留。它另绑冻结源及新原始报告，不回写本页旧预验收false字段；新4ee schema3 prepare/cancel/trace/完整节点压力、pre-Core reservation与未完成control writer的shutdown锁窗口仍未完成。
+后续[新4ee默认/IO与quota240、双活cold和命名故障复验](RUNTIME4EE_REQUALIFICATION.md)已实际完成25个scope，并独立核验43个外层执行代际和4个专属loop绑定无残留。它另绑冻结源及新原始报告，不回写本页旧预验收false字段；新4ee schema3空间/prepare entry trace/原始排队取消与复制、owner有限窗口已另行[实际复验](NODE4EE_REQUALIFICATION.md)；完整最坏节点资源压力、session pre-Core reservation跨drain与未完成control writer的shutdown锁窗口仍未完成。

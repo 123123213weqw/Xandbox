@@ -1,6 +1,6 @@
 # 排队取消与 held-copy 下独立停止、回收（TEST ONLY）
 
-当前分支的[节点准入控制](NODE_CONTROL.md)已改变生产 ELF；固定 probe 计划已为新程序重绑定，但新程序的实机取消与 held-copy 回收复验尚未通过。下文和清单保持原冻结历史证据，不能用于新程序认证；复现历史用例须使用对应历史源码与资产。
+当前分支的[节点准入控制](NODE_CONTROL.md)已改变生产 ELF；新4ee的实际原始排队取消、held-copy下keeper独立回收与固定ENTRY trace已另行[实机复验](NODE4EE_REQUALIFICATION.md)。下文和清单仍保持原冻结历史证据，未重标为新程序结果；复现历史用例须使用对应历史源码与资产。
 
 **有限实机用例，不是节点满载、公平性或生产 SLO 验收。** 冻结源 `c121f63dd2283fb514cb0ce33655e83d1332bd50`，普通 daemon/admin/warden/builder 四个 ELF 与已验收 2e 字节相同；只有 TEST fixture 变为 `117fdd4e…`。[原始报告](validation/kvm-node-cancel-admission-v1.json)的 `prepare_cancellation` 与[来源清单](validation/node-cancel-provenance-v1.json)记录本次独立证据，不重标旧 DEFAULT/quota240 数据。
 

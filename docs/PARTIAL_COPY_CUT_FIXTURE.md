@@ -1,5 +1,7 @@
 # 未主动同步的部分复制宿主掉电：有限验收
 
+> 本页保持原冻结程序的历史证据；准入控制变更后的4ee程序已另行完成[对应有限节点/复制/owner实机复验](NODE4EE_REQUALIFICATION.md)，没有重标本页报告或推断生产就绪。
+
 2026-10-23 固定新case及相关回归已通过，见[精确SHA与全部原始证据](validation/copy-cut-provenance-v2.json)。这是独立于[稳定前缀 TEST EIO](PARTIAL_COPY_FIXTURE.md)的新故障窗口。冻结源 `25423a68dc96a1330ea6c73a47990d86857f0436`，普通生产 daemon / warden / builder / guest 未改，仍为实验状态，不是完整 Prepare、介质或生产验收。
 
 ## 故障点与凭据边界

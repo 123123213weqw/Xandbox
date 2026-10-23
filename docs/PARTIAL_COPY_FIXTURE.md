@@ -1,5 +1,7 @@
 # TEST ONLY：部分 workspace 复制失败与存活 keeper
 
+> 本页保持原冻结程序的历史证据；准入控制变更后的4ee程序已另行完成[对应有限节点/复制/owner实机复验](NODE4EE_REQUALIFICATION.md)，没有重标本页报告或推断生产就绪。
+
 2026-10-23 下述固定有限实测已通过，见[精确SHA/全部原始报告](validation/copy-prepare-provenance-v1.json)；**不是完整partial Prepare/生产验收**。生产Go/daemon不增加故障开关，不把已完成的quota双租户240次切换重新当成待验收或该新故障的替代证明。
 
 ## 明确的独立规格

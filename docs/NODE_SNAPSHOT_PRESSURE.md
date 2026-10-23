@@ -1,5 +1,7 @@
 # schema3快照与节点空间准入压力（有限实机验收）
 
+> 本页保持原冻结程序的历史证据；准入控制变更后的4ee程序已另行完成[对应有限节点/复制/owner实机复验](NODE4EE_REQUALIFICATION.md)，没有重标本页报告或推断生产就绪。
+
 **不是完整生产或节点饱和验收。** 冻结源码`d432e091c3110c069efa0bf44839f958c97c81aa`新增TEST-only路径；普通生产daemon/admin/warden/builder与已验收2e源的`3ea1e247…/19bbd460…/b290a5ed…/243dedf1…`字节完全一致，只有fixture变为`597b0d59…`。新[原始报告](validation/kvm-node-snapshot-admission-v2.json)和[来源/15个输入SHA](validation/node-snapshot-provenance-v2.json)不重标旧DEFAULT/quota240测量。
 
 ## 相同节点策略，明确的新实验规格

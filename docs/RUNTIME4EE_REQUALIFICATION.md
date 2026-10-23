@@ -48,4 +48,4 @@ Linux native full race×3/vet、fixture race×10/vet、root Python95（0 skip）
 
 ## 尚未完成
 
-仍需新4ee schema3 snapshot/prepare/cancel/trace和完整节点压力复验、实际drain跨已接受pre-Core session reservation、shutdown期间未完成control writer保持锁窗口、unique RAM/open-loop/fairness/长期SLO、生产TLS网关与凭证生命周期、独立operator/systemd安装恢复、持久审计/告警/外部日志预算、archive/rotation/备份/升级/回滚及其余M1–M4。PR19保持Draft，main和主分支ZIP不变；`production_ready`与Goal不标完成。
+新4ee命名的schema3 snapshot空间/prepare entry trace/原始排队取消与owner、复制窗口已另行[实际复验](NODE4EE_REQUALIFICATION.md)，其原始报告和有限范围不回写本页测量；仍需完整最坏节点资源压力、实际drain跨已接受pre-Core session reservation、shutdown期间未完成control writer保持锁窗口、unique RAM/open-loop/fairness/长期SLO、生产TLS网关与凭证生命周期、独立operator/systemd安装恢复、持久审计/告警/外部日志预算、archive/rotation/备份/升级/回滚及其余M1–M4。PR19保持Draft，main和主分支ZIP不变；`production_ready`与Goal不标完成。

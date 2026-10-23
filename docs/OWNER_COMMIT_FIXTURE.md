@@ -1,5 +1,7 @@
 # owner unlink 后、目录 fsync 未返回的原盘冷恢复
 
+> 本页保持原冻结程序的历史证据；准入控制变更后的4ee程序已另行完成[对应有限节点/复制/owner实机复验](NODE4EE_REQUALIFICATION.md)，没有重标本页报告或推断生产就绪。
+
 2026-10-23 固定有限验收通过，见[精确SHA/原始报告/失败前序](validation/owner-cut-provenance-v2.json)。冻结源 `2cbf074ab690faa3c7a67d705dfc51d97f073729`，普通生产Go/daemon522/warden/builder/原guest未改；不是完整元数据故障或生产验收。
 
 ## 为什么 quota 清零还不能确认 DESTROYED
