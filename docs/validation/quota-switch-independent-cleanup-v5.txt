@@ -1,0 +1,14 @@
+kvm-quota-switch-mixed-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-loss-reserve-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-loss-release-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-syscalls-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-switch-eio-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-preclear-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-postclear-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-reserve-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-clear-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-switch-snapshot-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-switch-io-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-switch-default-io-private-v5 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL12 quota-switch and shared-harness fixture scopes independently rechecked;34 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.

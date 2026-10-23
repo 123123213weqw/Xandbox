@@ -10,6 +10,8 @@ Linux6.8 的 `ignore_hardlimit()` 对持有 `CAP_SYS_RESOURCE` 的进程允许�
 
 ## 当前分支的实验性接入（PR19，未完成验收）
 
+新增[quota双租户忙任务切换与双活cold有限验收](QUOTA_SWITCH_FIXTURE.md)：3f9冻结源、明确3GiB/4GiB资源规格，各120次/actual writer/pre-timeout独立Stop与durable回收、测量后双活session同盘冷恢复及旧11个规格回归通过。production522未改，12 passing scope/34外层代际＋4 failed scope/5代际独立核验；不替代节点总预算、其余持久窗口或完整M1–M4。
+
 - `Config.Quota` 为操作员不可变策略：完整ext4 UUID、独占project范围、block/inode硬上限；mount-ID、实际enforcement与所有controller线程的capability均检查。旧state不可直接加/删/改策略，缺省仍是原有无quota实验规格。
 - projectID与既有durable UID slot一一对应，owner v3/v4分别支持cold/snapshot；`quota_attempted`必须持久化后才允许设置限额。未知或未attempt的非空quota记录不能收养；准备失败也保留owner直到准确清理。
 - 全部私有jail/root在复制前设置project/继承，快照共享链接仅在可信pre-fork区间进入并reseal，fork前读回。cold与snapshot均已有有限实机检查；**全部quota I/O/崩溃、并发与初始化窗口仍未完成**。

@@ -1054,7 +1054,7 @@
     "state_io_regression_cases": 4
   },
   "quota_enabled_two_tenant_switching_pending": {
-    "status": "PENDING full acceptance; measured LOAD240 passed but WHOLE PROFILE cold recovery FAILED",
+    "status": "Historical pending/false stage superseded by quota_enabled_busy_two_tenant_switching",
     "production_ready": false,
     "goal_complete": false,
     "complete_pr19_acceptance": false,
@@ -1075,6 +1075,46 @@
     "false_reports_preserved": 4,
     "independently_absent_outer_execution_generations": 5,
     "scope": "Frozen599a measured phase fully passed, then cold inode strict comparison failed. New3f9 resamples both receipts only after both Ready/pins2, retains strict cold equality, adds private diagnostics; native/full load/cold/shared-harness wave pending. No failed rows spliced or full M1-M4/production claim.",
-    "measured_load_passed": true
+    "measured_load_passed": true,
+    "superseded_by": "docs/validation/quota-switch-provenance-v5.json"
+  },
+  "quota_enabled_busy_two_tenant_switching": {
+    "status": "finite profile and legacy regressions passed; not production acceptance",
+    "production_ready": false,
+    "goal_complete": false,
+    "complete_pr19_acceptance": false,
+    "design": "docs/QUOTA_SWITCH_FIXTURE.md",
+    "provenance": "docs/validation/quota-switch-provenance-v5.json",
+    "report": "docs/validation/kvm-quota-switch-mixed-v5.json",
+    "failed_reports": [
+      "docs/validation/kvm-quota-switch-mixed-v1.json",
+      "docs/validation/kvm-quota-switch-mixed-v2.json",
+      "docs/validation/kvm-quota-switch-mixed-v3.json",
+      "docs/validation/kvm-quota-switch-mixed-v4.json"
+    ],
+    "frozen_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
+    "ordinary_daemon_sha256": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+    "production_changed": false,
+    "l1_ram_mib": 3072,
+    "l1_disk_bytes": 4294967296,
+    "outer_cgroup_memory_max": 4294967296,
+    "node_capacity": 4,
+    "tenant_capacity": 3,
+    "uid_project_slots": 8,
+    "cycles_per_tenant": 120,
+    "fixed_run_budget_seconds": 720,
+    "measured_duration_seconds": 606.719829842,
+    "actual_guest_progress_and_pre_timeout_host_stop_each_switch": true,
+    "four_distinct_latency_views": true,
+    "stable_two_live_session_cold_recovery": true,
+    "private_receipt_version": 3,
+    "strict_cold_link_metadata_comparison": true,
+    "passing_scopes": 12,
+    "passing_outer_generations": 34,
+    "failed_scopes": 4,
+    "failed_outer_generations": 5,
+    "total_independently_absent_outer_generations": 39,
+    "runner_exit_status": 0,
+    "scope": "Finite explicit-resource closed-loop profile. Not unique RAM/node admission, open-loop saturation/fairness/production SLO, all persistence windows, independent operator or complete M1-M4."
   }
 }

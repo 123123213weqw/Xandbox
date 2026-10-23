@@ -63,6 +63,8 @@
 
 最新[重复clear与额外TEST listener失效](QUOTA_LISTENER_FIXTURE.md)有限检查已通过：三个clear各3次及两个最后listener关闭/实际ENOSYS/冷恢复，32个执行代际独立核验清理。生产Go/ELF未改、生产不依赖该TEST listener；不能把它当作完整生产监听器或双监督故障门槛，quota并发/其余持久窗口仍未完成。
 
+新增[quota双租户忙任务切换与双活cold有限验收](QUOTA_SWITCH_FIXTURE.md)：3f9冻结源、明确3GiB/4GiB资源规格，各120次/actual writer/pre-timeout独立Stop与durable回收、测量后双活session同盘冷恢复及旧11个规格回归通过。production522未改，12 passing scope/34外层代际＋4 failed scope/5代际独立核验；不替代节点总预算、其余持久窗口或完整M1–M4。
+
 M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。完整宿主重启窗口/物理介质故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
 停止/GC 独立有界池、所有权 fsync 不持有全局锁及受控慢 I/O 下的恢复已有 [专项证据](LIFECYCLE.md)。[独立 guardian 租约](GUARDIAN.md) 已用真实暂停控制器测试；这只完成该部分基础设施，不替代持续负载、公平性、整机故障和最坏延迟验收。
