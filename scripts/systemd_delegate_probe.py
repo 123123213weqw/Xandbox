@@ -179,6 +179,14 @@ def checkpoint():
             'machine_id_preserved_vs_previous':bool(old),'not_sandbox_lifecycle_recovery':True}
 
 
+def failure_console(operation):
+    # Failure-only private diagnostics must finish BEFORE the error reply;
+    # otherwise the outer harness can kill L1 before the journal is captured.
+    with open('/dev/console','w') as console:
+        console.write('XANDBOX_SYSTEMD_HOST_FAILED operation='+operation+'\n');console.flush()
+        subprocess.run(['journalctl','--no-pager','-n','50','-u',UNIT,'-u','xandbox-systemd-operator.service'],stdout=console,stderr=console,timeout=10)
+
+
 def operator():
     guard();os.umask(0o077);RUN.mkdir(mode=0o700,exist_ok=True)
     run('systemctl','start',UNIT);wait(lambda:(RUN/'ready.json').is_file());probe()
@@ -197,6 +205,7 @@ def operator():
             result=actions[value['operation']]()
             stream.write(json.dumps({'ok':True,'result':result},sort_keys=True).encode()+b'\n')
         except Exception:
+            failure_console(value.get('operation','decode') if isinstance(value,dict) else 'decode')
             stream.write(b'{"ok":false,"error":"owned systemd fixture operation failed"}\n')
             raise
 
@@ -207,8 +216,5 @@ if __name__=='__main__':
     try:modes[sys.argv[1]]()
     except Exception:
         if sys.argv[1]=='operator':
-            # Failure-only private diagnostics, never part of the JSON result.
-            with open('/dev/console','w') as console:
-                console.write('XANDBOX_SYSTEMD_HOST_FAILED\n');console.flush()
-                subprocess.run(['journalctl','--no-pager','-n','40','-u',UNIT,'-u','xandbox-systemd-operator.service'],stdout=console,stderr=console,timeout=10)
+            failure_console('startup-or-unhandled')
         raise

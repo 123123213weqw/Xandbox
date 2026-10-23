@@ -137,9 +137,13 @@ def main():
             private_json(logs/f'private-cgroup-{result["l1_boots"]}.json',private_group_counters(group))
             group.rmdir()
         boot()
-        result['cases'].append({'boot':1,'probe':request('probe'),'reload':request('reload'),'stop_restart':request('stop-restart'),'checkpoint':request('checkpoint')})
+        result['cases'].append({'boot':1})
+        for operation in ('probe','reload','stop-restart','checkpoint'):
+            result['cases'][-1][operation]=request(operation)
         cut();boot()
-        result['cases'].append({'boot':2,'probe':request('probe'),'reload':request('reload'),'checkpoint':request('checkpoint')})
+        result['cases'].append({'boot':2})
+        for operation in ('probe','reload','checkpoint'):
+            result['cases'][-1][operation]=request(operation)
         result['passed']=True
     finally:
         if ours(group):
