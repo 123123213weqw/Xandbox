@@ -20,6 +20,10 @@ class SystemdFixtureControls(unittest.TestCase):
         for kind in (tarfile.CHRTYPE,tarfile.BLKTYPE,tarfile.FIFOTYPE):
             member=tarfile.TarInfo('special');member.type=kind
             with self.assertRaises(ValueError):validate_root_members([member])
+        known=tarfile.TarInfo('dev/null');known.type=tarfile.CHRTYPE;known.devmajor=1;known.devminor=3
+        self.assertEqual(validate_root_members([known]),[])
+        known.devminor=4
+        with self.assertRaises(ValueError):validate_root_members([known])
         member=tarfile.TarInfo('oversize');member.size=(1<<30)+1
         with self.assertRaises(ValueError):validate_root_members([member])
         with self.assertRaises(ValueError):validate_root_members([tarfile.TarInfo('a')]*50001)

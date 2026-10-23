@@ -204,4 +204,11 @@ def operator():
 if __name__=='__main__':
     modes={'main':main_service,'writer':writer,'reload':reload_service,'operator':operator}
     if len(sys.argv)!=2 or sys.argv[1] not in modes:raise SystemExit('fixed owned L1 mode required')
-    modes[sys.argv[1]]()
+    try:modes[sys.argv[1]]()
+    except Exception:
+        if sys.argv[1]=='operator':
+            # Failure-only private diagnostics, never part of the JSON result.
+            with open('/dev/console','w') as console:
+                console.write('XANDBOX_SYSTEMD_HOST_FAILED\n');console.flush()
+                subprocess.run(['journalctl','--no-pager','-n','40','-u',UNIT,'-u','xandbox-systemd-operator.service'],stdout=console,stderr=console,timeout=10)
+        raise

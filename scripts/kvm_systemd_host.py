@@ -115,7 +115,9 @@ def main():
             def ready():
                 assert process.poll() is None,'bounded QEMU launcher exited; inspect private log'
                 p=root/'console.log'
-                if p.exists():assert p.stat().st_size<=2<<20,'console bound exceeded'
+                if p.exists():
+                    assert p.stat().st_size<=2<<20,'console bound exceeded'
+                    assert b'XANDBOX_SYSTEMD_HOST_FAILED' not in p.read_bytes(),'owned systemd operation failed; inspect private console'
                 return p.exists() and b'XANDBOX_SYSTEMD_HOST_READY' in p.read_bytes()
             wait(ready,'owned systemd L1 readiness',seconds=120)
             qmp_probe(root/'qmp.sock',2048);channel=JSONSocket(root/'control.sock',30)

@@ -9,7 +9,7 @@ import gzip
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import stat
 import subprocess
@@ -24,13 +24,23 @@ MAX_ROOT_ARCHIVE = 160 << 20
 MAX_ROOT_MEMBERS = 50000
 MAX_ROOT_CONTENTS = 1 << 30
 MARKER = 'Xandbox owned systemd delegation fixture v1\n'
+OMITTED_DEVICES = {'dev/console':(5,1),'dev/full':(1,7),'dev/null':(1,3),'dev/ptmx':(5,2),
+                   'dev/random':(1,8),'dev/tty':(5,0),'dev/urandom':(1,9),'dev/zero':(1,5)}
 
 
 def validate_root_members(members):
     if len(members) > MAX_ROOT_MEMBERS or sum(m.size for m in members) > MAX_ROOT_CONTENTS:
         raise ValueError('bounded systemd rootfs required')
-    if any(m.isdev() or m.isfifo() or not (m.isdir() or m.isfile() or m.issym() or m.islnk()) for m in members):
-        raise ValueError('no special rootfs members')
+    regular = []
+    for member in members:
+        # The official root tar has eight device headers. Verify and OMIT them,
+        # never ask tarfile to create downloaded devices on the build host.
+        if member.ischr() and (member.devmajor,member.devminor)==OMITTED_DEVICES.get(str(PurePosixPath(member.name))) and member.size==0:
+            continue
+        if member.isdev() or member.isfifo() or not (member.isdir() or member.isfile() or member.issym() or member.islnk()):
+            raise ValueError('no undeclared special rootfs members')
+        regular.append(member)
+    return regular
 
 
 def units():
@@ -133,8 +143,9 @@ def build(*, ubuntu, alpine, probe, output_disk, output_initrd):
     with tempfile.TemporaryDirectory(prefix='xandbox-systemd-build-') as private:
         root = Path(private)/'root'; root.mkdir(mode=0o755)
         with tarfile.open(ubuntu, 'r:xz') as source:
-            members = source.getmembers(); validate_root_members(members)
-            source.extractall(root, members=members, filter=safe_guest_filter)
+            members = source.getmembers(); regular = validate_root_members(members)
+            omitted_devices = len(members)-len(regular)
+            source.extractall(root, members=regular, filter=safe_guest_filter)
         root.chmod(0o755)
         configure_root(root, probe)
         with output_disk.open('xb') as out:
@@ -169,6 +180,6 @@ def build(*, ubuntu, alpine, probe, output_disk, output_initrd):
             with output_initrd.open('xb') as out:
                 with gzip.GzipFile(filename='',fileobj=out,mode='wb',mtime=0) as packed: shutil.copyfileobj(cpio,packed)
                 out.flush();os.fsync(out.fileno())
-    return {'test_only':True,'rootfs_sha256':lock['rootfs_sha256'],'root_disk_bytes':ROOT_BYTES,
+    return {'test_only':True,'rootfs_sha256':lock['rootfs_sha256'],'root_disk_bytes':ROOT_BYTES,'downloaded_device_headers_omitted':omitted_devices,
             'initrd_sha256':digest(output_initrd),'probe_sha256':digest(probe),'kernel_sha256':policy['l1_kernel_sha256'],
             'host_chroot_or_guest_execution':False,'host_mount_or_service_or_module_change':False}
