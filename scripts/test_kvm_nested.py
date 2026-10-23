@@ -55,14 +55,14 @@ class NestedFixtureTests(unittest.TestCase):
         workers=[]
         labels=('binding','first_new_command','old_host_stopped','old_durable_destroyed')
         for tenant in ('alpha','beta'):
-            rows=[{'iteration':i+1,'session_ordinal':i//48+1,'completed':True,'busy_old_job_running_at_switch_request':True,'old_job_terminal':'CANCELLED','workload_start_ms':i*1500,'workload_end_ms':i*1500+10,'switch_start_ms':i*1500+10,'switch_end_ms':i*1500+50,**{k:20 for k in keys},'server_phase_observations':{'measured':True}} for i in range(120)]
+            rows=[{'iteration':i+1,'session_ordinal':i//48+1,'completed':True,'busy_old_job_running_at_switch_request':True,'busy_old_guest_write_progress_checked':True,'old_job_earliest_timeout_budget_ms_at_switch_request':59000,'old_job_terminal':'HISTORY_DROPPED_AFTER_RECLAIM','workload_start_ms':i*1500,'workload_end_ms':i*1500+10,'switch_start_ms':i*1500+10,'switch_end_ms':i*1500+50,**{k:20 for k in keys},'server_phase_observations':{'measured':True}} for i in range(120)]
             workers.append({'tenant':tenant,'samples':rows,'summary_ms':{label:{'count':120,'p50':20,'p95':20,'p99':20,'p100':20} for label in labels}})
         good={'phase':'quota-enabled-two-tenant-switching','load':{'passed':True,'cycles_per_tenant':120,'minimum_paced_seconds':180,'duration_seconds':180.1,'busy_old_writer_each_switch':True,'no_operator_quota_sync_during_measured_switches':True,'same_initial_session_key_isolated_between_tenants':True,'workers':workers,'cross_tenant_overlapping_switch_interval_pairs':120,'resources':[dict(resource) for _ in range(3)],'checkpoint':{k:True for k in checkpoint}}}
         validate_quota_switch_run(good)
         for field,value in [('cycles_per_tenant',119),('duration_seconds',179),('cross_tenant_overlapping_switch_interval_pairs',0),('busy_old_writer_each_switch',False),('no_operator_quota_sync_during_measured_switches',False)]:
             bad=copy.deepcopy(good);bad['load'][field]=value
             with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
-        for field,value in [('completed',False),('busy_old_job_running_at_switch_request',False),('old_job_terminal','TIMED_OUT'),('request_to_first_new_command_success_ms',float('nan'))]:
+        for field,value in [('completed',False),('busy_old_job_running_at_switch_request',False),('busy_old_guest_write_progress_checked',False),('old_job_terminal','TIMED_OUT'),('old_job_earliest_timeout_budget_ms_at_switch_request',20),('old_job_earliest_timeout_budget_ms_at_switch_request',float('nan')),('request_to_first_new_command_success_ms',float('nan'))]:
             bad=copy.deepcopy(good);bad['load']['workers'][0]['samples'][10][field]=value
             with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
         bad=copy.deepcopy(good);bad['load']['workers'][0]['samples'].pop()

@@ -225,7 +225,10 @@ def validate_quota_switch_run(value):
         rows=worker['samples'];assert len(rows)==120 and not worker.get('failure_stage')
         for i,row in enumerate(rows):
             assert row['iteration']==i+1 and row['session_ordinal']==i//48+1 and row['completed'] is True and row['busy_old_job_running_at_switch_request'] is True
-            assert row['old_job_terminal'] in ('CANCELLED','FAILED','EXITED')
+            assert row['old_job_terminal'] in ('CANCELLED','FAILED','EXITED','HISTORY_DROPPED_AFTER_RECLAIM')
+            assert row['busy_old_guest_write_progress_checked'] is True
+            assert type(row['old_job_earliest_timeout_budget_ms_at_switch_request']) in (int,float) and math.isfinite(row['old_job_earliest_timeout_budget_ms_at_switch_request'])
+            assert 0<=row['request_to_old_host_stopped_observed_ms']<row['old_job_earliest_timeout_budget_ms_at_switch_request']<=60000
             assert 0<=row['workload_start_ms']<=row['workload_end_ms']<=row['switch_start_ms']<=row['switch_end_ms']
             for k in fields.values():assert type(row[k]) in (int,float) and math.isfinite(row[k]) and row[k]>=0
             assert row['request_to_first_new_command_success_ms']>=row['request_to_binding_response_ms']

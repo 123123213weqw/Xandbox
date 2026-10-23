@@ -43,6 +43,12 @@ type switchAPI struct {
 	token string
 }
 
+type switchHTTPStatusError struct{ Got, Want int }
+
+func (e *switchHTTPStatusError) Error() string {
+	return fmt.Sprintf("fixed switch API status %d expected %d", e.Got, e.Want)
+}
+
 func newSwitchAPI(socket, token string) *switchAPI {
 	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 		return (&net.Dialer{}).DialContext(ctx, "unix", socket)
@@ -83,7 +89,7 @@ func (c *switchAPI) call(ctx context.Context, method, path, key string, body, ou
 		return errors.New("bounded fixed API reply exceeded")
 	}
 	if r.StatusCode != want {
-		return fmt.Errorf("fixed switch API status %d expected %d", r.StatusCode, want)
+		return &switchHTTPStatusError{Got: r.StatusCode, Want: want}
 	}
 	if out != nil {
 		return json.Unmarshal(b, out)

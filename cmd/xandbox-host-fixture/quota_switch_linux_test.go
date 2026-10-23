@@ -5,7 +5,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 	"testing"
@@ -95,6 +97,87 @@ func TestSwitchPrivateCrashReceiptPreservesExplicitJobReference(t *testing.T) {
 	var got switchCrashReceipt
 	if json.Unmarshal(b, &got) != nil || got.Version != 2 || got.Bindings[0].JobRef != ref || got.Bindings[0].JobID != saved.Bindings[0].JobID || got.Bindings[0].Binding.Current != ref {
 		t.Fatal("private receipt lost sandbox ID through embedded job-ID collision")
+	}
+}
+
+func TestSwitchMissingJobHistoryIsNotStopProofOrAnInventedTerminalStatus(t *testing.T) {
+	row := switchRow{BusyOldRunning: true, BusyProgress: true, OldStoppedMS: 25, OldDestroyedMS: 40, OldTimeoutMS: 59000}
+	missing := &switchHTTPStatusError{Got: 404, Want: 200}
+	if status, e := switchOldJobOutcome(sandbox.Job{}, missing, row); e != nil || status != "HISTORY_DROPPED_AFTER_RECLAIM" {
+		t.Fatal("actual reclamation contract", e)
+	}
+	for _, bad := range []switchRow{
+		{BusyOldRunning: true, OldStoppedMS: 25, OldDestroyedMS: 40, OldTimeoutMS: 59000},
+		{BusyOldRunning: true, BusyProgress: true, OldStoppedMS: 25, OldDestroyedMS: 0, OldTimeoutMS: 59000},
+		{BusyOldRunning: true, BusyProgress: true, OldStoppedMS: 25, OldDestroyedMS: 24, OldTimeoutMS: 59000},
+		{BusyOldRunning: true, BusyProgress: true, OldStoppedMS: 25, OldDestroyedMS: 40, OldTimeoutMS: 25},
+		{BusyOldRunning: true, BusyProgress: true, OldStoppedMS: math.NaN(), OldDestroyedMS: 40, OldTimeoutMS: 59000},
+	} {
+		if _, e := switchOldJobOutcome(sandbox.Job{}, missing, bad); e == nil {
+			t.Fatal("404 substituted for independent physical/durable proof")
+		}
+	}
+	for _, e := range []error{&switchHTTPStatusError{Got: 500, Want: 200}, context.Canceled, errors.New("transport")} {
+		if _, got := switchOldJobOutcome(sandbox.Job{}, e, row); got == nil {
+			t.Fatal("non404 failure ignored")
+		}
+	}
+	for _, status := range []string{"RUNNING", "TIMED_OUT", "EXITED", "UNKNOWN"} {
+		if _, e := switchOldJobOutcome(sandbox.Job{Status: status, FinishedAt: time.Now()}, nil, row); e == nil {
+			t.Fatal("invalid terminal passed")
+		}
+	}
+	if status, e := switchOldJobOutcome(sandbox.Job{Status: "CANCELLED", FinishedAt: time.Now()}, nil, row); e != nil || status != "CANCELLED" {
+		t.Fatal("observed terminal rejected")
+	}
+}
+
+func TestSwitchBusyProofRequiresSecondGuestExecutionBeforeRunningCheck(t *testing.T) {
+	ref := sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
+	binding := session.Result{ID: strings.Repeat("c", 32), Revision: 1, Current: ref}
+	busy := sandbox.Job{ID: strings.Repeat("d", 32), Ref: ref, Status: "RUNNING"}
+	probe := sandbox.Job{ID: strings.Repeat("e", 32), Ref: ref, Status: "EXITED", FinishedAt: time.Now()}
+	step := 0
+	client := &switchAPI{http: &http.Client{Transport: switchTestTransport(func(r *http.Request) (*http.Response, error) {
+		step++
+		var value any
+		status := 200
+		switch step {
+		case 1, 2:
+			var body struct {
+				Argv []string `json:"argv"`
+			}
+			if r.Method != "POST" || r.URL.Path != "/v1/sessions/"+binding.ID+"/exec" || json.NewDecoder(r.Body).Decode(&body) != nil {
+				t.Fatal("unexpected guest operation")
+			}
+			want, job := switchBusyWriter(), busy
+			if step == 2 {
+				want, job = switchBusyProgressCommand(), probe
+			}
+			if strings.Join(body.Argv, "\x00") != strings.Join(want, "\x00") {
+				t.Fatal("actual guest progress command missing or wrong order")
+			}
+			value, status = map[string]any{"revision": 1, "sandbox": ref, "job": job}, 202
+		case 3:
+			if r.URL.Path != switchPath(ref)+"/executions/"+probe.ID {
+				t.Fatal("progress was not awaited")
+			}
+			value = probe
+		case 4:
+			if r.URL.Path != switchPath(ref)+"/executions/"+busy.ID {
+				t.Fatal("old job was not rechecked after progress")
+			}
+			value = busy
+		default:
+			t.Fatal("unexpected additional request")
+		}
+		b, _ := json.Marshal(value)
+		return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(string(b))), Header: make(http.Header)}, nil
+	})}}
+	began := time.Now()
+	job, deadline, e := client.waitBusy(context.Background(), binding)
+	if e != nil || step != 4 || job.ID != busy.ID || job.Ref != ref || deadline.Before(began.Add(60*time.Second)) || deadline.After(time.Now().Add(60*time.Second)) {
+		t.Fatal("busy proof/deadline contract", e)
 	}
 }
 

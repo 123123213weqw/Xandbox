@@ -84,7 +84,7 @@ func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (ma
 		if _, e = api[i].sessionExec(ctx, b, []string{"sh", "-c", "set -e; printf assigned > mixed-marker; sync"}); e != nil {
 			return nil, e
 		}
-		job, e := api[i].waitBusy(ctx, b)
+		job, _, e := api[i].waitBusy(ctx, b)
 		if e != nil {
 			return nil, e
 		}

@@ -4,6 +4,8 @@
 
 首次固定源 `fb836bf` 的真实 L1 已完成 setup/preflight，但负载在 initial 阶段失败、零次切换；原始 false 报告及单个执行域的清理证据保留。原因是 TEST 客户端误把 public Job JSON 中未携带的 sandbox ID 当成完整 Ref：Job 的显式任务 `id` 会遮蔽嵌入 Ref 的 `id`。修订夹具先校验独立 session envelope 的 revision/ref 和 job 的 generation/id，再从已校验 envelope/lookup path 恢复完整内存 Ref；坏绑定继续拒绝。私有 crash receipt v2 改用独立 JobID/JobRef 字段，防止同一 JSON 遮蔽问题；不改生产 wire/API。这是夹具错误修复，不把失败改写成通过或据此推断配额错误。
 
+第二次固定源 `5bda138` 仍为 false：两租户都进入第一轮，但零行完整完成。夹具在旧代 durable DESTROYED 后错误要求 ephemeral job GET200，而普通 manager 按既有契约已丢弃该代 job history，实际404；同伴被取消。修订不把404伪造为CANCELLED或Stop证明：另用第二条普通guest执行观察旧writer两次实际写入进度，再确认其API仍RUNNING；要求独立host-empty观测早于从POST前本地时钟推导的最早60秒job deadline，且普通durable DESTROYED及资源消失已通过，才允许将404标为 `HISTORY_DROPPED_AFTER_RECLAIM`。若仍能读到job则实际终态仍须非timeout、非成功退出。失败的原始partial rows保留，不能拼接进新运行。
+
 ## 独立且明确的新规格
 
 固定 `--quota-switch` / launch profile `quota-switch-v1`：L1 RAM **3GiB**、raw disk **4GiB**、外层自有 cgroup memory.max **4GiB**，CPU4、pids128、swap0、无NIC、hard15min不变。启动前要求L0 MemAvailable≥8GiB及测试目录free≥12GiB；这只是有界实验前置检查，不是生产全局 admission。旧 profile 的2GiB RAM/2GiB盘/3GiB cgroup和固定dm 2GiB guard不放宽。未知profile拒绝。
@@ -18,7 +20,7 @@
 
 固定两个Go并发worker，各 **120次**、最少 **180秒**paced closed-loop，session每48次轮换以保留history上限。两租户初始相同create key必须隔离。alpha guest分配24MiB tmpfs/8MiB ext4/4轮hash，beta为4MiB/1MiB/1轮hash；全部argv经普通session guest API，不在host执行。
 
-每次切换请求前，都有已确认RUNNING的旧guest循环writer。切换后要求新ref/revision、干净workspace/tmpfs、新UID65534/boot，独立监测旧cgroup实际empty、普通durable DESTROYED及私有资源消失，旧writer终止且不是等待job timeout。重放同switch key不得创建额外候选；旧revision exec/switch与普通per-VM绕过均409。保留未完成/慢/错误行，不过滤掉失败。
+每次切换请求前，都有旧guest循环writer；并发第二条guest命令确认其写完1MiB且单调序号实际前进，之后再次检查job仍RUNNING，不把尚未dispatch的控制器状态当真实guest进度。进度探针与工作负载都在switch计时起点之前，额外开销仍计入完整负载wall time。切换后要求新ref/revision、干净workspace/tmpfs、新UID65534/boot，独立监测旧cgroup实际empty、普通durable DESTROYED及私有资源消失；host-empty必须早于保守最早job deadline。已回收代际的job history404按上文单独分类，不能虚构终态或只凭404证明停止。重放同switch key不得创建额外候选；旧revision exec/switch与普通per-VM绕过均409。保留未完成/慢/错误行，不过滤掉失败。cgroup.events的ENODEV只在精确同一路径再次确认已不存在时允许，不吞掉现存group/其他错误。
 
 分别记录请求到binding响应、首条新命令成功、旧执行域实际停止观测、旧代durable销毁观测，外加server各phase；nearest-rank P50/P95/P99/P100从全部完成行计算，外部复核器逐项重算。两个worker实际switch interval必须重叠。**不是open-loop、scheduler公平性、线上SLO或极端尾部界限**。
 

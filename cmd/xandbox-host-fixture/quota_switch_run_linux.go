@@ -34,6 +34,8 @@ type switchRow struct {
 	OldDestroyedMS  float64         `json:"request_to_old_durable_destroyed_observed_ms"`
 	Server          session.Timings `json:"server_phase_observations"`
 	BusyOldRunning  bool            `json:"busy_old_job_running_at_switch_request"`
+	BusyProgress    bool            `json:"busy_old_guest_write_progress_checked"`
+	OldTimeoutMS    float64         `json:"old_job_earliest_timeout_budget_ms_at_switch_request"`
 	OldJobTerminal  string          `json:"old_job_terminal"`
 	Completed       bool            `json:"completed"`
 }
@@ -126,7 +128,7 @@ func (c *switchAPI) revoke(ctx context.Context, b session.Result) error {
 	return c.destroyed(ctx, b.Current)
 }
 func switchFreshCommand() []string {
-	return []string{"sh", "-c", "set -e; test ! -e mixed-marker; test ! -e mixed-disk; test ! -e /tmp/mixed-memory; id -u; cat /proc/sys/kernel/random/boot_id"}
+	return []string{"sh", "-c", "set -e; test ! -e mixed-marker; test ! -e mixed-disk; test ! -e /tmp/mixed-memory; test ! -e busy-switch-writer; test ! -e /tmp/busy-switch-sequence; id -u; cat /proc/sys/kernel/random/boot_id"}
 }
 func switchGuestIdentity(out sandbox.Output) (string, error) {
 	f := strings.Fields(out.Stdout)
@@ -150,6 +152,28 @@ func switchOldJobStopped(j sandbox.Job) bool {
 	}
 	return false
 }
+
+func switchOldJobOutcome(j sandbox.Job, lookupErr error, row switchRow) (string, error) {
+	for _, v := range []float64{row.OldStoppedMS, row.OldDestroyedMS, row.OldTimeoutMS} {
+		if math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+			return "", errors.New("invalid old execution proof observation")
+		}
+	}
+	if !row.BusyProgress || !row.BusyOldRunning || row.OldTimeoutMS <= row.OldStoppedMS || row.OldDestroyedMS <= 0 || row.OldDestroyedMS < row.OldStoppedMS {
+		return "", errors.New("independent pre-timeout stop and durable resource reclamation required")
+	}
+	if lookupErr != nil {
+		var status *switchHTTPStatusError
+		if errors.As(lookupErr, &status) && status.Got == 404 {
+			return "HISTORY_DROPPED_AFTER_RECLAIM", nil
+		}
+		return "", lookupErr
+	}
+	if !switchOldJobStopped(j) {
+		return "", errors.New("busy old writer terminal status invalid")
+	}
+	return j.Status, nil
+}
 func switchWorkload(tenant int) []string {
 	ram, disk, rounds := 24, 8, 4
 	if tenant == 1 {
@@ -158,17 +182,30 @@ func switchWorkload(tenant int) []string {
 	return []string{"sh", "-c", fmt.Sprintf("set -e; dd if=/dev/zero of=/tmp/mixed-memory bs=1048576 count=%d 2>/dev/null; dd if=/dev/zero of=mixed-disk bs=1048576 count=%d 2>/dev/null; test $(wc -c < /tmp/mixed-memory) -eq %d; test $(wc -c < mixed-disk) -eq %d; sync; i=0; while [ $i -lt %d ]; do sha256sum /tmp/mixed-memory mixed-disk >/dev/null; i=$((i+1)); done; printf private > mixed-marker", ram, disk, ram<<20, disk<<20, rounds)}
 }
 func switchBusyWriter() []string {
-	return []string{"sh", "-c", "set -e; while :; do dd if=/dev/zero of=busy-switch-writer bs=1048576 count=1 conv=notrunc 2>/dev/null; sync; sleep 0.05; done"}
+	return []string{"sh", "-c", "set -e; i=0; while :; do dd if=/dev/zero of=busy-switch-writer bs=1048576 count=1 conv=notrunc 2>/dev/null; sync; i=$((i+1)); printf '%s\\n' \"$i\" > /tmp/busy-switch-sequence.new; mv /tmp/busy-switch-sequence.new /tmp/busy-switch-sequence; sleep 0.05; done"}
+}
+func switchBusyProgressCommand() []string {
+	// A second ordinary guest execution proves actual writer progress. Merely
+	// observing controller RUNNING would also accept a not-yet-dispatched job.
+	return []string{"sh", "-c", "set -e; i=0; while [ ! -s /tmp/busy-switch-sequence ]; do i=$((i+1)); test $i -le 200; sleep 0.05; done; first=$(cat /tmp/busy-switch-sequence); case $first in ''|*[!0-9]*) exit 1;; esac; test \"$first\" -gt 0; i=0; while :; do next=$(cat /tmp/busy-switch-sequence); case $next in ''|*[!0-9]*) exit 1;; esac; if [ \"$next\" -gt \"$first\" ]; then break; fi; i=$((i+1)); test $i -le 200; sleep 0.05; done; test $(wc -c < busy-switch-writer) -eq 1048576"}
 }
 func switchDomainEmpty(ref sandbox.Ref) (bool, error) {
 	if !switchRefValid(ref) {
 		return false, errors.New("invalid fixed stop observation ref")
 	}
-	b, e := os.ReadFile(nodeGroup + "/" + ref.ID + ref.Generation + "/cgroup.events")
+	path := nodeGroup + "/" + ref.ID + ref.Generation + "/cgroup.events"
+	b, e := os.ReadFile(path)
 	if os.IsNotExist(e) {
 		return true, nil
 	}
 	if e != nil {
+		// A cgroup can disappear after open and return ENODEV from read. Only
+		// absence of this exact path permits that race to count as empty.
+		if errors.Is(e, unix.ENODEV) {
+			if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+				return true, nil
+			}
+		}
 		return false, e
 	}
 	for _, line := range strings.Split(string(b), "\n") {
@@ -181,22 +218,29 @@ func switchDomainEmpty(ref sandbox.Ref) (bool, error) {
 	}
 	return false, errors.New("missing actual cgroup populated counter")
 }
-func (c *switchAPI) waitBusy(ctx context.Context, b session.Result) (sandbox.Job, error) {
+func (c *switchAPI) waitBusy(ctx context.Context, b session.Result) (sandbox.Job, time.Time, error) {
+	// The controller cannot start the execution timeout before this local
+	// instant. Stop must be observed before this conservative lower bound.
+	earliestTimeout := time.Now().Add(60 * time.Second)
 	j, e := c.sessionJob(ctx, b, switchBusyWriter())
 	if e != nil {
-		return j, e
+		return j, earliestTimeout, e
+	}
+	if _, e = c.sessionExec(ctx, b, switchBusyProgressCommand()); e != nil {
+		return j, earliestTimeout, e
 	}
 	live, e := c.job(ctx, b.Current, j)
 	if e != nil || live.Status != "RUNNING" {
-		return j, errors.New("old writer not running at switch request")
+		return j, earliestTimeout, errors.New("old writer not running after actual guest write progress")
 	}
-	return j, nil
+	return j, earliestTimeout, nil
 }
 func (n *node) switchWorker(ctx context.Context, tenant int, api *switchAPI, initial session.Result, began time.Time, out *switchWorkerReport) (err error) {
 	stage := "initial"
 	defer func() {
 		if err != nil {
 			out.FailureStage = stage
+			fmt.Fprintln(os.Stderr, "private quota switch worker failure", tenant, stage, err)
 		}
 	}()
 	binding := initial
@@ -241,11 +285,12 @@ func (n *node) switchWorker(ctx context.Context, tenant int, api *switchAPI, ini
 		}
 		row.WorkloadEndMS = switchMS(began)
 		stage = "busy_old_job"
-		oldJob, e := api.waitBusy(ctx, binding)
+		oldJob, earliestTimeout, e := api.waitBusy(ctx, binding)
 		if e != nil {
 			return e
 		}
 		row.BusyOldRunning = true
+		row.BusyProgress = true
 		old := binding
 		key, e := randomKey()
 		if e != nil {
@@ -253,6 +298,10 @@ func (n *node) switchWorker(ctx context.Context, tenant int, api *switchAPI, ini
 		}
 		request := session.SwitchRequest{ExpectedRevision: old.Revision, Create: switchGuestSpec()}
 		origin := time.Now()
+		row.OldTimeoutMS = float64(earliestTimeout.Sub(origin).Microseconds()) / 1000
+		if row.OldTimeoutMS <= 0 {
+			return errors.New("old writer timeout budget exhausted before switch")
+		}
 		row.SwitchStartMS = switchMS(began)
 		type stoppedResult struct {
 			ms float64
@@ -299,19 +348,22 @@ func (n *node) switchWorker(ctx context.Context, tenant int, api *switchAPI, ini
 			return observed.e
 		}
 		row.OldStoppedMS = observed.ms
+		if row.OldStoppedMS >= row.OldTimeoutMS {
+			return errors.New("old execution stop not independent of job timeout")
+		}
 		stage = "old_durable_destroyed"
 		if e = api.destroyed(ctx, old.Current); e != nil {
 			return e
 		}
 		row.OldDestroyedMS = switchMS(origin)
 		terminal, e := api.job(ctx, old.Current, oldJob)
+		// Ordinary manager deliberately drops ephemeral history at durable
+		// DESTROYED. A 404 is not a job terminal status or standalone Stop
+		// proof; independent host-empty/deadline/reclamation must pass first.
+		row.OldJobTerminal, e = switchOldJobOutcome(terminal, e, *row)
 		if e != nil {
 			return e
 		}
-		if !switchOldJobStopped(terminal) {
-			return errors.New("busy old writer not stopped independently of job timeout")
-		}
-		row.OldJobTerminal = terminal.Status
 		stage = "new_generation_quota"
 		if _, e = n.switchReady(binding.Current, false); e != nil {
 			return e
@@ -675,7 +727,7 @@ func (n *node) quotaSwitchRun(ctx context.Context) (out map[string]any, err erro
 			return out, errors.New("missing switch rows")
 		}
 		for _, r := range report.Workers[i].Rows {
-			if !r.Completed || !r.BusyOldRunning {
+			if !r.Completed || !r.BusyOldRunning || !r.BusyProgress || r.OldStoppedMS >= r.OldTimeoutMS {
 				return out, errors.New("incomplete switch row")
 			}
 		}
