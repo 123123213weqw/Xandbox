@@ -29,11 +29,49 @@ const quotaBarrierPhase = "reserve-quota-syncfs-held"
 const quotaBarrierReceiptPath = "/srv/fixture/quota-barrier-receipt.json"
 const quotaBarrierGroup = "/sys/fs/cgroup/xandbox-sq-reserve-barrier-hang"
 
+type quotaCommitMode uint8
+
+const (
+	quotaReserveHold quotaCommitMode = iota
+	quotaReserveEIO
+	quotaReleasePreHold
+	quotaReleasePostHold
+)
+
+func (m quotaCommitMode) phase() string {
+	switch m {
+	case quotaReserveHold:
+		return quotaBarrierPhase
+	case quotaReserveEIO:
+		return "reserve-quota-syncfs-real-eio"
+	case quotaReleasePreHold:
+		return "release-preclear-quota-syncfs-held"
+	case quotaReleasePostHold:
+		return "release-postclear-quota-syncfs-held"
+	}
+	return ""
+}
+func (m quotaCommitMode) release() bool { return m == quotaReleasePreHold || m == quotaReleasePostHold }
+func (m quotaCommitMode) ordinal() int {
+	switch m {
+	case quotaReserveHold, quotaReserveEIO:
+		return 1
+	case quotaReleasePreHold:
+		return 2
+	case quotaReleasePostHold:
+		return 3
+	}
+	return 0
+}
+
 type quotaBarrierPlan struct {
+	Mode                  quotaCommitMode
 	Key, Boot, ConfigHash string
 	Dirty                 *os.File
 }
 type quotaBarrierReceipt struct {
+	Mode                    quotaCommitMode `json:"mode,omitempty"`
+	L2Boot                  string          `json:"l2_boot,omitempty"`
 	Phase                   string
 	Ref                     sandbox.Ref
 	Key, L1Boot, ConfigHash string
@@ -90,7 +128,7 @@ func (o *quotaNotifier) prepareBarrier(q quotaNotif) error {
 	if o.barrier == nil || o.mapper == nil || o.state.name != quotaBarrierCase {
 		return errors.New("fixed mapped barrier plan required")
 	}
-	if q.Data.NR == int32(unix.SYS_QUOTACTL_FD) && q.Data.Args[1] == 0x80000802 && !o.state.baselineSaved {
+	if !o.barrier.Mode.release() && q.Data.NR == int32(unix.SYS_QUOTACTL_FD) && q.Data.Args[1] == 0x80000802 && !o.state.baselineSaved {
 		ref, e := negativeLedgerRef(o.base, sandbox.Ref{})
 		if e != nil {
 			return e
@@ -120,7 +158,7 @@ func (o *quotaNotifier) prepareBarrier(q quotaNotif) error {
 		if _, e = os.Lstat(quotaBarrierReceiptPath); !os.IsNotExist(e) {
 			return errors.New("refuse existing barrier receipt")
 		}
-		receipt := quotaBarrierReceipt{Phase: quotaBarrierPhase, Ref: ref, Key: o.barrier.Key, L1Boot: o.barrier.Boot, ConfigHash: o.barrier.ConfigHash, Owner: b}
+		receipt := quotaBarrierReceipt{Mode: o.barrier.Mode, Phase: o.barrier.Mode.phase(), Ref: ref, Key: o.barrier.Key, L1Boot: o.barrier.Boot, ConfigHash: o.barrier.ConfigHash, Owner: b}
 		// Persist BEFORE SET. No observer fsync/syncfs is issued after SET.
 		if e = privateWrite(quotaBarrierReceiptPath, receipt); e != nil {
 			return e
@@ -129,10 +167,10 @@ func (o *quotaNotifier) prepareBarrier(q quotaNotif) error {
 		o.state.owner = append([]byte(nil), b...)
 		o.state.baselineSaved = true
 	}
-	if q.Data.NR != int32(unix.SYS_SYNCFS) {
+	if q.Data.NR != int32(unix.SYS_SYNCFS) || o.state.syncfsPassed+1 != o.barrier.Mode.ordinal() {
 		return nil
 	}
-	if !o.state.baselineSaved || !o.state.seenSet || !o.state.seenSync || o.state.barrierContinued {
+	if !o.state.baselineSaved || o.state.qsyncPassed != o.barrier.Mode.ordinal() || o.state.qsetPassed != expectedCommitSets(o.barrier.Mode) || o.state.barrierContinued {
 		return errors.New("syncfs was not preceded by baseline, SET and Q_SYNC")
 	}
 	b, e := privatefile.Read(o.base+"/s/firecracker/"+o.state.ref.ID+o.state.ref.Generation+".json", 2048)
@@ -148,15 +186,28 @@ func (o *quotaNotifier) prepareBarrier(q quotaNotif) error {
 	}
 	r, e := fs.get(quotaFirst)
 	fs.file.Close()
-	if e != nil || r.BHard != 192<<10 || r.IHard != 128 || r.BSoft|r.ISoft|r.Space|r.Inodes|r.BTime|r.ITime != 0 {
-		return errors.New("limits not installed before filesystem barrier")
+	if e != nil {
+		return e
 	}
+	if e = validateCommitBoundary(o.barrier.Mode, r); e != nil {
+		return e
+	}
+	o.state.boundarySpace = r.Space
+	o.state.boundaryInodes = r.Inodes
 	// The already-created fixed project-zero file makes filesystem writeback
 	// observable even if quota journal metadata became clean in the meantime.
 	// This is a bounded TEST load, not a claim of per-project flush isolation.
 	b = make([]byte, 4<<20)
 	if n, e := o.barrier.Dirty.Write(b); e != nil || n != len(b) {
 		return errors.New("fixed unsynced barrier write failed")
+	}
+	if o.barrier.Mode == quotaReserveEIO {
+		var err error
+		o.exitTrace, err = o.startExitTrace(q)
+		if err != nil {
+			return err
+		}
+		return o.mapper.setError()
 	}
 	return o.mapper.suspend() // NOFLUSH + SKIP_LOCKFS, own mapper only.
 }
@@ -220,11 +271,14 @@ func fixedBarrierConfig() (firecracker.Config, error) {
 	}
 	return cfg, nil
 }
-func (n *node) quotaBarrierCheckpoint(ctx context.Context) (result map[string]any, err error) {
+func (n *node) quotaBarrierCheckpoint(ctx context.Context) (map[string]any, error) {
+	return n.quotaBarrierCheckpointOn(ctx, quotaReserveHold)
+}
+func (n *node) quotaBarrierCheckpointOn(ctx context.Context, mode quotaCommitMode) (result map[string]any, err error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
-	if !n.quotaStateIO || n.mapper == nil || n.process != nil || n.quotaHeld != nil {
+	if mode.phase() == "" || !n.quotaStateIO || n.mapper == nil || n.process != nil || n.quotaHeld != nil {
 		return nil, errors.New("fresh mapped quota node required")
 	}
 	for _, p := range []string{"/srv/sq", "/srv/sr", quotaBarrierReceiptPath} {
@@ -281,7 +335,7 @@ func (n *node) quotaBarrierCheckpoint(ctx context.Context) (result map[string]an
 		dirty.Close()
 		return nil, errors.New("dirty probe must remain project zero")
 	}
-	plan := &quotaBarrierPlan{Key: key, Boot: n.boot, ConfigHash: h, Dirty: dirty}
+	plan := &quotaBarrierPlan{Mode: mode, Key: key, Boot: n.boot, ConfigHash: h, Dirty: dirty}
 	liveCtx, cancel := context.WithTimeout(context.Background(), 210*time.Second)
 	p, o, e := startQuotaNotifiedOn(liveCtx, quotaBarrierCase, cfg.RuntimeRoot, n.mapper, plan)
 	if e != nil {
@@ -304,8 +358,14 @@ func (n *node) quotaBarrierCheckpoint(ctx context.Context) (result map[string]an
 	if e = negativeReady(ctx, p, api); e != nil {
 		return nil, e
 	}
+	if mode.release() {
+		return n.releaseCommitCheckpoint(ctx, mode, live, api, cfg)
+	}
 	o.arm()
 	go func() { var r sandbox.Record; live.done <- api.Create(liveCtx, key, nodeSpec(), &r) }()
+	if mode == quotaReserveEIO {
+		return n.reserveCommitEIO(ctx, live, api)
+	}
 	if e = waitNode(ctx, func() (bool, error) {
 		select {
 		case e := <-live.done:
@@ -369,10 +429,13 @@ func runQuotaBarrierRecoveryDaemon() error {
 	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
 }
 func (n *node) recoverQuotaBarrier(ctx context.Context) (map[string]any, error) {
+	return n.recoverQuotaBarrierOn(ctx, quotaReserveHold)
+}
+func (n *node) recoverQuotaBarrierOn(ctx context.Context, mode quotaCommitMode) (map[string]any, error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
-	if !n.quotaStateIO || n.mapper == nil || n.process != nil || n.quotaHeld != nil {
+	if mode.phase() == "" || !n.quotaStateIO || n.mapper == nil || n.process != nil || n.quotaHeld != nil {
 		return nil, errors.New("fresh mapped recovery boot required")
 	}
 	b, e := privatefile.Read(quotaBarrierReceiptPath, 8192)
@@ -383,7 +446,7 @@ func (n *node) recoverQuotaBarrier(ctx context.Context) (map[string]any, error) 
 	if e = strictjson.Decode(b, &old); e != nil {
 		return nil, e
 	}
-	if old.Phase != quotaBarrierPhase || old.L1Boot == "" || old.L1Boot == n.boot || len(old.Key) != 64 || strings.Trim(old.Key, "0123456789abcdef") != "" {
+	if old.Mode != mode || old.Phase != mode.phase() || old.L1Boot == "" || old.L1Boot == n.boot || len(old.Key) != 64 || strings.Trim(old.Key, "0123456789abcdef") != "" {
 		return nil, errors.New("invalid cold pre-fork barrier receipt")
 	}
 	if e = decodeQuotaBarrierOwner(old.Owner, old.Ref); e != nil {
@@ -472,12 +535,21 @@ func (n *node) recoverQuotaBarrier(ctx context.Context) (map[string]any, error) 
 	if e != nil {
 		return nil, e
 	}
+	if fresh.Ref == old.Ref {
+		return nil, errors.New("old reference reused after commit crash")
+	}
 	if e = syscallGuestBoundaryWithObserver(cfg, fresh.Ref, c.Process.Pid, false); e != nil {
 		return nil, e
 	}
 	u, e := worker.execute(ctx, fresh.Ref, []string{"id", "-u"})
 	if e != nil || strings.TrimSpace(u.Stdout) != "65534" {
 		return nil, errors.New("fresh recovered guest UID mismatch")
+	}
+	if mode.release() {
+		boot, e := worker.execute(ctx, fresh.Ref, []string{"cat", "/proc/sys/kernel/random/boot_id"})
+		if e != nil || strings.TrimSpace(boot.Stdout) == "" || strings.TrimSpace(boot.Stdout) == old.L2Boot || old.L2Boot == "" {
+			return nil, errors.New("old release guest restored or boot missing")
+		}
 	}
 	if _, e = worker.execute(ctx, fresh.Ref, []string{"true"}); e != nil {
 		return nil, e
@@ -497,5 +569,5 @@ func (n *node) recoverQuotaBarrier(ctx context.Context) (map[string]any, error) 
 	if e = os.Remove(quotaBarrierGroup); e != nil {
 		return nil, e
 	}
-	return map[string]any{"phase": quotaBarrierPhase, "l1_boot_changed": true, "attempted_owner_bytes_policy_and_absent_namespace_before_daemon": true, "unreturned_commit_empty_or_known_limits_checked": true, "cold_quota_record_empty": empty, "no_assigned_guest_restore": true, "old_durable_destroyed": true, "old_resources_absent": true, "old_key_refused410": true, "fresh_real_kvm_uid_exec_destroy_uninstrumented_launch": true, "all_fixed_project_records_cleared": true, "owned_cgroup_root_removed": true}, nil
+	return map[string]any{"phase": mode.phase(), "old_real_guest_boot_changed": mode.release(), "l1_boot_changed": true, "attempted_owner_bytes_policy_and_absent_namespace_before_daemon": true, "unreturned_commit_empty_or_known_limits_checked": true, "cold_quota_record_empty": empty, "no_assigned_guest_restore": true, "old_durable_destroyed": true, "old_resources_absent": true, "old_key_refused410": true, "fresh_real_kvm_uid_exec_destroy_uninstrumented_launch": true, "all_fixed_project_records_cleared": true, "owned_cgroup_root_removed": true}, nil
 }

@@ -128,10 +128,40 @@ def validate_quota_barrier_checkpoint(value):
     assert type(value['fixed_project_zero_dirty_bytes']) is int and value['fixed_project_zero_dirty_bytes']==4<<20
 
 
-def validate_quota_barrier_recovery(value):
-    assert value['phase']=='reserve-quota-syncfs-held'
+def validate_quota_barrier_recovery(value, phase='reserve-quota-syncfs-held'):
+    assert value['phase']==phase
     for key in ('l1_boot_changed','attempted_owner_bytes_policy_and_absent_namespace_before_daemon','unreturned_commit_empty_or_known_limits_checked','no_assigned_guest_restore','old_durable_destroyed','old_resources_absent','old_key_refused410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed'): assert value[key] is True
     assert type(value['cold_quota_record_empty']) is bool
+
+
+COMMIT_PROFILES = {
+    'quota_commit_eio': ('reserve-quota-syncfs-real-eio', 'quota-commit-eio'),
+    'quota_release_preclear_hang': ('release-preclear-quota-syncfs-held', 'quota-preclear-hold'),
+    'quota_release_postclear_hang': ('release-postclear-quota-syncfs-held', 'quota-postclear-hold'),
+}
+
+
+def validate_quota_commit_checkpoint(value, phase):
+    assert phase in {v[0] for v in COMMIT_PROFILES.values()} and value['phase']==phase
+    assert type(value['fixed_project_zero_dirty_bytes']) is int and value['fixed_project_zero_dirty_bytes']==4<<20
+    if phase=='reserve-quota-syncfs-real-eio':
+        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_retained_after_linear_restore','pre_fork_namespace_absent_after_eio','admission_new_create503','no_quota_query_after_eio','own_mapper_linear_restored_no_rw_remount','no_l2_vm_born_at_checkpoint')
+        assert type(value['selected_syncfs_kernel_errno']) is int and value['selected_syncfs_kernel_errno']==5
+        assert type(value['selected_syncfs_exit_observations']) is int and value['selected_syncfs_exit_observations']==1
+    else:
+        flags=('checkpoint_receipt_fsynced_before_delete','old_real_kvm_guest_uid_exec_and_quota_checked','same_durable_owner_checked_at_release_boundary','namespace_and_cgroup_absent_before_suspend','ordinary_qsync_returned_before_selected_syncfs','notification_continued_into_real_kernel','actual_syncfs_syscall_D_filesystem_stack_not_seccomp','actual_kernel_hold_rechecked_three_times','durable_reclaiming_stopped_not_destroyed','capacity_retained_new_create503','no_quota_or_srv_reads_after_suspend','no_observer_sync_after_delete','mapper_still_suspended_until_power_cut')
+        post=phase=='release-postclear-quota-syncfs-held'
+        assert type(value['selected_syncfs_ordinal']) is int and value['selected_syncfs_ordinal']==(3 if post else 2)
+        assert value['quota_record_empty_before_suspend'] is post
+        for key,bound in (('quota_space_before_suspend',192<<20),('quota_inodes_before_suspend',128)):
+            assert type(value[key]) is int and 0<=value[key]<=(0 if post else bound)
+    for key in flags: assert value[key] is True
+
+
+def validate_quota_commit_recovery(value, phase):
+    assert phase in {v[0] for v in COMMIT_PROFILES.values()}
+    validate_quota_barrier_recovery(value, phase)
+    assert value['old_real_guest_boot_changed'] is phase.startswith('release-')
 
 
 def main():
@@ -141,6 +171,8 @@ def main():
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    for flag in COMMIT_PROFILES:
+        profiles.add_argument('--'+flag.replace('_','-'), action='store_true', help='TEST ONLY: fixed real quota filesystem commit fault and owned L1 cold recovery')
     profiles.add_argument('--quota-barrier-hang', action='store_true', help='TEST ONLY: actual ordinary quota syncfs kernel hold and pre-fork crash')
     profiles.add_argument('--quota-syscalls', action='store_true', help='TEST ONLY: fixed own-child quotactl_fd errno injection, NOT physical media failure')
     profiles.add_argument('--quota-clear-crash', action='store_true', help='TEST ONLY: power cut after ordinary quota clear, before durable owner/pin release')
@@ -152,9 +184,12 @@ def main():
     profiles.add_argument('--quota-probe', action='store_true', help='TEST ONLY: ext4 project quota kernel prerequisites, NOT production enforcement')
     profiles.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
     args = parser.parse_args(); os.umask(0o077)
+    selected=[v for flag,v in COMMIT_PROFILES.items() if getattr(args,flag)]
+    commit_phase,commit_operation=selected[0] if selected else (None,None)
+    commit_profile=bool(selected)
     snapshot_profile = args.quota_snapshot or args.quota_clear_crash
     state_io_profile = args.state_io or args.quota_state_io
-    driver_profile = args.quota_driver or snapshot_profile or args.quota_negatives or args.quota_syscalls or args.quota_unenforced or args.quota_state_io or args.quota_barrier_hang
+    driver_profile = args.quota_driver or snapshot_profile or args.quota_negatives or args.quota_syscalls or args.quota_unenforced or args.quota_state_io or args.quota_barrier_hang or commit_profile
     if snapshot_profile: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
     else: assert not args.admin and not args.snapshot_builder and not args.snapshot_seed_manifest
     assert os.geteuid() == 0 and os.uname().sysname == 'Linux' and os.uname().machine == 'x86_64'
@@ -178,11 +213,12 @@ def main():
         seed=json.loads(Path(args.snapshot_seed_manifest).read_text())
         assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
         for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
-    phases = ('reserve-quota-syncfs-held',) if args.quota_barrier_hang else ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_actual_quota_syncfs_hold_prefork_crash' if args.quota_barrier_hang else 'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+    phases = (commit_phase,) if commit_profile else ('reserve-quota-syncfs-held',) if args.quota_barrier_hang else ('quota-cleared-owner-pinned',) if args.quota_clear_crash else () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
+    result = {'test':'owned_l1_fixed_real_quota_commit_fault' if commit_profile else 'owned_l1_actual_quota_syncfs_hold_prefork_crash' if args.quota_barrier_hang else 'owned_l1_fixed_quota_syscall_errno_real_l2_kvm' if args.quota_syscalls else 'owned_l1_quota_cleared_owner_pinned_power_cut_real_l2_kvm' if args.quota_clear_crash else 'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
         'production_ready':False,'passed':False,'state_io_profile':state_io_profile,'quota_state_io_profile':args.quota_state_io,'quota_prerequisite_profile':args.quota_probe,
         'production_driver_quota':driver_profile,'quota_snapshot_profile':snapshot_profile,'quota_clear_crash_profile':args.quota_clear_crash,'quota_negative_profile':args.quota_negatives,'quota_unenforced_profile':args.quota_unenforced,
         'quota_syscall_errno_profile':args.quota_syscalls,'quota_barrier_hang_profile':args.quota_barrier_hang,
+        'quota_commit_fault_phase':commit_phase,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -202,6 +238,8 @@ def main():
         result['limitations'].append('Healthy catalog lock is deliberately held by L1 PID1 after ordinary quota clear, until outer L1 power cut. This tests that precise clear-before-owner-delete window, not arbitrary quota syscall errors or latency under a held catalog lock.')
     if args.quota_barrier_hang:
         result['limitations'].append('Additional TEST ONLY seccomp/NNP launch observer locates quota syncfs, then CONTINUE enters actual suspended-mapper filesystem IO. No old L2 VM is born at this pre-fork checkpoint. Fixed 4MiB project-zero dirty data ensures filesystem-wide writeback; not per-project IO or physical media failure. Receipt is synced BEFORE SET, with no observer sync after SET; unreturned commit is not assumed durable.')
+    if commit_profile:
+        result['limitations'].append('Additional TEST ONLY seccomp/NNP observer locates a fixed ordinary commit. CONTINUE enters the real kernel. One owned L1 mapper only: no physical L0 media failure or bounded filesystem IO guarantee. Fixed 4MiB project-zero dirty data is filesystem-wide. Reserve EIO uses an exact owned-thread, first-syncfs-return eBPF observer only inside L1; no tracee payloads or persistent hook. Release holds allow DELETE acceptance but never confirm DESTROYED/capacity before commit. Receipts sync before SET or DELETE; no observer sync after the selected mutation.')
     if args.quota_syscalls:
         result['limitations'].append('ELF-unchanged ordinary child has an additional inherited TEST ONLY seccomp notification/NNP launch layer. Six fixed errno cases, not physical media EIO/EROFS, held Q_SYNC, in-flight crash or snapshot pin acceptance. Other calls execute the real kernel via CONTINUE; no synthetic successful quota response.')
     if args.quota_state_io:
@@ -224,7 +262,7 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls),quota_snapshot=snapshot_profile,quota_unenforced=args.quota_unenforced,quota_state_io=(args.quota_state_io or args.quota_barrier_hang))
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls),quota_snapshot=snapshot_profile,quota_unenforced=args.quota_unenforced,quota_state_io=(args.quota_state_io or args.quota_barrier_hang or commit_profile))
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
@@ -319,8 +357,9 @@ def main():
             result['syscall_setup']=request('quota-syscall-setup')
             validate_quota_syscall_setup(result['syscall_setup'])
         for phase in phases:
-            checkpoint=request('quota-barrier-checkpoint') if args.quota_barrier_hang else request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
-            if args.quota_barrier_hang: validate_quota_barrier_checkpoint(checkpoint)
+            checkpoint=request(commit_operation+'-checkpoint') if commit_profile else request('quota-barrier-checkpoint') if args.quota_barrier_hang else request('quota-clear-checkpoint') if args.quota_clear_crash else request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
+            if commit_profile: validate_quota_commit_checkpoint(checkpoint,commit_phase)
+            elif args.quota_barrier_hang: validate_quota_barrier_checkpoint(checkpoint)
             else: assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
             if args.quota_clear_crash: validate_quota_clear_checkpoint(checkpoint)
             if args.quota_state_io:
@@ -329,12 +368,13 @@ def main():
                 assert checkpoint['quota_and_ownership_released_only_after_io_resumed' if phase.startswith('hang-') else 'quota_owner_retained_until_cold_recovery'] is True
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
-            boot(); recovered=request('quota-barrier-recover' if args.quota_barrier_hang else 'quota-clear-recover' if args.quota_clear_crash else 'recover')
-            if args.quota_barrier_hang: validate_quota_barrier_recovery(recovered)
+            boot(); recovered=request(commit_operation+'-recover' if commit_profile else 'quota-barrier-recover' if args.quota_barrier_hang else 'quota-clear-recover' if args.quota_clear_crash else 'recover')
+            if commit_profile: validate_quota_commit_recovery(recovered,commit_phase)
+            elif args.quota_barrier_hang: validate_quota_barrier_recovery(recovered)
             else:
                 assert recovered['l1_boot_changed'] and recovered['old_durable_destroyed'] and recovered['old_resources_absent'] and recovered['old_key_refused_410']
                 assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
-            if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
+            if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang or commit_profile): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
             if args.quota_clear_crash: validate_quota_clear_recovery(recovered)
             if args.quota_probe: assert recovered['quota_persisted_after_power_cut'] and recovered['all_fixture_project_records_cleared']
             guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if state_io_profile else True

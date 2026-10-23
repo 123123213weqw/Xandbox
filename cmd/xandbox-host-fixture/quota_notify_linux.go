@@ -157,6 +157,8 @@ type quotaNotifyState struct {
 	baselineSaved, seenSync, barrierContinued bool
 	barrierTID                                uint32
 	barrierFD                                 uint64
+	qsyncPassed, qsetPassed, syncfsPassed     int
+	boundarySpace, boundaryInodes             uint64
 }
 
 // No tracee pointer is dereferenced. A subsequent syscall plus independent
@@ -196,6 +198,7 @@ type quotaNotifier struct {
 	done                        chan struct{}
 	mapper                      *stateMapper
 	barrier                     *quotaBarrierPlan
+	exitTrace                   *quotaExitTrace
 }
 
 func quotaNotifyIO(fd int, request uint, p unsafe.Pointer) error {
@@ -315,7 +318,7 @@ func (o *quotaNotifier) serve() {
 			o.mu.Unlock()
 			return
 		}
-		barrierTarget := o.state.name == quotaBarrierCase && o.state.armed && q.Data.NR == int32(unix.SYS_SYNCFS)
+		barrierTarget := o.state.name == quotaBarrierCase && o.state.armed && q.Data.NR == int32(unix.SYS_SYNCFS) && o.state.syncfsPassed+1 == o.barrier.Mode.ordinal()
 		if o.state.name == quotaBarrierCase && o.state.armed {
 			e = o.prepareBarrier(q)
 		}
@@ -331,6 +334,9 @@ func (o *quotaNotifier) serve() {
 		r := o.state.response(q.ID, inject)
 		e = quotaNotifyIO(o.fd, unix.SECCOMP_IOCTL_NOTIF_SEND, unsafe.Pointer(&r))
 		if e == nil {
+			if q.Data.NR == int32(unix.SYS_SYNCFS) {
+				o.state.syncfsPassed++
+			}
 			if barrierTarget {
 				o.state.barrierContinued = true
 				o.state.barrierTID = q.PID
@@ -347,9 +353,15 @@ func (o *quotaNotifier) serve() {
 			}
 			if q.Data.NR == int32(unix.SYS_QUOTACTL_FD) && q.Data.Args[1] == 0x80000102 {
 				o.state.seenSync = true
+				if !inject {
+					o.state.qsyncPassed++
+				}
 			}
 			if q.Data.NR == int32(unix.SYS_QUOTACTL_FD) && q.Data.Args[1] == 0x80000802 {
 				o.state.seenSet = true
+				if !inject {
+					o.state.qsetPassed++
+				}
 			}
 		} else if !errors.Is(e, unix.ENOENT) {
 			o.state.err = e
@@ -450,7 +462,11 @@ func startQuotaNotifiedOn(ctx context.Context, name, runtimeRoot string, mapper 
 	parent, child := os.NewFile(uintptr(sockets[0]), "quota-listener-parent"), os.NewFile(uintptr(sockets[1]), "quota-listener-child")
 	defer parent.Close()
 	defer child.Close()
-	log, e := os.OpenFile(base+"/first.log", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	logPath := base + "/first.log"
+	if barrier != nil && barrier.Mode == quotaReserveEIO {
+		logPath = "/run/quota-commit-eio.log"
+	}
+	log, e := os.OpenFile(logPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
 		return nil, nil, e
 	}

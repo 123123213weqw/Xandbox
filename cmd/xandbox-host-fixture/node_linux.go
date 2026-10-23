@@ -55,7 +55,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -574,6 +574,18 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 				result, e = n.quotaBarrierCheckpoint(ctx)
 			case "quota-barrier-recover":
 				result, e = n.recoverQuotaBarrier(ctx)
+			case "quota-commit-eio-checkpoint":
+				result, e = n.quotaBarrierCheckpointOn(ctx, quotaReserveEIO)
+			case "quota-commit-eio-recover":
+				result, e = n.recoverQuotaBarrierOn(ctx, quotaReserveEIO)
+			case "quota-preclear-hold-checkpoint":
+				result, e = n.quotaBarrierCheckpointOn(ctx, quotaReleasePreHold)
+			case "quota-preclear-hold-recover":
+				result, e = n.recoverQuotaBarrierOn(ctx, quotaReleasePreHold)
+			case "quota-postclear-hold-checkpoint":
+				result, e = n.quotaBarrierCheckpointOn(ctx, quotaReleasePostHold)
+			case "quota-postclear-hold-recover":
+				result, e = n.recoverQuotaBarrierOn(ctx, quotaReleasePostHold)
 			case "quota-checkpoint":
 				if !quotaDriver {
 					e = errors.New("ordinary driver quota image profile required")

@@ -7,10 +7,45 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_real_commit_eio_requires_direct_kernel_errno_and_retained_owner(self):
+        phase='reserve-quota-syncfs-real-eio'
+        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_retained_after_linear_restore','pre_fork_namespace_absent_after_eio','admission_new_create503','no_quota_query_after_eio','own_mapper_linear_restored_no_rw_remount','no_l2_vm_born_at_checkpoint')
+        good={'phase':phase,**{k:True for k in flags},'fixed_project_zero_dirty_bytes':4<<20,'selected_syncfs_kernel_errno':5,'selected_syncfs_exit_observations':1}
+        validate_quota_commit_checkpoint(good,phase)
+        for key in good:
+            bad=dict(good);del bad[key]
+            with self.assertRaises(KeyError):validate_quota_commit_checkpoint(bad,phase)
+            values=(False,0,'true') if key in flags else ('running',) if key=='phase' else (False,0,-1,6)
+            for v in values:
+                with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(dict(good,**{key:v}),phase)
+        with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(good,'untrusted')
+
+    def test_release_commit_hold_requires_exact_ordinal_usage_and_fresh_guest_recovery(self):
+        flags=('checkpoint_receipt_fsynced_before_delete','old_real_kvm_guest_uid_exec_and_quota_checked','same_durable_owner_checked_at_release_boundary','namespace_and_cgroup_absent_before_suspend','ordinary_qsync_returned_before_selected_syncfs','notification_continued_into_real_kernel','actual_syncfs_syscall_D_filesystem_stack_not_seccomp','actual_kernel_hold_rechecked_three_times','durable_reclaiming_stopped_not_destroyed','capacity_retained_new_create503','no_quota_or_srv_reads_after_suspend','no_observer_sync_after_delete','mapper_still_suspended_until_power_cut')
+        recovery=('l1_boot_changed','attempted_owner_bytes_policy_and_absent_namespace_before_daemon','unreturned_commit_empty_or_known_limits_checked','no_assigned_guest_restore','old_durable_destroyed','old_resources_absent','old_key_refused410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed')
+        for phase,_ in COMMIT_PROFILES.values():
+            release=phase.startswith('release-')
+            rec={'phase':phase,**{k:True for k in recovery},'cold_quota_record_empty':False,'old_real_guest_boot_changed':release}
+            validate_quota_commit_recovery(rec,phase)
+            with self.assertRaises(AssertionError):validate_quota_commit_recovery(dict(rec,old_real_guest_boot_changed=not release),phase)
+            with self.assertRaises(KeyError):validate_quota_commit_recovery({k:v for k,v in rec.items() if k!='old_real_guest_boot_changed'},phase)
+            if not release:continue
+            post='postclear' in phase
+            good={'phase':phase,**{k:True for k in flags},'fixed_project_zero_dirty_bytes':4<<20,'selected_syncfs_ordinal':3 if post else 2,'quota_record_empty_before_suspend':post,'quota_space_before_suspend':0 if post else 4096,'quota_inodes_before_suspend':0 if post else 1}
+            validate_quota_commit_checkpoint(good,phase)
+            for key in good:
+                bad=dict(good);del bad[key]
+                with self.assertRaises(KeyError):validate_quota_commit_checkpoint(bad,phase)
+            for key in flags:
+                with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(dict(good,**{key:False}),phase)
+            for key,values in {'selected_syncfs_ordinal':(True,0,2 if post else 3),'quota_record_empty_before_suspend':(not post,0,1),'quota_space_before_suspend':(False,-1,1 if post else (193<<20)),'quota_inodes_before_suspend':(False,-1,1 if post else 129),'fixed_project_zero_dirty_bytes':(True,0,1)}.items():
+                for v in values:
+                    with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(dict(good,**{key:v}),phase)
+
     def test_quota_barrier_requires_actual_filesystem_stack_and_prefork_cold_recovery(self):
         checkpoint=('checkpoint_receipt_fsynced_before_set','pre_fork_namespace_absent_before_suspend','durable_attempted_owner_before_set','installed_limits_checked_before_suspend','ordinary_qsync_returned_before_syncfs','notification_continued_into_real_kernel','actual_syncfs_syscall_D_filesystem_stack_not_seccomp','actual_kernel_hold_rechecked_three_times','no_create_ack_while_commit_held','capacity_retained_new_create503','no_quota_or_srv_reads_after_suspend','mapper_still_suspended_until_power_cut','no_l2_vm_born_at_checkpoint')
         recovery=('l1_boot_changed','attempted_owner_bytes_policy_and_absent_namespace_before_daemon','unreturned_commit_empty_or_known_limits_checked','no_assigned_guest_restore','old_durable_destroyed','old_resources_absent','old_key_refused410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed')
