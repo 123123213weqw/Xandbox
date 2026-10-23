@@ -39,6 +39,10 @@ const operatorStoreHoldMax = 20 * time.Second
 var operatorTempPattern = regexp.MustCompile(`^\.state-[0-9]+$`)
 
 func runOperatorStoreDaemon() error {
+	return runOperatorObservedDaemon(false)
+}
+
+func runOperatorObservedDaemon(shutdown bool) error {
 	if e := requireQuotaChild(); e != nil {
 		return e
 	}
@@ -63,6 +67,9 @@ func runOperatorStoreDaemon() error {
 		return e
 	}
 	p, e := ownerNotifyProgram()
+	if shutdown {
+		p, e = operatorShutdownProgram()
+	}
 	if e != nil {
 		return e
 	}
@@ -493,37 +500,46 @@ func (n *node) stopOperatorDaemon(ctx context.Context) error {
 	}
 }
 func (n *node) startOperatorStoreObserved(ctx context.Context) (*operatorStoreObserver, error) {
+	o, _, e := n.startOperatorObserved(ctx, false)
+	return o, e
+}
+
+func (n *node) startOperatorObserved(ctx context.Context, shutdown bool) (*operatorStoreObserver, *operatorShutdownObserver, error) {
 	if e := n.operatorProfile(); e != nil {
-		return nil, e
+		return nil, nil, e
 	}
 	hash, e := fileHash("/srv/assets/sandboxd")
 	if e != nil || hash != prepareTraceELFSHA {
-		return nil, errors.New("fixed ordinary FileStore executable required")
+		return nil, nil, errors.New("fixed ordinary FileStore executable required")
 	}
 	pair, e := unix.Socketpair(unix.AF_UNIX, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)
 	if e != nil {
-		return nil, e
+		return nil, nil, e
 	}
 	parent, child := os.NewFile(uintptr(pair[0]), "operator-store-parent"), os.NewFile(uintptr(pair[1]), "operator-store-child")
 	defer parent.Close()
 	defer child.Close()
-	log, e := os.OpenFile("/srv/fixture/operator-store-controller.log", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	mode, logPath := "node-operator-store-daemon", "/srv/fixture/operator-store-controller.log"
+	if shutdown {
+		mode, logPath = "node-operator-shutdown-daemon", operatorShutdownLog
+	}
+	log, e := os.OpenFile(logPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
-		return nil, e
+		return nil, nil, e
 	}
 	defer log.Close()
 	cg, e := os.Open(nodeGroup + "/control")
 	if e != nil {
-		return nil, e
+		return nil, nil, e
 	}
 	defer cg.Close()
-	cmd := exec.Command("/usr/bin/xandbox-host-fixture", "-mode", "node-operator-store-daemon")
+	cmd := exec.Command("/usr/bin/xandbox-host-fixture", "-mode", mode)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	cmd.ExtraFiles = []*os.File{child}
 	cmd.Stdout, cmd.Stderr = log, log
 	cmd.SysProcAttr = &syscall.SysProcAttr{UseCgroupFD: true, CgroupFD: int(cg.Fd())}
 	if e = cmd.Start(); e != nil {
-		return nil, e
+		return nil, nil, e
 	}
 	n.process = cmd
 	n.exited = make(chan error, 1)
@@ -536,7 +552,7 @@ func (n *node) startOperatorStoreObserved(ctx context.Context) (*operatorStoreOb
 		cmd.Process.Kill()
 		<-n.exited
 		n.process = nil
-		return nil, e
+		return nil, nil, e
 	}
 	identity, e := processStart(cmd.Process.Pid)
 	if e != nil {
@@ -544,10 +560,16 @@ func (n *node) startOperatorStoreObserved(ctx context.Context) (*operatorStoreOb
 		cmd.Process.Kill()
 		<-n.exited
 		n.process = nil
-		return nil, e
+		return nil, nil, e
 	}
 	o := &operatorStoreObserver{fd: fd, pid: cmd.Process.Pid, identity: identity, held: make(chan struct{}, 1), inject: make(chan struct{}, 1), ticketContinue: make(chan struct{}, 1), stop: make(chan struct{}), done: make(chan struct{})}
-	go o.serve()
+	var shut *operatorShutdownObserver
+	if shutdown {
+		shut = newOperatorShutdownObserver(o)
+		go shut.serve()
+	} else {
+		go o.serve()
+	}
 	e = waitNode(ctx, func() (bool, error) {
 		if e := o.snapshot().Err; e != nil {
 			return false, e
@@ -565,7 +587,7 @@ func (n *node) startOperatorStoreObserved(ctx context.Context) (*operatorStoreOb
 		<-n.exited
 		n.process = nil
 		o.close()
-		return nil, e
+		return nil, nil, e
 	}
-	return o, nil
+	return o, shut, nil
 }

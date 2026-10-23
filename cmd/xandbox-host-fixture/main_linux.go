@@ -30,6 +30,12 @@ func main() {
 		}
 	case "node-budget":
 		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
+	case "node-operator-shutdown-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed shutdown child accepts no arguments")
+		} else {
+			err = runOperatorObservedDaemon(true)
+		}
 	case "node-operator-store-daemon":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("fixed operator store child accepts no arguments")

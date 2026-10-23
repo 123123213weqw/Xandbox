@@ -415,10 +415,16 @@ func validateOperatorStoreReceipt(s operatorStoreReceiptValue, mode operatorStor
 	return nil
 }
 func (n *node) nodeOperatorStoreRecover(ctx context.Context, mode operatorStoreMode) (map[string]any, error) {
+	return n.recoverOperatorStore(ctx, mode, operatorStoreReceipt)
+}
+func (n *node) recoverOperatorStore(ctx context.Context, mode operatorStoreMode, receipt string) (map[string]any, error) {
+	if receipt != operatorStoreReceipt && !(receipt == operatorShutdownReceipt && mode == operatorStorePre) {
+		return nil, errors.New("fixed recovery receipt required")
+	}
 	if e := n.operatorProfile(); e != nil {
 		return nil, e
 	}
-	data, e := privatefile.Read(operatorStoreReceipt, 32768)
+	data, e := privatefile.Read(receipt, 32768)
 	if e != nil {
 		return nil, e
 	}
@@ -454,7 +460,7 @@ func (n *node) nodeOperatorStoreRecover(ctx context.Context, mode operatorStoreM
 	}
 	defer c.Close()
 	view, e := c.Status(ctx)
-	if e != nil || view.Control.Phase != "ready" || view.Control.Committed != saved.Expected || view.Control.AdmissionOpen != (mode == operatorStorePre) {
+	if e != nil || view.Control.Phase != "ready" || view.Control.Committed != saved.Expected || view.Control.AdmissionOpen != (mode == operatorStorePre) || (receipt == operatorShutdownReceipt && view.Control.PendingSessionReservations != 0) {
 		return nil, errors.New("ordinary restart did not use actual disk truth")
 	}
 	api := newSwitchAPI("/srv/state/api.sock", n.token)
