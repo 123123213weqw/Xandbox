@@ -6,7 +6,7 @@
 
 普通 API 为 root0600、state为0700，无特权反向代理不能凭空访问它。本实现选择小型 root **固定连接 broker**，不改普通 daemon 的权限与协议：
 
-- root supervisor不创建 TCP listener、不处理HTTP/TLS。只读取私有配置/证书、校验静态同源可执行文件，并将子进程降为显式专用UID/GID（1000–65534、相同ID、无附加组）。
+- root supervisor不创建 TCP listener、不处理网络HTTP/TLS流量或握手。只校验操作员提供的私有配置/证书、校验静态同源可执行文件，并将子进程降为显式专用UID/GID（1000–65534、相同ID、无附加组）。
 - 网络子进程进入root-owned0555且只含同一`/gateway`静态ELF的chroot，capabilities为空、NNP开启，nofile192/nproc64/core0/fsize0硬限制。它不读取宿主状态目录或凭证文件；不使用shell，不执行租户程序。
 - root创建的私有`SOCK_SEQPACKET` socketpair通过继承FD成为能力；不是可由其他进程连接的broker socket。24字节定长消息只有连接、释放、完整policy更新/确认和liveness心跳，无path/argv/任意syscall选择器。socketpair凭证在创建时确定，不能把其root peer误称为子进程当前UID证明。[Linux Unix socket/SCM_RIGHTS语义](https://man7.org/linux/man-pages/man7/unix.7.html)
 - root只连接启动时固定且经过root-owned0700目录、0600 `api.sock` inode与root peer检查的tenant端点，最多16个lease、45秒硬寿命，并对控制消息/新连接限速。子进程拿到的是这个已连接socket的FD，不能请求operator/metrics或其他路径；超时用`shutdown`影响所有dup，不能只close父FD假装撤回。

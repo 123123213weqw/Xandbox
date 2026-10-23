@@ -22,7 +22,7 @@ func main() {
 		e = gateway.RunRoot(*config)
 	}
 	if e != nil { // Never echo policy/path/header/certificate/credential/error details.
-		fmt.Fprintln(os.Stderr, "gateway unavailable; ingress closed")
+		fmt.Fprintf(os.Stderr, "gateway unavailable; ingress closed (%s)\n", gateway.FailureCode(e))
 		os.Exit(1)
 	}
 }

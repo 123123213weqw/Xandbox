@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"strings"
 	"sync"
@@ -195,5 +196,16 @@ func TestPolicySingleAtomicPublisherAndBoundedTenantBudgets(t *testing.T) {
 	}
 	if !q.tenantRate("alpha", now.Add(time.Second)) {
 		t.Fatal("tenant rate did not recover")
+	}
+}
+
+func TestGatewayDiagnosticsAreClosedVocabularyNotErrorEcho(t *testing.T) {
+	if FailureCode(nil) != "NONE" || FailureCode(errors.New("gateway durable policy state rejected")) != "POLICY_STATE" {
+		t.Fatal("fixed diagnostic classification")
+	}
+	for _, message := range []string{testBackend, "/private/operator/secret", "gateway durable policy state rejected: " + testBackend} {
+		if FailureCode(errors.New(message)) != "UNAVAILABLE" {
+			t.Fatal("untrusted error reflected")
+		}
 	}
 }
