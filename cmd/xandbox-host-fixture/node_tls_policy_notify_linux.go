@@ -34,7 +34,7 @@ type tlsPolicyMode string
 
 const tlsPolicyPre tlsPolicyMode = "pre-file"
 const tlsPolicyPost tlsPolicyMode = "post-commit"
-const tlsPolicyGatewaySHA = "555b9974239d74ea2cde60d024e402b10d4b8e1bb13a89c9b680e83fa69893bd"
+const tlsPolicyGatewaySHA = "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a"
 const tlsPolicyRoot = gatewayDir + "/policy"
 const tlsPolicyReceipt = gatewayDir + "/policy-fault-receipt.json"
 const tlsPolicyMemfd = "xandbox-gateway-policy"

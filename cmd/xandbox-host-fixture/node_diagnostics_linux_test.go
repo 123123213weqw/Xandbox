@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -284,11 +285,38 @@ func TestDiagnosticContenderBaselineMustFollowOrdinarySessionClose(t *testing.T)
 	if e = broker.Close(ctx); e != nil {
 		t.Fatal(e)
 	}
+	// A visible named file does not mean the asynchronous Save has returned to
+	// the journal worker. CloseSession and Close can legitimately coalesce while
+	// that worker finishes an already-CLOSED write. Reopen only AFTER Close has
+	// drained it: New performs its recovery fence synchronously and the new
+	// broker has no dirty entry or live request before this shutdown exercise.
+	broker, e = session.New(manager, journal, session.Options{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer broker.Close(ctx)
+	before, e = readNamed()
+	if e != nil {
+		t.Fatal(e)
+	}
+	beforeInfo, e := os.Lstat(filepath.Join(root, "sessions", first.ID+".json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = broker.Close(ctx); e != nil {
+		t.Fatal(e)
+	}
 	after, e := readNamed()
 	if e != nil {
 		t.Fatal(e)
 	}
-	if !after.UpdatedAt.After(before.UpdatedAt) || after.State != session.Closed || after.Current != first.Current {
+	afterInfo, e := os.Lstat(filepath.Join(root, "sessions", first.ID+".json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	// Require a real ordinary atomic journal replacement, not monotonic wall
+	// clock movement (UpdatedAt is UTC and is not a journal sequence number).
+	if os.SameFile(beforeInfo, afterInfo) || after.State != session.Closed || after.Current != first.Current {
 		t.Fatal("normal final closed-session write not observed")
 	}
 	after.UpdatedAt = before.UpdatedAt
