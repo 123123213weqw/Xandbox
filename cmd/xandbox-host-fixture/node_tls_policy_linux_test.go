@@ -16,6 +16,18 @@ import (
 func TestTLSPolicyNoL0OrArbitraryProtocol(t *testing.T) {
 	ctx := context.Background()
 	n := &node{nodeBudget: true, quotaDriver: true}
+	if _, e := tlsPolicyInventory(tlsPolicyOrphan{}, false, 0); e == nil {
+		t.Fatal("L0 inventory")
+	}
+	if tlsPolicyColdRefusalProbes(ctx, tlsPolicySaved{}, tlsSavedForTestConfig()) == nil {
+		t.Fatal("L0 probe files")
+	}
+	if _, e := captureTLSPolicyOrphan(&tlsPolicyObserver{}); e == nil {
+		t.Fatal("L0 orphan inspection")
+	}
+	if tlsPolicyDirSync() == nil {
+		t.Fatal("L0 policy directory Sync")
+	}
 	if runTLSPolicyGateway() == nil {
 		t.Fatal("L0 filter install")
 	}
@@ -68,7 +80,11 @@ func policySavedForTest(m tlsPolicyMode) tlsPolicySaved {
 	old := storeTestReceipt(operatorStorePre)
 	before := tlsPolicyRecord{Version: 1, Revision: 1, Digest: strings.Repeat("a", 64)}
 	next := tlsPolicyRecord{Version: 1, Revision: 2, Digest: strings.Repeat("b", 64)}
-	return tlsPolicySaved{Version: 1, Mode: m, L1Boot: old.L1Boot, Config: strings.Repeat("c", 64), Auth: strings.Repeat("d", 64), Policy: strings.Repeat("e", 64), Identity: strings.Repeat("f", 64), Lock: strings.Repeat("a", 64), CA: strings.Repeat("b", 64), IngressConfig: strings.Repeat("c", 64), Before: old.Before, Baseline: before, Attempted: next, Observed: tlsPolicyExpectedDisk(m, before, next), Raw: old.Raw, Binding: old.Session, RawKey: strings.Repeat("1", 64), SessionKey: strings.Repeat("2", 64), AlphaOld: strings.Repeat("3", 64), AlphaNew: strings.Repeat("4", 64), BetaExternal: strings.Repeat("5", 64), Boots: [2]string{old.RawBoot, old.SessionBoot}}
+	v := tlsPolicySaved{Version: 2, Mode: m, L1Boot: old.L1Boot, Config: strings.Repeat("c", 64), Auth: strings.Repeat("d", 64), Policy: strings.Repeat("e", 64), Identity: strings.Repeat("f", 64), Lock: strings.Repeat("a", 64), CA: strings.Repeat("b", 64), IngressConfig: strings.Repeat("c", 64), Before: old.Before, Baseline: before, Attempted: next, Observed: tlsPolicyExpectedDisk(m, before, next), Raw: old.Raw, Binding: old.Session, RawKey: strings.Repeat("1", 64), SessionKey: strings.Repeat("2", 64), AlphaOld: strings.Repeat("3", 64), AlphaNew: strings.Repeat("4", 64), BetaExternal: strings.Repeat("5", 64), Boots: [2]string{old.RawBoot, old.SessionBoot}}
+	if m == tlsPolicyPre {
+		v.Orphan = tlsPolicyOrphan{Name: ".policy-123", SHA: strings.Repeat("e", 64), Bytes: 128}
+	}
+	return v
 }
 func TestTLSPolicyReceiptDistinguishesUnacknowledgedAndDurable(t *testing.T) {
 	const boot = "55555555-5555-4555-8555-555555555555"
@@ -77,7 +93,7 @@ func TestTLSPolicyReceiptDistinguishesUnacknowledgedAndDurable(t *testing.T) {
 		if e := validateTLSPolicySaved(good, boot); e != nil {
 			t.Fatal(e)
 		}
-		for _, mutate := range []func(*tlsPolicySaved){func(s *tlsPolicySaved) { s.Version++ }, func(s *tlsPolicySaved) { s.Mode = "custom" }, func(s *tlsPolicySaved) { s.L1Boot = boot }, func(s *tlsPolicySaved) { s.Baseline.Revision = 2 }, func(s *tlsPolicySaved) { s.Attempted.Revision = 1 }, func(s *tlsPolicySaved) { s.Attempted.Digest = s.Baseline.Digest }, func(s *tlsPolicySaved) { s.Observed.Revision = 3 }, func(s *tlsPolicySaved) { s.Identity = "bad" }, func(s *tlsPolicySaved) { s.Lock = "bad" }, func(s *tlsPolicySaved) { s.AlphaOld = s.AlphaNew }, func(s *tlsPolicySaved) { s.Raw = s.Binding.Current }, func(s *tlsPolicySaved) { s.Binding.Revision = 2 }, func(s *tlsPolicySaved) {
+		for _, mutate := range []func(*tlsPolicySaved){func(s *tlsPolicySaved) { s.Version++ }, func(s *tlsPolicySaved) { s.Mode = "custom" }, func(s *tlsPolicySaved) { s.L1Boot = boot }, func(s *tlsPolicySaved) { s.Baseline.Revision = 2 }, func(s *tlsPolicySaved) { s.Attempted.Revision = 1 }, func(s *tlsPolicySaved) { s.Attempted.Digest = s.Baseline.Digest }, func(s *tlsPolicySaved) { s.Observed.Revision = 3 }, func(s *tlsPolicySaved) { s.Identity = "bad" }, func(s *tlsPolicySaved) { s.Lock = "bad" }, func(s *tlsPolicySaved) { s.Orphan.Name = "../foreign" }, func(s *tlsPolicySaved) { s.AlphaOld = s.AlphaNew }, func(s *tlsPolicySaved) { s.Raw = s.Binding.Current }, func(s *tlsPolicySaved) { s.Binding.Revision = 2 }, func(s *tlsPolicySaved) {
 			s.Binding.Previous = sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
 		}, func(s *tlsPolicySaved) { s.Boots[1] = s.Boots[0] }, func(s *tlsPolicySaved) { s.Before.Revision++ }} {
 			bad := good

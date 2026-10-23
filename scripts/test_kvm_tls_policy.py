@@ -1,9 +1,9 @@
 import unittest
 from kvm_nested_host import (node_tls_policy_profile,TLS_POLICY_CHECKPOINT_FLAGS,TLS_POLICY_RECOVERY_FLAGS,TLS_POLICY_TIMINGS,validate_tls_policy_checkpoint,validate_tls_policy_recovery)
 def checkpoint(mode):
-    return {**{k:True for k in TLS_POLICY_CHECKPOINT_FLAGS},'file_fsync_entries':1,'directory_fsync_entries':int(mode=='post-commit'),'policy_memfd_entries':int(mode=='post-commit'),'target_continue_or_errno_replies':0,'other_continue_submissions':9,'other_continue_while_held':0,'policy_revision_before_cold':1 if mode=='pre-file' else 2,'hold_bound_ms':20000,**dict(zip(TLS_POLICY_TIMINGS,(2900.0,60.0,300.0))),'filesystem_d_or_physical_media_fault_claim':False,'production_slo_or_all_policy_windows_claim':False}
+    return {**{k:True for k in TLS_POLICY_CHECKPOINT_FLAGS},'policy_orphans_before_cold':int(mode=='pre-file'),'file_fsync_entries':1,'directory_fsync_entries':int(mode=='post-commit'),'policy_memfd_entries':int(mode=='post-commit'),'target_continue_or_errno_replies':0,'other_continue_submissions':9,'other_continue_while_held':0,'policy_revision_before_cold':1 if mode=='pre-file' else 2,'hold_bound_ms':20000,**dict(zip(TLS_POLICY_TIMINGS,(2900.0,60.0,300.0))),'filesystem_d_or_physical_media_fault_claim':False,'production_slo_or_all_policy_windows_claim':False}
 def recovery(mode):
-    return {**{k:True for k in TLS_POLICY_RECOVERY_FLAGS},'pre_file_old_revision1_then_production_commit2':mode=='pre-file','post_commit_revision2_old_config1_refused_and_exact_replay':mode=='post-commit','policy_revision_before_start':1 if mode=='pre-file' else 2}
+    return {**{k:True for k in TLS_POLICY_RECOVERY_FLAGS},'foreign_symlink_and_skipped_revision_refused_without_orphan_or_authority_mutation':mode=='pre-file','policy_orphans_after_ordinary_start':0,'pre_file_old_revision1_then_production_commit2':mode=='pre-file','post_commit_revision2_old_config1_refused_and_exact_replay':mode=='post-commit','policy_revision_before_start':1 if mode=='pre-file' else 2}
 class TLSPolicyTests(unittest.TestCase):
     def test_only_fixed_exclusive_profile(self):
         for mode in ('pre-file','post-commit'):node_tls_policy_profile(mode,False)
@@ -16,7 +16,7 @@ class TLSPolicyTests(unittest.TestCase):
             for k,v in good.items():
                 if type(v) is bool:
                     with self.assertRaises(AssertionError):validate_tls_policy_checkpoint(dict(good,**{k:not v}),mode)
-            for k in ('file_fsync_entries','directory_fsync_entries','policy_memfd_entries','target_continue_or_errno_replies','policy_revision_before_cold','hold_bound_ms'):
+            for k in ('policy_orphans_before_cold','file_fsync_entries','directory_fsync_entries','policy_memfd_entries','target_continue_or_errno_replies','policy_revision_before_cold','hold_bound_ms'):
                 for v in (True,good[k]+1):
                     with self.assertRaises(AssertionError):validate_tls_policy_checkpoint(dict(good,**{k:v}),mode)
             for v in (True,-1,8193):

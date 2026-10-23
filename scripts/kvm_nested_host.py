@@ -555,15 +555,15 @@ def validate_tls_gateway_recovery(v):
     assert type(v) is dict and set(v)==set(TLS_GATEWAY_RECOVERY_FLAGS)
     for k in TLS_GATEWAY_RECOVERY_FLAGS:assert v[k] is True
 
-TLS_POLICY_CHECKPOINT_FLAGS=('real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404','exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked','operator_config2_input_synced_no_policy_authority_fixture_patch','fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog','child_heartbeat_watchdog_closes_tls_while_root_notification_valid','ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue','root_actually_sigkill_reaped_target_enoent_on_still_open_listener','independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold','cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut')
-TLS_POLICY_RECOVERY_FLAGS=('original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked','ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival','current_revision2_verified_tls_leaf2_new_key200_old_key401','old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc','no_policy_ledger_owner_control_authority_repair_by_fixture','all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed')
+TLS_POLICY_CHECKPOINT_FLAGS=('actual_held_temp_or_rename_inventory_checked_after_root_kill_and_before_cold','real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404','exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked','operator_config2_input_synced_no_policy_authority_fixture_patch','fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog','child_heartbeat_watchdog_closes_tls_while_root_notification_valid','ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue','root_actually_sigkill_reaped_target_enoent_on_still_open_listener','independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold','cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut')
+TLS_POLICY_RECOVERY_FLAGS=('ordinary_gateway_policy_inventory_named_only_before_new_tls_guest','original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked','ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival','current_revision2_verified_tls_leaf2_new_key200_old_key401','old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc','no_policy_ledger_owner_control_authority_repair_by_fixture','all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed')
 TLS_POLICY_TIMINGS=('held_to_child_gone_observed_ms','delete_to_execution_empty_observed_ms','delete_to_durable_private_quota0_observed_ms')
 def node_tls_policy_profile(mode,gateway_enabled):
     if mode is not None and (mode not in ('pre-file','post-commit') or gateway_enabled):raise ValueError('fixed TLS policy phase must not combine with healthy TLS profile')
 def validate_tls_policy_checkpoint(v,mode):
     assert mode in ('pre-file','post-commit')
     post=mode=='post-commit'
-    exact={'file_fsync_entries':1,'directory_fsync_entries':int(post),'policy_memfd_entries':int(post),'target_continue_or_errno_replies':0,'policy_revision_before_cold':2 if post else 1,'hold_bound_ms':20000}
+    exact={'policy_orphans_before_cold':0 if post else 1,'file_fsync_entries':1,'directory_fsync_entries':int(post),'policy_memfd_entries':int(post),'target_continue_or_errno_replies':0,'policy_revision_before_cold':2 if post else 1,'hold_bound_ms':20000}
     counts=('other_continue_submissions','other_continue_while_held')
     false=('filesystem_d_or_physical_media_fault_claim','production_slo_or_all_policy_windows_claim')
     assert type(v) is dict and set(v)==set(TLS_POLICY_CHECKPOINT_FLAGS)|set(exact)|set(counts)|set(false)|set(TLS_POLICY_TIMINGS)
@@ -576,7 +576,7 @@ def validate_tls_policy_checkpoint(v,mode):
     assert v[TLS_POLICY_TIMINGS[0]]<8000 and v[TLS_POLICY_TIMINGS[1]]<=v[TLS_POLICY_TIMINGS[2]]
 def validate_tls_policy_recovery(v,mode):
     assert mode in ('pre-file','post-commit')
-    exact={'pre_file_old_revision1_then_production_commit2':mode=='pre-file','post_commit_revision2_old_config1_refused_and_exact_replay':mode=='post-commit','policy_revision_before_start':1 if mode=='pre-file' else 2}
+    exact={'foreign_symlink_and_skipped_revision_refused_without_orphan_or_authority_mutation':mode=='pre-file','policy_orphans_after_ordinary_start':0,'pre_file_old_revision1_then_production_commit2':mode=='pre-file','post_commit_revision2_old_config1_refused_and_exact_replay':mode=='post-commit','policy_revision_before_start':1 if mode=='pre-file' else 2}
     assert type(v) is dict and set(v)==set(TLS_POLICY_RECOVERY_FLAGS)|set(exact)
     for k in TLS_POLICY_RECOVERY_FLAGS:assert v[k] is True
     for k,n in exact.items():assert type(v[k]) is type(n) and v[k]==n

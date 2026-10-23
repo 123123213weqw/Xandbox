@@ -33,6 +33,7 @@ type tlsPolicySaved struct {
 	Binding                                                         session.Result
 	RawKey, SessionKey, AlphaOld, AlphaNew, BetaExternal            string
 	Boots                                                           [2]string
+	Orphan                                                          tlsPolicyOrphan
 }
 
 func tlsPolicyExpectedDisk(m tlsPolicyMode, before, next tlsPolicyRecord) tlsPolicyRecord {
@@ -42,8 +43,11 @@ func tlsPolicyExpectedDisk(m tlsPolicyMode, before, next tlsPolicyRecord) tlsPol
 	return next
 }
 func validateTLSPolicySaved(s tlsPolicySaved, boot string) error {
-	if s.Version != 1 || !s.Mode.valid() || !switchUUID(s.L1Boot) || s.L1Boot == boot || !switchRefValid(s.Raw) || !switchRefValid(s.Binding.Current) || s.Raw == s.Binding.Current || !hex32Pattern(s.Binding.ID) || s.Binding.Revision != 1 || s.Binding.Previous != (sandbox.Ref{}) {
+	if s.Version != 2 || !s.Mode.valid() || !switchUUID(s.L1Boot) || s.L1Boot == boot || !switchRefValid(s.Raw) || !switchRefValid(s.Binding.Current) || s.Raw == s.Binding.Current || !hex32Pattern(s.Binding.ID) || s.Binding.Revision != 1 || s.Binding.Previous != (sandbox.Ref{}) {
 		return errors.New("invalid private policy cold receipt")
+	}
+	if !s.Orphan.valid(s.Mode) {
+		return errors.New("invalid observed production orphan receipt")
 	}
 	for _, h := range []string{s.Config, s.Auth, s.Policy, s.Identity, s.Lock, s.CA, s.IngressConfig, s.Baseline.Digest, s.Attempted.Digest} {
 		if !hashPattern.MatchString(h) {
@@ -331,6 +335,13 @@ func (n *node) nodeTLSPolicyCheckpoint(ctx context.Context, m tlsPolicyMode) (ou
 	if e = o.close(); e != nil {
 		return nil, e
 	}
+	orphan, e := captureTLSPolicyOrphan(o)
+	if e != nil {
+		return nil, e
+	}
+	if _, e = tlsPolicyInventory(orphan, m == tlsPolicyPre, 0); e != nil {
+		return nil, e
+	}
 	// These ordinary cleanup operations may sync the filesystem. We do NOT claim
 	// an unsynced-temp media cut; the held pre-rename FSYNC never received a reply.
 	began := time.Now()
@@ -354,6 +365,9 @@ func (n *node) nodeTLSPolicyCheckpoint(ctx context.Context, m tlsPolicyMode) (ou
 	if e = budgetDestroyed(ctx, directAlpha, raw.Ref); e != nil {
 		return nil, e
 	}
+	if e = gatewayColdRecord(raw.Ref, "nested-fixture"); e != nil {
+		return nil, e
+	}
 	q, e := driverQuotaRead(owner.ProjectID)
 	if e != nil || !quotaEmpty(q) {
 		return nil, errors.New("policy raw private quota not cleared")
@@ -363,6 +377,9 @@ func (n *node) nodeTLSPolicyCheckpoint(ctx context.Context, m tlsPolicyMode) (ou
 		return nil, e
 	}
 	if e = budgetDestroyed(ctx, directBeta, bound.Current); e != nil {
+		return nil, e
+	}
+	if e = gatewayColdRecord(bound.Current, gatewayBeta); e != nil {
 		return nil, e
 	}
 	if e = driverQuotaAllClear(); e != nil {
@@ -378,7 +395,7 @@ func (n *node) nodeTLSPolicyCheckpoint(ctx context.Context, m tlsPolicyMode) (ou
 	if e != nil || observed != tlsPolicyExpectedDisk(m, baseline, attempted) {
 		return nil, errors.New("held policy record changed after exact root death")
 	}
-	saved := tlsPolicySaved{Version: 1, Mode: m, L1Boot: n.boot, Before: initial.Control.Committed, Baseline: baseline, Attempted: attempted, Observed: observed, Raw: raw.Ref, Binding: bound, RawKey: rawKey, SessionKey: sessionKey, AlphaOld: alphaOld, AlphaNew: alphaNew, BetaExternal: betaExternal, Boots: [2]string{rawBoot, sessionBoot}}
+	saved := tlsPolicySaved{Version: 2, Mode: m, Orphan: orphan, L1Boot: n.boot, Before: initial.Control.Committed, Baseline: baseline, Attempted: attempted, Observed: observed, Raw: raw.Ref, Binding: bound, RawKey: rawKey, SessionKey: sessionKey, AlphaOld: alphaOld, AlphaNew: alphaNew, BetaExternal: betaExternal, Boots: [2]string{rawBoot, sessionBoot}}
 	for _, v := range []struct {
 		path string
 		out  *string
@@ -389,10 +406,13 @@ func (n *node) nodeTLSPolicyCheckpoint(ctx context.Context, m tlsPolicyMode) (ou
 		}
 		*v.out = h
 	}
+	if _, e = tlsPolicyInventory(orphan, m == tlsPolicyPre, 0); e != nil {
+		return nil, e
+	}
 	if e = privateWrite(tlsPolicyReceipt, saved); e != nil {
 		return nil, e
 	}
-	return map[string]any{"real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404": true, "exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked": true, "operator_config2_input_synced_no_policy_authority_fixture_patch": true, "fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog": true, "child_heartbeat_watchdog_closes_tls_while_root_notification_valid": true, "ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue": true, "root_actually_sigkill_reaped_target_enoent_on_still_open_listener": true, "independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold": true, "cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut": true, "file_fsync_entries": held.FileEntries, "directory_fsync_entries": held.DirEntries, "policy_memfd_entries": held.MemfdEntries, "target_continue_or_errno_replies": 0, "other_continue_submissions": held.Continued, "other_continue_while_held": held.OtherWhileHeld, "policy_revision_before_cold": int(observed.Revision), "hold_bound_ms": int(tlsPolicyHoldMax / time.Millisecond), "held_to_child_gone_observed_ms": watchdogMS, "delete_to_execution_empty_observed_ms": stopMS, "delete_to_durable_private_quota0_observed_ms": reclaimMS, "filesystem_d_or_physical_media_fault_claim": false, "production_slo_or_all_policy_windows_claim": false}, nil
+	return map[string]any{"real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404": true, "actual_held_temp_or_rename_inventory_checked_after_root_kill_and_before_cold": true, "policy_orphans_before_cold": map[bool]int{true: 1, false: 0}[m == tlsPolicyPre], "exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked": true, "operator_config2_input_synced_no_policy_authority_fixture_patch": true, "fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog": true, "child_heartbeat_watchdog_closes_tls_while_root_notification_valid": true, "ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue": true, "root_actually_sigkill_reaped_target_enoent_on_still_open_listener": true, "independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold": true, "cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut": true, "file_fsync_entries": held.FileEntries, "directory_fsync_entries": held.DirEntries, "policy_memfd_entries": held.MemfdEntries, "target_continue_or_errno_replies": 0, "other_continue_submissions": held.Continued, "other_continue_while_held": held.OtherWhileHeld, "policy_revision_before_cold": int(observed.Revision), "hold_bound_ms": int(tlsPolicyHoldMax / time.Millisecond), "held_to_child_gone_observed_ms": watchdogMS, "delete_to_execution_empty_observed_ms": stopMS, "delete_to_durable_private_quota0_observed_ms": reclaimMS, "filesystem_d_or_physical_media_fault_claim": false, "production_slo_or_all_policy_windows_claim": false}, nil
 }
 func (n *node) nodeTLSPolicyRecover(ctx context.Context, m tlsPolicyMode) (map[string]any, error) {
 	if !m.valid() {
@@ -417,6 +437,9 @@ func (n *node) nodeTLSPolicyRecover(ctx context.Context, m tlsPolicyMode) (map[s
 		if e != nil || h != v.hash {
 			return nil, errors.New("original policy cold disk changed")
 		}
+	}
+	if _, e = tlsPolicyInventory(s.Orphan, m == tlsPolicyPre, 0); e != nil {
+		return nil, e
 	}
 	if disk, e := tlsPolicyRead(); e != nil || disk != s.Observed {
 		return nil, errors.New("cold actual policy namespace differs")
@@ -493,6 +516,11 @@ func (n *node) nodeTLSPolicyRecover(ctx context.Context, m tlsPolicyMode) (map[s
 			return nil, e
 		}
 	}
+	if m == tlsPolicyPre {
+		if e = tlsPolicyColdRefusalProbes(ctx, s, cfg); e != nil {
+			return nil, e
+		}
+	}
 	ca, e := privatefile.Read(gatewayDir+"/ca.pem", 65536)
 	if e != nil {
 		return nil, e
@@ -512,7 +540,11 @@ func (n *node) nodeTLSPolicyRecover(ctx context.Context, m tlsPolicyMode) (map[s
 		return nil, e
 	}
 	defer beta.close()
-	p, e := startGateway(ctx, 2)
+	label := 2
+	if m == tlsPolicyPre {
+		label = 4
+	}
+	p, e := startGateway(ctx, label)
 	if e != nil {
 		return nil, e
 	}
@@ -528,6 +560,9 @@ func (n *node) nodeTLSPolicyRecover(ctx context.Context, m tlsPolicyMode) (map[s
 	}
 	if e = old.call(ctx, "GET", "/healthz", "", nil, nil, 401); e != nil {
 		return nil, e
+	}
+	if _, e = tlsPolicyInventory(s.Orphan, false, 0); e != nil {
+		return nil, errors.New("ordinary gateway did not collect observed orphan")
 	}
 	current, e := tlsPolicyRead()
 	if e != nil || current != s.Attempted {
@@ -585,5 +620,5 @@ func (n *node) nodeTLSPolicyRecover(ctx context.Context, m tlsPolicyMode) (map[s
 			return nil, e
 		}
 	}
-	return map[string]any{"original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked": true, "ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival": true, "current_revision2_verified_tls_leaf2_new_key200_old_key401": true, "old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc": true, "no_policy_ledger_owner_control_authority_repair_by_fixture": true, "all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed": true, "pre_file_old_revision1_then_production_commit2": m == tlsPolicyPre, "post_commit_revision2_old_config1_refused_and_exact_replay": m == tlsPolicyPost, "policy_revision_before_start": int(s.Observed.Revision)}, nil
+	return map[string]any{"original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked": true, "ordinary_gateway_policy_inventory_named_only_before_new_tls_guest": true, "foreign_symlink_and_skipped_revision_refused_without_orphan_or_authority_mutation": m == tlsPolicyPre, "policy_orphans_after_ordinary_start": 0, "ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival": true, "current_revision2_verified_tls_leaf2_new_key200_old_key401": true, "old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc": true, "no_policy_ledger_owner_control_authority_repair_by_fixture": true, "all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed": true, "pre_file_old_revision1_then_production_commit2": m == tlsPolicyPre, "post_commit_revision2_old_config1_refused_and_exact_replay": m == tlsPolicyPost, "policy_revision_before_start": int(s.Observed.Revision)}, nil
 }

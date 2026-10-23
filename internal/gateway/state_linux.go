@@ -29,6 +29,7 @@ type policyState struct {
 	dir     string
 	info    os.FileInfo
 	lock    *os.File
+	root    *os.File
 	binding string
 	record  policyRecord
 }
@@ -62,9 +63,13 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 		return nil, e
 	}
 	f := os.NewFile(uintptr(fd), "gateway-state-lock")
+	var directory *os.File
 	defer func() {
 		if err != nil {
 			f.Close()
+			if directory != nil {
+				directory.Close()
+			}
 		}
 	}()
 	info, e := f.Stat()
@@ -86,7 +91,16 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 	if e != nil {
 		return nil, e
 	}
-	s := &policyState{dir: dir, info: root, lock: f, binding: binding}
+	directoryFD, e := unix.Open(dir, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if e != nil {
+		return nil, e
+	}
+	directory = os.NewFile(uintptr(directoryFD), "gateway-policy-directory")
+	pinned, e := directory.Stat()
+	if e != nil || !os.SameFile(root, pinned) {
+		return nil, errors.New("gateway policy directory changed while opening")
+	}
+	s := &policyState{dir: dir, info: root, lock: f, root: directory, binding: binding}
 	if freshLock {
 		if e = f.Sync(); e != nil {
 			return nil, e
@@ -104,8 +118,11 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 	identity, ie := privatefile.Read(filepath.Join(dir, "policy.identity"), 1024)
 	record, re := privatefile.Read(filepath.Join(dir, "policy.json"), 4096)
 	if os.IsNotExist(ie) && os.IsNotExist(re) {
-		entries, e := os.ReadDir(dir)
-		if !freshLock || e != nil || len(entries) != 1 || entries[0].Name() != "gateway.lock" {
+		if !freshLock {
+			return nil, errors.New("used gateway state cannot bootstrap")
+		}
+		entries, e := s.names()
+		if e != nil || len(entries) != 1 || entries[0] != "gateway.lock" {
 			return nil, errors.New("used gateway state cannot bootstrap")
 		}
 		return s, nil
@@ -128,11 +145,24 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 	}
 	return s, nil
 }
-func (s *policyState) Close() { _ = s.lock.Close() }
+func (s *policyState) Close() { _ = s.root.Close(); _ = s.lock.Close() }
 func (s *policyState) checkDirectory() error {
 	now, e := os.Lstat(s.dir)
 	if e != nil || !os.SameFile(now, s.info) || !now.IsDir() || now.Mode().Perm() != 0700 {
 		return errors.New("gateway policy directory changed")
+	}
+	pinned, e := s.root.Stat()
+	if e != nil || !os.SameFile(pinned, s.info) {
+		return errors.New("gateway policy directory descriptor changed")
+	}
+	lock, e := os.Lstat(filepath.Join(s.dir, "gateway.lock"))
+	held, he := s.lock.Stat()
+	if e != nil || he != nil || !os.SameFile(lock, held) || !lock.Mode().IsRegular() || lock.Mode().Perm() != 0600 {
+		return errors.New("gateway policy lock identity changed")
+	}
+	st, ok := held.Sys().(*syscall.Stat_t)
+	if !ok || st.Uid != uint32(os.Geteuid()) || st.Nlink != 1 || held.Size() != 0 {
+		return errors.New("gateway policy lock attributes changed")
 	}
 	return nil
 }
@@ -181,22 +211,26 @@ func (s *policyState) Commit(snapshot Snapshot) error {
 		if next.Revision != 1 {
 			return errors.New("fresh gateway policy must start at revision1")
 		}
-		if e := s.atomic("policy.json", ".policy-", next); e != nil {
-			return e
-		}
-		if e := s.atomic("policy.identity", ".identity-", policyIdentity{Version: 1, BindingSHA256: s.binding}); e != nil {
-			return e
-		}
 	} else if next.Revision == s.record.Revision {
 		if next != s.record {
 			return errors.New("gateway revision reused with different policy")
 		}
+	} else if s.record.Revision == ^uint64(0) || next.Revision != s.record.Revision+1 {
+		return errors.New("gateway policy rollback or skipped revision")
+	}
+	// No filesystem mutation for an invalid CAS. Recognized unreferenced temps
+	// are collected and their removal synced before any snapshot can be exposed.
+	if e := s.collect(); e != nil {
+		return e
+	}
+	if next == s.record {
 		return nil
-	} else {
-		if s.record.Revision == ^uint64(0) || next.Revision != s.record.Revision+1 {
-			return errors.New("gateway policy rollback or skipped revision")
-		}
-		if e := s.atomic("policy.json", ".policy-", next); e != nil {
+	}
+	if e := s.atomic("policy.json", ".policy-", next); e != nil {
+		return e
+	}
+	if s.record.Revision == 0 {
+		if e := s.atomic("policy.identity", ".identity-", policyIdentity{Version: 1, BindingSHA256: s.binding}); e != nil {
 			return e
 		}
 	}
