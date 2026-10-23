@@ -221,6 +221,10 @@ func nodeSnapshotPressureRefusals(ctx context.Context, api *switchAPI) (string, 
 	if e := requireNode(); e != nil {
 		return "", e
 	}
+	baseline, e := switchGauges(ctx)
+	if e != nil {
+		return "", e
+	}
 	before, e := fileHash("/srv/state/firecracker/catalog/index.json")
 	if e != nil {
 		return "", e
@@ -241,6 +245,17 @@ func nodeSnapshotPressureRefusals(ctx context.Context, api *switchAPI) (string, 
 		return key, errors.New("failed headroom publication changed catalog index")
 	}
 	if e = api.call(ctx, "POST", "/v1/sandboxes", key, nodeSpec(), nil, 410); e != nil {
+		return key, e
+	}
+	// The failed key is fenced before asynchronous GC necessarily finishes.
+	// Do not cut or continue with an unproved failed-Prepare terminal record.
+	if e = waitNode(ctx, func() (bool, error) {
+		g, err := switchGauges(ctx)
+		if err != nil {
+			return false, err
+		}
+		return g["allocated"] == baseline["allocated"] && g["stop_running"] == 0 && g["cleanup_running"] == 0 && g["stop_queued"] == 0 && g["cleanup_queued"] == 0, nil
+	}); e != nil {
 		return key, e
 	}
 	return key, nil
