@@ -54,4 +54,6 @@
 
 ## 当前仍未完成
 
+后续[两个实际 FileStore fsync TEST EIO 入口](NODE_OPERATOR_STORE.md)已另有源绑定的有限报告，补充 pre/post 提交错误与 caller 取消结果；它们不是物理 filesystem D/EIO，不回写本轮健康 ACK 报告。
+
 本次是 ACK 后的虚拟宿主 cold cut，不是 operator 的真实 fsync/rename 提交窗口、filesystem D/EIO 或物理介质故障。已接受但阻塞在 Core 预留之前的 session ticket，目前仍只有 unit/race 证据。新程序完整 DEFAULT/IO、quota240/双活cold/故障及 node snapshot/prepare/cancel 等矩阵仍需逐项复验；独立部署、审计告警、备份升级回滚、持续开放到达/公平性/完整资源计费等生产门槛也没有完成。Goal 与 Draft PR 继续保持未完成状态。

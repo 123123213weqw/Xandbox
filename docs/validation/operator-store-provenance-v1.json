@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "scope": "finite_actual_filestore_pre_and_post_commit_single_test_errno_not_physical_io_fault",
+  "production_ready": false,
+  "source_commit": "c49cb9e04e1e824e05a9e8216769e1e509f7c3c5",
+  "source_archive_sha256": "688149a2eaeaa390ba4ae92f09c7907bf45fedf499aef4be05b02ce93fbdf23e",
+  "toolchain": "go1.27.3",
+  "GOOS": "linux",
+  "GOARCH": "amd64",
+  "CGO_ENABLED": "0",
+  "build_flags": [
+    "-trimpath",
+    "-buildvcs=false"
+  ],
+  "independent_cross_native_six_artifacts_identical": true,
+  "ordinary_five_artifacts_identical_to_node_control_prequalification": true,
+  "artifact_sha256": {
+    "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "fixture": "f7c712bb64914c2bddcaaf2d0ebb9d6fab7fd7435c940f966a4a8a99a43fffa5",
+    "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+  },
+  "validation": {
+    "darwin_frozen_full_race_count": 3,
+    "darwin_vet": true,
+    "linux_frozen_full_race_count": 3,
+    "linux_vet": true,
+    "linux_fixture_race_count": 10,
+    "linux_fixture_vet": true,
+    "linux_kernel_quota_filter_cgo_free_count": 3,
+    "root_python_tests_passed": 90,
+    "root_python_tests_skipped": 0,
+    "actual_temp_file_pre_rename_fsync_errno_eio_case": true,
+    "actual_root_dir_after_admission_dir_fsync_errno_eio_case": true,
+    "caller_cancelled_but_accepted_store_writer_not_rolled_back": true,
+    "status_busy_old_exec_stop_private_gc_continue_while_held": true,
+    "post_error_memory_latch_until_ordinary_cold_restart": true,
+    "precommit_old_open_vs_postcommit_drained_cold_truth": true
+  },
+  "independent_resource_audit": {
+    "scopes": 2,
+    "outer_execution_generations": 4,
+    "all_passing": true,
+    "exact_owned_root_control_cgroup_parent_and_all_generations_read_only_absent": true,
+    "quota_and_namespace_proven_inside_l1_before_disk_deletion_not_inferred_from_directory_absence": true,
+    "audit_stdout_sha256": "45ddeb934ab83e88f7623947a042366e4ac3901c408bdae8e3aa7ba5313b3a64"
+  },
+  "observations_each_n1_not_slo": {
+    "pre-file": {
+      "execution_domain_stop_ms": 54.039,
+      "private_destroy_quota_zero_ms": 375.964,
+      "other_fsync_continue_replies_while_held_not_completions": 12,
+      "recovered_mode": "open"
+    },
+    "post-root": {
+      "execution_domain_stop_ms": 59.776,
+      "private_destroy_quota_zero_ms": 395.506,
+      "other_fsync_continue_replies_while_held_not_completions": 12,
+      "recovered_mode": "drained"
+    }
+  },
+  "scope_limits": [
+    "Only one selected FSYNC per case receives synthetic EIO through a TEST ONLY inherited notification layer; ordinary4ee ELF is unchanged. Actual FileStore and callers execute, but this is not physical media EIO, an actual filesystem D-state, or a production dependency on the notifier.",
+    "File Sync CONTINUE is not a completion counter. The later ordinary directory entries plus exact same renamed inode and unique transition payload prove progression through checked return/rename paths of the frozen code.",
+    "Caller disconnect occurs after the actual target entry. In-memory committed status remains old even when post-commit disk state is new; status/metrics are not a backup/quiescence certificate.",
+    "Before cold cut, both guests are fully reclaimed and instrumented daemon cleanly exits. This is not a cut during the held syscall or a test of retaining the state lock while an unresolved shutdown writer remains.",
+    "Pre-file EIO leaves an unacknowledged intent: ordinary restart may legitimately reopen old open mode; no persistent failed-intent fence or rollback is invented. Post-root case reloads committed drained and exact retry can acknowledge it.",
+    "Full new DEFAULT/IO/quota240/dual-live/fault/node snapshot/prepare cancel, actual pre-Core session ticket under drain, physical blocking/failure tails, independent deployment/gateway/audit/backup/rollback/long-run resource and SLO gates remain incomplete."
+  ],
+  "preflight_notes": [
+    "Development cross-build first reported a missing privatefile import; corrected before freeze/native/hardware. Source review corrected /proc/PID/cgroup to its hierarchy-relative path and added a test, also before freeze. Neither was a hardware test or a retained frozen failing run.",
+    "Frozen c49 native tests and both hardware cases completed without failing predecessor or resampling. Historical operator v2/v3 false reports remain unchanged, not silently replaced by these distinct syscall cases."
+  ],
+  "runner_exit_status": 0,
+  "raw_result_archive_sha256": "1ad7485dc8ac63bc7123505de40af61776fd331cd75b0a40c6bea8be44b764ea",
+  "raw_result_members": [
+    {
+      "name": "kvm-operator-store-pre-v1.json",
+      "bytes": 8667,
+      "sha256": "2b604f1c3c99500a20894f0d5ab1af0562dd09ab8ccd5dde28bfa38f17e76c80"
+    },
+    {
+      "name": "kvm-operator-store-post-v1.json",
+      "bytes": 8682,
+      "sha256": "420a02d42cfe9a1566057d11a3ffd898f59cbeb900e3ed8cc1817bb76bb25cac"
+    },
+    {
+      "name": "operator-store-pipeline-v1.log",
+      "bytes": 1044,
+      "sha256": "12447aa7088a056a27ec074b2020f92b283581962cb703eb175cbb5613f3912f"
+    },
+    {
+      "name": "operator-store-race-v1.log",
+      "bytes": 1767,
+      "sha256": "09e5231c40177da6ee8981c631872e74dfcd1c10a0e975b568c51b0d78b2c3a6"
+    },
+    {
+      "name": "operator-store-vet-v1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "operator-store-fixture-v1.log",
+      "bytes": 70,
+      "sha256": "53a7c75587fa971cd27d045ece05047a1aa0238010f0b93c7fa57fa8684dbc92"
+    },
+    {
+      "name": "operator-store-fixture-vet-v1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "operator-store-filter-v1.log",
+      "bytes": 846,
+      "sha256": "5ac81731bce779d60b7c3f8a4b985d1ab079da1572bb342cc6e7388bdb893d1b"
+    },
+    {
+      "name": "operator-store-python-v1.log",
+      "bytes": 189,
+      "sha256": "590585b73c761717bdab584aa631a70c81843b90d7e4ec3d09c5430ddf7cb767"
+    },
+    {
+      "name": "operator-store-v1.status",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "name": "operator-store-artifacts-v1.sha256",
+      "bytes": 598,
+      "sha256": "c4d8779f8b4674d723e049d520cf1dae0c69863ce90993597d6ff3aa4dd94e63"
+    },
+    {
+      "name": "run-operator-store-v1.sh",
+      "bytes": 4859,
+      "sha256": "a8560de779f1fec4de87e5efe9bba89b099fb2440dac14bd04a3f492d0892bf4"
+    }
+  ],
+  "private_darwin_log_sha256": "09fadf7bfaaba1024f0479b629d128931a379fc74e08efc5cfdc2f80c7d3d3ed",
+  "frozen_source_inputs": [
+    {
+      "path": "cmd/xandbox-host-fixture/main_linux.go",
+      "bytes": 4839,
+      "sha256": "7f358fa99b34077e0aaf9d8bedc5933429d4d1342cc92b1b161ea5eca77bf229"
+    },
+    {
+      "path": "cmd/xandbox-host-fixture/node_linux.go",
+      "bytes": 25865,
+      "sha256": "fa0745de0432fdf9bf026a84dc56d9bd199b427c77a0d78b062e466b392fe15d"
+    },
+    {
+      "path": "cmd/xandbox-host-fixture/node_operator_store_linux.go",
+      "bytes": 19716,
+      "sha256": "d563e4c356caa3028f402bb3e375c2f4a34cd94bebd96f883b7565bafd24256c"
+    },
+    {
+      "path": "cmd/xandbox-host-fixture/node_operator_store_linux_test.go",
+      "bytes": 5637,
+      "sha256": "0a4b6f96cada59ba966283e968644938272fa58ba81d6d7d9e50b9c45be74b98"
+    },
+    {
+      "path": "cmd/xandbox-host-fixture/node_operator_store_notify_linux.go",
+      "bytes": 16856,
+      "sha256": "17ec666ec9cebf6afb75c17e3add0247925cd724b7ff50dfd3fa35b6dc9c807b"
+    },
+    {
+      "path": "scripts/kvm_nested_host.py",
+      "bytes": 89140,
+      "sha256": "a9527be396d3cb0cb99676d318659dc4ace46bc26d029e7292a39aa112a85080"
+    },
+    {
+      "path": "scripts/test_kvm_operator_store.py",
+      "bytes": 4432,
+      "sha256": "5a5b3496204404c09022b531c3215baf3d1dc7b3867ff81bf0aa3d875ea9649e"
+    }
+  ],
+  "public_report_inputs": [
+    {
+      "path": "docs/validation/kvm-operator-store-pre-v1.json",
+      "bytes": 8667,
+      "sha256": "2b604f1c3c99500a20894f0d5ab1af0562dd09ab8ccd5dde28bfa38f17e76c80"
+    },
+    {
+      "path": "docs/validation/kvm-operator-store-post-v1.json",
+      "bytes": 8682,
+      "sha256": "420a02d42cfe9a1566057d11a3ffd898f59cbeb900e3ed8cc1817bb76bb25cac"
+    }
+  ],
+  "raw_console_private_receipts_ids_keys_epoch_runtime_paths_exported": false
+}

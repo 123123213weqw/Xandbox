@@ -83,3 +83,5 @@ python3 scripts/node_control_smoke.py \
 该冻结源的 Darwin/Linux 全量 race×3、vet 通过；Linux opt-in fixture race×10/vet、CGO-free 内核 quota filter×3、root Python 82 项（零跳过）与完整 make smoke 通过。[Darwin](validation/node-control-darwin-process-v1.json)和[Linux](validation/node-control-linux-process-v1.json)的实际 daemon/CLI 报告均明确 `hardware_qualification=false`。固定 probe 的 whole-ELF、符号与九处指令字节已离线核验，但尚未运行新程序的实机 probe。
 
 开发阶段的 umask 负例构造、首版脚本执行状态枚举及旧根 metadata 测试预期曾失败，原因与修正保留在来源清单；未将失败改写为通过，也未放宽旧根 drained 默认。冻结源上述测试没有失败；这批预验收没有启动新的 L1/KVM 用例。当时尚未验证 operator 的异 UID 内核拒绝、实际状态盘故障/掉电及新 KVM 矩阵；后续有限实机证据按上方链接单独绑定，真实提交故障窗口与完整矩阵仍未完成。
+
+后续[实际 FileStore 的两个 fsync TEST errno 窗口](NODE_OPERATOR_STORE.md)已单独验证 pre-rename 与 post-admission-directory 的 pending、caller 取消、一次 EIO、内存 fence 与不同 cold namespace 结果。它执行真实 Store 而非模拟对象，但不是实际 filesystem D/介质故障或全部提交窗口验收；旧预验收与前轮健康 ACK 报告仍保持冻结范围。
