@@ -1,0 +1,6 @@
+kvm-quota-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-io-cold-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-io-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-io-default-state-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL4 quota-enabled whole-state IO fixture scopes independently rechecked;18 execution generations absent;read-only audit,no cleanup actions.
+Quota zero/ownership proofs came from actual L1 kernel readback before disk deletion,not this path audit. Whole-state fsync faults are not every quota syscall/crash persistence window.

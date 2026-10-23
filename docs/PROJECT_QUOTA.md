@@ -1,6 +1,6 @@
 # ext4 project quota：前置证据与实现中的驱动协议
 
-**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold及snapshot的有限恢复与共享pin检查，quota清零已移出catalog pin锁；block/inode耗尽与启动拒绝已有有限实测；quota专属I/O/崩溃、全部持久窗口和完整新运行时回归仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
+**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold及snapshot的有限恢复与共享pin检查，quota清零已移出catalog pin锁；block/inode耗尽与启动拒绝已有有限实测；quota启用的整state I/O故障也已有有限实测；逐quota syscall、崩溃/并发窗口和完整新运行时回归仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
 
 ## 为什么不能只设一个 hard limit
 
@@ -66,7 +66,28 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 中间一次[私有runner预检失败原文](validation/quota-negative-preflight-failed-v2.txt)原样保留：文件名替换误把已固定的initrd-v10写成不存在的v20，SHA预检在源码解压/native测试/L1分配前退出1，0次开机、无KVM报告；新v3只修正runner文件名，源码仍是相同 `c7e0026…`，guest和生产代码未改。两轮实际runner均退出0；旧冷路径失败前序、旧部分验收清单仍按历史源码保留，不改写成当前结果。
 
-**合并前还必须完成**：quota专属真实EIO/EROFS/held-quota syscall、quota设置/清零及owner/catalog各持久窗口的崩溃与并发；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。上述有限EDQUOT/拒绝/snapshot/cold通过，不等于这些要求、M2完整物理预算或生产验收完成。
+### quota启用时的整state真实I/O故障
+
+[新原始报告](validation/kvm-quota-io-v1.json)通过busy/idle各一次EIO与挂起I/O，共4例、5次L1开机。与之前默认nil-quota场景不同，这轮**普通daemon实际启用quota**，仍为未修改的 `ab547783…`/warden `b290a5ed…` 与原guest；测试源码冻结 `e13a3eb…`。[精确provenance与SHA](validation/quota-io-provenance-v1.json)记录五个native ELF与独立交叉构建匹配、范围和未完成清单。
+
+新固定profile只在自己的L1中建立dm-linear/error/suspend并挂载fresh ext4/prjquota。PID1观察器必须核对本进程创建的mapper对象、名称、设备、完整linear表、固定vda backing、block-node身份和实际rw ext4/prjquota/format，不能传入任意device/table/project。普通daemon仍通过独立子进程移除CAP_SYS_RESOURCE，VMM继承quota额外filter及默认seccomp；不改共享L0的模块、挂载、能力或device-mapper。
+
+故障前对READY状态的私有资产、quota/receipt和整个文件系统做同步baseline，再对包含ledger/owner/runtime/assets/已打开FD的**整个state盘**施加故障；控制面留在tmpfs/串口。并非先证明了每个quota设置窗口的持久性。
+
+| 故障阶段 | 实际结果 |
+|---|---|
+| EIO busy/idle | 预打开O_DIRECT读确实EIO；DELETE500且无durable STOPPED/DESTROYED假确认，new exec409、new create503；恢复linear后原quota owner字节不变，保留到冷启动 |
+| 冷启动后的EIO恢复 | 读回192MiB/128 inode硬限制、project/继承及不可变资产；实际quota与独立namespace都为189,911,040字节/16 host inode；旧key410、新真实VM执行销毁、全部四个project记录清零 |
+| 挂起I/O busy/idle | 预打开direct read阻塞，普通daemon真实线程在`/srv/state`的fsync/fdatasync中处于D；无DELETE ACK且容量503，停止执行和拒绝新执行独立观察 |
+| 恢复挂起的I/O后 | direct read才完成；随后确认durable DESTROYED、精确资源消失及quota零值，再切断自己的L1并冷启动；不是在阻塞期间假认回收 |
+
+四个有限样本中，DELETE发起到host执行域空为34.495–45.114ms，新exec拒绝为0.669–6.118ms，均通过既有1500/500ms夹具闸门；这是各场景N=1的观测，不是百分位、最坏延迟或SLO，也不把DELETE错误响应当作物理停止证明。本轮同步baseline使两例EIO后非权威PID文件内容保留，charge无4KiB下降；恢复仍不根据PID文件选择进程。此前未同步cold测试的有效4KiB下降另行回归，不能强迫两种前提给出相同PID现象。
+
+原始字段`quota_and_ownership_released_only_after_io_resumed`表示恢复I/O后的零值/owner消失确认，加上held-fsync/无ACK/容量保留的证据；**没有在设备挂起期间独立读quota**，不能只靠这个字段证明所有中间syscall状态。实际观察到的阻塞syscall是ledger fsync，而不是Q_SET/Q_SYNC。精确quota syscall/clear-before-owner-delete等窗口仍待单独故障注入和崩溃检查，不能把本轮整盘故障替代它们。
+
+同一新fixture还通过[普通quota cold3](validation/kvm-quota-io-cold-v1.json)、[真正L1-built snapshot/shared2与cold3](validation/kvm-quota-io-snapshot-v1.json)、[默认nil-quota I/O4](validation/kvm-quota-io-default-state-io-v1.json)回归；共享观察器的重构没有把旧profile放宽为任选设备。[native full race×3](validation/quota-io-native-race-v1.txt)/vet、[fixture race×10](validation/quota-io-fixture-native-race-v1.txt)/vet、root Python44、[CGO0实际filter proof×3](validation/quota-io-cgo0-kernel-filter-v1.txt)、Darwin race×3/vet通过。[runner原文](validation/quota-io-pipeline-v1.txt)退出0；[独立只读清理](validation/quota-io-independent-cleanup-v1.txt)复核4个scope、18个外层执行代际/root/control全部不存在。quota零值来自销盘前L1实际读回，不由事后路径消失冒充。
+
+**合并前还必须完成**：针对Q_SET/Q_SYNC/readback/clear确切窗口的EIO/EROFS/held syscall、quota已清但owner/pin/UID/project尚未durable释放等崩溃与并发；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。有限整state I/O、EDQUOT/拒绝/snapshot/cold通过，不等于这些要求、M2完整物理预算或生产验收完成。
 
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 
