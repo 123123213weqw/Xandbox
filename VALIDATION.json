@@ -1159,5 +1159,26 @@
     "failed_outer_generations": 1,
     "runner_exit_status": 0,
     "scope": "N1 fixed held notification without target reply or observer L1 sync/receipt after16MiB; external private control receipt, original-disk ordinary recovery and freshKVM/pins/GC. NOT filesystemD, physical media failure, all persistence windows, fullM1-M4 or production acceptance."
+  },
+  "owner_unlink_directory_commit_pending_cut": {
+    "production_ready": false,
+    "goal_complete": false,
+    "complete_pr19_acceptance": false,
+    "design": "docs/OWNER_COMMIT_FIXTURE.md",
+    "provenance": "docs/validation/owner-cut-provenance-v2.json",
+    "report": "docs/validation/kvm-owner-cut-owner-v2.json",
+    "failed_predecessor_report": "docs/validation/kvm-owner-cut-owner-failed-v1.json",
+    "frozen_source": "2cbf074ab690faa3c7a67d705dfc51d97f073729",
+    "production_changed": false,
+    "new_case_l1_boots": 2,
+    "actual_cold_victim_owner_present": true,
+    "actual_cold_durable_owner_pins": 2,
+    "other_fsync_continue_reply_submissions": 50,
+    "passing_related_scopes_including_new": 6,
+    "passing_outer_generations": 15,
+    "failed_scopes_independently_absent": 1,
+    "failed_outer_generations": 1,
+    "runner_exit_status": 0,
+    "scope": "N1 original daemon post-unlink FSYNC held without target reply, private outerL0 receipt/no observer L1sync. Actual cold owner reappears; ordinary cleanup and freshKVM/pins/GC. NOT actual filesystemD, physical media fault, every persistence outcome, global nonblocking catalog or full production acceptance."
   }
 }

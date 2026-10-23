@@ -1,0 +1,3 @@
+FAILED ownerV1 sourcee8fbe5e: checkpoint failed before receipt/outercut. Raw passed=false, one boot, no ordinary cold-recovery/final quota-zero proof claimed.
+New fixture reused an acquiring-lock helper where expected busy should be observed; V2 uses separate inode-verified nonblocking probe and tests busy/unheld/other-error separately. Generic errno alone is not a complete syscall trace.
+Read-only independent audit: failed exact root/control/cgroup parent/one child/runner absent, cleanup_confirmed=true. No cleanup actions or quota inference from outer disk deletion.

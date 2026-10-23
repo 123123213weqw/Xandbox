@@ -28,7 +28,7 @@ V1 `d06d21e…` 实测在 checkpoint 的 catalog-index 谓词失败，仅一次 
 
 ## 尚未完成
 
-只有这个固定在途窗口；owner unlink/dirfsync/catalog锁、其他keeper/shared-pin持久组合、真实介质错误仍独立待做。节点物理/unique-RAM/IO/catalog/ledger/journal/preparation总准入、开放到达/公平性/长期资源稳定性、独立操作员/SLO以及完整M1–M4未完成。PR19保持Draft，不据此声明生产就绪或完成Goal。先前 quota240 与双活cold证据保留其原3f9c源码标签，不重新贴本轮源码。
+只有这个固定partial-copy在途窗口；另有[owner unlink后目录fsync pending的独立有限cold证据](OWNER_COMMIT_FIXTURE.md)，不是所有owner unlink/dirfsync/catalog锁窗口；其他keeper/shared-pin持久组合、真实介质错误仍独立待做。节点物理/unique-RAM/IO/catalog/ledger/journal/preparation总准入、开放到达/公平性/长期资源稳定性、独立操作员/SLO以及完整M1–M4未完成。PR19保持Draft，不据此声明生产就绪或完成Goal。先前 quota240 与双活cold证据保留其原3f9c源码标签，不重新贴本轮源码。
 
 ## 新固定窗口的实际结果
 

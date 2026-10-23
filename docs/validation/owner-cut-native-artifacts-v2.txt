@@ -1,0 +1,5 @@
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-owner-cut-v2
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-owner-cut-v2
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-owner-cut-v2
+3b279bc7e4c183737fdd3324421533d7ee2da3deeda0ef15e96520a545e5a98e  bin/fixture-owner-cut-v2
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-owner-cut-v2

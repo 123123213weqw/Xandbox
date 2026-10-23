@@ -67,6 +67,8 @@
 
 新增[部分workspace复制失败/keeper有限验收](PARTIAL_COPY_FIXTURE.md)：真实16MiB前缀、一次TEST errno EIO、普通GC/slot复用与retired keeper pin组合通过；另有[未主动同步的固定partial-copy host cut](PARTIAL_COPY_CUT_FIXTURE.md)原盘冷恢复通过，保留失败前序和实际cold文件丢失/独立quota核账；其余元数据持久窗口及完整M2仍未完成。
 
+新增[owner unlink后目录fsync pending原盘cold有限验收](OWNER_COMMIT_FIXTURE.md)：实际owner在冷后重新出现、quota0保留、无虚假DESTROYED/返容量、普通恢复与keeper共享backing/新guest/GC组合通过；其他元数据窗口、catalog锁内慢提交及完整M2仍未完成。
+
 M2 的独立组件见 [GUEST.md](GUEST.md)，服务设计见 [FIRECRACKER.md](FIRECRACKER.md)。[独立组件验收](validation/kvm-guest-2026-10-22.json) 与 [已验收基线的真实KVM冷路径30项回归](validation/kvm-pristine-cold-service-2026-10-22.json) 已通过，覆盖出生即入 cgroup、鉴权/配额、SIGKILL/重启、部分准备恢复、并发停止、控制器暂停、硬 TTL 和 guardian 失效。完整宿主重启窗口/物理介质故障、双监督失效、guest 回收故障注入、存储预算和持续负载仍未完成；不能将本轮小样本通过等同于全部 M2 或生产试运行验收。
 
 停止/GC 独立有界池、所有权 fsync 不持有全局锁及受控慢 I/O 下的恢复已有 [专项证据](LIFECYCLE.md)。[独立 guardian 租约](GUARDIAN.md) 已用真实暂停控制器测试；这只完成该部分基础设施，不替代持续负载、公平性、整机故障和最坏延迟验收。
