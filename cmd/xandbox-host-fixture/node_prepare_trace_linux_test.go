@@ -88,12 +88,15 @@ func TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents(t *testing.T) {
 		"unknown":          bytes.Replace(valid, []byte("xbg_ok"), []byte("xbg_unknown"), 1),
 		"bad-cpu":          bytes.Replace(valid, []byte("[000]"), []byte("[008]"), 1),
 		"zero-g":           bytes.Replace(valid, []byte("g=0x1"), []byte("g=0x0"), 1),
-		"missing-register": bytes.Replace(valid, []byte("ax=0x0"), []byte("ax=(fault)"), 1),
+		"missing-register": bytes.Replace(valid, []byte("value=0x0"), []byte("value=(fault)"), 1),
 		"invalid-tid":      bytes.Replace(valid, []byte("sandboxd-20"), []byte("sandboxd-0"), 1),
 		"backwards":        bytes.Replace(valid, []byte("1.000002"), []byte("0.000002"), 1),
 		"excess":           bytes.Repeat([]byte("a-1 [000] d... 1.000001: xbg_enter: (0x73ff72) g=0x1 value=0x1\n"), prepareTraceMaxEvents+1),
 	} {
 		t.Run(name, func(t *testing.T) {
+			if bytes.Equal(raw, valid) {
+				t.Fatal("negative case did not mutate trace")
+			}
 			if _, e := parsePrepareTrace(raw); e == nil {
 				t.Fatal("unsafe trace accepted")
 			}
