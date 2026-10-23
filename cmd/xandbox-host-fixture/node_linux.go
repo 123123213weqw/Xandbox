@@ -75,7 +75,7 @@ func (q nodeRequest) validate() error {
 	}
 
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -640,6 +640,8 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 				}
 			case "quota-copy-setup":
 				result, e = n.quotaCopySetup(ctx)
+			case "node-prepare-cancel":
+				result, e = n.nodePrepareCancel(ctx)
 			case "node-snapshot-checkpoint":
 				result, e = n.nodeSnapshotCheckpoint(ctx)
 			case "node-snapshot-recover":

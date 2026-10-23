@@ -425,12 +425,46 @@ def validate_node_snapshot_checkpoint(v):
 def validate_node_snapshot_recovery(v):
     for k in NODE_SNAPSHOT_RECOVERY_FLAGS:assert v[k] is True
 
+NODE_PREPARE_CANCEL_FLAGS=('real_nested_kvm','schema3_exact_prepare_workers_one','keeper_holder_and_two_queued_frontend_allocated_four_fifth503','two_queued_actual_gate_entries_no_backend_owner_jail_group','original_queued_http_cancelled_without_token','cancelled_key410_durable_destroyed_pools_baseline_no_backend_resources','keeper_stop_cleanup_durable_destroyed_project_zero_while_write_still_held','continue_is_not_write_completion','survivor_original_requests_ready_real_guests_independent_boots_clean_workspace','all_four_projects_zero_pins_zero_pools_idle','observed_daemon_reaped_and_ordinary_daemon_restarted')
+def node_prepare_cancel_profile(snapshot,enabled):
+    if enabled and not snapshot:raise ValueError('node prepare cancellation requires the exclusive schema3 node-snapshot profile')
+def validate_node_prepare_cancel(v):
+    for k in NODE_PREPARE_CANCEL_FLAGS:assert v[k] is True
+    for k,w in {'held_workspace_prefix_bytes':16<<20,'hold_deadline_ms':20000,'prepare_timeout_ms_unchanged':30000,'http_budget_ms_unchanged':40000,'held_continue_response_count':1}.items():assert type(v[k]) is int and v[k]==w
+    assert type(v['other_continue_replies_during_keeper_cleanup']) is int and 0<v['other_continue_replies_during_keeper_cleanup']<=32768
+    for k in ('keeper_delete_to_execution_domain_empty_observed_ms','keeper_delete_to_full_reclaim_observed_ms','held_write_to_continue_reply_observed_ms','holder_request_to_ready_observed_ms','survivor_request_to_ready_observed_ms'):assert type(v[k]) in (int,float) and math.isfinite(v[k]) and 0<=v[k]<40000
+    assert v['keeper_delete_to_execution_domain_empty_observed_ms']<=v['keeper_delete_to_full_reclaim_observed_ms']<v['held_write_to_continue_reply_observed_ms']<20000
+    for k in ('filesystem_D_or_physical_media_fault_claim','exact_copy_stage_timing_scheduler_fairness_or_slo_claim'):assert v[k] is False
+    t=v['trace'];assert t['exact_ordinary_elf_sha256']=='3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2'
+    for k,w in {'instruction_entry_probes':9,'event_count':15,'completed_preparations':2,'cancelled_waiters_without_token':1}.items():assert type(t[k]) is int and t[k]==w
+    for k in ('all_eight_cpu_loss_counters_zero','all_nine_probe_hits_equal_trace','live_incarnation_inode_control_event_tgid_checked'):assert t[k] is True
+    assert t['exact_channel_linearization_or_slo_claim'] is False
+    rows=t['normalized_transitions'];assert type(rows) is list and len(rows)==15
+    states={1:0,2:0,3:0};held=0
+    for row in rows:
+        point=row['point'];g=row['goroutine_index'];assert type(g) is int and g in states
+        assert set(row)==({'point','goroutine_index','selected_case'} if point=='selected' else {'point','goroutine_index'})
+        seq=('enter','selected','cancel') if g==2 else ('enter','selected','ok','node_ok','release','released')
+        assert states[g]<len(seq) and point==seq[states[g]]
+        if point=='enter' and g!=1:assert held==1
+        if point=='selected':
+            assert type(row['selected_case']) is int
+            if g==2:assert row['selected_case']==1 and held==1
+            else:
+                assert row['selected_case']==0 and held==0
+                if g==3:assert states[2]==3
+                held+=1
+        if point=='release':assert held==1 and states[2]==3 and states[3]>=1;held-=1
+        states[g]+=1
+    assert states=={1:6,2:3,3:6} and held==0
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'daemon', 'warden', 'firecracker', 'jailer', 'kernel', 'initrd', 'workspace', 'alpine',
                  'source-revision', 'report', 'log-dir'):
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
+    parser.add_argument('--node-prepare-cancel',action='store_true',help='TEST ONLY modifier of --node-snapshot: actual original queued request cancellation and independent keeper cleanup while one fixed partial workspace WRITE notification is held; no filesystemD or SLO')
     profiles = parser.add_mutually_exclusive_group()
     profiles.add_argument("--node-snapshot",action="store_true",help="TEST ONLY: explicit8GiB schema3 snapshots, inode/byte admission pressure and low-free same-disk cold recovery; no full OOM or prepare-permit trace claim")
     profiles.add_argument("--node-budget",action="store_true",help="TEST ONLY: schema3 aggregate node envelope, explicit8GiB RAM/12GiB disk/10GiB outerCG/CPU8; new parent-limit refusal and healthy same-disk cold recovery")
@@ -453,6 +487,7 @@ def main():
     profiles.add_argument('--quota-probe', action='store_true', help='TEST ONLY: ext4 project quota kernel prerequisites, NOT production enforcement')
     profiles.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
     args = parser.parse_args(); os.umask(0o077)
+    node_prepare_cancel_profile(args.node_snapshot,args.node_prepare_cancel)
     selected=[v for flag,v in COMMIT_PROFILES.items() if getattr(args,flag)]
     commit_phase,commit_operation=selected[0] if selected else (None,None)
     commit_profile=bool(selected)
@@ -498,7 +533,7 @@ def main():
         'production_ready':False,'passed':False,'state_io_profile':state_io_profile,'quota_state_io_profile':args.quota_state_io,'quota_prerequisite_profile':args.quota_probe,
         'production_driver_quota':driver_profile,'quota_snapshot_profile':snapshot_profile,'quota_clear_crash_profile':args.quota_clear_crash,'quota_negative_profile':args.quota_negatives,'quota_unenforced_profile':args.quota_unenforced,
         'quota_syscall_errno_profile':args.quota_syscalls,'quota_barrier_hang_profile':args.quota_barrier_hang,
-        'quota_commit_fault_phase':commit_phase,'quota_listener_loss_phase':listener_phase,'quota_switch_profile':args.quota_switch,'quota_partial_copy_profile':args.quota_partial_copy,'quota_partial_copy_cut_profile':args.quota_partial_copy_cut,'quota_owner_cut_profile':args.quota_owner_cut,'node_budget_profile':args.node_budget,'node_snapshot_profile':args.node_snapshot,
+        'quota_commit_fault_phase':commit_phase,'quota_listener_loss_phase':listener_phase,'quota_switch_profile':args.quota_switch,'quota_partial_copy_profile':args.quota_partial_copy,'quota_partial_copy_cut_profile':args.quota_partial_copy_cut,'quota_owner_cut_profile':args.quota_owner_cut,'node_budget_profile':args.node_budget,'node_snapshot_profile':args.node_snapshot,'node_prepare_cancel_profile':args.node_prepare_cancel,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
         'l0_kernel':os.uname().release,'l1_kernel':policy['l1_kernel_release'],'qemu_package_version':policy['qemu_package_version'],
@@ -669,6 +704,9 @@ def main():
         elif snapshot_profile and not private_cut_profile:
             result['snapshot_setup']=request('quota-snapshot-setup')
             if args.node_snapshot:validate_node_snapshot_setup(result['snapshot_setup'])
+        if args.node_prepare_cancel:
+            result['prepare_cancellation']=request('node-prepare-cancel')
+            validate_node_prepare_cancel(result['prepare_cancellation'])
         if args.quota_negatives:
             result['negative_setup']=request('quota-negative-setup')
             validate_negative_setup(result['negative_setup'])

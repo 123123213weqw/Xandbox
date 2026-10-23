@@ -180,22 +180,33 @@ func (n *node) nodeSnapshotGuest(ctx context.Context, api *switchAPI) (sandbox.R
 	if e != nil {
 		return r, key, "", e
 	}
+	boot, e := n.nodeSnapshotVerifyGuest(ctx, api, r)
+	return r, key, boot, e
+}
+func (n *node) nodeSnapshotVerifyGuest(ctx context.Context, api *switchAPI, r sandbox.Record) (string, error) {
+	if e := requireNode(); e != nil {
+		return "", e
+	}
+	if !n.nodeSnapshot || n.process == nil {
+		return "", errors.New("fixed live snapshot guest required")
+	}
+	var e error
 	if e = budgetVM(r.Ref); e != nil {
-		return r, key, "", e
+		return "", e
 	}
 	c, e := fixedNodeSnapshotConfig()
 	if e != nil {
-		return r, key, "", e
+		return "", e
 	}
 	if e = syscallGuestBoundaryWithObserver(c, r.Ref, n.process.Process.Pid, false); e != nil {
-		return r, key, "", e
+		return "", e
 	}
 	out, e := api.executeVM(ctx, r.Ref, []string{"sh", "-c", "set -e; test ! -e snapshot-marker; printf node-snapshot > snapshot-marker; dd if=/dev/zero of=/tmp/node-memory bs=1048576 count=8 2>/dev/null; sync; id -u; cat /proc/sys/kernel/random/boot_id"})
 	if e != nil {
-		return r, key, "", e
+		return "", e
 	}
 	boot, e := switchGuestIdentity(out)
-	return r, key, boot, e
+	return boot, e
 }
 func nodeSnapshotDelete(ctx context.Context, api *switchAPI, ref sandbox.Ref) error {
 	o, _, e := nodeSnapshotOwner(ref)

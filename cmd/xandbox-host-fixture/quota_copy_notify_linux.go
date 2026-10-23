@@ -159,6 +159,18 @@ func (o *copyObserver) close() error {
 	}
 }
 func (o *copyObserver) match(q quotaNotif) (copyBoundary, bool, error) {
+	return o.matchScope(q, false)
+}
+func (o *copyObserver) matchNode(q quotaNotif) (copyBoundary, bool, error) {
+	if e := requireNode(); e != nil {
+		return copyBoundary{}, false, e
+	}
+	if _, e := fixedNodeSnapshotConfig(); e != nil {
+		return copyBoundary{}, false, e
+	}
+	return o.matchScope(q, true)
+}
+func (o *copyObserver) matchScope(q quotaNotif, nodeScope bool) (copyBoundary, bool, error) {
 	var b copyBoundary
 	if e := requireNode(); e != nil {
 		return b, false, e
@@ -263,11 +275,18 @@ func (o *copyObserver) match(q quotaNotif) (copyBoundary, bool, error) {
 			return b, false, errors.New("copy boundary already reached link or execution stage")
 		}
 	}
-	empty, e := switchDomainEmpty(ref)
+	groupRoot := nodeGroup
+	var empty bool
+	if nodeScope {
+		groupRoot = nodeBudgetInstances
+		empty, e = nodePrepareGroupEmpty(ref)
+	} else {
+		empty, e = switchDomainEmpty(ref)
+	}
 	if e != nil || !empty {
 		return b, false, errors.New("partial-copy boundary has running execution")
 	}
-	procs, e := os.ReadFile(nodeGroup + "/" + ref.ID + ref.Generation + "/cgroup.procs")
+	procs, e := os.ReadFile(groupRoot + "/" + ref.ID + ref.Generation + "/cgroup.procs")
 	if e != nil || strings.TrimSpace(string(procs)) != "" {
 		return b, false, errors.New("partial-copy cgroup not present and empty")
 	}

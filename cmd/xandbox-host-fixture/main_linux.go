@@ -50,6 +50,12 @@ func main() {
 		} else {
 			err = runOwnerDaemon()
 		}
+	case "node-prepare-copy-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed node copy child accepts no arguments")
+		} else {
+			err = runNodePrepareCopyDaemon()
+		}
 	case "quota-copy-daemon":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("copy daemon accepts no arguments")

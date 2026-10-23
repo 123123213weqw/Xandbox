@@ -458,7 +458,10 @@ func validatePrepareProfile(raw []byte, events []prepareTraceEvent) error {
 	return nil
 }
 
-func (t *prepareTrace) finish() (map[string]any, error) {
+func (t *prepareTrace) collect(scope string) ([]prepareTraceEvent, error) {
+	if scope != "calibration" && scope != "cancel" {
+		return nil, errors.New("fixed trace scope required")
+	}
 	if e := t.daemon(); e != nil {
 		return nil, e
 	}
@@ -470,7 +473,7 @@ func (t *prepareTrace) finish() (map[string]any, error) {
 		return nil, e
 	}
 	// Raw register values and per-thread identities stay root0600 INSIDE L1.
-	log, e := os.OpenFile("/srv/fixture/node-prepare-calibration-private.log", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	log, e := os.OpenFile("/srv/fixture/node-prepare-"+scope+"-private.log", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
 		return nil, e
 	}
@@ -516,12 +519,20 @@ func (t *prepareTrace) finish() (map[string]any, error) {
 			return nil, errors.New("trace thread no longer verifiable in exact live daemon")
 		}
 	}
+	if e = t.daemon(); e != nil {
+		return nil, e
+	}
+	return events, nil
+}
+
+func (t *prepareTrace) finish() (map[string]any, error) {
+	events, e := t.collect("calibration")
+	if e != nil {
+		return nil, e
+	}
 	contended, e := validatePrepareCalibration(events)
 	if e != nil {
 		return nil, fmt.Errorf("%w; normalized transitions=%v", e, normalizedPrepareTransitions(events))
-	}
-	if e = t.daemon(); e != nil {
-		return nil, e
 	}
 	return map[string]any{"normalized_transitions": normalizedPrepareTransitions(events), "first_selected_token_observed_before_second_dispatch": true, "calibration_only": true, "exact_ordinary_elf_sha256": prepareTraceELFSHA, "instruction_entry_probes": len(prepareProbes()), "event_count": len(events), "completed_preparations": 2, "second_actual_gate_entry_inside_first_held_interval": contended, "all_eight_cpu_loss_counters_zero": true, "live_daemon_incarnation_inode_control_and_event_tgid_checked": true, "entry_probe_only_no_uretprobe_or_user_memory_read": true, "queued_request_cancellation_and_cleanup_isolation_claim": false, "exact_channel_linearization_or_latency_slo_claim": false}, nil
 }
