@@ -530,8 +530,7 @@ func (n *node) diagnosticCheckpoint(ctx context.Context, mode diagnosticHoldMode
 	}); e != nil {
 		return nil, e
 	}
-	authority, e := diagnosticAuthority()
-	if e != nil {
+	if _, e = diagnosticAuthority(); e != nil {
 		return nil, e
 	}
 	if e = o.signal(); e != nil {
@@ -548,6 +547,14 @@ func (n *node) diagnosticCheckpoint(ctx context.Context, mode diagnosticHoldMode
 		return nil, ctx.Err()
 	}
 	if e = o.bothValid(); e != nil {
+		return nil, e
+	}
+	// Session.Close legitimately rewrites CLOSED.UpdatedAt during run's defers.
+	// Snapshot the stable namespace only AFTER actual EXIT_GROUP entry, before
+	// the contender: comparing against a pre-SIGTERM digest falsely attributes
+	// ordinary shutdown writes to that separate refused process.
+	authority, e := diagnosticAuthority()
+	if e != nil {
 		return nil, e
 	}
 	if e = n.diagnosticContender(ctx, o, authority); e != nil {
