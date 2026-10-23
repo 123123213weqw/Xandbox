@@ -26,6 +26,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [quota双租户忙任务切换与双活cold有限验收](docs/QUOTA_SWITCH_FIXTURE.md)：明确3GiB/4GiB实验规格，各120次真实writer进度、pre-timeout独立Stop/持久回收与随后同盘双session冷恢复已通过。生产ELF未改；新12 scope/34代际及4个false前序5代际独立核验清理。仍非节点总预算、持续公平性或生产通过。
 
+新增 [部分workspace复制失败与存活keeper](docs/PARTIAL_COPY_FIXTURE.md)：真实16MiB前缀后一次TEST write EIO，普通GC/quota清零/旧key410、keeper pin/数据存活及同slot新代际复用通过，生产ELF未改；不是物理EIO或部分复制掉电验收。
+
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
 停止/GC 分池、背压及关闭不变量见 [生命周期调度](docs/LIFECYCLE.md)；控制器暂停时的独立停止路径见 [guardian 租约](docs/GUARDIAN.md)。

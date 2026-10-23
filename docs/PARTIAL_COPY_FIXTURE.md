@@ -1,6 +1,6 @@
 # TEST ONLY：部分 workspace 复制失败与存活 keeper
 
-新增夹具尚在验收，**不是通过报告**。生产Go/daemon不增加故障开关，不把已完成的quota双租户240次切换重新当成待验收或该新故障的替代证明。
+2026-10-23 下述固定有限实测已通过，见[精确SHA/全部原始报告](validation/copy-prepare-provenance-v1.json)；**不是完整partial Prepare/生产验收**。生产Go/daemon不增加故障开关，不把已完成的quota双租户240次切换重新当成待验收或该新故障的替代证明。
 
 ## 明确的独立规格
 
@@ -23,3 +23,13 @@
 - 暂停的是seccomp notification wait，**不是实际filesystem D-state**；错误由TEST errno返回，**不是物理EIO**。CONTINUE计数是成功提交回复数，不是所有WRITE完成或时延统计。
 - 该profile只有一次L1开机，没有部分Prepare掉电/任意未同步prefix恢复证明；不能拿健康同步前缀代替in-flight host power cut。
 - 未完成的partial-copy冷恢复、owner unlink/dirfsync/catalog锁内持久窗口、其他keeper/shared-pin故障组合和节点总预算仍要继续；完整M1–M4/独立操作员/SLO/生产验收未完成，PR19继续Draft。
+
+## 固定源实测
+
+冻结源 `eee528d6337e9b1e701164a124f357d70c8d9e2c`，普通daemon仍为 `522da68e…`、production Go/warden/原guest未改，五种native ELF与独立cross一致。新[原始partial报告](validation/kvm-copy-prepare-partial-v1.json)为N=1/一次L1开机：实际workspace16,777,216字节，独立三个private inode实际quota16,785,408字节；精确目标一次EIO回复，其他2176次CONTINUE回复。后者不是每次WRITE完成/时延统计。
+
+同步稳定的partial边界上，API及原子ledger CREATING、exec409/capacity503、retired pins2/GC0检查通过；普通Prepare500及私有EIO日志、普通GC/资源消失/q0/key410、keeper同boot/数据/执行/共享backing存活、原never-assigned export新声明、新ref/template/boot和旧UID/project清零后复用、最后keeper释放后精确旧模板GC及四projects0/reap/parent删除均通过。不把观察器同步前缀当作未同步crash或物理EIO证据。
+
+同冻结源另有真正L1 snapshot shared2/cold3（4次开机）、quota-clear owner/pin精确窗口（2次开机）、6 errno含每个clear3次及cold3（4次开机）通过；旧2GiB规格未放宽。Native fullrace×3/vet、fixture race×10/vet、root Python61、实际CGO0 kernel/exec filter×3和Darwin fullrace×3/vet通过。共4个scope/11个外层执行代际，[独立只读清理](validation/copy-prepare-independent-cleanup-v1.txt)核验全部自有root/control/cgroup不存在；kernel quota/pin证明来自L1内读回，不从删盘推断。
+
+此前[quota双租户完整240次与双活cold](QUOTA_SWITCH_FIXTURE.md)的3f9c源/生产ELF和被测worker函数未改变，保留其独立证据，不把旧240次重新贴本轮新源码标签。下一步仍需部分Prepare的在途掉电/未同步prefix恢复和owner unlink/dirfsync等持久窗口，以及其余M1–M4/节点预算/独立操作员门槛；PR19继续Draft，Goal未完成。

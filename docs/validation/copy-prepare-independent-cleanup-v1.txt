@@ -1,0 +1,6 @@
+partial all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 1
+snapshot all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 4
+clear all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+syscalls all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 4
+ALL4 partial-copy and related legacy fixture scopes,11 outer generations independently absent; read-only audit, no cleanup actions.
+Quota/private namespace and pin checks were actually read inside L1 before owned disk deletion, not inferred from this final path audit.
