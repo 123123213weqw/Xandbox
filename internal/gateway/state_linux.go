@@ -51,7 +51,13 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 	if _, e := privatefile.ExistingDirectory(dir); e != nil {
 		return nil, e
 	}
-	fd, e := unix.Open(filepath.Join(dir, "gateway.lock"), unix.O_RDWR|unix.O_CREAT|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0600)
+	// The durable lock inode is also a used-directory marker. A surviving lock
+	// must never authorize bootstrap after both authority records disappear.
+	fd, e := unix.Open(filepath.Join(dir, "gateway.lock"), unix.O_RDWR|unix.O_CREAT|unix.O_EXCL|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0600)
+	freshLock := e == nil
+	if errors.Is(e, unix.EEXIST) {
+		fd, e = unix.Open(filepath.Join(dir, "gateway.lock"), unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	}
 	if e != nil {
 		return nil, e
 	}
@@ -81,17 +87,34 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 		return nil, e
 	}
 	s := &policyState{dir: dir, info: root, lock: f, binding: binding}
+	if freshLock {
+		if e = f.Sync(); e != nil {
+			return nil, e
+		}
+		d, e := os.Open(dir)
+		if e != nil {
+			return nil, e
+		}
+		e = d.Sync()
+		_ = d.Close()
+		if e != nil {
+			return nil, e
+		}
+	}
 	identity, ie := privatefile.Read(filepath.Join(dir, "policy.identity"), 1024)
 	record, re := privatefile.Read(filepath.Join(dir, "policy.json"), 4096)
 	if os.IsNotExist(ie) && os.IsNotExist(re) {
 		entries, e := os.ReadDir(dir)
-		if e != nil || len(entries) != 1 || entries[0].Name() != "gateway.lock" {
+		if !freshLock || e != nil || len(entries) != 1 || entries[0].Name() != "gateway.lock" {
 			return nil, errors.New("used gateway state cannot bootstrap")
 		}
 		return s, nil
 	}
 	if ie != nil || re != nil {
 		return nil, errors.New("gateway policy identity or record missing")
+	}
+	if freshLock {
+		return nil, errors.New("gateway policy lock missing from initialized state")
 	}
 	var id policyIdentity
 	if strictjson.Decode(identity, &id) != nil || id.Version != 1 || id.BindingSHA256 != binding {

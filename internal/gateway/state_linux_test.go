@@ -63,7 +63,7 @@ func TestGatewayDurablePolicyCASColdReloadAndNoRollback(t *testing.T) {
 	}
 }
 func TestGatewayPolicyStateMissingIdentityRecordAndUsedRootFailClosed(t *testing.T) {
-	for _, remove := range []string{"policy.json", "policy.identity"} {
+	for _, remove := range []string{"policy.json", "policy.identity", "gateway.lock"} {
 		dir := t.TempDir()
 		s, e := openPolicyState(dir, strings.Repeat("a", 64))
 		if e != nil {
@@ -122,5 +122,36 @@ func TestGatewayStateBindingAndDirectoryCannotBeRetargeted(t *testing.T) {
 	snapshot.Epoch = 2
 	if s.Commit(snapshot) == nil {
 		t.Fatal("private state directory swapped")
+	}
+}
+
+func TestGatewayPersistentLockCannotBootstrapLostAuthority(t *testing.T) {
+	for _, committed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "interrupted-bootstrap", true: "both-records-lost"}[committed], func(t *testing.T) {
+			dir := t.TempDir()
+			binding := strings.Repeat("a", 64)
+			s, e := openPolicyState(dir, binding)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if committed {
+				snapshot, _ := testSnapshot(t)
+				if e = s.Commit(snapshot); e != nil {
+					t.Fatal(e)
+				}
+			}
+			s.Close()
+			if committed {
+				for _, name := range []string{"policy.json", "policy.identity"} {
+					if e = os.Remove(filepath.Join(dir, name)); e != nil {
+						t.Fatal(e)
+					}
+				}
+			}
+			if retry, e := openPolicyState(dir, binding); e == nil {
+				retry.Close()
+				t.Fatal("persistent lock was treated as a fresh directory")
+			}
+		})
 	}
 }
