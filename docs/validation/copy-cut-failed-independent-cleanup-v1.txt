@@ -1,0 +1,2 @@
+FAILEDv1 source d06d21e: checkpoint catalog-index predicate failed before receipt/cut. Raw report remains passed=false, one L1 boot, no ordinary cold-recovery or final quota-zero proof claimed.
+Read-only independent audit: exact failed outer root/control/cgroup parent/one child and exact runner absent; cleanup_confirmed=true. No cleanup actions, no inference of per-project quota from outer disk deletion.

@@ -1136,5 +1136,28 @@
     "independently_absent_outer_generations": 11,
     "runner_exit_status": 0,
     "scope": "N1 fixed TEST write errno with live keeper/pins/retirement/GC/cleared-slot reuse. Not actual filesystemD/physicalEIO/partial-copy powercut, every metadata window or production acceptance."
+  },
+  "partial_workspace_copy_unsynced_host_cut": {
+    "production_ready": false,
+    "goal_complete": false,
+    "complete_pr19_acceptance": false,
+    "design": "docs/PARTIAL_COPY_CUT_FIXTURE.md",
+    "provenance": "docs/validation/copy-cut-provenance-v2.json",
+    "report": "docs/validation/kvm-copy-cut-inflight-v2.json",
+    "failed_predecessor_report": "docs/validation/kvm-copy-cut-inflight-failed-v1.json",
+    "frozen_source": "25423a68dc96a1330ea6c73a47990d86857f0436",
+    "production_changed": false,
+    "actual_live_prefix_bytes": 16777216,
+    "actual_cold_workspace_name_retained": false,
+    "actual_cold_private_namespace_entries": 2,
+    "actual_cold_project_space_bytes": 8192,
+    "actual_cold_project_inodes": 2,
+    "new_case_l1_boots": 2,
+    "passing_related_scopes_including_new": 5,
+    "passing_outer_generations": 13,
+    "failed_scopes_independently_absent": 1,
+    "failed_outer_generations": 1,
+    "runner_exit_status": 0,
+    "scope": "N1 fixed held notification without target reply or observer L1 sync/receipt after16MiB; external private control receipt, original-disk ordinary recovery and freshKVM/pins/GC. NOT filesystemD, physical media failure, all persistence windows, fullM1-M4 or production acceptance."
   }
 }

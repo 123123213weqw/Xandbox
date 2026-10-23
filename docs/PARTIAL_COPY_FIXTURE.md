@@ -22,7 +22,7 @@
 
 - 暂停的是seccomp notification wait，**不是实际filesystem D-state**；错误由TEST errno返回，**不是物理EIO**。CONTINUE计数是成功提交回复数，不是所有WRITE完成或时延统计。
 - 该profile只有一次L1开机，没有部分Prepare掉电/任意未同步prefix恢复证明；不能拿健康同步前缀代替in-flight host power cut。
-- 未完成的partial-copy冷恢复、owner unlink/dirfsync/catalog锁内持久窗口、其他keeper/shared-pin故障组合和节点总预算仍要继续；完整M1–M4/独立操作员/SLO/生产验收未完成，PR19继续Draft。
+- 另有[未主动同步partial-copy固定host-cut有限验收](PARTIAL_COPY_CUT_FIXTURE.md)；其他partial-copy窗口、owner unlink/dirfsync/catalog锁内持久窗口、其他keeper/shared-pin故障组合和节点总预算仍要继续；完整M1–M4/独立操作员/SLO/生产验收未完成，PR19继续Draft。
 
 ## 固定源实测
 
@@ -32,4 +32,4 @@
 
 同冻结源另有真正L1 snapshot shared2/cold3（4次开机）、quota-clear owner/pin精确窗口（2次开机）、6 errno含每个clear3次及cold3（4次开机）通过；旧2GiB规格未放宽。Native fullrace×3/vet、fixture race×10/vet、root Python61、实际CGO0 kernel/exec filter×3和Darwin fullrace×3/vet通过。共4个scope/11个外层执行代际，[独立只读清理](validation/copy-prepare-independent-cleanup-v1.txt)核验全部自有root/control/cgroup不存在；kernel quota/pin证明来自L1内读回，不从删盘推断。
 
-此前[quota双租户完整240次与双活cold](QUOTA_SWITCH_FIXTURE.md)的3f9c源/生产ELF和被测worker函数未改变，保留其独立证据，不把旧240次重新贴本轮新源码标签。下一步仍需部分Prepare的在途掉电/未同步prefix恢复和owner unlink/dirfsync等持久窗口，以及其余M1–M4/节点预算/独立操作员门槛；PR19继续Draft，Goal未完成。
+此前[quota双租户完整240次与双活cold](QUOTA_SWITCH_FIXTURE.md)的3f9c源/生产ELF和被测worker函数未改变，保留其独立证据，不把旧240次重新贴本轮新源码标签。后续[固定在途掉电/未同步prefix恢复](PARTIAL_COPY_CUT_FIXTURE.md)已有独立有限证据；下一步仍需其他partial窗口和owner unlink/dirfsync等持久窗口，以及其余M1–M4/节点预算/独立操作员门槛；PR19继续Draft，Goal未完成。
