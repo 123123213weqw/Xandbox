@@ -1,0 +1,34 @@
+work/quota-syscall-source-v1.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/tagrace10/tagvet/rootPython46/CGO0 kernel filter proof
+..............................................
+----------------------------------------------------------------------
+Ran 46 tests in 0.048s
+
+OK
+bin/sandboxd-quota-syscall-v1: 成功
+bin/xandbox-template-quota-syscall-v1: 成功
+bin/xandbox-warden-quota-syscall-v1: 成功
+bin/fixture-quota-syscall-v1: 成功
+bin/builder-quota-syscall-v1: 成功
+ab547783c9c9ba3651c4b6a0f8c6ca78803a31c0a1809eef97c8aa7284878cb6  bin/sandboxd-quota-syscall-v1
+ace686422ffad4bc987d7a32f7b845a364022ff57900be7766fe7ac66a4824da  bin/xandbox-template-quota-syscall-v1
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-syscall-v1
+995903f64069fd76378b1d3615a9007fbd632a4acf76f0cb93c7b5855dc2ff4c  bin/fixture-quota-syscall-v1
+882704f757dc756c8d577f39dde8785c29272712f2ab3eb366cb4d262943dc67  bin/builder-quota-syscall-v1
+stage: six fixed quota syscall errno cases + normal quota cold3
+46603 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: exact post-clear owner-pin crash regression
+46603 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: normal snapshot shared2/cold3 regression
+46603 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: quota whole-state IO4 regression
+46603 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+stage: default nil-quota IO4 regression
+46473 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+quota syscall errno partial gate passed; held calls/crash windows/snapshot faults/full default matrix remain

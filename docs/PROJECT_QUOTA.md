@@ -108,6 +108,29 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 **合并前还必须完成**：其他Q_SET/Q_SYNC/readback/clear确切窗口的EIO/EROFS/held syscall、partial prepare及其余owner/pin/fsync崩溃与并发；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。这个精确窗口及有限整state I/O、EDQUOT/拒绝/snapshot/cold通过，不等于M2完整物理预算或生产验收完成。
 
+### 精确quota syscall errno注入（有限、非介质故障）
+
+[原始6例及普通cold三检查点](validation/kvm-quota-syscall-v1.json)与[精确来源/构建/边界清单](validation/quota-syscall-provenance-v1.json)另验了下列固定窗口。普通daemon仍为 `ab547783…`、warden/guest未变；**该profile的启动环境额外继承TEST ONLY seccomp通知和NNP，不能称为完全相同的生产启动环境**。
+
+| 固定注入位置 | errno | 注入时独立内核读回 |
+|---|---|---|
+| 持久attempt owner之后、reserve SET | EIO | quota记录全空，尚无执行namespace |
+| reserve SET之后的GET | EROFS | 已安装192MiB/128 inode硬限制，usage为0 |
+| reserve SET/GET之后的SYNC | EIO | 同上 |
+| Stop/私有namespace清理后的clear SET | EIO | 已知硬限制仍在，usage为0 |
+| clear SET之后的SYNC | EROFS | quota记录全空，但owner/容量尚不能释放 |
+| clear SET/SYNC之后的GET | EIO | 同上 |
+
+三个reserve失败实际Create500；每例均等到普通持久DESTROYED、精确owner/jail/cgroup不存在、三个固定project全清零、旧key410，再以新key创建真实KVM/UID65534 guest、执行并销毁。三个clear失败在errno仍armed时检查RECLAIMING、有StoppedAt而无DestroyedAt、原owner字节不变、新Create503；解除注入后才等待正常销毁/清零并复验新真实VM。**每例仅观察到一次实际注入，不据此宣称已经验收反复重试**。
+
+通知器只由独占L1的PID1启动其固定直接子进程，经私有SCM_RIGHTS接收listener；核对immutable进程身份、通知线程的Tgid、固定runtime anchor inode、固定命令与project范围。Linux6.8的尺寸先查询再严格核对；all-thread `NEW_LISTENER|TSYNC|TSYNC_ESRCH|WAIT_KILLABLE_RECV`不支持即失败，不做单线程回退。成功路径必须发CONTINUE，让**原syscall真正进入内核**，不能用返回0伪造quota成功；指定失败才返回负errno。原warden的quota deny和Firecracker默认filter没有替换，成功guest另检查真实VM FD、全部线程能力/NNP及新增observer层。
+
+实现依据为[Linux6.8通知接口](https://docs.kernel.org/6.8/userspace-api/seccomp_filter.html)、[固定UAPI与CONTINUE限制](https://github.com/torvalds/linux/blob/v6.8/include/uapi/linux/seccomp.h)、[固定内核flag/通知实现](https://github.com/torvalds/linux/blob/v6.8/kernel/seccomp.c)。通知器**不是安全策略**，不读取tracee指针；独立quota读回只是该时刻的内核状态，不是介质持久性证明。这里没有让设备实际返回EIO/EROFS，也没有卡住真实Q_SYNC或在其内部掉电。
+
+源码冻结 `9e0ddc910a2933893bd47df806744117497ac48d`；Linux原生fixture `995903f6…` 与独立Mac→Linux构建精确一致，另四个原生ELF同样匹配。native full race×3/vet、fixture race×10/vet、root Python46项、实际CGO0 kernel/exec filter×3与Darwin race×3/vet通过。同一夹具还回归[清零后owner/pin精确掉电](validation/kvm-quota-syscall-clear-v1.json)、[真正L1快照共享及cold](validation/kvm-quota-syscall-snapshot-v1.json)、[quota整state I/O](validation/kvm-quota-syscall-io-v1.json)、[默认nil-quota I/O](validation/kvm-quota-syscall-default-io-v1.json)。[只读独立审计](validation/quota-syscall-independent-cleanup-v1.txt)复核5个scope、20个实际L1执行代际全部不存在；quota证据来自盘删除前的L1实际读回，不由路径消失推断。
+
+仍未覆盖held-quota、listener失效、重复clear错误、逐syscall崩溃/重启、partial-copy Prepare与snapshot pin故障组合；owner unlink/目录fsync、完整新运行时回归、节点总预算、最终PR19 CI与M1–M4门槛也未完成。PR19继续Draft，不因此宣称生产就绪。
+
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 
 ## TEST ONLY 夹具的边界
