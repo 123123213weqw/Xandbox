@@ -50,6 +50,9 @@ func (o *quotaNotifier) boundary(q quotaNotif) error {
 	if index < 0 || owner.Version != 3 || owner.Ref != ref || !owner.QuotaAttempted || owner.InitializationAttempted || owner.TemplateID != "" || owner.UID != 480000+4*index || owner.ProjectID != quotaFirst {
 		return errors.New("durable attempted owner missing before injected syscall")
 	}
+	if e = quotaOwnerSelector(q, owner.ProjectID); e != nil {
+		return e
+	}
 	if len(o.state.owner) > 0 && !bytes.Equal(o.state.owner, b) {
 		return errors.New("retained owner changed while fault armed")
 	}
@@ -73,7 +76,7 @@ func (o *quotaNotifier) boundary(q quotaNotif) error {
 			return errors.New("expected empty kernel quota at exact injected boundary")
 		}
 	} else if r.BHard != 192<<10 || r.IHard != 128 || r.BSoft|r.ISoft|r.Space|r.Inodes|r.BTime|r.ITime != 0 {
-		return errors.New("expected persisted limits without usage at exact injected boundary")
+		return errors.New("expected installed limits without usage at exact injected boundary")
 	}
 	o.state.ref = ref
 	o.state.owner = append([]byte(nil), b...)
@@ -81,6 +84,9 @@ func (o *quotaNotifier) boundary(q quotaNotif) error {
 }
 
 func syscallGuestBoundary(cfg firecracker.Config, ref sandbox.Ref, daemon int) error {
+	return syscallGuestBoundaryWithObserver(cfg, ref, daemon, true)
+}
+func syscallGuestBoundaryWithObserver(cfg firecracker.Config, ref sandbox.Ref, daemon int, observer bool) error {
 	// Inspect only the immutable fixture child's threads and its exact domain.
 	if e := requireNode(); e != nil {
 		return e
@@ -111,7 +117,7 @@ func syscallGuestBoundary(cfg firecracker.Config, ref sandbox.Ref, daemon int) e
 					return errors.New("observed task can bypass quota")
 				}
 			}
-			if !strings.Contains(string(b), "NoNewPrivs:\t1\n") || !strings.Contains(string(b), "Seccomp:\t2\n") {
+			if minimum > 0 && (!strings.Contains(string(b), "NoNewPrivs:\t1\n") || !strings.Contains(string(b), "Seccomp:\t2\n")) {
 				return errors.New("observed task lost seccomp or NNP")
 			}
 			count := 0
@@ -130,7 +136,11 @@ func syscallGuestBoundary(cfg firecracker.Config, ref sandbox.Ref, daemon int) e
 		}
 		return nil
 	}
-	if e = check(strconv.Itoa(daemon), 1); e != nil {
+	controllerMinimum := 0
+	if observer {
+		controllerMinimum = 1
+	}
+	if e = check(strconv.Itoa(daemon), controllerMinimum); e != nil {
 		return e
 	}
 	vmm := false
@@ -146,9 +156,12 @@ func syscallGuestBoundary(cfg firecracker.Config, ref sandbox.Ref, daemon int) e
 				actual = true
 			}
 		}
-		minimum := 2
+		minimum := 1
+		if observer {
+			minimum++
+		}
 		if actual {
-			minimum = 3
+			minimum++
 			vmm = true
 		}
 		if e = check(pid, minimum); e != nil {

@@ -102,6 +102,16 @@ func TestQuotaNotifyProgramExactSyscallAndArchitecture(t *testing.T) {
 			t.Fatalf("unexpected action %x != %x", got, v.want)
 		}
 	}
+	if run(unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_SYNCFS)) != unix.SECCOMP_RET_ALLOW {
+		t.Fatal("legacy profile unexpectedly observes syncfs")
+	}
+	p, e = quotaNotifyProgramOn(true)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if run(unix.AUDIT_ARCH_X86_64, uint32(unix.SYS_SYNCFS)) != unix.SECCOMP_RET_USER_NOTIF || run(unix.AUDIT_ARCH_I386, uint32(unix.SYS_SYNCFS)) != unix.SECCOMP_RET_KILL_PROCESS {
+		t.Fatal("fixed barrier syscall filter wrong")
+	}
 }
 func TestQuotaNotifyOnlyExactStageAndNeverSyntheticSuccess(t *testing.T) {
 	for _, name := range quotaSyscallCases {

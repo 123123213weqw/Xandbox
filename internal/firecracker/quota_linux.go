@@ -237,9 +237,22 @@ func openProjectQuota(cfg Config) (*projectQuota, error) {
 		return r, e
 	}
 	q.set = func(id uint32, r projectRecord) error { return q.call(0x800008, id, unsafe.Pointer(&r)) }
-	q.sync = func() error { return q.call(0x800001, 0, nil) }
+	q.sync = func() error {
+		return quotaCommitBarrier(func() error { return q.call(0x800001, 0, nil) }, func() error { return unix.Syncfs(int(q.anchor.Fd())) })
+	}
 	ok = true
 	return q, nil
+}
+
+// ext4's internal journalled quota uses DQUOT_QUOTA_SYS_FILE/NOLIST_DIRTY:
+// Linux v6.8 dquot_quota_sync may return without sync_fs or sync_blockdev.
+// Commit this exact anchored filesystem before Prepare or owner release may
+// proceed. This is filesystem-wide, not a per-project flush or bounded IO.
+func quotaCommitBarrier(quotaSync, filesystemSync func() error) error {
+	if e := quotaSync(); e != nil {
+		return e
+	}
+	return filesystemSync()
 }
 func (q *projectQuota) revalidate() error {
 	if e := checkQuotaCapabilities(); e != nil {

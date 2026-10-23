@@ -42,11 +42,17 @@ func main() {
 		} else {
 			err = runNegativeQuotaDaemon((*mode)[len("quota-negative-"):])
 		}
-	case "quota-syscall-reserve-set-eio", "quota-syscall-reserve-read-erofs", "quota-syscall-reserve-sync-eio", "quota-syscall-clear-set-eio", "quota-syscall-clear-sync-erofs", "quota-syscall-clear-read-eio":
+	case "quota-syscall-reserve-barrier-hang", "quota-syscall-reserve-set-eio", "quota-syscall-reserve-read-erofs", "quota-syscall-reserve-sync-eio", "quota-syscall-clear-set-eio", "quota-syscall-clear-sync-erofs", "quota-syscall-clear-read-eio":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("syscall daemon accepts no parameters")
 		} else {
 			err = runQuotaSyscallDaemon((*mode)[len("quota-syscall-"):])
+		}
+	case "quota-barrier-recover-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("barrier recovery accepts no parameters")
+		} else {
+			err = runQuotaBarrierRecoveryDaemon()
 		}
 	case "node-quota":
 		err = runNodeOptions(false, true)

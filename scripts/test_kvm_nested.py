@@ -7,10 +7,24 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_quota_barrier_requires_actual_filesystem_stack_and_prefork_cold_recovery(self):
+        checkpoint=('checkpoint_receipt_fsynced_before_set','pre_fork_namespace_absent_before_suspend','durable_attempted_owner_before_set','installed_limits_checked_before_suspend','ordinary_qsync_returned_before_syncfs','notification_continued_into_real_kernel','actual_syncfs_syscall_D_filesystem_stack_not_seccomp','actual_kernel_hold_rechecked_three_times','no_create_ack_while_commit_held','capacity_retained_new_create503','no_quota_or_srv_reads_after_suspend','mapper_still_suspended_until_power_cut','no_l2_vm_born_at_checkpoint')
+        recovery=('l1_boot_changed','attempted_owner_bytes_policy_and_absent_namespace_before_daemon','unreturned_commit_empty_or_known_limits_checked','no_assigned_guest_restore','old_durable_destroyed','old_resources_absent','old_key_refused410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed')
+        for fn,keys,extra in ((validate_quota_barrier_checkpoint,checkpoint,{'fixed_project_zero_dirty_bytes':4<<20}),(validate_quota_barrier_recovery,recovery,{'cold_quota_record_empty':True})):
+            good={'phase':'reserve-quota-syncfs-held',**{k:True for k in keys},**extra};fn(good)
+            for k in keys:
+                bad=dict(good);bad[k]=False
+                with self.assertRaises(AssertionError):fn(bad)
+                bad=dict(good);del bad[k]
+                with self.assertRaises(KeyError):fn(bad)
+            with self.assertRaises(AssertionError):fn(dict(good,phase='running'))
+            for k in extra:
+                with self.assertRaises(AssertionError):fn(dict(good,**{k:0}))
+
     def test_quota_syscall_setup_requires_each_exact_errno_and_ordinary_recovery_proof(self):
         common=('test_only_seccomp_errno','fixed_child_thread_and_anchor_verified','durable_attempted_owner_before_injection','kernel_limits_and_zero_usage_checked_at_boundary','no_execution_namespace_at_injected_boundary','real_kernel_continue_not_emulated_success','durable_destroyed_resources_absent_key410','capacity_reused_fresh_real_kvm_guest_uid_exec_destroy','all_thread_caps_nnp_observer_and_ordinary_vmm_filters_checked','all_fixed_projects_cleared','owned_cgroup_root_removed')
         good={k:True for k in ('test_only_syscall_errno_injection','ordinary_daemon_elf_unchanged','not_physical_media_fault','all_fixed_projects_cleared')}

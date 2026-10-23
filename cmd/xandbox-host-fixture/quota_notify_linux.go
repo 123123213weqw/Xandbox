@@ -45,9 +45,14 @@ type quotaNotifSizes struct{ Notification, Response, Data uint16 }
 
 const quotaNotifIDValid = 0x40082102 // _IOW('!', 2, __u64)
 
+const quotaBarrierCase = "reserve-barrier-hang"
+
 var quotaSyscallCases = [...]string{"reserve-set-eio", "reserve-read-erofs", "reserve-sync-eio", "clear-set-eio", "clear-sync-erofs", "clear-read-eio"}
 
 func quotaSyscallBase(name string) (string, error) {
+	if name == quotaBarrierCase {
+		return "/srv/sq/" + name, nil
+	}
 	for _, allowed := range quotaSyscallCases {
 		if name == allowed {
 			return "/srv/sq/" + name, nil
@@ -56,6 +61,9 @@ func quotaSyscallBase(name string) (string, error) {
 	return "", errors.New("fixed quota syscall case required")
 }
 func quotaSyscallRuntime(name string) (string, error) {
+	if name == quotaBarrierCase {
+		return "/srv/sr/6", nil
+	}
 	for i, allowed := range quotaSyscallCases {
 		if name == allowed {
 			return "/srv/sr/" + strconv.Itoa(i), nil
@@ -63,11 +71,12 @@ func quotaSyscallRuntime(name string) (string, error) {
 	}
 	return "", errors.New("fixed quota syscall runtime required")
 }
-func quotaNotifyProgram() ([]unix.SockFilter, error) {
+func quotaNotifyProgram() ([]unix.SockFilter, error) { return quotaNotifyProgramOn(false) }
+func quotaNotifyProgramOn(barrier bool) ([]unix.SockFilter, error) {
 	if runtime.GOARCH != "amd64" {
 		return nil, errors.New("fixed x86_64 L1 observer required")
 	}
-	return []unix.SockFilter{
+	p := []unix.SockFilter{
 		{Code: unix.BPF_LD | unix.BPF_W | unix.BPF_ABS, K: 4},
 		{Code: unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K, K: unix.AUDIT_ARCH_X86_64, Jt: 1},
 		{Code: unix.BPF_RET | unix.BPF_K, K: unix.SECCOMP_RET_KILL_PROCESS},
@@ -76,8 +85,11 @@ func quotaNotifyProgram() ([]unix.SockFilter, error) {
 		{Code: unix.BPF_RET | unix.BPF_K, K: unix.SECCOMP_RET_KILL_PROCESS},
 		{Code: unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K, K: uint32(unix.SYS_QUOTACTL_FD), Jf: 1},
 		{Code: unix.BPF_RET | unix.BPF_K, K: unix.SECCOMP_RET_USER_NOTIF},
-		{Code: unix.BPF_RET | unix.BPF_K, K: unix.SECCOMP_RET_ALLOW},
-	}, nil
+	}
+	if barrier {
+		p = append(p, unix.SockFilter{Code: unix.BPF_JMP | unix.BPF_JEQ | unix.BPF_K, K: uint32(unix.SYS_SYNCFS), Jf: 1}, unix.SockFilter{Code: unix.BPF_RET | unix.BPF_K, K: unix.SECCOMP_RET_USER_NOTIF})
+	}
+	return append(p, unix.SockFilter{Code: unix.BPF_RET | unix.BPF_K, K: unix.SECCOMP_RET_ALLOW}), nil
 }
 func quotaNotifySizes() error {
 	var sizes quotaNotifSizes
@@ -112,7 +124,7 @@ func runQuotaSyscallDaemon(name string) error {
 	if _, _, e := syscall.AllThreadsSyscall(unix.SYS_PRCTL, unix.PR_SET_NO_NEW_PRIVS, 1, 0); e != 0 {
 		return e
 	}
-	p, e := quotaNotifyProgram()
+	p, e := quotaNotifyProgramOn(name == quotaBarrierCase)
 	if e != nil {
 		return e
 	}
@@ -136,12 +148,15 @@ func runQuotaSyscallDaemon(name string) error {
 }
 
 type quotaNotifyState struct {
-	name                string
-	armed, seenSet      bool
-	continued, injected int
-	err                 error
-	ref                 sandbox.Ref
-	owner               []byte
+	name                                      string
+	armed, seenSet                            bool
+	continued, injected                       int
+	err                                       error
+	ref                                       sandbox.Ref
+	owner                                     []byte
+	baselineSaved, seenSync, barrierContinued bool
+	barrierTID                                uint32
+	barrierFD                                 uint64
 }
 
 // No tracee pointer is dereferenced. A subsequent syscall plus independent
@@ -179,6 +194,8 @@ type quotaNotifier struct {
 	identity, base, runtimeRoot string
 	stop                        chan struct{}
 	done                        chan struct{}
+	mapper                      *stateMapper
+	barrier                     *quotaBarrierPlan
 }
 
 func quotaNotifyIO(fd int, request uint, p unsafe.Pointer) error {
@@ -193,27 +210,30 @@ func (o *quotaNotifier) inspect(q quotaNotif) error {
 	if e := requireNode(); e != nil {
 		return e
 	}
-	if q.ID == 0 || q.PID == 0 || q.Flags != 0 || q.Data.Arch != unix.AUDIT_ARCH_X86_64 || q.Data.NR != int32(unix.SYS_QUOTACTL_FD) || q.Data.Args[0] > 511 {
+	isBarrier := o.state.name == quotaBarrierCase && q.Data.NR == int32(unix.SYS_SYNCFS)
+	if q.ID == 0 || q.PID == 0 || q.Flags != 0 || q.Data.Arch != unix.AUDIT_ARCH_X86_64 || (!isBarrier && q.Data.NR != int32(unix.SYS_QUOTACTL_FD)) || q.Data.Args[0] > 511 {
 		return errors.New("unexpected fixed notification")
 	}
-	if q.Data.Args[4] != 0 || q.Data.Args[5] != 0 {
+	if !isBarrier && (q.Data.Args[4] != 0 || q.Data.Args[5] != 0) {
 		return errors.New("unexpected extra quota arguments")
 	}
-	cmd, id := q.Data.Args[1], q.Data.Args[2]
-	if (cmd == 0x80000102) != (q.Data.Args[3] == 0) {
-		return errors.New("unexpected quota value pointer role")
-	}
-	switch cmd {
-	case 0x80000102, 0x80000402:
-		if id != 0 {
-			return errors.New("unexpected global quota selector")
+	if !isBarrier {
+		cmd, id := q.Data.Args[1], q.Data.Args[2]
+		if (cmd == 0x80000102) != (q.Data.Args[3] == 0) {
+			return errors.New("unexpected quota value pointer role")
 		}
-	case 0x80000702, 0x80000802:
-		if id < uint64(quotaFirst) || id >= uint64(quotaFirst+3) {
-			return errors.New("unexpected project selector")
+		switch cmd {
+		case 0x80000102, 0x80000402:
+			if id != 0 {
+				return errors.New("unexpected global quota selector")
+			}
+		case 0x80000702, 0x80000802:
+			if id < uint64(quotaFirst) || id >= uint64(quotaFirst+3) {
+				return errors.New("unexpected project selector")
+			}
+		default:
+			return errors.New("unexpected quota command")
 		}
-	default:
-		return errors.New("unexpected quota command")
 	}
 	start, e := processStart(o.pid)
 	if e != nil || start != o.identity {
@@ -295,7 +315,11 @@ func (o *quotaNotifier) serve() {
 			o.mu.Unlock()
 			return
 		}
-		inject := o.state.wants(q.Data.Args[1])
+		barrierTarget := o.state.name == quotaBarrierCase && o.state.armed && q.Data.NR == int32(unix.SYS_SYNCFS)
+		if o.state.name == quotaBarrierCase && o.state.armed {
+			e = o.prepareBarrier(q)
+		}
+		inject := o.state.name != quotaBarrierCase && o.state.wants(q.Data.Args[1])
 		if inject {
 			e = o.boundary(q)
 		}
@@ -307,6 +331,12 @@ func (o *quotaNotifier) serve() {
 		r := o.state.response(q.ID, inject)
 		e = quotaNotifyIO(o.fd, unix.SECCOMP_IOCTL_NOTIF_SEND, unsafe.Pointer(&r))
 		if e == nil {
+			if barrierTarget {
+				o.state.barrierContinued = true
+				o.state.barrierTID = q.PID
+				o.state.barrierFD = q.Data.Args[0]
+				o.state.armed = false
+			}
 			if inject {
 				o.state.injected++
 				if strings.HasPrefix(o.state.name, "reserve-") {
@@ -315,7 +345,10 @@ func (o *quotaNotifier) serve() {
 			} else {
 				o.state.continued++
 			}
-			if q.Data.Args[1] == 0x80000802 {
+			if q.Data.NR == int32(unix.SYS_QUOTACTL_FD) && q.Data.Args[1] == 0x80000102 {
+				o.state.seenSync = true
+			}
+			if q.Data.NR == int32(unix.SYS_QUOTACTL_FD) && q.Data.Args[1] == 0x80000802 {
 				o.state.seenSet = true
 			}
 		} else if !errors.Is(e, unix.ENOENT) {
@@ -390,6 +423,9 @@ func receiveQuotaListener(ctx context.Context, socket int) (int, error) {
 	}
 }
 func startQuotaNotified(ctx context.Context, name, runtimeRoot string) (*negativeDaemon, *quotaNotifier, error) {
+	return startQuotaNotifiedOn(ctx, name, runtimeRoot, nil, nil)
+}
+func startQuotaNotifiedOn(ctx context.Context, name, runtimeRoot string, mapper *stateMapper, barrier *quotaBarrierPlan) (*negativeDaemon, *quotaNotifier, error) {
 	if e := requireNode(); e != nil {
 		return nil, nil, e
 	}
@@ -400,6 +436,9 @@ func startQuotaNotified(ctx context.Context, name, runtimeRoot string) (*negativ
 	want, e := quotaSyscallRuntime(name)
 	if e != nil || runtimeRoot != want {
 		return nil, nil, errors.New("fixed observed runtime required")
+	}
+	if (name == quotaBarrierCase) != (mapper != nil && barrier != nil) {
+		return nil, nil, errors.New("fixed mapped barrier plan required")
 	}
 	if e = quotaNotifySizes(); e != nil {
 		return nil, nil, e
@@ -441,7 +480,7 @@ func startQuotaNotified(ctx context.Context, name, runtimeRoot string) (*negativ
 		<-p.done
 		return nil, nil, e
 	}
-	o := &quotaNotifier{state: quotaNotifyState{name: name}, fd: fd, pid: c.Process.Pid, identity: identity, base: base, runtimeRoot: runtimeRoot, stop: make(chan struct{}), done: make(chan struct{})}
+	o := &quotaNotifier{mapper: mapper, barrier: barrier, state: quotaNotifyState{name: name}, fd: fd, pid: c.Process.Pid, identity: identity, base: base, runtimeRoot: runtimeRoot, stop: make(chan struct{}), done: make(chan struct{})}
 	go o.serve()
 	return p, o, nil
 }

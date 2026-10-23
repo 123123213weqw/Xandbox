@@ -42,6 +42,7 @@ type node struct {
 	quotaSnapshot   bool
 	quotaStateIO    bool
 	quotaWindowLock *os.File
+	quotaHeld       *quotaBarrierLive
 	mapper          *stateMapper
 	api             *client.Client
 	process         *exec.Cmd
@@ -54,7 +55,7 @@ func (q nodeRequest) validate() error {
 		return errors.New("bad fixture protocol")
 	}
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-negative-setup", "quota-syscall-setup", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -569,6 +570,10 @@ func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quo
 				result, e = n.quotaNegativeSetup(ctx)
 			case "quota-syscall-setup":
 				result, e = n.quotaSyscallSetup(ctx)
+			case "quota-barrier-checkpoint":
+				result, e = n.quotaBarrierCheckpoint(ctx)
+			case "quota-barrier-recover":
+				result, e = n.recoverQuotaBarrier(ctx)
 			case "quota-checkpoint":
 				if !quotaDriver {
 					e = errors.New("ordinary driver quota image profile required")
