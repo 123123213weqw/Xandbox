@@ -393,7 +393,16 @@ def validate_node_snapshot_setup(v):
 
 NODE_SNAPSHOT_CHECKPOINT_FLAGS=('real_nested_kvm','checkpoint_receipt_fsynced','schema3_snapshot_exact_node_policy','publisher_and_daemon_inside_control','two_actual_snapshot_clones_private_quota_shared_inode_pins_checked','inode_pressure_refuses_prepare_publish_but_stop_cleanup_continues','inode_filler_removed_and_headroom_restored','byte_pressure_refuses_prepare_publish_existing_exec_continues','publisher_refusal_specific_and_catalog_unchanged','healthy_synced_low_free_checkpoint_not_inflight_fault')
 NODE_SNAPSHOT_RECOVERY_FLAGS=('l1_boot_changed','exact_policy_owner_namespace_quota_shared_backing_before_daemon','low_free_guard_survived_cold_and_ordinary_start_reclaims','old_keys410_all_four_projects_zero_before_reuse','only_exact_owned_filler_removed_headroom_restored','same_unassigned_declaration_publish_succeeds_after_restore','fresh_two_actual_guests_clean_workspace_new_boots','retire_pins_gc_survivor_exec_and_final_gc_checked','all_four_projects_zero_controller_reaped_entire_node_subtree_removed','no_assigned_guest_or_owner_restoration')
+PREPARE_CALIBRATION_FLAGS=('calibration_only','second_actual_gate_entry_inside_first_held_interval','all_eight_cpu_loss_counters_zero','live_daemon_incarnation_inode_control_and_event_tgid_checked','entry_probe_only_no_uretprobe_or_user_memory_read')
+def validate_prepare_calibration(v):
+    assert type(v) is dict
+    for k in PREPARE_CALIBRATION_FLAGS:assert v[k] is True
+    assert v['exact_ordinary_elf_sha256']=='3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2'
+    for k,want in {'instruction_entry_probes':9,'event_count':12,'completed_preparations':2}.items():assert type(v[k]) is int and v[k]==want
+    for k in ('queued_request_cancellation_and_cleanup_isolation_claim','exact_channel_linearization_or_latency_slo_claim'):assert v[k] is False
+
 def validate_node_snapshot_checkpoint(v):
+    validate_prepare_calibration(v['prepare_entry_calibration'])
     for k in NODE_SNAPSHOT_CHECKPOINT_FLAGS:assert v[k] is True
     assert type(v['guest_memory_touched_bytes_each']) is int and v['guest_memory_touched_bytes_each']==8<<20
     for k in ('inode_filler_files','byte_filler_allocated_bytes','free_byte_guard','free_inode_guard','observed_free_bytes','inode_pressure_free_before_delete','inode_pressure_free_after_delete'):assert type(v[k]) is int and v[k]>0

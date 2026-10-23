@@ -3,7 +3,10 @@ import unittest
 from build_nested_host import init_scripts
 from kvm_nested_host import (nested_node_resources,nested_group_limits,node_snapshot_format_options,
  validate_node_snapshot_setup,validate_node_snapshot_checkpoint,validate_node_snapshot_recovery,
- NODE_SNAPSHOT_CHECKPOINT_FLAGS,NODE_SNAPSHOT_RECOVERY_FLAGS)
+ NODE_SNAPSHOT_CHECKPOINT_FLAGS,NODE_SNAPSHOT_RECOVERY_FLAGS,validate_prepare_calibration,PREPARE_CALIBRATION_FLAGS)
+def calibration():
+ return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':'3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2','instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False}
+
 class NodeSnapshotTests(unittest.TestCase):
  def test_explicit_profile_and_inode_format_leave_old_modes_unchanged(self):
   r=nested_node_resources(True);self.assertEqual(r,{'profile':'node-snapshot-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30})
@@ -19,7 +22,7 @@ class NodeSnapshotTests(unittest.TestCase):
    bad=dict(v);bad[k]=False
    with self.assertRaises(AssertionError):validate_node_snapshot_setup(bad)
  def test_checkpoint_requires_separate_pressure_and_cleanup_not_permit_claim(self):
-  v={**{k:True for k in NODE_SNAPSHOT_CHECKPOINT_FLAGS},'guest_memory_touched_bytes_each':8<<20,'inode_filler_files':125000,'byte_filler_allocated_bytes':7<<30,'free_byte_guard':3362619392,'free_inode_guard':5776,'observed_free_bytes':2800000000,'inode_pressure_free_before_delete':5200,'inode_pressure_free_after_delete':5220,'prepare_permit_hardware_trace_claim':False}
+  v={**{k:True for k in NODE_SNAPSHOT_CHECKPOINT_FLAGS},'guest_memory_touched_bytes_each':8<<20,'inode_filler_files':125000,'byte_filler_allocated_bytes':7<<30,'free_byte_guard':3362619392,'free_inode_guard':5776,'observed_free_bytes':2800000000,'inode_pressure_free_before_delete':5200,'inode_pressure_free_after_delete':5220,'prepare_permit_hardware_trace_claim':False,'prepare_entry_calibration':calibration()}
   validate_node_snapshot_checkpoint(v)
   for k in NODE_SNAPSHOT_CHECKPOINT_FLAGS:
    bad=copy.deepcopy(v);bad[k]=False
@@ -27,6 +30,14 @@ class NodeSnapshotTests(unittest.TestCase):
   for k,x in [('inode_filler_files',150001),('byte_filler_allocated_bytes',(10<<30)+1),('observed_free_bytes',3362619392),('inode_pressure_free_after_delete',5776),('inode_pressure_free_before_delete',1000),('free_byte_guard',True),('inode_filler_files',1.0),('prepare_permit_hardware_trace_claim',True)]:
    bad=dict(v);bad[k]=x
    with self.assertRaises(AssertionError):validate_node_snapshot_checkpoint(bad)
+ def test_calibration_cannot_be_promoted_to_cancel_cleanup_or_latency_proof(self):
+  v=calibration();validate_prepare_calibration(v)
+  for k in tuple(v):
+   bad=dict(v);bad[k]=not v[k] if type(v[k]) is bool else True
+   with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
+  for k in ('instruction_entry_probes','event_count','completed_preparations'):
+   bad=dict(v);bad[k]=float(v[k])
+   with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
  def test_recovery_requires_low_free_startup_and_ordinary_reclamation(self):
   v={k:True for k in NODE_SNAPSHOT_RECOVERY_FLAGS};validate_node_snapshot_recovery(v)
   for k in v:

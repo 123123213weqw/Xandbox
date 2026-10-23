@@ -461,11 +461,7 @@ func (n *node) nodeSnapshotCheckpoint(ctx context.Context) (map[string]any, erro
 	if e = privateWrite("/srv/fixture/node-next-manifest.json", manifest); e != nil {
 		return nil, e
 	}
-	a, _, _, e := n.nodeSnapshotGuest(ctx, api)
-	if e != nil {
-		return nil, e
-	}
-	keeper, _, _, e := n.nodeSnapshotGuest(ctx, api)
+	a, keeper, calibration, e := n.nodePrepareCalibration(ctx, api)
 	if e != nil {
 		return nil, e
 	}
@@ -604,7 +600,7 @@ func (n *node) nodeSnapshotCheckpoint(ctx context.Context) (map[string]any, erro
 	if e = privateWrite(nodeSnapshotReceiptPath, saved); e != nil {
 		return nil, e
 	}
-	return map[string]any{"real_nested_kvm": true, "checkpoint_receipt_fsynced": true, "schema3_snapshot_exact_node_policy": true, "publisher_and_daemon_inside_control": true, "two_actual_snapshot_clones_private_quota_shared_inode_pins_checked": true, "inode_pressure_refuses_prepare_publish_but_stop_cleanup_continues": true, "inode_filler_removed_and_headroom_restored": true, "byte_pressure_refuses_prepare_publish_existing_exec_continues": true, "publisher_refusal_specific_and_catalog_unchanged": true, "healthy_synced_low_free_checkpoint_not_inflight_fault": true, "guest_memory_touched_bytes_each": 8 << 20, "inode_filler_files": filled, "inode_pressure_free_before_delete": inodeObservation.Before, "inode_pressure_free_after_delete": inodeObservation.After, "byte_filler_allocated_bytes": saved.Filler.Size, "free_byte_guard": space, "free_inode_guard": ig, "observed_free_bytes": fs.Bavail * uint64(fs.Bsize), "prepare_permit_hardware_trace_claim": false}, nil
+	return map[string]any{"prepare_entry_calibration": calibration, "real_nested_kvm": true, "checkpoint_receipt_fsynced": true, "schema3_snapshot_exact_node_policy": true, "publisher_and_daemon_inside_control": true, "two_actual_snapshot_clones_private_quota_shared_inode_pins_checked": true, "inode_pressure_refuses_prepare_publish_but_stop_cleanup_continues": true, "inode_filler_removed_and_headroom_restored": true, "byte_pressure_refuses_prepare_publish_existing_exec_continues": true, "publisher_refusal_specific_and_catalog_unchanged": true, "healthy_synced_low_free_checkpoint_not_inflight_fault": true, "guest_memory_touched_bytes_each": 8 << 20, "inode_filler_files": filled, "inode_pressure_free_before_delete": inodeObservation.Before, "inode_pressure_free_after_delete": inodeObservation.After, "byte_filler_allocated_bytes": saved.Filler.Size, "free_byte_guard": space, "free_inode_guard": ig, "observed_free_bytes": fs.Bavail * uint64(fs.Bsize), "prepare_permit_hardware_trace_claim": false}, nil
 }
 func (n *node) nodeSnapshotRecover(ctx context.Context) (map[string]any, error) {
 	if e := requireNode(); e != nil {
