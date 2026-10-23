@@ -50,6 +50,8 @@ func main() {
 		} else {
 			err = quotaWorker(*mode)
 		}
+	case "node-quota-io":
+		err = runNodeQuotaIOProfiles(false, false, false, false, true)
 	case "node-io":
 		err = runNodeProfile(true)
 	default:

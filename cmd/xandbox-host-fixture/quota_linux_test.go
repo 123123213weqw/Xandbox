@@ -281,3 +281,28 @@ func TestUnenforcedQuotaProbeCannotRunOnL0AndHasNoParameters(t *testing.T) {
 		}
 	}
 }
+
+func TestQuotaIOProfileAndMappedReadersCannotEscapeL1(t *testing.T) {
+	if e := runNodeQuotaIOProfiles(true, false, false, false, true); e == nil {
+		t.Fatal("mixed ordinary/quota IO profile accepted")
+	}
+	if e := runNodeQuotaIOProfiles(false, false, true, false, true); e == nil {
+		t.Fatal("mixed quota/IO profile accepted")
+	}
+	if e := runNodeQuotaIOProfiles(false, false, false, false, true); e == nil {
+		t.Fatal("quota IO node escaped L1 PID1 guard")
+	}
+	m := &stateMapper{}
+	if _, e := openQuotaFSWithMapper(false, m); e == nil {
+		t.Fatal("mapped quota reader escaped L1 PID1 guard")
+	}
+	if _, e := driverQuotaReadOn(driverProjectFirst, m); e == nil {
+		t.Fatal("mapped project read escaped L1 guard")
+	}
+	if _, e := driverQuotaReadOn(quotaFirst, m); e == nil {
+		t.Fatal("non-driver project accepted")
+	}
+	if _, _, e := (&node{quotaDriver: true, quotaStateIO: true}).observeDriverQuota(sandbox.Ref{}, "running", m); e == nil {
+		t.Fatal("quota IO checkpoint escaped L1 guard")
+	}
+}

@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
@@ -64,12 +65,13 @@ func runQuotaDaemonCapacity(capacity int) error {
 	}
 	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", strconv.Itoa(capacity), "-metrics"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
 }
-func driverQuotaRead(id uint32) (quotaRecord, error) {
+func driverQuotaRead(id uint32) (quotaRecord, error) { return driverQuotaReadOn(id, nil) }
+func driverQuotaReadOn(id uint32, mapper *stateMapper) (quotaRecord, error) {
 	var r quotaRecord
 	if id < driverProjectFirst || id >= driverProjectFirst+4 {
 		return r, errors.New("fixed driver quota project required")
 	}
-	q, e := openQuotaFS(false)
+	q, e := openQuotaFSWithMapper(false, mapper)
 	if e != nil {
 		return r, e
 	}
@@ -80,9 +82,10 @@ func driverQuotaRead(id uint32) (quotaRecord, error) {
 	}
 	return r, nil
 }
-func driverQuotaAllClear() error {
+func driverQuotaAllClear() error { return driverQuotaAllClearOn(nil) }
+func driverQuotaAllClearOn(mapper *stateMapper) error {
 	for id := driverProjectFirst; id < driverProjectFirst+4; id++ {
-		r, e := driverQuotaRead(id)
+		r, e := driverQuotaReadOn(id, mapper)
 		if e != nil {
 			return e
 		}
@@ -105,129 +108,12 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 	if e = strictjson.Decode(b, &old); e != nil {
 		return nil, e
 	}
-	qr := driverQuotaReceipt{Phase: phase, Snapshot: n.quotaSnapshot}
-	if phase == "destroyed" {
-		if e = driverQuotaAllClear(); e != nil {
-			return nil, e
-		}
-	} else {
-		k := old.Ref.ID + old.Ref.Generation
-		b, e = os.ReadFile("/srv/state/firecracker/" + k + ".json")
-		if e != nil {
-			return nil, e
-		}
-		var owner struct {
-			Version int    `json:"version"`
-			Project uint32 `json:"project_id"`
-			Attempt bool   `json:"quota_attempted"`
-		}
-		if e = json.Unmarshal(b, &owner); e != nil {
-			return nil, e
-		}
-		wantVersion := 3
-		if n.quotaSnapshot {
-			wantVersion = 4
-		}
-		if owner.Version != wantVersion || !owner.Attempt {
-			return nil, errors.New("ordinary driver did not persist project ownership before limit setup")
-		}
-		jail := "/srv/r/j/firecracker/" + k
-		for _, path := range []string{jail, jail + "/root"} {
-			a, e := quotaAttributes(path, nil)
-			if e != nil || a.Project != owner.Project || a.XFlags&quotaInherit == 0 {
-				return nil, errors.New("jail/project inheritance not set")
-			}
-		}
-		for _, name := range privateQuotaAssets(n.quotaSnapshot) {
-			path := jail + "/root/" + name
-			fd, e := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
-			if e != nil {
-				return nil, e
-			}
-			f := os.NewFile(uintptr(fd), "private-integration-file")
-			e = f.Sync()
-			f.Close()
-			if e != nil {
-				return nil, e
-			}
-			a, e := quotaAttributes(path, nil)
-			if e != nil || a.Project != owner.Project {
-				return nil, errors.New("mutable prepared file outside instance project")
-			}
-		}
-		q, e := openQuotaFS(false)
-		if e != nil {
-			return nil, e
-		}
-		e = q.sync()
-		q.file.Close()
-		if e != nil {
-			return nil, e
-		}
-		qr.Jail = jail
-		qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries, e = driverQuotaTree(jail, n.quotaSnapshot)
-		if e != nil {
-			return nil, e
-		}
-		qr.Project = owner.Project
-		qr.Record, e = driverQuotaRead(owner.Project)
-		if e != nil {
-			return nil, e
-		}
-		if qr.Record.BHard != 192<<10 || qr.Record.IHard != 128 || qr.Record.Space < 128<<20 || qr.Record.Space > 192<<20 || qr.Record.Inodes == 0 || qr.Record.Inodes > 128 {
-			return nil, errors.New("ordinary driver quota limits/usage mismatch")
-		}
-		if e = validateDriverQuotaAccounting(qr, qr.Record, qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries); e != nil {
-			return nil, e
-		}
-		out["linked_namespace_accounted_before_cut"] = true
-		if n.quotaSnapshot {
-			if e = verifySharedQuotaFiles(jail); e != nil {
-				return nil, e
-			}
-			out["shared_inodes_not_charged_to_clone"] = true
-			out["snapshot_owner_version4_checked"] = true
-		}
-		out["private_project_space_bytes"] = qr.Record.Space
-		out["private_project_inodes"] = qr.Record.Inodes
-		if phase == "running" {
-			procs, e := os.ReadFile(nodeGroup + "/" + k + "/cgroup.procs")
-			if e != nil {
-				return nil, e
-			}
-			vmm := false
-			for _, pid := range strings.Fields(string(procs)) {
-				status, e := os.ReadFile("/proc/" + pid + "/status")
-				if e != nil {
-					return nil, e
-				}
-				for _, field := range []string{"CapEff", "CapPrm", "CapBnd", "CapInh", "CapAmb"} {
-					present, e := capabilityPresent(string(status), field, unix.CAP_SYS_RESOURCE)
-					if e != nil || present {
-						return nil, errors.New("execution domain can bypass quota")
-					}
-				}
-				if !strings.Contains(string(status), "NoNewPrivs:\t1\n") || !strings.Contains(string(status), "Seccomp:\t2\n") {
-					return nil, errors.New("execution domain lacks inherited quota filter")
-				}
-				for _, line := range strings.Split(string(status), "\n") {
-					f := strings.Fields(line)
-					if len(f) == 2 && f[0] == "Seccomp_filters:" {
-						count, e := strconv.Atoi(f[1])
-						if e != nil {
-							return nil, e
-						}
-						if count >= 2 {
-							vmm = true
-						}
-					}
-				}
-			}
-			if !vmm {
-				return nil, errors.New("pinned VMM default plus quota filters not observed")
-			}
-			out["quota_filter_inherited_with_default_vmm_seccomp"] = true
-		}
+	qr, observed, e := n.observeDriverQuota(old.Ref, phase, nil)
+	if e != nil {
+		return nil, e
+	}
+	for k, v := range observed {
+		out[k] = v
 	}
 	if e = privateWrite("/srv/fixture/driver-quota-receipt.json", qr); e != nil {
 		return nil, e
@@ -237,7 +123,144 @@ func (n *node) quotaDriverCheckpoint(ctx context.Context, phase string) (map[str
 	out["mutable_project_inheritance_checked"] = true
 	return out, nil
 }
-func verifyDriverQuotaColdBoot() (map[string]any, error) {
+func (n *node) observeDriverQuota(ref sandbox.Ref, phase string, mapper *stateMapper) (qr driverQuotaReceipt, out map[string]any, err error) {
+	if e := requireNode(); e != nil {
+		return qr, nil, e
+	}
+	var b []byte
+	var e error
+	out = map[string]any{}
+	qr = driverQuotaReceipt{Phase: phase, Snapshot: n.quotaSnapshot}
+	if phase == "destroyed" {
+		if e = driverQuotaAllClearOn(mapper); e != nil {
+			return qr, nil, e
+		}
+	} else {
+		k := ref.ID + ref.Generation
+		b, e = os.ReadFile("/srv/state/firecracker/" + k + ".json")
+		if e != nil {
+			return qr, nil, e
+		}
+		var owner struct {
+			Version int    `json:"version"`
+			Project uint32 `json:"project_id"`
+			Attempt bool   `json:"quota_attempted"`
+		}
+		if e = json.Unmarshal(b, &owner); e != nil {
+			return qr, nil, e
+		}
+		wantVersion := 3
+		if n.quotaSnapshot {
+			wantVersion = 4
+		}
+		if owner.Version != wantVersion || !owner.Attempt {
+			return qr, nil, errors.New("ordinary driver did not persist project ownership before limit setup")
+		}
+		jail := "/srv/r/j/firecracker/" + k
+		for _, path := range []string{jail, jail + "/root"} {
+			a, e := quotaAttributes(path, nil)
+			if e != nil || a.Project != owner.Project || a.XFlags&quotaInherit == 0 {
+				return qr, nil, errors.New("jail/project inheritance not set")
+			}
+		}
+		for _, name := range privateQuotaAssets(n.quotaSnapshot) {
+			path := jail + "/root/" + name
+			fd, e := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+			if e != nil {
+				return qr, nil, e
+			}
+			f := os.NewFile(uintptr(fd), "private-integration-file")
+			e = f.Sync()
+			f.Close()
+			if e != nil {
+				return qr, nil, e
+			}
+			a, e := quotaAttributes(path, nil)
+			if e != nil || a.Project != owner.Project {
+				return qr, nil, errors.New("mutable prepared file outside instance project")
+			}
+		}
+		q, e := openQuotaFSWithMapper(false, mapper)
+		if e != nil {
+			return qr, nil, e
+		}
+		e = q.sync()
+		q.file.Close()
+		if e != nil {
+			return qr, nil, e
+		}
+		qr.Jail = jail
+		qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries, e = driverQuotaTree(jail, n.quotaSnapshot)
+		if e != nil {
+			return qr, nil, e
+		}
+		qr.Project = owner.Project
+		qr.Record, e = driverQuotaReadOn(owner.Project, mapper)
+		if e != nil {
+			return qr, nil, e
+		}
+		if qr.Record.BHard != 192<<10 || qr.Record.IHard != 128 || qr.Record.Space < 128<<20 || qr.Record.Space > 192<<20 || qr.Record.Inodes == 0 || qr.Record.Inodes > 128 {
+			return qr, nil, errors.New("ordinary driver quota limits/usage mismatch")
+		}
+		if e = validateDriverQuotaAccounting(qr, qr.Record, qr.NamespaceBlocks, qr.NamespaceInodes, qr.Entries); e != nil {
+			return qr, nil, e
+		}
+		out["linked_namespace_accounted_before_cut"] = true
+		if n.quotaSnapshot {
+			if e = verifySharedQuotaFiles(jail); e != nil {
+				return qr, nil, e
+			}
+			out["shared_inodes_not_charged_to_clone"] = true
+			out["snapshot_owner_version4_checked"] = true
+		}
+		out["private_project_space_bytes"] = qr.Record.Space
+		out["private_project_inodes"] = qr.Record.Inodes
+		if phase == "running" {
+			procs, e := os.ReadFile(nodeGroup + "/" + k + "/cgroup.procs")
+			if e != nil {
+				return qr, nil, e
+			}
+			vmm := false
+			for _, pid := range strings.Fields(string(procs)) {
+				status, e := os.ReadFile("/proc/" + pid + "/status")
+				if e != nil {
+					return qr, nil, e
+				}
+				for _, field := range []string{"CapEff", "CapPrm", "CapBnd", "CapInh", "CapAmb"} {
+					present, e := capabilityPresent(string(status), field, unix.CAP_SYS_RESOURCE)
+					if e != nil || present {
+						return qr, nil, errors.New("execution domain can bypass quota")
+					}
+				}
+				if !strings.Contains(string(status), "NoNewPrivs:\t1\n") || !strings.Contains(string(status), "Seccomp:\t2\n") {
+					return qr, nil, errors.New("execution domain lacks inherited quota filter")
+				}
+				for _, line := range strings.Split(string(status), "\n") {
+					f := strings.Fields(line)
+					if len(f) == 2 && f[0] == "Seccomp_filters:" {
+						count, e := strconv.Atoi(f[1])
+						if e != nil {
+							return qr, nil, e
+						}
+						if count >= 2 {
+							vmm = true
+						}
+					}
+				}
+			}
+			if !vmm {
+				return qr, nil, errors.New("pinned VMM default plus quota filters not observed")
+			}
+			out["quota_filter_inherited_with_default_vmm_seccomp"] = true
+		}
+	}
+	out["ordinary_driver_quota_enabled"] = true
+	out["durable_project_ownership_checked"] = true
+	out["mutable_project_inheritance_checked"] = true
+	return qr, out, nil
+}
+func verifyDriverQuotaColdBoot() (map[string]any, error) { return verifyDriverQuotaColdBootOn(nil) }
+func verifyDriverQuotaColdBootOn(mapper *stateMapper) (map[string]any, error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
@@ -251,11 +274,11 @@ func verifyDriverQuotaColdBoot() (map[string]any, error) {
 	}
 	result := map[string]any{"quota_limits_and_ownership_survived_cold_boot": true, "quota_accounting_matches_recovered_namespace": true}
 	if old.Phase == "destroyed" {
-		if e = driverQuotaAllClear(); e != nil {
+		if e = driverQuotaAllClearOn(mapper); e != nil {
 			return nil, e
 		}
 	} else {
-		r, e := driverQuotaRead(old.Project)
+		r, e := driverQuotaReadOn(old.Project, mapper)
 		if e != nil {
 			return nil, e
 		}
@@ -384,7 +407,8 @@ func validateDriverQuotaAccounting(old driverQuotaReceipt, actual quotaRecord, b
 
 // Only bounded enums and allocation numbers leave this PRIVATE fixture RPC.
 // No raw PID, UID, project, inode number, generation or filesystem path is sent.
-func driverQuotaDiagnostic() (map[string]any, error) {
+func driverQuotaDiagnostic() (map[string]any, error) { return driverQuotaDiagnosticOn(nil) }
+func driverQuotaDiagnosticOn(mapper *stateMapper) (map[string]any, error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
@@ -396,7 +420,7 @@ func driverQuotaDiagnostic() (map[string]any, error) {
 	if e = strictjson.Decode(b, &old); e != nil {
 		return nil, e
 	}
-	actual, e := driverQuotaRead(old.Project)
+	actual, e := driverQuotaReadOn(old.Project, mapper)
 	if e != nil {
 		return nil, e
 	}

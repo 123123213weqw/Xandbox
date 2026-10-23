@@ -105,6 +105,7 @@ def main():
         parser.add_argument('--' + name, required=True)
     for name in ('admin','snapshot-builder','snapshot-seed-manifest'): parser.add_argument('--'+name)
     profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument('--quota-state-io', action='store_true', help='TEST ONLY: whole owned state disk EIO/held I/O with ordinary driver quota enabled')
     profiles.add_argument('--quota-unenforced', action='store_true', help='TEST ONLY: fresh ext4 without project quota must reject startup; no L2 VM expected')
     profiles.add_argument('--quota-negatives', action='store_true', help='TEST ONLY: ordinary driver EDQUOT and startup rejection cases before cold recovery')
     profiles.add_argument('--quota-snapshot', action='store_true', help='TEST ONLY: genuinely L1-built pristine snapshot with ordinary driver quota')
@@ -112,7 +113,8 @@ def main():
     profiles.add_argument('--quota-probe', action='store_true', help='TEST ONLY: ext4 project quota kernel prerequisites, NOT production enforcement')
     profiles.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
     args = parser.parse_args(); os.umask(0o077)
-    driver_profile = args.quota_driver or args.quota_snapshot or args.quota_negatives or args.quota_unenforced
+    state_io_profile = args.state_io or args.quota_state_io
+    driver_profile = args.quota_driver or args.quota_snapshot or args.quota_negatives or args.quota_unenforced or args.quota_state_io
     if args.quota_snapshot: assert args.admin and args.snapshot_builder and args.snapshot_seed_manifest
     else: assert not args.admin and not args.snapshot_builder and not args.snapshot_seed_manifest
     assert os.geteuid() == 0 and os.uname().sysname == 'Linux' and os.uname().machine == 'x86_64'
@@ -136,9 +138,9 @@ def main():
         seed=json.loads(Path(args.snapshot_seed_manifest).read_text())
         assert seed['assignment']=='UNASSIGNED' and re.fullmatch('[0-9a-f]{64}',seed['agent_sha256'])
         for n in ('firecracker','jailer','kernel','initrd','workspace'): assert seed[n+'_sha256']==digest(sources[n])
-    phases = () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if args.state_io else ('running','stopped','destroyed')
-    result = {'test':'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
-        'production_ready':False,'passed':False,'state_io_profile':args.state_io,'quota_prerequisite_profile':args.quota_probe,
+    phases = () if args.quota_unenforced else ('quota-prerequisites',) if args.quota_probe else ('eio-busy','eio-idle','hang-busy','hang-idle') if state_io_profile else ('running','stopped','destroyed')
+    result = {'test':'owned_l1_quota_whole_state_io_failure_real_l2_kvm' if args.quota_state_io else 'owned_l1_ordinary_driver_unenforced_ext4_startup_rejection' if args.quota_unenforced else 'owned_l1_ordinary_driver_quota_negative_real_l2_kvm' if args.quota_negatives else 'owned_l1_snapshot_driver_quota_real_l2_kvm' if args.quota_snapshot else 'owned_l1_ordinary_driver_quota_real_l2_kvm' if args.quota_driver else 'owned_l1_project_quota_prerequisites_real_l2_kvm' if args.quota_probe else 'owned_l1_whole_state_io_failure_real_l2_kvm' if args.state_io else 'owned_l1_host_power_cut_real_l2_kvm',
+        'production_ready':False,'passed':False,'state_io_profile':state_io_profile,'quota_state_io_profile':args.quota_state_io,'quota_prerequisite_profile':args.quota_probe,
         'production_driver_quota':driver_profile,'quota_snapshot_profile':args.quota_snapshot,'quota_negative_profile':args.quota_negatives,'quota_unenforced_profile':args.quota_unenforced,
         'source_revision':args.source_revision,'validated_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'harness_sha256':digest(__file__),'builder_sha256':digest(Path(__file__).with_name('build_nested_host.py')),
@@ -155,6 +157,8 @@ def main():
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
     if args.quota_probe or driver_profile:
         result['quota_modules_sha256'] = policy['quota_modules_sha256']
+    if args.quota_state_io:
+        result['limitations'].append('Quota enabled during whole-filesystem faults. The injected blocking point is state fsync, not a claim of every Q_SET/Q_SYNC/readback/clear syscall persistence window.')
     if args.quota_unenforced:
         result.update(startup_rejection_only=True,l2_guest_memory_mib=0,l2_vcpus=0,l2_workspace_bytes=0)
         result['limitations'].append('Separate fresh ext4 startup rejection only: no L2 VM, tenant execution, cold recovery or quota-zero readback claimed in this profile.')
@@ -173,7 +177,7 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives),quota_snapshot=args.quota_snapshot,quota_unenforced=args.quota_unenforced)
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives),quota_snapshot=args.quota_snapshot,quota_unenforced=args.quota_unenforced,quota_state_io=args.quota_state_io)
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':4,'reserved_uid_range':True}
@@ -265,8 +269,12 @@ def main():
             result['negative_setup']=request('quota-negative-setup')
             validate_negative_setup(result['negative_setup'])
         for phase in phases:
-            checkpoint=request('quota-probe') if args.quota_probe else request('io-fault' if args.state_io else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
+            checkpoint=request('quota-probe') if args.quota_probe else request('io-fault' if state_io_profile else 'quota-checkpoint' if driver_profile else 'checkpoint',phase)
             assert checkpoint['real_nested_kvm'] and checkpoint['checkpoint_receipt_fsynced']
+            if args.quota_state_io:
+                for key in ('ordinary_driver_quota_enabled','durable_project_ownership_checked','mutable_project_inheritance_checked','linked_namespace_accounted_before_cut','quota_filter_inherited_with_default_vmm_seccomp','quota_mapped_mount_and_policy_checked_before_fault'): assert checkpoint[key] is True
+                assert checkpoint['private_project_space_bytes']>=128<<20 and 0<checkpoint['private_project_inodes']<=128
+                assert checkpoint['quota_and_ownership_released_only_after_io_resumed' if phase.startswith('hang-') else 'quota_owner_retained_until_cold_recovery'] is True
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
             boot(); recovered=request('recover')
@@ -274,7 +282,7 @@ def main():
             assert recovered['fresh_real_kvm_exec_destroy'] and recovered['fresh_guest_boot_changed']
             if driver_profile: assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
             if args.quota_probe: assert recovered['quota_persisted_after_power_cut'] and recovered['all_fixture_project_records_cleared']
-            guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if args.state_io else True
+            guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if state_io_profile else True
             result['cases'].append({'phase':phase,'passed':guard,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
         assert len(owned_groups)==len(phases)+1 and len(set(owned_groups))==len(phases)+1
         result['distinct_l0_execution_generations']=len(owned_groups)

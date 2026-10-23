@@ -11,6 +11,14 @@ from kvm_nested_host import JSONSocket, replace_private_json, quota_format_optio
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_quota_io_profile_loads_quota_but_never_mounts_backing_bypassing_mapper(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_state_io=True)
+        self.assertNotIn('mount -t ext4',service)
+        self.assertIn('insmod /lib/fixture/quota_v2.ko',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-io >/dev/console 2>&1\n'))
+        for other in ('state_io','quota_probe','quota_driver','quota_snapshot','quota_unenforced'):
+            with self.assertRaises(ValueError):init_scripts([],quota_state_io=True,**{other:True})
+
     def test_unenforced_profile_is_fresh_ext4_not_quotaoff_or_fake_kvm_acceptance(self):
         _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_unenforced=True)
         self.assertIn('mount -t ext4 -o rw,nosuid /dev/vda /srv',service)

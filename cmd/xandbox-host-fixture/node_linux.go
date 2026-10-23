@@ -40,6 +40,8 @@ type nodeReceipt struct {
 type node struct {
 	quotaDriver   bool
 	quotaSnapshot bool
+	quotaStateIO  bool
+	mapper        *stateMapper
 	api           *client.Client
 	process       *exec.Cmd
 	exited        chan error
@@ -470,8 +472,11 @@ func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
 	return runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, false)
 }
 func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) error {
+	return runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, false)
+}
+func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO bool) error {
 	count := 0
-	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot} {
+	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO} {
 		if enabled {
 			count++
 		}
@@ -479,7 +484,8 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 	if count > 1 {
 		return errors.New("exclusive L1 image profile required")
 	}
-	quotaDriver = quotaDriver || quotaSnapshot
+	quotaDriver = quotaDriver || quotaSnapshot || quotaStateIO
+	stateIO = stateIO || quotaStateIO
 	if e := requireNode(); e != nil {
 		return e
 	}
@@ -491,7 +497,11 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 			return e
 		}
 		defer mapper.close()
-		if e = unix.Mount(stateDevice, "/srv", "ext4", unix.MS_NOSUID, "errors=remount-ro"); e != nil {
+		mountOptions := "errors=remount-ro"
+		if quotaStateIO {
+			mountOptions += ",prjquota"
+		}
+		if e = unix.Mount(stateDevice, "/srv", "ext4", unix.MS_NOSUID, mountOptions); e != nil {
 			return e
 		}
 	}
@@ -513,7 +523,7 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot}
+	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, mapper: mapper}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -576,7 +586,7 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 					quotaResult, e = recoverQuotaProbe()
 				}
 				if e == nil && quotaDriver {
-					quotaResult, e = verifyDriverQuotaColdBoot()
+					quotaResult, e = verifyDriverQuotaColdBootOn(mapper)
 				}
 				if e == nil {
 					e = kvmAvailable()
@@ -584,7 +594,7 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 				if e == nil {
 					result, e = n.recover(ctx)
 					if e == nil && quotaDriver {
-						e = driverQuotaAllClear()
+						e = driverQuotaAllClearOn(mapper)
 						if e == nil {
 							quotaResult["all_private_project_ids_cleared"] = true
 						}
@@ -618,7 +628,7 @@ func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) er
 				_ = log.Close()
 			}
 			if quotaDriver && q.Operation == "recover" {
-				if diag, diagErr := driverQuotaDiagnostic(); diagErr == nil {
+				if diag, diagErr := driverQuotaDiagnosticOn(mapper); diagErr == nil {
 					out["quota_diagnostic"] = diag
 				}
 			}
