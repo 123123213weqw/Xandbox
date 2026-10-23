@@ -75,7 +75,7 @@ func (q nodeRequest) validate() error {
 	}
 
 	switch q.Operation {
-	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "node-operator-checkpoint", "node-operator-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -613,7 +613,7 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 		}
 		if e == nil {
 			timeout := 70 * time.Second
-			if q.Operation == "node-snapshot-checkpoint" || q.Operation == "node-snapshot-recover" || q.Operation == "node-budget-checkpoint" || q.Operation == "node-budget-recover" || q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
+			if q.Operation == "node-operator-checkpoint" || q.Operation == "node-operator-recover" || q.Operation == "node-snapshot-checkpoint" || q.Operation == "node-snapshot-recover" || q.Operation == "node-budget-checkpoint" || q.Operation == "node-budget-recover" || q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
 			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
@@ -646,6 +646,10 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 				result, e = n.nodeSnapshotCheckpoint(ctx)
 			case "node-snapshot-recover":
 				result, e = n.nodeSnapshotRecover(ctx)
+			case "node-operator-checkpoint":
+				result, e = n.nodeOperatorCheckpoint(ctx)
+			case "node-operator-recover":
+				result, e = n.nodeOperatorRecover(ctx)
 			case "node-budget-checkpoint":
 				result, e = n.nodeBudgetCheckpoint(ctx)
 			case "node-budget-recover":

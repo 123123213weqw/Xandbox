@@ -30,6 +30,12 @@ func main() {
 		}
 	case "node-budget":
 		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
+	case "node-operator-foreign":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed operator foreign child accepts no arguments")
+		} else {
+			err = runOperatorForeignChild()
+		}
 	case "node-budget-daemon", "node-budget-bad-limits":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("node-budget child accepts no arguments")
