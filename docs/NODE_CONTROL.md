@@ -73,3 +73,11 @@ python3 scripts/node_control_smoke.py \
 单测覆盖 gate 排序、已接受 session ticket、阻塞 Save 时 status/Exec/Destroy 继续、提交前后报错的不同重启结果、取消/冲突/精确重试、关闭后迟到 resume 不重开、未返回控制 writer 保留 state 锁、socket/根替换及协议负例。模拟 Store 的错误不是实际 filesystem D、EIO 或掉电注入；同 UID 内核正例加 UID 比较单测也不是另 UID 的内核拒绝验收。
 
 进程脚本使用两个实际 mock daemon 启动和 CLI 子进程，验证 drain 后旧 raw/session 命令执行成功、新预留不写元数据、Stop/Destroy 完成、重启保留已确认 drain、陈旧 resume 拒绝、恢复后原拒绝 key 可用，最后五个 mock 代际均持久销毁。它**没有隔离能力，也不是 KVM、真实故障窗口或性能报告**。新生产 ELF 的独立交叉/原生构建及全部 DEFAULT/IO、quota240/双活cold/故障与节点取消矩阵必须另行绑定，不能复用旧 ELF 结论。
+
+### 冻结源码的预验收结果
+
+冻结源 `b2afd3e1dd6e84d56001f77098fe4cdd474f0cad`，归档 SHA-256 `6574c3bf…`。[来源与未完成门槛](validation/node-control-prequalification-v1.json)绑定全部 43 个本次变更输入及六个 Linux 产物；独立冻结归档交叉构建与 Linux 原生构建逐字节相同。新 daemon 为 `4ee09d0a…`，新 node CLI 为 `fd700c39…`，不能继续沿用旧 `3ea1e247…` 的硬件结论。
+
+该冻结源的 Darwin/Linux 全量 race×3、vet 通过；Linux opt-in fixture race×10/vet、CGO-free 内核 quota filter×3、root Python 82 项（零跳过）与完整 make smoke 通过。[Darwin](validation/node-control-darwin-process-v1.json)和[Linux](validation/node-control-linux-process-v1.json)的实际 daemon/CLI 报告均明确 `hardware_qualification=false`。固定 probe 的 whole-ELF、符号与九处指令字节已离线核验，但尚未运行新程序的实机 probe。
+
+开发阶段的 umask 负例构造、首版脚本执行状态枚举及旧根 metadata 测试预期曾失败，原因与修正保留在来源清单；未将失败改写为通过，也未放宽旧根 drained 默认。冻结源上述测试没有失败；本轮没有启动新的 L1/KVM 用例。因此新 operator 的异 UID 内核拒绝、实际状态盘故障/掉电和全部新 KVM 矩阵仍未验收。

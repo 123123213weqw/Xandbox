@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "passed": true,
+  "backend": "mock",
+  "isolation": false,
+  "production_ready": false,
+  "hardware_qualification": false,
+  "system": "Darwin",
+  "architecture": "arm64",
+  "daemon_sha256": "8c0972f410b7d26243d1f9598fe17eccc43e9919115a1662ca9e5a4b811f2a8e",
+  "node_cli_sha256": "894e7d8ade95a01fa9bdad0d59501cf524fa48b2b663e8347a540112748caaba",
+  "harness_sha256": "931daf810900f423ead679511fb72779523144d03758b45dff549b388c5f7d56",
+  "checks": [
+    "new raw/session/switch rejected without durable metadata or history",
+    "existing raw/session executions succeed and raw destruction completes while drained",
+    "exact retry/stale resume rejection and rejected keys reusable after resume",
+    "acknowledged drain survives clean daemon restart with same epoch/revision",
+    "two daemon boots reaped; all five MOCK generations durably destroyed"
+  ]
+}
