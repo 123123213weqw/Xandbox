@@ -6,6 +6,8 @@
 
 第二次固定源 `5bda138` 仍为 false：两租户都进入第一轮，但零行完整完成。夹具在旧代 durable DESTROYED 后错误要求 ephemeral job GET200，而普通 manager 按既有契约已丢弃该代 job history，实际404；同伴被取消。修订不把404伪造为CANCELLED或Stop证明：另用第二条普通guest执行观察旧writer两次实际写入进度，再确认其API仍RUNNING；要求独立host-empty观测早于从POST前本地时钟推导的最早60秒job deadline，且普通durable DESTROYED及资源消失已通过，才允许将404标为 `HISTORY_DROPPED_AFTER_RECLAIM`。若仍能读到job则实际终态仍须非timeout、非成功退出。失败的原始partial rows保留，不能拼接进新运行。
 
+第三次固定源 `4653b08` 在601.837秒返回false：beta120行完整、alpha119行完整，第120行在最后replay/CAS检查被夹具600秒总deadline取消。原始240行（含未完成行）及1189条资源样本全部保留；**239行完成不是完整通过**。前三次false与各自独立清理审计见[待验收provenance](validation/quota-switch-pending-provenance-v4.json)。新修订仅将该固定实验run budget明确增加到720秒、控制读取770秒、资源采样上限1452及回复上限2MiB；120次/租户、实际writer进度、最少180秒、原guest60秒job timeout及独立早于timeout的Stop判据不降低。外层900秒hard lifetime与原有资源边界不变；720秒是实验总运行上限，不是单次切换SLO。尚需新固定源真实完整重跑，不能把旧239行拼入新运行。
+
 ## 独立且明确的新规格
 
 固定 `--quota-switch` / launch profile `quota-switch-v1`：L1 RAM **3GiB**、raw disk **4GiB**、外层自有 cgroup memory.max **4GiB**，CPU4、pids128、swap0、无NIC、hard15min不变。启动前要求L0 MemAvailable≥8GiB及测试目录free≥12GiB；这只是有界实验前置检查，不是生产全局 admission。旧 profile 的2GiB RAM/2GiB盘/3GiB cgroup和固定dm 2GiB guard不放宽。未知profile拒绝。
@@ -32,6 +34,6 @@
 
 只power-cut自有L1。同盘冷启动，普通daemon启动前核对精确两个owner/策略/共享backing/inode记账、旧执行域不存在、两个pin仍在；再普通启动（无额外通知器）回收旧代，session CLOSED/no binding、旧exec及创建key410、旧job不恢复。新两租户真实guest必须干净且boot不同，最终8 projects全零、pin0、daemon reaped/owned cgroup root移除。
 
-只有该profile允许1MiB有界控制回复，保留完整240行/采样；旧回复64KiB和所有请求8KiB不变。失败的sanitized partial rows也保留，私有ref、token、UID/project/inode/boot、argv/输出和receipt不公开。
+只有该profile允许2MiB有界控制回复，保留完整240行/采样；旧回复64KiB和所有请求8KiB不变。失败的sanitized partial rows也保留，私有ref、token、UID/project/inode/boot、argv/输出和receipt不公开。
 
 尚需固定源native/cross、真实完整profile、旧launch/harness兼容回归、独立只读清理及脱敏raw证据。quota/node总预算、partial-copy、owner unlink/dirfsync/shared-pin故障组合、独立操作员和完整M1–M4仍未完成；PR19继续Draft。

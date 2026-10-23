@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, QUOTA_SWITCH_MAX_FRAME, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
 
 
 class NestedFixtureTests(unittest.TestCase):
@@ -26,8 +26,8 @@ class NestedFixtureTests(unittest.TestCase):
         conn=JSONSocket.__new__(JSONSocket)
         raw=json.dumps({'sample':'x'*70000}).encode()+b'\n';conn.file=io.BytesIO(raw)
         with self.assertRaises(AssertionError):conn.read()
-        conn.max_frame=1<<20;conn.file=io.BytesIO(raw);self.assertEqual(len(conn.read()['sample']),70000)
-        conn.file=io.BytesIO(b'x'*((1<<20)+1))
+        conn.max_frame=QUOTA_SWITCH_MAX_FRAME;conn.file=io.BytesIO(raw);self.assertEqual(len(conn.read()['sample']),70000)
+        conn.file=io.BytesIO(b'x'*(QUOTA_SWITCH_MAX_FRAME+1))
         with self.assertRaises(AssertionError):conn.read()
 
     def test_switch_setup_and_cold_recovery_require_every_explicit_boundary(self):
@@ -57,9 +57,9 @@ class NestedFixtureTests(unittest.TestCase):
         for tenant in ('alpha','beta'):
             rows=[{'iteration':i+1,'session_ordinal':i//48+1,'completed':True,'busy_old_job_running_at_switch_request':True,'busy_old_guest_write_progress_checked':True,'old_job_earliest_timeout_budget_ms_at_switch_request':59000,'old_job_terminal':'HISTORY_DROPPED_AFTER_RECLAIM','workload_start_ms':i*1500,'workload_end_ms':i*1500+10,'switch_start_ms':i*1500+10,'switch_end_ms':i*1500+50,**{k:20 for k in keys},'server_phase_observations':{'measured':True}} for i in range(120)]
             workers.append({'tenant':tenant,'samples':rows,'summary_ms':{label:{'count':120,'p50':20,'p95':20,'p99':20,'p100':20} for label in labels}})
-        good={'phase':'quota-enabled-two-tenant-switching','load':{'passed':True,'cycles_per_tenant':120,'minimum_paced_seconds':180,'duration_seconds':180.1,'busy_old_writer_each_switch':True,'no_operator_quota_sync_during_measured_switches':True,'same_initial_session_key_isolated_between_tenants':True,'workers':workers,'cross_tenant_overlapping_switch_interval_pairs':120,'resources':[dict(resource) for _ in range(3)],'checkpoint':{k:True for k in checkpoint}}}
+        good={'phase':'quota-enabled-two-tenant-switching','load':{'passed':True,'cycles_per_tenant':120,'minimum_paced_seconds':180,'fixed_run_budget_seconds':720,'duration_seconds':180.1,'busy_old_writer_each_switch':True,'no_operator_quota_sync_during_measured_switches':True,'same_initial_session_key_isolated_between_tenants':True,'workers':workers,'cross_tenant_overlapping_switch_interval_pairs':120,'resources':[dict(resource) for _ in range(3)],'checkpoint':{k:True for k in checkpoint}}}
         validate_quota_switch_run(good)
-        for field,value in [('cycles_per_tenant',119),('duration_seconds',179),('cross_tenant_overlapping_switch_interval_pairs',0),('busy_old_writer_each_switch',False),('no_operator_quota_sync_during_measured_switches',False)]:
+        for field,value in [('fixed_run_budget_seconds',600),('cycles_per_tenant',119),('duration_seconds',179),('cross_tenant_overlapping_switch_interval_pairs',0),('busy_old_writer_each_switch',False),('no_operator_quota_sync_during_measured_switches',False)]:
             bad=copy.deepcopy(good);bad['load'][field]=value
             with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
         for field,value in [('completed',False),('busy_old_job_running_at_switch_request',False),('busy_old_guest_write_progress_checked',False),('old_job_terminal','TIMED_OUT'),('old_job_earliest_timeout_budget_ms_at_switch_request',20),('old_job_earliest_timeout_budget_ms_at_switch_request',float('nan')),('request_to_first_new_command_success_ms',float('nan'))]:

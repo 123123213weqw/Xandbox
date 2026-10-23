@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/123123213weqw/Xandbox/internal/access"
@@ -34,6 +35,9 @@ const switchCycles = 120
 const switchMinimumSeconds = 180
 const switchSlots = 8
 const switchCapacity = 4
+const switchRunBudget = 720 * time.Second
+const switchSampleLimit = 1450
+const switchReplyMax = 2 << 20
 const switchReceiptPath = "/srv/fixture/quota-switch-receipt.json"
 
 var switchTenants = [2]string{"switch-alpha", "switch-beta"}

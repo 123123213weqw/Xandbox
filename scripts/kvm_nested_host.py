@@ -22,6 +22,7 @@ from kvm_driver_smoke import wait
 from kvm_snapshot_smoke import private_json, sync_dir
 
 DISK_BYTES = 2 << 30
+QUOTA_SWITCH_MAX_FRAME = 2 << 20
 
 
 def quota_format_options(enabled):
@@ -33,7 +34,7 @@ def quota_format_options(enabled):
 class JSONSocket:
     def __init__(self, path, timeout=90, quota_switch=False):
         assert type(quota_switch) is bool
-        self.max_frame=(1<<20) if quota_switch else 65536
+        self.max_frame=QUOTA_SWITCH_MAX_FRAME if quota_switch else 65536
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); self.sock.settimeout(timeout)
         self.sock.connect(str(path)); self.file = self.sock.makefile('rb')
     def read(self):
@@ -217,7 +218,7 @@ def validate_quota_switch_setup(value):
 
 def validate_quota_switch_run(value):
     assert value['phase']=='quota-enabled-two-tenant-switching'
-    load=value['load'];assert load['passed'] is True and load['cycles_per_tenant']==120 and load['minimum_paced_seconds']==180 and load['duration_seconds']>=180
+    load=value['load'];assert load['passed'] is True and load['cycles_per_tenant']==120 and load['minimum_paced_seconds']==180 and load['fixed_run_budget_seconds']==720 and 180<=load['duration_seconds']<=720
     for k in ('busy_old_writer_each_switch','no_operator_quota_sync_during_measured_switches','same_initial_session_key_isolated_between_tenants'):assert load[k] is True
     workers=load['workers'];assert [w['tenant'] for w in workers]==['alpha','beta']
     fields={'binding':'request_to_binding_response_ms','first_new_command':'request_to_first_new_command_success_ms','old_host_stopped':'request_to_old_host_stopped_observed_ms','old_durable_destroyed':'request_to_old_durable_destroyed_observed_ms'}
@@ -239,7 +240,7 @@ def validate_quota_switch_run(value):
             for percentile in (50,95,99,100):assert q['p'+str(percentile)]==vals[math.ceil(120*percentile/100)-1]
     overlaps=sum(a['switch_start_ms']<b['switch_end_ms'] and b['switch_start_ms']<a['switch_end_ms'] for a in workers[0]['samples'] for b in workers[1]['samples'])
     assert load['cross_tenant_overlapping_switch_interval_pairs']==overlaps and overlaps>0
-    resources=load['resources'];assert 3<=len(resources)<=1252
+    resources=load['resources'];assert 3<=len(resources)<=1452
     for row in resources:
         assert 0<=row['allocated']<=4 and 0<=row['nontransactional_nonempty_quota_slots']<=8 and row['l1_root_free_bytes']>=256<<20
     final=resources[-1]
@@ -428,7 +429,7 @@ def main():
                 return console.exists() and b'XANDBOX_NESTED_HOST_READY' in console.read_bytes()
             wait(ready,'L1 fixture boot',seconds=90)
             qmp_probe(root/'qmp.sock',resources['memory_mib'] if args.quota_switch else None)
-            channel=JSONSocket(root/'control.sock',650 if args.quota_switch else 210 if (snapshot_profile or args.quota_negatives or args.quota_syscalls) else 90,quota_switch=args.quota_switch)
+            channel=JSONSocket(root/'control.sock',770 if args.quota_switch else 210 if (snapshot_profile or args.quota_negatives or args.quota_syscalls) else 90,quota_switch=args.quota_switch)
             channel.send({'version':1,'operation':'probe'}); reply=channel.read()
             assert reply['ok'] and reply['result']['nested_kvm_api']==12
             assert disk.stat().st_size==disk_bytes

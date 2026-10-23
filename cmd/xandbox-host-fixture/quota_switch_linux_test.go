@@ -287,12 +287,15 @@ func TestSwitchFreshnessAndBusyStopCannotPassOnTimeoutOrIgnoredShellFailure(t *t
 	}
 }
 func TestSwitchPublicReplyBoundForFullTargetsAndNoPrivateIdentityFields(t *testing.T) {
-	r := switchReport{Cycles: 120, Resources: make([]switchResource, 1252)}
+	if switchRunBudget != 720*time.Second || switchSampleLimit != 1450 || switchReplyMax != 2<<20 {
+		t.Fatal("unreviewed bounded experiment change")
+	}
+	r := switchReport{Cycles: 120, Resources: make([]switchResource, switchSampleLimit+2)}
 	for i := range r.Workers {
 		r.Workers[i].Rows = make([]switchRow, 120)
 	}
 	b, e := json.Marshal(r)
-	if e != nil || len(b) > 1<<20 {
+	if e != nil || len(b) > switchReplyMax {
 		t.Fatal("full target no longer fits explicit control reply bound")
 	}
 	for _, v := range []string{`"id":`, `"generation":`, `"token":`, `"argv":`, `"stdout":`, `"uid":`} {

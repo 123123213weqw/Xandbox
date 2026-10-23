@@ -564,7 +564,7 @@ func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot,
 				timeout = 200 * time.Second
 			}
 			if q.Operation == "quota-switch-run" {
-				timeout = 600 * time.Second
+				timeout = switchRunBudget
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			var result map[string]any

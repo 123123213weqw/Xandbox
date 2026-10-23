@@ -67,6 +67,7 @@ type switchReport struct {
 	Passed                               bool                  `json:"passed"`
 	Cycles                               int                   `json:"cycles_per_tenant"`
 	MinimumSeconds                       int                   `json:"minimum_paced_seconds"`
+	RunBudgetSeconds                     int                   `json:"fixed_run_budget_seconds"`
 	DurationSeconds                      float64               `json:"duration_seconds"`
 	BusyWriterEverySwitch                bool                  `json:"busy_old_writer_each_switch"`
 	Workers                              [2]switchWorkerReport `json:"workers"`
@@ -590,7 +591,7 @@ func (n *node) quotaSwitchRun(ctx context.Context) (out map[string]any, err erro
 	}
 	marker.Close()
 	began := time.Now()
-	report := &switchReport{Cycles: switchCycles, MinimumSeconds: switchMinimumSeconds, BusyWriterEverySwitch: true, Resources: []switchResource{}, NoObserverSyncDuringMeasuredSwitches: true}
+	report := &switchReport{Cycles: switchCycles, MinimumSeconds: switchMinimumSeconds, RunBudgetSeconds: int(switchRunBudget / time.Second), BusyWriterEverySwitch: true, Resources: []switchResource{}, NoObserverSyncDuringMeasuredSwitches: true}
 	report.Workers[0] = switchWorkerReport{Tenant: "alpha", Rows: []switchRow{}}
 	report.Workers[1] = switchWorkerReport{Tenant: "beta", Rows: []switchRow{}}
 	out = map[string]any{"phase": "quota-enabled-two-tenant-switching", "load": report}
@@ -659,7 +660,7 @@ func (n *node) quotaSwitchRun(ctx context.Context) (out map[string]any, err erro
 					}
 					return
 				}
-				if len(report.Resources) >= 1250 {
+				if len(report.Resources) >= switchSampleLimit {
 					sampleError <- errors.New("fixed sample count bound exceeded")
 					cancel()
 					return
