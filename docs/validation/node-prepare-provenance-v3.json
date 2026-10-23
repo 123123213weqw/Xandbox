@@ -1,0 +1,278 @@
+{
+  "status": "finite_exact_ordinary_daemon_instruction_entry_two_create_calibration_passed_not_cancel_cleanup_or_production_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source": "1e7650af7ea031b13ef370ccaa9b8915156d94db",
+  "source_archive_sha256": "fae94a92d88a987feb0223d5c0aea3928115e08f26b5df1641e5edb53a08aa37",
+  "raw_reports_archive_sha256": "c248126dbf47d7f50f977acd972c8b0e37e4caa5a3bed823937ff0c832ddb8b3",
+  "raw_archive_regular_members": 20,
+  "production_implementation_changed": false,
+  "ordinary_production_ELFs_byte_equal_to_verified_2e": true,
+  "original_production_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+  "internal_tree_byte_equal_to_prior_d432": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_final_source_cross_5_ELFs_exact": true,
+  "artifacts_sha256": {
+    "fixture": "9297f982bbf8b39b0c66bb311087040dacdedb8f1d2aa33134a7a0119249c1a7",
+    "daemon": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "19bbd460b8cd526f55fe0fe892985c593b47f3f102f0e071f35e7c7cf071d613",
+    "snapshot_builder": "243dedf173271f269391a84375c561409082bba3ddcde6f09143646ba10f3a62"
+  },
+  "new_calibration": {
+    "all_eight_cpu_loss_counters_zero": true,
+    "calibration_only": true,
+    "completed_preparations": 2,
+    "entry_probe_only_no_uretprobe_or_user_memory_read": true,
+    "event_count": 12,
+    "exact_channel_linearization_or_latency_slo_claim": false,
+    "exact_ordinary_elf_sha256": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "first_selected_token_observed_before_second_dispatch": true,
+    "instruction_entry_probes": 9,
+    "live_daemon_incarnation_inode_control_and_event_tgid_checked": true,
+    "normalized_transitions": [
+      {
+        "goroutine_index": 1,
+        "point": "enter"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "selected"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "ok"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "node_ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "enter"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "release"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "released"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "selected"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "node_ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "release"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "released"
+      }
+    ],
+    "queued_request_cancellation_and_cleanup_isolation_claim": false,
+    "second_actual_gate_entry_inside_first_held_interval": true
+  },
+  "trace_scope": {
+    "owned_l1_only": true,
+    "shared_l0_trace_modified": false,
+    "kernel_release": "6.8.0-136-generic",
+    "instruction_entry_only": true,
+    "uretprobes_or_return_address_rewrites": false,
+    "user_stack_context_or_tenant_buffer_fetch": false,
+    "raw_registers_tid_pid_time_exported": false,
+    "public_normalized_point_and_local_goroutine_ordinal_only": true,
+    "whole_daemon_ELF_and_exact_symbol_instruction_bytes_checked": true,
+    "deferred_release_inlined_callsite_checked": true,
+    "first_actual_token_observed_before_second_request": true,
+    "acceptance_boundaries_unchanged_after_false_attempt": true,
+    "eight_cpu_buffer_loss_stats_zero_and_all_nine_probe_hit_counts_equal_raw_trace": true,
+    "cleanup_registry_empty_instance_removed_owned_tracefs_unmounted": true,
+    "not_exact_channel_linearization_or_SLO": true,
+    "waiting_goroutine_actually_scheduler_parked_claim": false,
+    "copy_stage_complete_nonoverlap_claim": false,
+    "queued_request_cancel_and_independent_cleanup_claim": false
+  },
+  "policy": {
+    "unchanged_from": "node-snapshot-provenance-v2.json",
+    "profile": "node-snapshot-v1",
+    "l1_ram_mib": 8192,
+    "l1_disk_bytes": 12884901888,
+    "outer_cgroup_memory_max": 10737418240,
+    "vcpus": 8,
+    "pids_max": 256,
+    "swap_max": 0,
+    "business_nics": 0,
+    "hard_seconds": 900,
+    "node_instances": 4,
+    "node_records": 1024,
+    "node_sessions": 32,
+    "prepare_workers": 1,
+    "private_hard_bytes": 201326592,
+    "private_hard_inodes": 128,
+    "guest_memory_touched_bytes_each": 8388608,
+    "offline_builder_outside_node_not_nodewide_memory_stress": true,
+    "space_filler_intentionally_test_external_not_enforced_external_budget": true
+  },
+  "accepted_regression_scopes": {
+    "admission": 2,
+    "node": 2,
+    "owner": 2,
+    "inflight": 2,
+    "partial": 1,
+    "snapshot": 4,
+    "clear": 2,
+    "syscalls": 4
+  },
+  "accepted_outer_execution_generations": 19,
+  "earlier_failed_outer_execution_generations": 1,
+  "all_twenty_hardware_generations_independently_absent": true,
+  "audit_mode": "readonly exact owned receipts; no cleanup actions; quota evidence inside L1, not inferred from outer disk removal",
+  "false_predecessors": [
+    {
+      "source": "9e5a25e0361f8f38532eabd575aaddad29e07c39",
+      "source_archive_sha256": "7218059ec7deb69973836276287930c378d1456714ae7b36925f8297af01044a",
+      "stage": "native_fixture_race_negative_test_was_noop_after_trace_field_rename",
+      "actual_exit": 1,
+      "status_bytes_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "hardware_boots": 0,
+      "production_or_fixture_ELF_build_reached": false,
+      "correction_source": "f7ea4f69f18bf1bef9805d1397ca3d7e860f9c12",
+      "correction": "Only _test.go negative-mutation strings and an assertion that the negative input actually changes; no parser/threshold relaxation."
+    },
+    {
+      "source": "f7ea4f69f18bf1bef9805d1397ca3d7e860f9c12",
+      "source_archive_sha256": "76c83d7f70f26d61e197fa11819d91f8f21003df55b5008c71c982c56214ba6a",
+      "stage": "actual_hardware_calibration_failed_before_first_checkpoint",
+      "actual_exit": 1,
+      "status_bytes_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "hardware_outer_generations": 1,
+      "report": "kvm-node-prepare-admission-false-v2.json",
+      "passed": false,
+      "cleanup_confirmed_and_independently_audited": true,
+      "raw_trace_exported": false,
+      "exact_failure_transition_order_reconstructable": false,
+      "correction_source": "1e7650af7ea031b13ef370ccaa9b8915156d94db",
+      "correction": "Source-audit found a simultaneous request barrier does not imply second entry after first token. Producer now observes real selected-token before second dispatch, with unchanged acceptance/timeouts/budgets and public normalized transitions. This is not a claim of the uniquely established cause of the earlier false trace."
+    }
+  ],
+  "validation": {
+    "linux_full_race_runs": 3,
+    "linux_full_vet": true,
+    "fixture_race_runs": 10,
+    "fixture_vet": true,
+    "root_python_tests": 78,
+    "cgo0_actual_kernel_exec_filter_runs": 3,
+    "darwin_final_frozen_full_race_runs": 3,
+    "darwin_final_frozen_vet": true
+  },
+  "offline_aggregation_preflight": {
+    "initial_generated_verifier_sha256": "814b6f1ce2af7d4bcc8ed95744b06c7ad6a6fe23780cb5dfad14d1c2b5520f07",
+    "corrected_verifier_sha256": "8bd4e6287f06ad0fcb0d286d722a209e7b9eb60587b5dd9fedb95fe63b7fb528",
+    "initial_failed_check_exit": 1,
+    "initial_failure_log_sha256": "6f4732f8cd0f7f2f82c9c9be7fcf4e8c1826c2ad9550a3890e17918a7409111e",
+    "correction": "Global helper renaming accidentally changed expected fixed node-snapshot-v1 launch profile to node-prepare-v1 and left old audit heading. Corrected these two expected literals to the actual frozen producer/profile and exact audit output. No hardware/source/report/threshold/namespace/quota rule changed or hardware rerun for this correction.",
+    "unlabeled_darwin_log_sha256": "9c585ec2dac7a8198a5506ddd1e5228eec58c83ea2ac0b1b9fd18bb3c1905e21",
+    "darwin_metadata_rejection_log_sha256": "fa2394e58df73065c663b5e3d754ac095dd96243a1cdab948b4c8be8dd91fbe3",
+    "darwin_action": "Earlier actual final-source Darwin run lacked required source/version header and was rejected as publication evidence. Full race3/vet re-executed with actual HEAD/code equality check and toolchain header; only this newly executed labeled log published.",
+    "private_error_traces_not_published_because_local_paths": true
+  },
+  "historical_production_qualification_not_retagged": {
+    "node_budget": "node-budget-provenance-v2.json",
+    "default_io": "node-runtime-provenance-v1.json",
+    "quota240_dual_live_cold": "node-quota-provenance-v1.json",
+    "space_only_original": "node-snapshot-provenance-v2.json"
+  },
+  "next_required": "Actual queued original request cancellation/no token-owner-quota leak and Stop/Cleanup while a different real partial workspace WRITE is held; unchanged30s Prepare/40s HTTP budgets. Full physical-memory/ancestor/affinity, unique-RAM, node-wide disk/log bounds, metadata/catalog lock/operator/long open-loop/fairness/SLO and full M1-M4 remain incomplete.",
+  "privacy": "20 exact regular archive inputs only. Raw consoles, private inner L1 traces/pointers/identities/filler/session/cut receipts/images/credentials excluded. Failed v2 raw register trace was on owned L1 disk deleted by normal cleanup; no invented posthoc sequence. Public transition ordinals1/2 are local non-identities.",
+  "files": {
+    "kvm-node-prepare-admission-v3.json": {
+      "sha256": "087c27f5669ba0cb8c9590611f39734c4fed4252dd886d74d0b2f1987b7f5d05",
+      "bytes": 10529
+    },
+    "kvm-node-prepare-node-v3.json": {
+      "sha256": "e86b490f6a2299d4e2d7f5d857bba945c6795f89db3c0f388b48da73d422fe94",
+      "bytes": 7607
+    },
+    "kvm-node-prepare-owner-v3.json": {
+      "sha256": "168b3b5bc9ed380a2665d4c3186c64846f74286f0e9b253e2aae9c0936018ff2",
+      "bytes": 9774
+    },
+    "kvm-node-prepare-inflight-v3.json": {
+      "sha256": "c2c33ca22eaf7eaec8e36ae4c9793684ad35b11d738b46d2f277bb83fc8b209c",
+      "bytes": 8865
+    },
+    "kvm-node-prepare-partial-v3.json": {
+      "sha256": "072a23dab5996fc25cd7504f71387a4b4167290871eb86efb0614bb865902e31",
+      "bytes": 8668
+    },
+    "kvm-node-prepare-snapshot-v3.json": {
+      "sha256": "42a69139a020c63839e527c9997348ebe69d6fe5f1301ef345f518dc2bc7e434",
+      "bytes": 9295
+    },
+    "kvm-node-prepare-clear-v3.json": {
+      "sha256": "c656599f5af2cea564192705fce60c043d0588d3e0c318f10c82589eca4ad140",
+      "bytes": 7097
+    },
+    "kvm-node-prepare-syscalls-v3.json": {
+      "sha256": "f145e01c8d26c62c43cc412a20cfcffd2d52972d360bc95008abffea84dae758",
+      "bytes": 13734
+    },
+    "node-prepare-native-race-v3.txt": {
+      "sha256": "d46f4a750bf70b0a4f763c4e6d5387d11c1e06842f0ba219c0f0d8c0fd6ceb67",
+      "bytes": 1639
+    },
+    "node-prepare-fixture-native-race-v3.txt": {
+      "sha256": "7090f12999ec8e29e4a2747ae88a4ba144ead45842dda0e395f6a7867ea57d61",
+      "bytes": 70
+    },
+    "node-prepare-cgo0-kernel-filter-v3.txt": {
+      "sha256": "3b25e04cfe62e602ef517da3519a5d7d1d451781aeda43afccc4cfa389e7c641",
+      "bytes": 846
+    },
+    "node-prepare-native-artifacts-v3.txt": {
+      "sha256": "fb0557aedcd3b53ca2a89424ddf9afea71f21aa11c85ccb9758c24474fbbe012",
+      "bytes": 487
+    },
+    "node-prepare-pipeline-v3.txt": {
+      "sha256": "d601d27a734fdfd36d0dddc8f0aeeea646a29e204d4ffab7ad1217b1f584ccd3",
+      "bytes": 2043
+    },
+    "node-prepare-independent-cleanup-v3.txt": {
+      "sha256": "31cf1356605760be2c1a1a94f3369f4c1c924e73fad095c2b42bff05d1d4abd1",
+      "bytes": 1437
+    },
+    "node-prepare-initial-unit-false-v1.txt": {
+      "sha256": "2a41ff9049a192569ffbbf48cc24d0a94184bcbbd3a9a178aedf2b55961f3e8c",
+      "bytes": 2500
+    },
+    "kvm-node-prepare-admission-false-v2.json": {
+      "sha256": "f932fe89a368b171712b1c1b72e5170b4bcc488ff9770614d19a55309fc6639f",
+      "bytes": 5409
+    },
+    "node-prepare-final-darwin-race-v3.txt": {
+      "sha256": "0497bf109ed01ac268c4a723481ebadd92371a0b822caeb5ae310128d0950ca7",
+      "bytes": 1556
+    }
+  }
+}
