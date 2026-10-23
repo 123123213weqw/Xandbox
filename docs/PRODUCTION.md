@@ -24,6 +24,8 @@
 
 当前新增[有界异步诊断与闭集原因计数](DIAGNOSTICS.md)：历史29fe的日志窗口证据保持原绑定；新 daemon d163、fixture98ae 已独立通过12scope（nested16次L1启动及4组 DEFAULT/IO×ENOSPC/EROFS）、真实EIO/EDQUOT/部分复制、准备/取消trace及两个日志窗口，并完成无补充清理的独立资源/loop复核。[脱敏摘要](validation/diagnostics-cause-v1.json)含原始归档指纹、native/cross9及72项拒绝检查。旧 raw stderr 负向已迁移到精确闭集启动行、独立 producer 计数或受控真实故障与同输入恢复证据，不恢复原始错误输出；这不是可靠租户审计、持久化根因证书或完整生产验收。新 template573e/nodeea48/gateway41e9/builder5ff7 仍不能沿用历史报告代签，剩余全量 DEFAULT/IO/quota240/dual-cold/failure/operator/session/TLS+metadata 重验待完成；本项不勾选完整M2/M4。
 
+随后另完成[d163 DEFAULT/IO/quota240命名兼容矩阵](D163_RUNTIME.md)：18个新scope与上述同源7个scope组成25组，分别保留原始来源，43个外层执行代际及4个loop绑定均有独立只读复核；冷30、DEFAULT/quota各双租户240次、双活cold及明确列出的故障通过，不重标历史ELF报告。此更新只完成该命名矩阵；owner/inflight、operator/session和TLS+metadata等独立门禁，以及饱和压力、可靠审计、独立部署与运营验收仍未完成。下文早期“最新”版本叙述为各自历史节点，以本段及对应源绑定报告区分当前证据，不勾选完整M1–M4。
+
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。
 - 一实例一独立 guest、写盘、进程资源组和执行代际；不把已使用实例直接交给另一租户。

@@ -182,7 +182,11 @@ race×3/vet 亦通过。源码提交的 push/PR 两组 CI 各5 jobs 全绿。
 后者在错误资产检查处、任何 KVM 阶段前拒绝，随后只恢复原 SHA 校验的 v10 路径，
 未修改源码、资源或时间预算。摘要发布器实际拒绝了72个 source/ELF/状态/范围变体。
 
-**剩余门禁**：以上不是完整 DEFAULT/IO、quota240、dual-cold、全部 failure、
-operator/session、TLS+metadata 的新 ELF 验收；未重跑部分仍需独立完成。
+后续已另完成同源新 ELF 的[DEFAULT/IO/quota240命名兼容矩阵](D163_RUNTIME.md)：
+18个新scope与前批同源7个scope分别保留来源，共25个scope/43个外层执行代际，
+不将不同来源的原始报告重标为一次新执行。
+
+**剩余门禁**：上述有限矩阵不是全部 failure、owner/inflight、operator/session、
+TLS+metadata 的完整新 ELF 验收；各自未完成的门禁仍需独立实测及复核。
 可靠租户审计、全局磁盘与内存压力、operator/systemd/恢复、PKI、长时 open-loop/fairness、
 备份升级回滚等仍属原 Goal 的未完成范围。
