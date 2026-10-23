@@ -362,6 +362,11 @@ NODE_BUDGET_CHECKPOINT_FLAGS = ('real_nested_kvm','checkpoint_receipt_fsynced','
 NODE_BUDGET_RECOVERY_FLAGS = ('l1_boot_changed','exact_node_policy_and_owner_quota_metadata_checked_before_daemon','old_execution_absent_and_ordinary_recovery_destroyed_resources_absent','old_key410_all_four_projects_zero_before_reuse','fresh_actual_guest_uid_boot_workspace_checked','all_four_projects_zero_controller_reaped_entire_node_subtree_removed','no_assigned_guest_restore_and_no_node_policy_retargeted')
 
 
+def nested_group_limits(resources):
+    large=resources['profile']=='node-budget-v1'
+    return {'memory.max':str(resources['cgroup_memory_max']),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'256' if large else '128','cpu.max':'800000 100000' if large else '400000 100000'}
+
+
 def nested_node_resources():
     return {'profile':'node-budget-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30}
 
@@ -550,7 +555,7 @@ def main():
             group.mkdir(mode=0o700);owned_groups.append(group)
             replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),
                 'cgroup_parent':str(parent_group),'cgroup':str(group),'all_cgroups':[str(p) for p in owned_groups]})
-            for name,value in {'memory.max':str(resources['cgroup_memory_max']),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'128','cpu.max':'400000 100000'}.items():
+            for name,value in nested_group_limits(resources).items():
                 (group/name).write_text(value); assert (group/name).read_text().strip()==value
             launch_policy['cgroup']=str(group);replace_private_json(cfg,launch_policy)
             boot_number+=1

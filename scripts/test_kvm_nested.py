@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from kvm_nested_host import (NODE_BUDGET_CHECKPOINT_FLAGS,NODE_BUDGET_RECOVERY_FLAGS,nested_node_resources,node_budget_policy,validate_node_budget_checkpoint,validate_node_budget_recovery,OWNER_CUT_CHECKPOINT_FLAGS, OWNER_CUT_RECOVERY_FLAGS, validate_quota_owner_cut_checkpoint, validate_quota_owner_cut_recovery, owner_cut_recovery_packet, detach_owner_cut_checkpoint, nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
+from kvm_nested_host import (NODE_BUDGET_CHECKPOINT_FLAGS,NODE_BUDGET_RECOVERY_FLAGS,nested_node_resources,nested_group_limits,node_budget_policy,validate_node_budget_checkpoint,validate_node_budget_recovery,OWNER_CUT_CHECKPOINT_FLAGS, OWNER_CUT_RECOVERY_FLAGS, validate_quota_owner_cut_checkpoint, validate_quota_owner_cut_recovery, owner_cut_recovery_packet, detach_owner_cut_checkpoint, nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
 
 from build_nested_host import init_scripts, validate_manifest
 from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, QUOTA_SWITCH_MAX_FRAME, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
@@ -17,6 +17,10 @@ class NestedFixtureTests(unittest.TestCase):
         self.assertEqual(nested_node_resources(),{'profile':'node-budget-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30})
         self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
         self.assertEqual(nested_copy_resources()['memory_mib'],3072)
+        self.assertEqual(nested_group_limits(nested_node_resources())['cpu.max'],'800000 100000')
+        self.assertEqual(nested_group_limits(nested_node_resources())['pids.max'],'256')
+        self.assertEqual(nested_group_limits(nested_resources(False))['cpu.max'],'400000 100000')
+        self.assertEqual(nested_group_limits(nested_copy_resources())['pids.max'],'128')
         _,service=init_scripts([],node_budget=True)
         self.assertIn('node-budget',service);self.assertIn('prjquota',service)
         with self.assertRaises(ValueError):init_scripts([],node_budget=True,quota_driver=True)
