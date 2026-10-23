@@ -8,6 +8,8 @@
 
 第三次固定源 `4653b08` 在601.837秒返回false：beta120行完整、alpha119行完整，第120行在最后replay/CAS检查被夹具600秒总deadline取消。原始240行（含未完成行）及1189条资源样本全部保留；**239行完成不是完整通过**。前三次false与各自独立清理审计见[待验收provenance](validation/quota-switch-pending-provenance-v4.json)。新修订仅将该固定实验run budget明确增加到720秒、控制读取770秒、资源采样上限1452及回复上限2MiB；120次/租户、实际writer进度、最少180秒、原guest60秒job timeout及独立早于timeout的Stop判据不降低。外层900秒hard lifetime与原有资源边界不变；720秒是实验总运行上限，不是单次切换SLO。尚需新固定源真实完整重跑，不能把旧239行拼入新运行。
 
+第四次固定源 `599a6de` 的测量阶段已全部完成240行、601.477秒，完整量化结果可独立复核；但第二次开机的cold inode元数据严格比较失败，**整体仍是false**，旧11个兼容profile尚未执行。检查点代码存在确定的基线时序错误：第二个clone创建前就保存了第一个clone的共享inode link count，而新clone正常增加共享link。新夹具在两者都Ready且pins2之后重新精确采样两份完整receipt，并要求共享inode身份/属性/link count逐项一致；冷恢复严格比较仍保留，绝不归一化或忽略link count。私有receipt语义版本升为3；增加错误时的私有字段差异诊断。旧失败未导出具体差异条目，不能声称该时序错误已被证明是唯一差异或提前宣布修复实机通过。仍需新冻结源完整重跑，不拼接旧240行。
+
 ## 独立且明确的新规格
 
 固定 `--quota-switch` / launch profile `quota-switch-v1`：L1 RAM **3GiB**、raw disk **4GiB**、外层自有 cgroup memory.max **4GiB**，CPU4、pids128、swap0、无NIC、hard15min不变。启动前要求L0 MemAvailable≥8GiB及测试目录free≥12GiB；这只是有界实验前置检查，不是生产全局 admission。旧 profile 的2GiB RAM/2GiB盘/3GiB cgroup和固定dm 2GiB guard不放宽。未知profile拒绝。

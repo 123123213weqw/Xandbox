@@ -15,6 +15,7 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
+	"golang.org/x/sys/unix"
 )
 
 type switchTestTransport func(*http.Request) (*http.Response, error)
@@ -88,15 +89,68 @@ func TestSwitchSessionJobUsesActualPublicWireContractAndRejectsWrongBindings(t *
 
 func TestSwitchPrivateCrashReceiptPreservesExplicitJobReference(t *testing.T) {
 	ref := sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
-	saved := switchCrashReceipt{Version: 2}
+	saved := switchCrashReceipt{Version: 3}
 	saved.Bindings[0] = switchSavedBinding{Binding: session.Result{Current: ref}, JobRef: ref, JobID: strings.Repeat("c", 32)}
 	b, e := json.Marshal(saved)
 	if e != nil {
 		t.Fatal(e)
 	}
 	var got switchCrashReceipt
-	if json.Unmarshal(b, &got) != nil || got.Version != 2 || got.Bindings[0].JobRef != ref || got.Bindings[0].JobID != saved.Bindings[0].JobID || got.Bindings[0].Binding.Current != ref {
+	if json.Unmarshal(b, &got) != nil || got.Version != 3 || got.Bindings[0].JobRef != ref || got.Bindings[0].JobID != saved.Bindings[0].JobID || got.Bindings[0].Binding.Current != ref {
 		t.Fatal("private receipt lost sandbox ID through embedded job-ID collision")
+	}
+}
+
+func TestSwitchSharedCheckpointRejectsPreSecondCloneBaselineWithoutWaivingColdLinks(t *testing.T) {
+	saved := switchCrashReceipt{Version: 3}
+	for i := range saved.Bindings {
+		entries := map[string]driverQuotaEntry{}
+		for j, name := range []string{"root/template.mem", "root/template.state"} {
+			entries[name] = driverQuotaEntry{Shared: true, Inode: uint64(100 + j), Links: 3, Mode: unix.S_IFREG | 0444, Size: 512 << 20, Blocks: 512 << 20}
+		}
+		entries["root/workspace.ext4"] = driverQuotaEntry{Inode: uint64(200 + i), Links: 1, Mode: unix.S_IFREG | 0600, Size: 128 << 20, Blocks: 128 << 20}
+		saved.Bindings[i].Quota = driverQuotaReceipt{Snapshot: true, Project: driverProjectFirst + uint32(i), Entries: entries, Record: quotaRecord{BHard: 192 << 10, IHard: 128, Space: 128 << 20, Inodes: 1}}
+	}
+	if e := switchStableCheckpointSharing(saved); e != nil {
+		t.Fatal("stable two-clone baseline rejected", e)
+	}
+	first := &saved.Bindings[0].Quota
+	stale := first.Entries["root/template.mem"]
+	stale.Links = 2
+	first.Entries["root/template.mem"] = stale
+	if switchStableCheckpointSharing(saved) == nil {
+		t.Fatal("first-clone-only link count accepted as two-clone baseline")
+	}
+	// Re-sampling after both clones exist restores the exact actual link count;
+	// it does not teach cold recovery to ignore legitimate metadata fields.
+	stale.Links = 3
+	first.Entries["root/template.mem"] = stale
+	actual := map[string]driverQuotaEntry{}
+	for k, v := range first.Entries {
+		actual[k] = v
+	}
+	if e := validateDriverQuotaAccounting(*first, first.Record, 128<<20, 1, actual); e != nil {
+		t.Fatal("stable cold metadata", e)
+	}
+	changed := actual["root/template.mem"]
+	changed.Links = 4
+	actual["root/template.mem"] = changed
+	if validateDriverQuotaAccounting(*first, first.Record, 128<<20, 1, actual) == nil {
+		t.Fatal("cold link-count drift was waived")
+	}
+	for _, name := range []string{"root/template.mem", "root/template.state"} {
+		original := first.Entries[name]
+		bad := original
+		bad.Inode++
+		first.Entries[name] = bad
+		if switchStableCheckpointSharing(saved) == nil {
+			t.Fatal("different backing inode accepted")
+		}
+		first.Entries[name] = original
+	}
+	saved.Version = 2
+	if switchStableCheckpointSharing(saved) == nil {
+		t.Fatal("old checkpoint semantics accepted")
 	}
 }
 

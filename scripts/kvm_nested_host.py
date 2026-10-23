@@ -249,7 +249,7 @@ def validate_quota_switch_run(value):
 
 def validate_quota_switch_checkpoint(value):
     assert value['phase']=='quota-enabled-two-tenant-switching'
-    for k in ('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault'):assert value[k] is True
+    for k in ('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault','receipts_sampled_after_both_bindings_ready','two_shared_inode_link_counts_captured_consistently'):assert value[k] is True
 
 
 def validate_quota_switch_recovery(value):

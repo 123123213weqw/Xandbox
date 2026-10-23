@@ -6,7 +6,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
@@ -58,7 +60,7 @@ func (n *node) quotaSwitchCheckpoint(ctx context.Context) (map[string]any, error
 	return result, e
 }
 func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (map[string]any, error) {
-	saved := switchCrashReceipt{Version: 2, L1Boot: n.boot, Template: n.switchTemplate}
+	saved := switchCrashReceipt{Version: 3, L1Boot: n.boot, Template: n.switchTemplate}
 	hash, e := fileHash("/srv/config/backend.json")
 	if e != nil {
 		return nil, e
@@ -108,6 +110,32 @@ func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (ma
 	if saved.Bindings[0].Quota.Project == saved.Bindings[1].Quota.Project {
 		return nil, errors.New("checkpoint sessions share private project")
 	}
+	// Capture the comparison baseline only AFTER both clones exist. Creating
+	// the second clone legitimately increments each shared backing inode's
+	// link count; the first clone's earlier per-create observation is stale.
+	// Keep the strict cold comparison rather than normalizing link counts.
+	for i := range saved.Bindings {
+		old := &saved.Bindings[i]
+		q, e := n.switchReady(old.Binding.Current, true)
+		if e != nil {
+			return nil, e
+		}
+		_, owner, e := switchReadOwner(old.Binding.Current)
+		if e != nil || !bytes.Equal(owner, old.Owner) {
+			return nil, errors.New("checkpoint owner changed while both bindings ready")
+		}
+		old.Quota = q
+	}
+	if e = switchStableCheckpointSharing(saved); e != nil {
+		return nil, e
+	}
+	status, e = n.fixedCatalogStatus(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if e = clearCatalogPins(status, n.switchTemplate, 2); e != nil {
+		return nil, e
+	}
 	for i := 0; i < 2; i++ {
 		old := saved.Bindings[i]
 		live, e := api[i].job(ctx, old.Binding.Current, sandbox.Job{ID: old.JobID, Ref: old.JobRef})
@@ -121,7 +149,21 @@ func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (ma
 	if e = privateWrite(switchReceiptPath, saved); e != nil {
 		return nil, e
 	}
-	return map[string]any{"real_nested_kvm": true, "checkpoint_receipt_fsynced": true, "two_live_tenant_sessions_and_running_old_jobs": true, "distinct_private_projects_with_named_inode_accounting": true, "two_active_template_pins_checked": true, "ordinary_quota_ready_owners_saved_privately": true, "checkpoint_after_measured_load_not_an_inflight_commit_fault": true}, nil
+	return map[string]any{"real_nested_kvm": true, "checkpoint_receipt_fsynced": true, "two_live_tenant_sessions_and_running_old_jobs": true, "distinct_private_projects_with_named_inode_accounting": true, "two_active_template_pins_checked": true, "ordinary_quota_ready_owners_saved_privately": true, "checkpoint_after_measured_load_not_an_inflight_commit_fault": true, "receipts_sampled_after_both_bindings_ready": true, "two_shared_inode_link_counts_captured_consistently": true}, nil
+}
+
+func switchStableCheckpointSharing(saved switchCrashReceipt) error {
+	if saved.Version != 3 || saved.Bindings[0].Quota.Project == saved.Bindings[1].Quota.Project {
+		return errors.New("invalid two-clone checkpoint identity")
+	}
+	for _, name := range []string{"root/template.mem", "root/template.state"} {
+		a, okA := saved.Bindings[0].Quota.Entries[name]
+		b, okB := saved.Bindings[1].Quota.Entries[name]
+		if !okA || !okB || !a.Shared || !b.Shared || a.Links < 3 || a != b {
+			return errors.New("shared checkpoint backing metadata not from stable two-clone state")
+		}
+	}
+	return nil
 }
 func verifySavedSwitchQuota(saved driverQuotaReceipt) error {
 	if !saved.Snapshot || saved.Phase != "running" || saved.Project < driverProjectFirst || saved.Project >= driverProjectFirst+switchSlots {
@@ -141,6 +183,15 @@ func verifySavedSwitchQuota(saved driverQuotaReceipt) error {
 		return e
 	}
 	if e = validateDriverQuotaAccounting(saved, r, blocks, inodes, entries); e != nil {
+		// Private failure evidence only: retain the exact field differences if
+		// another cold metadata discrepancy occurs. Never export inode/UIDs or
+		// paths via the sanitized result, nor waive any strict comparison.
+		for name, before := range saved.Entries {
+			after, exists := entries[name]
+			if !exists || !reflect.DeepEqual(before, after) {
+				fmt.Fprintf(os.Stderr, "private switch cold inode difference %q exists=%t before=%+v after=%+v\n", name, exists, before, after)
+			}
+		}
 		return e
 	}
 	return verifySharedQuotaFiles(saved.Jail)
@@ -160,7 +211,7 @@ func (n *node) quotaSwitchRecover(ctx context.Context) (map[string]any, error) {
 	if e = strictjson.Decode(b, &saved); e != nil {
 		return nil, e
 	}
-	if saved.Version != 2 || saved.L1Boot == "" || saved.L1Boot == n.boot || !hashPattern.MatchString(saved.Template) {
+	if saved.Version != 3 || saved.L1Boot == "" || saved.L1Boot == n.boot || !hashPattern.MatchString(saved.Template) {
 		return nil, errors.New("invalid saved switch host incarnation")
 	}
 	if _, e = fixedSwitchConfig(); e != nil {
@@ -184,6 +235,9 @@ func (n *node) quotaSwitchRecover(ctx context.Context) (map[string]any, error) {
 		return nil, errors.New("L1 pristine export ABI/assignment changed")
 	}
 	n.switchTemplate = saved.Template
+	if e = switchStableCheckpointSharing(saved); e != nil {
+		return nil, e
+	}
 	for i := 0; i < 2; i++ {
 		old := saved.Bindings[i]
 		if !switchRefValid(old.Binding.Current) || !hex32Pattern(old.Binding.ID) || len(old.Key) != 64 || strings.Trim(old.Key, "0123456789abcdef") != "" || old.Boot == "" || old.JobRef != old.Binding.Current || !hex32Pattern(old.JobID) {

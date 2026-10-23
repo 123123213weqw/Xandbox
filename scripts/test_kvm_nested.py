@@ -39,7 +39,7 @@ class NestedFixtureTests(unittest.TestCase):
             bad=copy.deepcopy(good);bad['preflight'][k]=False
             with self.assertRaises(AssertionError):validate_quota_switch_setup(bad)
         flags=('l1_boot_changed','two_exact_owners_policy_shared_backing_and_independent_quota_checked_before_daemon','two_old_execution_domains_absent','two_pins_retained_before_ordinary_recovery','old_sessions_closed_exec_and_create_keys410_no_old_job_resume','both_old_generations_destroyed_resources_absent','two_fresh_real_kvm_guest_uids_workspaces_and_boots_checked','all_eight_project_records_zero_and_active_template_pins_zero','controller_reaped_and_owned_cgroup_root_removed','no_assigned_guest_restored_or_exported')
-        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault')
+        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault','receipts_sampled_after_both_bindings_ready','two_shared_inode_link_counts_captured_consistently')
         cp={'phase':'quota-enabled-two-tenant-switching',**{k:True for k in checkpoint}};validate_quota_switch_checkpoint(cp)
         for k in checkpoint:
             with self.assertRaises(AssertionError):validate_quota_switch_checkpoint(dict(cp,**{k:False}))
@@ -50,7 +50,7 @@ class NestedFixtureTests(unittest.TestCase):
 
     def test_full_switch_validator_cannot_pass_fewer_idle_or_unmeasured_rows(self):
         keys=('request_to_binding_response_ms','request_to_first_new_command_success_ms','request_to_old_host_stopped_observed_ms','request_to_old_durable_destroyed_observed_ms')
-        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault')
+        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault','receipts_sampled_after_both_bindings_ready','two_shared_inode_link_counts_captured_consistently')
         resource={k:0 for k in ('allocated','stop_queued','cleanup_queued','stop_running','cleanup_running','owned_cgroup_count','durable_owner_files','nontransactional_nonempty_quota_slots','nontransactional_quota_space_bytes','nontransactional_quota_inodes')};resource['l1_root_free_bytes']=1<<30
         workers=[]
         labels=('binding','first_new_command','old_host_stopped','old_durable_destroyed')
