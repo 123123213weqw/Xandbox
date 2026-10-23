@@ -78,11 +78,12 @@ type quotaBarrierReceipt struct {
 	Owner                   []byte
 }
 type quotaBarrierLive struct {
-	p      *negativeDaemon
-	o      *quotaNotifier
-	plan   *quotaBarrierPlan
-	done   chan error
-	cancel context.CancelFunc
+	classes *prepareSampler
+	p       *negativeDaemon
+	o       *quotaNotifier
+	plan    *quotaBarrierPlan
+	done    chan error
+	cancel  context.CancelFunc
 }
 
 func quotaOwnerSelector(q quotaNotif, project uint32) error {
@@ -358,6 +359,22 @@ func (n *node) quotaBarrierCheckpointOn(ctx context.Context, mode quotaCommitMod
 	if e = negativeReady(ctx, p, api); e != nil {
 		return nil, e
 	}
+	if mode == quotaReserveEIO {
+		live.classes, e = startPrepareSampler(liveCtx, base+"/s/metrics.sock")
+		if e != nil {
+			return nil, e
+		}
+		defer func() {
+			if live.classes != nil {
+				live.classes.close()
+				live.classes = nil
+			}
+		}()
+		v, e := live.classes.snapshot()
+		if e != nil || v != (prepareClasses{}) {
+			return nil, errors.New("pre-fault producer counters not zero")
+		}
+	}
 	if mode.release() {
 		return n.releaseCommitCheckpoint(ctx, mode, live, api, cfg)
 	}
@@ -426,7 +443,7 @@ func runQuotaBarrierRecoveryDaemon() error {
 		return e
 	}
 	base, _ := quotaSyscallBase(quotaBarrierCase)
-	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
+	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1", "-metrics"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
 }
 func (n *node) recoverQuotaBarrier(ctx context.Context) (map[string]any, error) {
 	return n.recoverQuotaBarrierOn(ctx, quotaReserveHold)

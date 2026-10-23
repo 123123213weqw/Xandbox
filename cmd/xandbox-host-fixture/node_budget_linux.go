@@ -210,7 +210,7 @@ func (n *node) budgetNegative(ctx context.Context, badLimits bool) error {
 	if badLimits {
 		want = "frontend admission differs from immutable node policy"
 	}
-	if !strings.Contains(output.String(), want) {
+	if !exactStartupRefusal(e, output.Bytes(), want) {
 		fmt.Fprintln(os.Stderr, "private budget negative diagnostic", output.String())
 		return errors.New("specific node rejection not observed")
 	}

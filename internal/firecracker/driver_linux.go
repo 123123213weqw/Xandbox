@@ -24,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
 	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
@@ -136,7 +137,7 @@ func newDriver(stateDir, configPath string, records []sandbox.Record, limits *sa
 		return nil, errors.New("operator must delegate memory, pids and cpu controllers")
 	}
 	if cfg.IO != nil && !hasWords(string(controllers), "io") {
-		return nil, errors.New("configured IO policy requires delegated io controller")
+		return nil, ErrIODelegation
 	}
 	if err := privateDir(cfg.RuntimeRoot); err != nil {
 		return nil, err
@@ -231,9 +232,9 @@ func (d *driver) paths(k string) (string, string) {
 func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Preparation) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			// Prepare has no tenant argv/output or bearer credentials. Bounded
-			// initialization errors stay in private operator logs, not the API.
-			slog.Error("Firecracker preparation failed", "error", retErr)
+			// Only a sealed class leaves the backend. Neither the log handler nor
+			// its queue receives or formats the original error object.
+			slog.Error("Firecracker preparation failed", diagnostics.ReasonAttribute, int(DiagnosticReason(retErr)))
 		}
 	}()
 	k, err := key(ref)

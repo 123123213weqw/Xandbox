@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"time"
 
@@ -52,6 +51,7 @@ func (n *node) reserveCommitEIO(ctx context.Context, live *quotaBarrierLive, api
 		return nil, e
 	}
 	var createErr error
+	var e error
 	tick := time.NewTicker(10 * time.Millisecond)
 	defer tick.Stop()
 	for waiting := true; waiting; {
@@ -84,10 +84,20 @@ func (n *node) reserveCommitEIO(ctx context.Context, live *quotaBarrierLive, api
 		return nil, errors.New("selected real syncfs exit was not EIO")
 	}
 	live.o.exitTrace.close()
-	log, e := os.ReadFile("/run/quota-commit-eio.log")
-	if e != nil || len(log) > 65536 || !strings.Contains(string(log), "Firecracker preparation failed") || !strings.Contains(string(log), "input/output error") {
-		return nil, errors.New("ordinary Prepare EIO diagnostics not observed independently")
+	if live.classes == nil {
+		return nil, errors.New("missing pre-fault cause sampler")
 	}
+	if e := waitNode(ctx, func() (bool, error) {
+		v, e := live.classes.snapshot()
+		return v.IO == 1 && v.Quota == 0 && v.Other == 0, e
+	}); e != nil {
+		return nil, e
+	}
+	live.classes.close()
+	live.classes = nil
+
+	// This observation is over private UDS/atoms; it does not read/sync /srv,
+	// require the errored log FS to work, or acknowledge a persisted record.
 	// Do not inspect an aborted ext4 namespace, even after restoring a
 	// linear table. Cached metadata can fail EIO independently of durable
 	// owner survival. Keep the fault until own L1 death; cold replay checks
@@ -108,7 +118,7 @@ func (n *node) reserveCommitEIO(ctx context.Context, live *quotaBarrierLive, api
 		return nil, errors.New("EIO opened new admission")
 	}
 	n.quotaHeld = live
-	return map[string]any{"phase": quotaReserveEIO.phase(), "checkpoint_receipt_fsynced_before_set": true, "durable_attempted_owner_before_set": true, "installed_limits_checked_before_fault": true, "ordinary_qsync_returned_before_syncfs": true, "notification_continued_no_errno_or_success_emulation": true, "selected_syncfs_kernel_exit_observed": true, "selected_syncfs_kernel_errno": int(unix.EIO), "selected_syncfs_exit_observations": exit.Seen, "ordinary_prepare_eio_diagnostic_in_tmpfs": true, "create_refused500": true, "no_false_ready_stop_destroy_confirmation": true, "exact_owner_receipt_persisted_before_eio_for_cold_recheck": true, "admission_new_create503": true, "no_observer_quota_or_srv_reads_after_eio": true, "own_mapper_error_retained_until_power_cut_no_rw_remount": true, "fixed_project_zero_dirty_bytes": 4 << 20, "no_l2_vm_born_at_checkpoint": true}, nil
+	return map[string]any{"phase": quotaReserveEIO.phase(), "checkpoint_receipt_fsynced_before_set": true, "durable_attempted_owner_before_set": true, "installed_limits_checked_before_fault": true, "ordinary_qsync_returned_before_syncfs": true, "notification_continued_no_errno_or_success_emulation": true, "selected_syncfs_kernel_exit_observed": true, "selected_syncfs_kernel_errno": int(unix.EIO), "selected_syncfs_exit_observations": exit.Seen, "ordinary_prepare_eio_closed_counter_independent_of_state_io": true, "private_metric_connection_open_before_fault_no_reconnect": true, "create_refused500": true, "no_false_ready_stop_destroy_confirmation": true, "exact_owner_receipt_persisted_before_eio_for_cold_recheck": true, "admission_new_create503": true, "no_observer_quota_or_srv_reads_after_eio": true, "own_mapper_error_retained_until_power_cut_no_rw_remount": true, "fixed_project_zero_dirty_bytes": 4 << 20, "no_l2_vm_born_at_checkpoint": true}, nil
 }
 func (n *node) releaseCommitCheckpoint(ctx context.Context, mode quotaCommitMode, live *quotaBarrierLive, api *client.Client, cfg firecracker.Config) (map[string]any, error) {
 	if e := requireNode(); e != nil {

@@ -83,7 +83,7 @@ func (p NodePolicy) match(l sandbox.AdmissionLimits, complete bool) error {
 		return errors.New("version3 requires complete service admission limits")
 	}
 	if l.MaxInstances != 0 && l.MaxInstances != p.MaxInstances || l.MaxRecords != 0 && l.MaxRecords != p.MaxRecords || l.MaxSessions != 0 && l.MaxSessions != p.MaxSessions {
-		return errors.New("frontend admission differs from immutable node policy")
+		return ErrAdmissionMismatch
 	}
 	if l.AllocatedInstances > p.MaxInstances || l.RetainedRecords > p.MaxRecords || l.RetainedSessions > p.MaxSessions {
 		return errors.New("recovered inventory exceeds immutable node reservation")
@@ -196,7 +196,7 @@ func nodeControllerPlacement(raw, root string) error {
 	}
 	want := strings.TrimPrefix(filepath.Join(root, "control"), "/sys/fs/cgroup")
 	if !cleanAbsolute(path) || (path != want && !strings.HasPrefix(path, want+"/")) {
-		return errors.New("controller/publisher must be inside node control subtree")
+		return ErrControllerPlacement
 	}
 	return nil
 }

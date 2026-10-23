@@ -44,7 +44,7 @@ func negativeDaemonArgs(name string) ([]string, error) {
 	if e != nil {
 		return nil, e
 	}
-	return []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1"}, nil
+	return []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1", "-metrics"}, nil
 }
 func runNegativeQuotaDaemon(name string) error {
 	if e := requireQuotaChild(); e != nil {
@@ -135,7 +135,7 @@ func expectNegativeExit(ctx context.Context, p *negativeDaemon, base, stage, exp
 	if e != nil {
 		return e
 	}
-	if len(b) > 65536 || !strings.Contains(string(b), expected) {
+	if !exactStartupRefusal(p.waitErr, b, expected) {
 		return errors.New("specific ordinary daemon rejection not observed")
 	}
 	if _, e := os.Lstat(base + "/s/api.sock"); !os.IsNotExist(e) {
@@ -444,9 +444,9 @@ func (n *node) quotaNegativeCase(ctx context.Context, q *quotaFS, seed firecrack
 			if e = api.Create(ctx, key, nodeSpec(), &rejected); e == nil || !strings.Contains(e.Error(), "HTTP 500:") {
 				return nil, errors.New("quota exhausted create was not refused with500")
 			}
-			b, e := os.ReadFile(base + "/first.log")
-			if e != nil || !strings.Contains(string(b), "Firecracker preparation failed") || !strings.Contains(string(b), "disk quota exceeded") {
-				return nil, errors.New("actual ordinary Prepare EDQUOT not observed")
+			firstClasses, e := fixedPrepareClasses(ctx, base+"/s/metrics.sock")
+			if e != nil || firstClasses.Quota != 1 || firstClasses.IO != 0 || firstClasses.Other != 0 {
+				return nil, errors.New("actual first ordinary Prepare exact EDQUOT producer class absent")
 			}
 			ref, e := negativeLedgerRef(base, sandbox.Ref{})
 			if e != nil {
@@ -492,10 +492,11 @@ func (n *node) quotaNegativeCase(ctx context.Context, q *quotaFS, seed firecrack
 			if e = api.Create(ctx, nextKey, nodeSpec(), &rejected); e == nil || !strings.Contains(e.Error(), "HTTP 500:") {
 				return nil, errors.New("new quota attempt did not reuse released capacity")
 			}
-			log, e := os.ReadFile(base + "/restart.log")
-			if e != nil || !strings.Contains(string(log), "Firecracker preparation failed") || !strings.Contains(string(log), "disk quota exceeded") {
-				return nil, errors.New("second prepare did not hit actual quota")
+			classes, e := fixedPrepareClasses(ctx, base+"/s/metrics.sock")
+			if e != nil || classes.Quota != 1 || classes.IO != 0 || classes.Other != 0 {
+				return nil, errors.New("second ordinary Prepare did not classify exact EDQUOT")
 			}
+			result["ordinary_closed_edquot_producer_counter_exact1"] = true
 			nextRef, e := negativeLedgerRef(base, ref)
 			if e != nil {
 				return nil, e
@@ -515,7 +516,7 @@ func (n *node) quotaNegativeCase(ctx context.Context, q *quotaFS, seed firecrack
 			}
 			result["released_capacity_reused_second_edquot_cleaned"] = true
 			result["same_binding_restart_destroyed_key410_checked"] = true
-			result["actual_prepare_edquot_private_log_checked"] = true
+			result["actual_prepare_edquot_closed_counter_checked"] = true
 			result["create_refused500"] = true
 			result["durable_destroyed_and_exact_resources_absent"] = true
 			result["old_create_key_refused410"] = true

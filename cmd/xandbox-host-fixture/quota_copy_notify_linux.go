@@ -98,7 +98,7 @@ func runCopyDaemon() error {
 	}
 	unix.Close(int(fd))
 	unix.Close(3)
-	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "2"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
+	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "2", "-metrics"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
 }
 
 type copyBoundary struct {

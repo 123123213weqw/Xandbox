@@ -71,6 +71,32 @@ func bootstrapMessage(r diagnostics.Reason) string {
 		return "sandboxd: choose exactly one authentication mode"
 	case diagnostics.DiagnosticsUnavailable:
 		return "sandboxd: private diagnostics unavailable"
+	case diagnostics.NodeAdmission:
+		return "sandboxd: frontend admission differs from immutable node policy"
+	case diagnostics.NodePlacement:
+		return "sandboxd: controller/publisher must be inside node control subtree"
+	case diagnostics.IOBackingQueue:
+		return "sandboxd: IO policy must name the exact runtime backing queue"
+	case diagnostics.IODelegation:
+		return "sandboxd: configured IO policy requires delegated io controller"
+	case diagnostics.BackendBinding:
+		return "sandboxd: backend binding changed; explicit offline migration is required"
+	case diagnostics.IOFailure:
+		return "sandboxd: input/output error"
+	case diagnostics.QuotaExceeded:
+		return "sandboxd: disk quota exceeded"
+	case diagnostics.NoSpace:
+		return "sandboxd: no space left on device"
+	case diagnostics.ReadOnly:
+		return "sandboxd: read-only file system"
+	case diagnostics.QuotaCapabilities:
+		return "sandboxd: quota requires CAP_SYS_RESOURCE absent from all capability sets"
+	case diagnostics.QuotaFilesystem:
+		return "sandboxd: quota runtime filesystem UUID changed"
+	case diagnostics.QuotaOwnership:
+		return "sandboxd: unowned nonempty quota record requires operator reconciliation"
+	case diagnostics.QuotaMount:
+		return "sandboxd: quota requires the exact writable ext4 mount with enforced prjquota"
 	default:
 		return "sandboxd: configuration or bootstrap failure"
 	}
@@ -85,7 +111,10 @@ func runArgs(args []string) (retErr error) {
 	started := false
 	defer func() {
 		if retErr != nil && !started {
-			reason := diagnostics.FailureReason(retErr)
+			reason := firecracker.DiagnosticReason(retErr)
+			if reason == diagnostics.Other {
+				reason = diagnostics.FailureReason(retErr)
+			}
 			if reason == diagnostics.Other {
 				reason = diagnostics.Configuration
 			}

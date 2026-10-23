@@ -68,7 +68,7 @@ func quotaCapsAbsent(status string) error {
 			seen[field] = true
 			mask, e := strconv.ParseUint(f[1], 16, 64)
 			if e != nil || mask&(1<<unix.CAP_SYS_RESOURCE) != 0 {
-				return errors.New("quota requires CAP_SYS_RESOURCE absent from all capability sets")
+				return ErrQuotaCapabilities
 			}
 		}
 	}
@@ -129,7 +129,7 @@ func quotaMountEnforced(raw, id, device string) error {
 		}
 		found++
 		if left[2] != device || len(right) != 3 || right[0] != "ext4" || !hasQuotaOption(left[5], "rw") || !hasQuotaOption(right[2], "prjquota") {
-			return errors.New("quota requires the exact writable ext4 mount with enforced prjquota")
+			return ErrQuotaMount
 		}
 	}
 	if found != 1 {
@@ -170,7 +170,7 @@ func inspectQuotaMount(f *os.File, uuid string) (string, error) {
 		return "", e
 	}
 	if u.Length != 16 || u.Flags != 0 || hex.EncodeToString(u.Value[:]) != uuid {
-		return "", errors.New("quota runtime filesystem UUID changed")
+		return "", ErrQuotaFilesystem
 	}
 	b, e := os.ReadFile(fmt.Sprintf("/proc/self/fdinfo/%d", f.Fd()))
 	if e != nil {
@@ -332,7 +332,7 @@ func (q *projectQuota) reconcile(owners map[string]ownership) error {
 		}
 		o, owned := known[id]
 		if (!owned || !o.QuotaAttempted) && !emptyProject(r) {
-			return errors.New("unowned nonempty quota record requires operator reconciliation")
+			return ErrQuotaOwnership
 		}
 		if owned && o.QuotaAttempted && !q.knownRecord(r) {
 			return errors.New("owned quota limits or usage conflict with immutable policy")

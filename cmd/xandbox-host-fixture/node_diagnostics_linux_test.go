@@ -128,11 +128,11 @@ func TestDiagnosticPrefixAndUnacknowledgedStageAreExact(t *testing.T) {
 	}
 }
 func TestDiagnosticExactPressureWithoutPersistedAck(t *testing.T) {
-	s := diagnostics.Stats{Enqueued: 66, Dropped: 15, Written: 1, Queued: 64, Capacity: 64}
+	s := diagnostics.Stats{Enqueued: 66, Dropped: 15, Written: 1, Queued: 64, Capacity: 64, PrepareOther: diagnosticProducers}
 	if diagnosticPressure(s) != nil {
 		t.Fatal("pressure")
 	}
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 9; i++ {
 		b := s
 		switch i {
 		case 0:
@@ -147,6 +147,12 @@ func TestDiagnosticExactPressureWithoutPersistedAck(t *testing.T) {
 			b.Queued--
 		case 5:
 			b.Capacity++
+		case 6:
+			b.PrepareIO++
+		case 7:
+			b.PrepareQuota++
+		case 8:
+			b.PrepareOther--
 		}
 		if diagnosticPressure(b) == nil {
 			t.Fatal("weakened pressure", i)

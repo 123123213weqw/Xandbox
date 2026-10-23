@@ -77,7 +77,7 @@ func (n *node) quotaUnenforced(ctx context.Context) (out map[string]any, err err
 	if e != nil {
 		return nil, e
 	}
-	if !strings.Contains(string(b), "quota requires the exact writable ext4 mount with enforced prjquota") {
+	if !exactStartupRefusal(runErr, b, "quota requires the exact writable ext4 mount with enforced prjquota") {
 		return nil, errors.New("specific ordinary mount enforcement rejection missing")
 	}
 	for _, path := range []string{"/srv/state/api.sock", "/srv/state/firecracker", "/srv/r/j"} {

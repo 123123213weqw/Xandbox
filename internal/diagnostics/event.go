@@ -38,8 +38,23 @@ const (
 	StateLock
 	AuthMode
 	DiagnosticsUnavailable
+	// Append only: persisted version1 enum values must never be renumbered.
+	IOFailure
+	QuotaExceeded
+	NoSpace
+	ReadOnly
+	NodeAdmission
+	NodePlacement
+	IOBackingQueue
+	IODelegation
+	BackendBinding
+	QuotaCapabilities
+	QuotaFilesystem
+	QuotaOwnership
+	QuotaMount
 	reasonCount
 )
+const ReasonAttribute = "xandbox_reason"
 const QueueCapacity = 64
 const RetainedRecords = 128
 const FrameBytes = 128
@@ -49,7 +64,7 @@ const RingBytes = 2*HeaderBytes + (RetainedRecords+1)*FrameBytes
 var ErrPending = errors.New("diagnostic writer unfinished")
 var ErrWrite = errors.New("diagnostic write unavailable")
 var kindNames = [...]string{"unknown", "service_mock", "service_kvm", "prepare_failed", "cleanup_unfinished", "session_unfinished", "control_unfinished", "operator_unfinished", "listener_failed", "process_failed", "process_stopped", "collector_closed"}
-var reasonNames = [...]string{"other", "deadline", "cancelled", "configuration", "state_lock", "auth_mode", "diagnostics_unavailable"}
+var reasonNames = [...]string{"other", "deadline", "cancelled", "configuration", "state_lock", "auth_mode", "diagnostics_unavailable", "io", "quota", "no_space", "read_only", "node_admission", "node_placement", "io_backing_queue", "io_delegation", "backend_binding", "quota_capabilities", "quota_filesystem", "quota_ownership", "quota_mount"}
 
 type Event struct {
 	Kind          Kind   `json:"kind"`
@@ -84,7 +99,7 @@ func ReasonFor(err error) Reason {
 	if errors.Is(err, context.Canceled) {
 		return Cancelled
 	}
-	return Other
+	return SystemReason(err)
 }
 
 // Fault preserves errors.Is/As without ever rendering the underlying error.
@@ -106,8 +121,12 @@ func FailureReason(err error) Reason {
 type Stats struct {
 	Enqueued, Dropped, Written, WriteErrors uint64
 	Queued, Capacity                        int
+	PrepareIO, PrepareQuota, PrepareOther   uint64
 }
-type counters struct{ enqueued, dropped, written, writeErrors atomic.Uint64 }
+type counters struct {
+	enqueued, dropped, written, writeErrors atomic.Uint64
+	prepareIO, prepareQuota, prepareOther   atomic.Uint64
+}
 type recordStore interface {
 	append(Event) error
 	close() error
@@ -135,6 +154,18 @@ func (l *Logger) Emit(kind Kind, reason Reason) bool {
 		l.stats.dropped.Add(1)
 		return false
 	}
+	// Count a valid producer observation even if queue/writer/Close later loses
+	// the record. These atoms are NOT durable events or accepted-operation ACKs.
+	if kind == PrepareFailed {
+		switch reason {
+		case IOFailure:
+			l.stats.prepareIO.Add(1)
+		case QuotaExceeded:
+			l.stats.prepareQuota.Add(1)
+		default:
+			l.stats.prepareOther.Add(1)
+		}
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.closing {
@@ -161,7 +192,7 @@ func (l *Logger) Stats() Stats {
 	if l == nil {
 		return Stats{Capacity: QueueCapacity}
 	}
-	return Stats{Enqueued: l.stats.enqueued.Load(), Dropped: l.stats.dropped.Load(), Written: l.stats.written.Load(), WriteErrors: l.stats.writeErrors.Load(), Queued: len(l.queue), Capacity: QueueCapacity}
+	return Stats{Enqueued: l.stats.enqueued.Load(), Dropped: l.stats.dropped.Load(), Written: l.stats.written.Load(), WriteErrors: l.stats.writeErrors.Load(), Queued: len(l.queue), Capacity: QueueCapacity, PrepareIO: l.stats.prepareIO.Load(), PrepareQuota: l.stats.prepareQuota.Load(), PrepareOther: l.stats.prepareOther.Load()}
 }
 func (l *Logger) write(s recordStore) {
 	defer close(l.done)
@@ -235,8 +266,10 @@ func (l *Logger) Close(ctx context.Context) error {
 	}
 }
 
-// Handler deliberately discards ALL attributes/groups and unrecognized message
-// text, including error values. It never retains a slog.Record or calls Error.
+// Handler discards arbitrary attributes/groups/message text, including errors.
+// Only a direct primitive enum attribute on the known PrepareFailed producer is
+// accepted. No Error/Is/As/Unwrap/LogValue method or attribute resolution occurs;
+// even the attribute scan is bounded. WithAttrs/WithGroup retain nothing.
 type Handler struct{ Logger *Logger }
 
 func (*Handler) Enabled(context.Context, slog.Level) bool { return true }
@@ -256,7 +289,32 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 	case "sandboxd failed":
 		k = ProcessFailed
 	}
-	h.Logger.Emit(k, Other)
+	reason := Other
+	if k == PrepareFailed && r.NumAttrs() <= 4 {
+		seen := false
+		invalid := false
+		r.Attrs(func(a slog.Attr) bool {
+			if a.Key != ReasonAttribute {
+				return true
+			}
+			if seen || a.Value.Kind() != slog.KindInt64 {
+				invalid = true
+				return true
+			}
+			seen = true
+			n := a.Value.Int64()
+			if n < 0 || n >= int64(reasonCount) {
+				invalid = true
+			} else {
+				reason = Reason(n)
+			}
+			return true
+		})
+		if invalid {
+			reason = Other
+		}
+	}
+	h.Logger.Emit(k, reason)
 	return nil
 }
 func (h *Handler) WithAttrs([]slog.Attr) slog.Handler { return h }

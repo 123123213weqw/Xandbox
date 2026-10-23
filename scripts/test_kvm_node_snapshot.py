@@ -5,7 +5,7 @@ from kvm_nested_host import (nested_node_resources,nested_group_limits,node_snap
  validate_node_snapshot_setup,validate_node_snapshot_checkpoint,validate_node_snapshot_recovery,
  NODE_SNAPSHOT_CHECKPOINT_FLAGS,NODE_SNAPSHOT_RECOVERY_FLAGS,validate_prepare_calibration,PREPARE_CALIBRATION_FLAGS)
 def calibration():
- return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':'29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c','instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False,'normalized_transitions':[{'point':p,'goroutine_index':g} for p,g in [('enter',1),('selected',1),('ok',1),('node_ok',1),('enter',2),('release',1),('selected',2),('released',1),('ok',2),('node_ok',2),('release',2),('released',2)]]}
+ return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':'d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26','instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False,'normalized_transitions':[{'point':p,'goroutine_index':g} for p,g in [('enter',1),('selected',1),('ok',1),('node_ok',1),('enter',2),('release',1),('selected',2),('released',1),('ok',2),('node_ok',2),('release',2),('released',2)]]}
 
 class NodeSnapshotTests(unittest.TestCase):
  def test_explicit_profile_and_inode_format_leave_old_modes_unchanged(self):

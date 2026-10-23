@@ -95,7 +95,7 @@ def validate_negative_setup(value):
         if r['case']=='unknown': assert r['unknown_record_unchanged_before_owned_fixture_cleanup'] is True
         if r['case']=='binding': assert r['changed_policy_rejected_original_binding_unchanged'] is True
         if r['case'] in ('block','inode'):
-            assert all(r[k] is True for k in ('actual_prepare_edquot_private_log_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned'))
+            assert all(r[k] is True for k in ('actual_prepare_edquot_closed_counter_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned','ordinary_closed_edquot_producer_counter_exact1'))
             assert (r['hard_bytes'],r['hard_inodes'])==((16<<20,128) if r['case']=='block' else (192<<20,1))
 
 
@@ -159,7 +159,7 @@ def validate_quota_commit_checkpoint(value, phase):
     assert phase in {v[0] for v in COMMIT_PROFILES.values()} and value['phase']==phase
     assert type(value['fixed_project_zero_dirty_bytes']) is int and value['fixed_project_zero_dirty_bytes']==4<<20
     if phase=='reserve-quota-syncfs-real-eio':
-        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')
+        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_closed_counter_independent_of_state_io','private_metric_connection_open_before_fault_no_reconnect','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')
         assert type(value['selected_syncfs_kernel_errno']) is int and value['selected_syncfs_kernel_errno']==5
         assert type(value['selected_syncfs_exit_observations']) is int and value['selected_syncfs_exit_observations']==1
     else:
@@ -397,7 +397,7 @@ PREPARE_CALIBRATION_FLAGS=('first_selected_token_observed_before_second_dispatch
 def validate_prepare_calibration(v):
     assert type(v) is dict
     for k in PREPARE_CALIBRATION_FLAGS:assert v[k] is True
-    assert v['exact_ordinary_elf_sha256']=='29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c'
+    assert v['exact_ordinary_elf_sha256']=='d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'
     for k,want in {'instruction_entry_probes':9,'event_count':12,'completed_preparations':2}.items():assert type(v[k]) is int and v[k]==want
     for k in ('queued_request_cancellation_and_cleanup_isolation_claim','exact_channel_linearization_or_latency_slo_claim'):assert v[k] is False
     states={};held=0;entered_inside=False
@@ -435,7 +435,7 @@ def validate_node_prepare_cancel(v):
     for k in ('keeper_delete_to_execution_domain_empty_observed_ms','keeper_delete_to_full_reclaim_observed_ms','held_write_to_continue_reply_observed_ms','holder_request_to_ready_observed_ms','survivor_request_to_ready_observed_ms'):assert type(v[k]) in (int,float) and math.isfinite(v[k]) and 0<=v[k]<40000
     assert v['keeper_delete_to_execution_domain_empty_observed_ms']<=v['keeper_delete_to_full_reclaim_observed_ms']<v['held_write_to_continue_reply_observed_ms']<20000
     for k in ('filesystem_D_or_physical_media_fault_claim','exact_copy_stage_timing_scheduler_fairness_or_slo_claim'):assert v[k] is False
-    t=v['trace'];assert t['exact_ordinary_elf_sha256']=='29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c'
+    t=v['trace'];assert t['exact_ordinary_elf_sha256']=='d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'
     for k,w in {'instruction_entry_probes':9,'event_count':15,'completed_preparations':2,'cancelled_waiters_without_token':1}.items():assert type(t[k]) is int and t[k]==w
     for k in ('all_eight_cpu_loss_counters_zero','all_nine_probe_hits_equal_trace','live_incarnation_inode_control_event_tgid_checked'):assert t[k] is True
     assert t['exact_channel_linearization_or_slo_claim'] is False

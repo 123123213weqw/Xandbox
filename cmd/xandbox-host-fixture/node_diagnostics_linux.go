@@ -64,7 +64,7 @@ func diagnosticMetrics(ctx context.Context) (diagnostics.Stats, error) {
 	if e != nil || r.StatusCode != 200 || len(b) > 65536 {
 		return out, errors.New("bounded diagnostic metrics required")
 	}
-	names := map[string]*uint64{"xandbox_diagnostics_enqueued_total": &out.Enqueued, "xandbox_diagnostics_dropped_total": &out.Dropped, "xandbox_diagnostics_written_total": &out.Written, "xandbox_diagnostics_write_errors_total": &out.WriteErrors}
+	names := map[string]*uint64{"xandbox_diagnostics_enqueued_total": &out.Enqueued, "xandbox_diagnostics_dropped_total": &out.Dropped, "xandbox_diagnostics_written_total": &out.Written, "xandbox_diagnostics_write_errors_total": &out.WriteErrors, `xandbox_prepare_failed_total{reason="io"}`: &out.PrepareIO, `xandbox_prepare_failed_total{reason="quota"}`: &out.PrepareQuota, `xandbox_prepare_failed_total{reason="other"}`: &out.PrepareOther}
 	seen := map[string]bool{}
 	for _, line := range strings.Split(string(b), "\n") {
 		p := strings.Fields(line)
@@ -91,7 +91,7 @@ func diagnosticMetrics(ctx context.Context) (diagnostics.Stats, error) {
 			out.Capacity = int(n)
 		}
 	}
-	if len(seen) != 6 {
+	if len(seen) != 9 {
 		return out, errors.New("missing diagnostic metrics")
 	}
 	return out, nil
@@ -739,7 +739,7 @@ func validateDiagnosticSaved(s diagnosticSaved, m diagnosticHoldMode, boot strin
 }
 
 func diagnosticPressure(s diagnostics.Stats) error {
-	if s.Capacity != 64 || s.Queued != 64 || s.Enqueued != 66 || s.Dropped != 15 || s.Written != 1 || s.WriteErrors != 0 {
+	if s.Capacity != 64 || s.Queued != 64 || s.Enqueued != 66 || s.Dropped != 15 || s.Written != 1 || s.WriteErrors != 0 || s.PrepareIO != 0 || s.PrepareQuota != 0 || s.PrepareOther != diagnosticProducers {
 		return fmt.Errorf("fixed diagnostic queue pressure mismatch %+v", s)
 	}
 	return nil

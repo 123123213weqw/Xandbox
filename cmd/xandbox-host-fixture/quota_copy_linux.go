@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -286,15 +285,11 @@ func (n *node) quotaCopySetup(ctx context.Context) (result map[string]any, err e
 	if notifyErr != nil || injected != 1 {
 		return nil, errors.New("exactly one fixed write error required")
 	}
-	log, e := os.Open("/srv/fixture/copy-controller.log")
-	if e != nil {
-		return nil, e
+	classes, e := fixedPrepareClasses(ctx, "/srv/state/metrics.sock")
+	if e != nil || classes.IO != 1 || classes.Quota != 0 || classes.Other != 0 {
+		return nil, errors.New("ordinary partial Prepare exact EIO producer class absent")
 	}
-	b, e := io.ReadAll(io.LimitReader(log, 32769))
-	log.Close()
-	if e != nil || len(b) > 32768 || !bytes.Contains(b, []byte("input/output error")) {
-		return nil, errors.New("ordinary private Prepare EIO diagnostic absent")
-	}
+
 	if e = api.destroyed(ctx, boundary.Ref); e != nil {
 		return nil, e
 	}

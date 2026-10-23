@@ -90,3 +90,31 @@ func TestDiagnosticCountersAndQueueAreFixedAndBounded(t *testing.T) {
 		t.Fatal("exposition exceeded existing cap")
 	}
 }
+
+func TestPrepareCauseExpositionHasExactlyThreePrimitiveRows(t *testing.T) {
+	r := &Registry{}
+	raw := string(r.Render(Gauges{Diagnostics: diagnostics.Stats{PrepareIO: ^uint64(0), PrepareQuota: 17, PrepareOther: 23}}))
+	want := map[string]bool{
+		`xandbox_prepare_failed_total{reason="io"} 18446744073709551615`: false,
+		`xandbox_prepare_failed_total{reason="quota"} 17`:                false,
+		`xandbox_prepare_failed_total{reason="other"} 23`:                false,
+	}
+	for _, line := range strings.Split(raw, "\n") {
+		if !strings.HasPrefix(line, "xandbox_prepare_failed_total") {
+			continue
+		}
+		seen, ok := want[line]
+		if !ok || seen {
+			t.Fatal("unexpected or duplicate producer class")
+		}
+		want[line] = true
+	}
+	for _, seen := range want {
+		if !seen {
+			t.Fatal("missing producer class")
+		}
+	}
+	if len(raw) > 65536 || !strings.Contains(raw, "not durable records or accepted-operation acknowledgments") || !strings.Contains(raw, "xandbox_diagnostics_written_total 0\n") {
+		t.Fatal("bound or independent-counter contract")
+	}
+}

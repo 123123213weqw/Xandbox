@@ -2,7 +2,8 @@
 
 本组件是 **best-effort diagnostics，不是逐请求、逐租户可靠审计**。
 本次改变了 daemon、operator CLI 及其依赖；旧 `4ee` daemon 的硬件报告
-不能证明新版本。当前已有两个固定日志写入挂起窗口及四个共享路径的真实 owned-L1 回归；
+不能证明新版本。历史 `29fe` 版本已有两个固定日志写入挂起窗口及四个共享路径的真实 owned-L1 回归；
+新增闭集原因与 producer 计数的当前代码尚待新 ELF 实测，不能沿用这些历史通过结果。
 完整 DEFAULT / IO / quota240 / dual-cold / failure / trace / TLS+metadata
 重验仍未完成，不能据此宣称生产就绪。
 
@@ -10,9 +11,14 @@
 
 `sandboxd` 默认启用，不提供关闭隐私约束或无界文本输出的配置：
 
-- 应用 `slog` 只映射已知固定消息为事件枚举。所有 attributes、groups、
+- 应用 `slog` 只映射已知固定消息为事件枚举。除下述唯一闭集 primitive 外，所有 attributes、groups、
   未识别消息正文及原始 `error` 值均不进入记录；不记录 tenant、token、
   request ID、argv、执行输出、任意路径或错误字符串。未知消息只产生 `unknown`。
+- 仅已知 `PrepareFailed` 消息可以携带一个直接的 `xandbox_reason` 整数枚举；
+  最多检查四个直接 attributes，重复、越界、非整数、嵌套或超出数量均归为 `other`。
+  Handler 不调用任意 `Error/Is/As/Unwrap/LogValue`，也不解析文本猜测 errno。
+  原因由 backend 的封闭 policy 类型或最多32层具体 OS wrapper 字段产生；
+  未知 wrapper（包括 `fmt` wrapper）保留 `other`，不是完整异常链诊断。
 - producer 只进行短互斥区、时间/原子计数和非阻塞入队；不做磁盘 I/O，
   不等待消费者。队列固定 **64** 条；另有至多一条正在写的记录。
 - 一个独立 goroutine 写入 `state-dir/diagnostics/events.ring`；每个记录 128 bytes，
@@ -26,6 +32,11 @@
   计数是本进程内独立原子采样，重启重置，不是事务快照。
   `dropped` 包含拒绝及失败 writer 丢弃的待写记录；`written` 含关闭记录，
   `enqueued` 不含 writer 自己生成的关闭记录，不能直接视为一组守恒账本。
+- `xandbox_prepare_failed_total{reason="io"|"quota"|"other"}` 恰有三个固定 label 值。
+  它们在入队前计数有效的 `PrepareFailed` producer，包括队列满、writer 已失败、
+  Close 后丢弃的观察；不依赖 ring 落盘，不是新请求数、成功 ACK、持久化审计或故障根因证明。
+  `io` 只计具体 EIO，`quota` 只计 EDQUOT；EROFS、ENOSPC 和其他闭集原因计入 `other`。
+  各项独立采样、进程重启归零，三个计数不构成事务快照。
 
 成功 `Emit` 只表示入队，不表示落盘。每条记录携带此前观察到的 loss watermark；
 最新丢失尚未被下一条记录反映、进程突然死亡时，无法恢复完整 loss 计数。
@@ -43,6 +54,9 @@ fatal/panic、外部程序、内核或第三方服务的全部输出。
 inode 校验和独占 `logger.lock`。只允许 lock 和 ring 两个名字；有界读取最多三个目录项。
 现有 lock 缺 ring、异常大小/权限/类型、未知文件、CRC/格式/枚举/序列损坏均拒绝启动；
 **不自动清空、重建、删除探针或修复现有日志**。初始化中断可能因此需要人工分析。
+原因枚举只追加，旧 ordinal 0..6 不变；当前 reader 能读取旧记录。
+旧 binary 不能识别新增 ordinal 时会拒绝现有 ring，不能把回滚等同于透明格式兼容，
+也不能删除 ring 来绕过拒绝。安全的升级/回滚流程仍待独立验收。
 
 header 含版本、容量、序列和配置绝对目录路径的 SHA-256 binding（不是明文路径）；
 须使用同一绝对路径，改名/别名迁移会拒绝，不属于备份迁移工具。
@@ -80,7 +94,7 @@ JSON 的 `observed_sequence` 与 `records` 是当前可见视图，不证明可�
 后续需要独立定义可靠审计的 ACK、故障、容量及不可用策略；不得把本 ring
 当作控制面状态、租户计费或安全裁决的权威日志。
 
-## 当前有限实测证据
+## 历史有限实测证据（不覆盖新增原因/计数代码）
 
 冻结源码 `0482ce2`，普通 Linux daemon `29fe145a…`、测试 fixture `9ecc86e3…`。
 [源、原始归档、9 个 native/cross ELF 与历史绑定](validation/diagnostics-provenance-v5.json)

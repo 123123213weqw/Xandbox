@@ -253,7 +253,7 @@ class NestedFixtureTests(unittest.TestCase):
 
     def test_real_commit_eio_requires_direct_kernel_errno_and_retained_owner(self):
         phase='reserve-quota-syncfs-real-eio'
-        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_diagnostic_in_tmpfs','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')
+        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_closed_counter_independent_of_state_io','private_metric_connection_open_before_fault_no_reconnect','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')
         good={'phase':phase,**{k:True for k in flags},'fixed_project_zero_dirty_bytes':4<<20,'selected_syncfs_kernel_errno':5,'selected_syncfs_exit_observations':1}
         validate_quota_commit_checkpoint(good,phase)
         for key in good:
@@ -371,7 +371,7 @@ class NestedFixtureTests(unittest.TestCase):
             if name=='unknown':row['unknown_record_unchanged_before_owned_fixture_cleanup']=True
             if name=='binding':row['changed_policy_rejected_original_binding_unchanged']=True
             if name in ('block','inode'):
-                for key in ('actual_prepare_edquot_private_log_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned'):row[key]=True
+                for key in ('actual_prepare_edquot_closed_counter_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned','ordinary_closed_edquot_producer_counter_exact1'):row[key]=True
                 row.update(hard_bytes=(16<<20 if name=='block' else 192<<20),hard_inodes=(128 if name=='block' else 1))
             rows.append(row)
         good={'all_fixed_negative_projects_cleared':True,'positive_backend_not_yet_bound':True,'ordinary_daemon_negative_cases':rows}

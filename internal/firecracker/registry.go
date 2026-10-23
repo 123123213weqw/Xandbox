@@ -68,7 +68,7 @@ func newRegistry(dir string, cfg Config, records []sandbox.Record) (*registry, e
 		}
 		have, _ := json.Marshal(old)
 		if !bytes.Equal(have, want) {
-			return nil, errors.New("backend binding changed; explicit offline migration is required")
+			return nil, ErrBackendBinding
 		}
 	}
 	r := &registry{dir: dir, cfg: cfg, owners: make(map[string]ownership), persist: durableJSON, syncDirectory: syncDir}

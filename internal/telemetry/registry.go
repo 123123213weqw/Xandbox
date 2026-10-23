@@ -114,5 +114,12 @@ func (r *Registry) Render(g Gauges) []byte {
 		fmt.Fprintf(&b, "# TYPE xandbox_diagnostics_%s_total counter\nxandbox_diagnostics_%s_total %d\n", v.name, v.name, v.value)
 	}
 	fmt.Fprintf(&b, "# TYPE xandbox_diagnostics_queued gauge\nxandbox_diagnostics_queued %d\n# TYPE xandbox_diagnostics_queue_capacity gauge\nxandbox_diagnostics_queue_capacity %d\n", g.Diagnostics.Queued, g.Diagnostics.Capacity)
+	b.WriteString("# HELP xandbox_prepare_failed_total Process-local producer classifications before enqueue; not durable records or accepted-operation acknowledgments.\n# TYPE xandbox_prepare_failed_total counter\n")
+	for _, v := range [...]struct {
+		name  string
+		value uint64
+	}{{"io", g.Diagnostics.PrepareIO}, {"quota", g.Diagnostics.PrepareQuota}, {"other", g.Diagnostics.PrepareOther}} {
+		fmt.Fprintf(&b, "xandbox_prepare_failed_total{reason=%q} %d\n", v.name, v.value)
+	}
 	return b.Bytes()
 }

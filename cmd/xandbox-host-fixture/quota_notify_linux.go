@@ -150,7 +150,7 @@ func runQuotaSyscallDaemon(name string) error {
 	}
 	unix.Close(int(fd))
 	unix.Close(3)
-	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
+	return unix.Exec("/srv/assets/sandboxd", []string{"sandboxd", "-backend", "firecracker", "-state-dir", base + "/s", "-auth-file", "/srv/config/auth.json", "-firecracker-config", base + "/backend.json", "-max-instances", "1", "-metrics"}, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"})
 }
 
 type quotaNotifyState struct {
