@@ -1,0 +1,14 @@
+kvm-node-quota-mixed-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-loss-reserve-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-loss-release-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-syscalls-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-node-quota-eio-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-preclear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-postclear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-reserve-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-clear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-node-quota-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-node-quota-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-node-quota-default-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL12 node-quota and shared-harness fixture scopes independently rechecked;34 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.

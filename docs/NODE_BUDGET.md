@@ -1,6 +1,6 @@
 # Version 3 节点总资源准入（有限实机门槛通过，仍未生产就绪）
 
-当前分支新增了生产代码的节点策略，**不是只新增 TEST hook**。新 ELF 已通过本文限定的 Linux/KVM 节点基础门槛及相关故障回归，[默认路径/IO的新运行时复验](RUNTIME_REQUALIFICATION.md)已另完成，quota240/双活cold仍独立进行；历史 daemon `522da68e…` 只能证明它自己的冻结基线。本文不是生产就绪声明，PR19/Goal的完整门槛仍未完成。
+当前分支新增了生产代码的节点策略，**不是只新增 TEST hook**。新 ELF 已通过本文限定的 Linux/KVM 节点基础门槛及相关故障回归，[默认路径/IO的新运行时复验](RUNTIME_REQUALIFICATION.md)已另完成，[quota240/双活cold及故障矩阵](QUOTA_REQUALIFICATION.md)也已另完成；历史 daemon `522da68e…` 只能证明它自己的冻结基线。本文不是生产就绪声明，PR19/Goal的完整门槛仍未完成。
 
 ## 不再把单实例上限当成节点预算
 
@@ -52,4 +52,4 @@ Version 1/2 保持实验性兼容格式，不自动扩容、迁移或获得生�
 
 ## 仍未完成
 
-[新程序完整DEFAULT/IO复验](RUNTIME_REQUALIFICATION.md)已另通过，quota240/双活cold/其余故障复验仍单独进行，不能沿用历史522的通过结论。当前Version3实机正例为cold；schema3 snapshot、完整节点资源压力、真实并发copy permit轨迹、独立共享页归属、开放到达/公平性/长期曲线、外部日志/导出约束、其他元数据故障/可靠catalog锁及完整M1–M4仍待验收。`production_ready`维持false。
+[新程序完整DEFAULT/IO复验](RUNTIME_REQUALIFICATION.md)已另通过，[quota240/双活cold/已命名故障矩阵](QUOTA_REQUALIFICATION.md)也已另完成；均为新2e/3ea实际执行，不沿用历史522的通过结论。当前Version3实机正例为cold；schema3 snapshot、完整节点资源压力、真实并发copy permit轨迹、独立共享页归属、开放到达/公平性/长期曲线、外部日志/导出约束、其他元数据故障/可靠catalog锁及完整M1–M4仍待验收。`production_ready`维持false。

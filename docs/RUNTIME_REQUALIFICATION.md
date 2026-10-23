@@ -1,6 +1,6 @@
 # 新3ea运行时的默认路径与IO兼容复验
 
-**有限冻结源码验收，不是生产认证。** schema3节点策略改变了生产代码，不能用旧daemon `522da68e…` 的报告证明新程序。本文记录新daemon `3ea1e247…`、admin `19bbd460…` 对已有默认路径/IO/有限quota拒绝恢复的重新运行；quota240忙任务/双活cold/其余故障矩阵仍单独执行，不由本页宣布完成。
+**有限冻结源码验收，不是生产认证。** schema3节点策略改变了生产代码，不能用旧daemon `522da68e…` 的报告证明新程序。本文记录新daemon `3ea1e247…`、admin `19bbd460…` 对已有默认路径/IO/有限quota拒绝恢复的重新运行；[quota240忙任务/双活cold/故障矩阵](QUOTA_REQUALIFICATION.md)现已另完成；不由本页的默认路径报告替代证明。
 
 冻结源码`2e514fe9d0b0ce8097b4baca67c9761afdfdbf48`；完整来源、19个公开输入文件SHA与范围见[provenance](validation/node-runtime-provenance-v1.json)。[节点schema3基础门槛](NODE_BUDGET.md)是另一个独立报告；这里的默认snapshot/IO配置仍是schema1/2、nilNode，不能替代schema3 snapshot或完整节点压力。
 
@@ -43,4 +43,4 @@
 
 ## 仍未验收
 
-quota240/busy-writer/双活cold/剩余故障的新程序复验另行进行；schema3 snapshot、全节点free bytes/inodes和实际准备并发压力、uniqueRAM归属、开放到达/公平性/长期资源、双监督失效/物理介质、可靠catalog锁协议、预热/完整初始化、结构化审计/告警/日志与export约束、备份/升级/回滚、独立操作员及SLO仍需完成。[部署恢复契约](OPERATIONS.md)明确区分实现、操作员输入与尚不存在的工具。PR19继续Draft，Goal/M1–M4与`production_ready`不标完成。
+[quota240/busy-writer/双活cold及已命名故障的新程序复验](QUOTA_REQUALIFICATION.md)已另完成；schema3 snapshot、全节点free bytes/inodes和实际准备并发压力、uniqueRAM归属、开放到达/公平性/长期资源、双监督失效/物理介质、可靠catalog锁协议、预热/完整初始化、结构化审计/告警/日志与export约束、备份/升级/回滚、独立操作员及SLO仍需完成。[部署恢复契约](OPERATIONS.md)明确区分实现、操作员输入与尚不存在的工具。PR19继续Draft，Goal/M1–M4与`production_ready`不标完成。

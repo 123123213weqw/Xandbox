@@ -1,5 +1,7 @@
 # TEST ONLY：quota 双租户切换与有界 headroom
 
+下文保留历史522/3f9冻结基线；新生产3ea的[quota240/双活cold/故障矩阵复验](QUOTA_REQUALIFICATION.md)已另完成，不重标历史结果。
+
 2026-10-23 已完成下述有限实测，见[新冻结源与全部原始证据](validation/quota-switch-provenance-v5.json)；**不是完整生产验收**。生产 Go/daemon 不增加测试接口或故障开关；不把历史默认 nil-quota 的240次切换当作 quota 验收。
 
 首次固定源 `fb836bf` 的真实 L1 已完成 setup/preflight，但负载在 initial 阶段失败、零次切换；原始 false 报告及单个执行域的清理证据保留。原因是 TEST 客户端误把 public Job JSON 中未携带的 sandbox ID 当成完整 Ref：Job 的显式任务 `id` 会遮蔽嵌入 Ref 的 `id`。修订夹具先校验独立 session envelope 的 revision/ref 和 job 的 generation/id，再从已校验 envelope/lookup path 恢复完整内存 Ref；坏绑定继续拒绝。私有 crash receipt v2 改用独立 JobID/JobRef 字段，防止同一 JSON 遮蔽问题；不改生产 wire/API。这是夹具错误修复，不把失败改写成通过或据此推断配额错误。
