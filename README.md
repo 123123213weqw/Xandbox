@@ -16,11 +16,13 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [整状态盘EIO与fsync卡住时的独立撤权](docs/STATE_IO.md)：新原生daemon四场景通过，并完成健康宿主/IO预算/只读/快照双租户240次/初始化及冷路径回归。held-fsync idle的执行域停止观测从旧4381.622ms变为新43.555ms，新Exec拒绝1.843ms；均为各N=1，不是持久销毁或生产SLO。旧失败基线保留，仍需等待存储恢复后完成持久确认、清理与还容量。
 
-新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。本分支另有普通驱动quota的实验性接入，cold与真正L1-built snapshot的有限恢复、双实例共享pin/配额检查已通过；quota清零已移出catalog pin锁，普通daemon实际EDQUOT和启动拒绝亦已有有限检查；quota启用时的整state I/O及quota清零后owner/pin仍保留的精确掉电窗口也已有限通过；另有6个固定quota syscall errno注入例通过（额外TEST ONLY启动层，非物理介质故障）；重复错误、完整逐syscall崩溃窗口及quota并发验收尚未完成，不能按生产能力启用。
+新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。本分支另有普通驱动quota的实验性接入，cold与真正L1-built snapshot的有限恢复、双实例共享pin/配额检查已通过；quota清零已移出catalog pin锁，普通daemon实际EDQUOT和启动拒绝亦已有有限检查；quota启用时的整state I/O及quota清零后owner/pin仍保留的精确掉电窗口也已有限通过；另有6个固定quota syscall errno注入例通过（额外TEST ONLY启动层，非物理介质故障）；其余完整逐syscall崩溃窗口及quota并发验收尚未完成，不能按生产能力启用。
 
 新增quota显式filesystem提交屏障：普通daemon已更新为 `522da68e…`，真实syncfs内核挂起/pre-fork掉电恢复及有限回归通过；Q_SYNC返回不再被当作独立提交屏障。默认服务兼容矩阵已另完成新原生复验（cold30、双租户各120次snapshot切换、初始化/存储/I/O）；quota模式完整故障/并发验收仍未完成，见[配额证据边界](docs/PROJECT_QUOTA.md)。
 
 新增 [真实quota提交故障证据](docs/QUOTA_COMMIT_FIXTURE.md)：同一普通daemon下，实际syncfs EIO及release前/后clear的真实内核挂起与冷恢复各N=1通过；postclear入口quota虽为零，未完成提交的掉电后仍回到已知限额，因此owner不能提前释放。生产ELF不变；29个执行代际（含失败前序）独立审计已清理。仍是TEST ONLY有限实验，不是完整quota并发、介质或生产验收。
+
+新增 [重复clear与TEST通知器失效检查](docs/QUOTA_LISTENER_FIXTURE.md)：三个clear errno子例各3次后才解除注入；两个最后listener关闭场景实际捕获内核ENOSYS并完成冷恢复。生产ELF不变，生产并不依赖该TEST listener；本轮32个执行代际已独立核验清理，仍不是完整quota并发或生产验收。
 
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 

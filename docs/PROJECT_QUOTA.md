@@ -183,6 +183,16 @@ release的固定第二/第三syncfs分别在clear前/后；DELETE前保存receip
 
 这是filesystem-wide fixed4MiB测试负载及额外TEST ONLY seccomp/NNP/BPF观察层，不是per-project IO隔离。Linux只读syncfs可noop返回0，不能虚构物理EROFS验收。完整quota切换/并发、重复clear/listener-loss/partial-copy、shared snapshot pins组合、owner unlink/dirfsync及节点总预算仍未完成；PR19继续Draft。
 
+### 重复clear与额外TEST listener失效（生产无此依赖）
+
+[夹具契约/完整解释](QUOTA_LISTENER_FIXTURE.md)及[精确provenance](validation/quota-listener-provenance-v1.json)记录冻结源 `7de4927…` 的11scope/32次L1开机。普通production Go与522 ELF均不变。三个clear子例各3次错误回复、每次同owner/namespace/kernel quota独立核对；clear-sync/read每次重新等待自己的SET，成功SET计数1/4/4避免把同一次SET后的preclear失败重复计作3个post-SET窗口。解除前API及有界atomic ledger均RECLAIMING/StoppedAt/无DestroyedAt、owner不丢、新admission503，之后正常CONTINUE清理/旧key410/新实际guest与project全零。
+
+两个固定profile分别在reserve或release SET入口关闭最后listener FD，不回复、不CONTINUE该SET。真正owned-L1加载的固定raw sys_exit BPF捕获精确TGID/TID的首个quotactl_fd返回 `-ENOSYS`；不是模拟errno或仅看API状态。reserve无旧guest，release先有实际guest/boot/配额/filter证据；关闭后三次核对durable reclaiming/owner/quota不变，普通未注入冷恢复及新guest执行销毁通过。生产没有通知监听器架构，此处仅证明额外测试层失效不会被当成成功，不能当作所有生产观察器/双监督故障验收。
+
+旧commit四profile、owner/pin、genuine-L1 snapshot shared2/cold3及quota/nil IO4亦回归；Native race3/vet、fixture race10/vet、root Python55、CGO0实际kernel/exec filter3、Darwin race3/vet和5种native/cross一致。初次传输后缺脚本启动失败原样保留，未创建VM；另将离线复核器错误的live byte常量改为policy及严格独立inode记账断言，quota IO一例多4096字节的具体inode原因不作推断。raw11报告未改，完整解释见链接。
+
+仍缺quota完整会话切换/并发/公平性、partial-copy、snapshot keeper/shared-pin故障组合、owner unlink/dirfsync/catalog持久窗口及节点总预算；不得以此勾选完整M2或Goal完成，PR19继续Draft。
+
 ## TEST ONLY 夹具的边界
 
 测试沿用[独占 L1 / 真实 L2 KVM](NESTED_HOST.md)，显式 `--quota-probe`，与 state-IO profile 互斥：

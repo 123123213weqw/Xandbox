@@ -1,0 +1,52 @@
+work/quota-listener-source-v1.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/fixture race10/vet/rootPython55/kernel filter3
+.......................................................
+----------------------------------------------------------------------
+Ran 55 tests in 0.059s
+
+OK
+bin/sandboxd-quota-listener-v1: 成功
+bin/xandbox-template-quota-listener-v1: 成功
+bin/xandbox-warden-quota-listener-v1: 成功
+bin/fixture-quota-listener-v1: 成功
+bin/builder-quota-listener-v1: 成功
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-quota-listener-v1
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-quota-listener-v1
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-listener-v1
+4afdc657ac1fcd0f83c279e6c3a6dac160c800150704c27c0a02945acdfdd87c  bin/fixture-quota-listener-v1
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-quota-listener-v1
+stage: fixed nested loss-reserve
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested loss-release
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested syscalls
+46969 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: fixed nested eio
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested preclear
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested postclear
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested reserve
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested clear
+46969 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested snapshot
+46969 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: fixed nested io
+46969 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+stage: fixed nested default-io
+46839 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+quota repeated-clear and listener loss partial gate passed; full quota switching/other persistence/production acceptance still unfinished

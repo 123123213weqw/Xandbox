@@ -29,4 +29,4 @@
 
 Native full race×3/vet、fixture race×10/vet、root Python52、CGO0实际kernel/exec filter×3、Darwin race×3/vet通过。503只证明新请求在frontend admission被拒绝，不是另行直接尝试backend UID/project分配；owner与释放顺序单独核对。
 
-仍需quota完整切换/并发、重复clear/listener-loss/partial-copy、snapshot shared-pin组合、owner unlink/dirfsync与其余catalog持久窗口、节点总预算及独立操作员验收。整体roadmap和PR #19仍未完成/Draft，不因这个子门槛勾选完整M2。
+后续重复clear与TEST listener-loss的有限检查见[新夹具及证据](QUOTA_LISTENER_FIXTURE.md)。仍需quota完整切换/并发、partial-copy、snapshot shared-pin组合、owner unlink/dirfsync与其余catalog持久窗口、节点总预算及独立操作员验收。整体roadmap和PR #19仍未完成/Draft，不因这个子门槛勾选完整M2。

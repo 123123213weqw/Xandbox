@@ -1,0 +1,13 @@
+kvm-quota-listener-loss-reserve-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-loss-release-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-syscalls-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-listener-eio-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-preclear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-postclear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-reserve-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-clear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-listener-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-listener-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-listener-default-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL11 quota repeated-clear and listener loss fixture scopes independently rechecked;32 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.
