@@ -1,6 +1,6 @@
 # TEST ONLY：配额 filesystem commit 故障夹具
 
-以下是新增夹具的设计契约，**不是实测通过报告或生产就绪声明**。生产 `sandboxd` 不新增故障开关、BPF、租户命令或设备控制接口。
+以下先说明夹具的设计契约；2026-10-23 已完成下述有限实测，见[原始证据与精确SHA](validation/quota-commit-provenance-v2.json)，**不是生产就绪声明**。生产 `sandboxd` 不新增故障开关、BPF、租户命令或设备控制接口。
 
 | 固定 profile | 普通 daemon 的边界 | 检查点 |
 | --- | --- | --- |
@@ -19,4 +19,14 @@
 - DELETE 可以被接收；本测试禁止的是过早宣称完整销毁或释放容量，不是假定所有 DELETE ACK 都应延迟。
 - Linux `syncfs` 的只读文件系统路径不保证返回 EROFS，不能把只读 noop 成功当作 durability 证明。实际挂载 RW 预检、ledger EROFS 和 syscall errno 单测是不同边界。
 
-尚需真实固定版本 native/cross、真实 EIO/两个 release hold 冷启动、原 hold 和 shared notifier 的兼容回归、独立资源审计以及脱敏原始证据；不能以本文件代替这些验收。整体 roadmap 和 PR #19 仍未完成。
+## 2026-10-23 有限实测
+
+普通 daemon 仍为 `522da68e…`，production Go与已验证a57完全相同；新TEST fixture源为 `f89492c…`。Go1.27.3 Linux原生五种artifact与独立cross字节一致。三种新profile各N=1/2次L1开机均通过：[真实EIO](validation/kvm-quota-commit-eio-v2.json)、[preclear hold](validation/kvm-quota-commit-preclear-v2.json)、[postclear hold](validation/kvm-quota-commit-postclear-v2.json)。真实EIO由实际L1加载的固定BPF捕获精确 `-EIO`；first-return latch的Seen1不是“整个daemon只调用一次syncfs”的证明。
+
+实际cold readback：reserve EIO和原reserve hold的quota记录均空；preclear和postclear均恢复为精确已知hard limits、usage0。尤其postclear在故障前已独立读回全零，但**未返回的syncfs后掉电，清零不保证持久化**。同一owner bytes始终在冷恢复前核对；普通daemon完成旧ref销毁/旧key410、新实际guest执行销毁与全部project清零，再释放ownership。并非已确认DESTROYED后限额复活的证据。release新旧guest boot不同；reserve不虚构旧guest。
+
+原reserve hold、六固定errno+cold3、postclear owner/pin窗口、真正L1-built snapshot shared2/cold3、quota整state IO4、默认nil-quota IO4亦通过。9个新scope共28次L1开机；另保留失败v1的1次，共10scope/29执行代际经独立只读审计全部不存在。v1在aborted FS上活读owner失败，原始passed=false保留，不能推断durable owner丢失或追认通过。另有private runner误写不存在的v20输入，SHA preflight在任何VM/源码解包前拒绝；修正的独立v2r1仅使用原始pinned v10，未生成替代guest。
+
+Native full race×3/vet、fixture race×10/vet、root Python52、CGO0实际kernel/exec filter×3、Darwin race×3/vet通过。503只证明新请求在frontend admission被拒绝，不是另行直接尝试backend UID/project分配；owner与释放顺序单独核对。
+
+仍需quota完整切换/并发、重复clear/listener-loss/partial-copy、snapshot shared-pin组合、owner unlink/dirfsync与其余catalog持久窗口、节点总预算及独立操作员验收。整体roadmap和PR #19仍未完成/Draft，不因这个子门槛勾选完整M2。

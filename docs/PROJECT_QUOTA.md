@@ -1,6 +1,6 @@
 # ext4 project quota：前置证据与实现中的驱动协议
 
-**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold及snapshot的有限恢复与共享pin检查，quota清零已移出catalog pin锁；block/inode耗尽与启动拒绝已有有限实测；quota启用的整state I/O故障也已有有限实测；逐quota syscall、崩溃/并发窗口和完整新运行时回归仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
+**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold及snapshot的有限恢复与共享pin检查，quota清零已移出catalog pin锁；block/inode耗尽与启动拒绝已有有限实测；quota启用的整state I/O故障也已有有限实测；quota启用的完整会话/并发/持久化矩阵仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
 
 ## 为什么不能只设一个 hard limit
 
@@ -147,7 +147,7 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 源码冻结 `a57f703d0c5ec9d3440430c573690df2856d39ae`；new native daemon/admin/builder/fixture及原warden五个ELF与独立交叉构建精确匹配，原guest initrd未变。native full race×3/vet、fixture race×10/vet、root Python47项、实际CGO0 kernel/exec filter×3与Darwin race×3/vet通过。新runtime还通过[6个errno及cold三检查点](validation/kvm-quota-barrier-syscalls-v1.json)、[post-clear owner/pin掉电](validation/kvm-quota-barrier-clear-v1.json)、[真正L1 snapshot/shared2+cold3](validation/kvm-quota-barrier-snapshot-v1.json)、[quota整盘I/O](validation/kvm-quota-barrier-io-v1.json)及[默认nil-quota I/O](validation/kvm-quota-barrier-default-io-v1.json)有限回归。[独立只读审计](validation/quota-barrier-independent-cleanup-v1.txt)含旧负对照共7个scope/23个外层执行代际，路径/执行域均无；quota证据来自删盘前L1实际读回。
 
-syncfs错误顺序/EIO/EROFS传播目前另有unit证明，**不是实际syncfs EIO/EROFS syscall故障验收**；release提交挂起/掉电、重复错误、listener失效、partial-copy Prepare、snapshot pin组合、owner元数据窗口、完整quota启用的新522矩阵、节点预算和最终exact-head CI仍待完成；默认服务兼容矩阵已在下节另验。目标与PR19继续未完成，不以本项通过勾选完整M2。
+该历史轮次只有syncfs错误顺序/EIO/EROFS传播unit证明，不能据此宣称实际存储故障通过；后续真实EIO与release hold/cold的有限证据见下节。重复错误、listener失效、partial-copy Prepare、snapshot pin组合、owner元数据窗口、完整quota启用的新522矩阵、节点预算和最终exact-head CI仍待完成；默认服务兼容矩阵已在下节另验。目标与PR19继续未完成，不以本项通过勾选完整M2。
 
 ### 新522默认服务兼容矩阵（quota完整验收仍未完成）
 
@@ -167,9 +167,21 @@ Cold及queue/binding原始报告没有顶层passed/cleanup布尔值，不能补�
 
 Linux native full race×3/vet、fixture race×10/vet、root Python50项、实际CGO0 kernel/exec filter×3及Darwin race×3/vet通过。新native daemon/admin/FC-test/session-test与独立交叉构建精确匹配，复用的原native warden/host-fixture/builder也逐一核对SHA及相同Go源码。legacy旧daemon仅用于实际旧ledger升级的准备，历史TEST export仍是其原源码角色；不把这些旧角色结果当成新daemon验证。
 
-这完成的是**新runtime的默认nil-quota服务兼容矩阵**，以及有限IO-budget和quota负向/冷恢复子门槛。quota启用的会话切换/并发/全部持久故障、实际syncfs EIO/EROFS及release提交hold/crash、重复clear/listener-loss/partial-copy、owner unlink/dirfsync与shared pin组合、节点总预算、最终exact-head CI及M1–M4仍未完成。PSS、cgroup charge、source residency等视图重叠，不能相加制造unique RAM；闭环完成数量相等也不是公平性证明。PR19继续Draft。
+这完成的是**新runtime的默认nil-quota服务兼容矩阵**，以及有限IO-budget和quota负向/冷恢复子门槛。quota启用的会话切换/并发/全部持久故障（后续真实EIO及两个release hold/cold只覆盖有限子集）、重复clear/listener-loss/partial-copy、owner unlink/dirfsync与shared pin组合、节点总预算、最终exact-head CI及M1–M4仍未完成。PSS、cgroup charge、source residency等视图重叠，不能相加制造unique RAM；闭环完成数量相等也不是公平性证明。PR19继续Draft。
 
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
+
+### 实际quota commit EIO与release hold/cold（仍为有限子门槛）
+
+新增[固定夹具契约与实测解释](QUOTA_COMMIT_FIXTURE.md)、[精确provenance/原始10JSON](validation/quota-commit-provenance-v2.json)。生产522 ELF及production Go不变，只有TEST fixture/驱动harness扩展。实际owned-L1加载固定raw sys_exit BPF，精确owned TGID/TID+SYS_SYNCFS的首个返回为 `-EIO`，并独立检查tmpfs中的普通Prepare日志、Create500与无假READY/stop/destroy确认。故障后不再observer读取aborted FS，mapper error保持到自有L1断电；冷启动才核对同一durable owner bytes/policy/空namespace，再由普通未注入daemon恢复旧ref/key410并启动执行销毁新真实guest。
+
+release的固定第二/第三syncfs分别在clear前/后；DELETE前保存receipt，先有真实KVM/UID/exec/quota证据。入口核对owner、已删除namespace/cgroup，CONTINUE后必须真实filesystem D+syncfs/sync_filesystem栈、无seccomp等待，连续三次复核；状态RECLAIMING/StoppedAt，无DestroyedAt，新请求503。DELETE接收不等于完整销毁；503也不是直接backend allocator探测。
+
+三个新profile各N=1、2次L1开机通过。postclear入口quota已全零，**掉电冷启动后仍为精确已知限额、usage0**，不是已持久清零；owner保留让普通恢复安全完成。preclear亦为已知限额/usage0；两个reserve profile冷记录为空。没有已确认READY/DESTROYED丢失持久性的推断，也没有物理L0介质或SLO声明。
+
+同fixture另回归原reserve hold、六errno+cold3、owner/pin窗口、L1-built snapshot shared2/cold3、quota IO4与nil-quota IO4。含失败前序共10scope/29执行代际独立只读清理审计通过；失败v1原样passed=false，不追认。Native race3/vet、fixture race10/vet、root Python52、实际CGO0 kernel/exec filter3、Darwin race3/vet及5种native/cross artifact一致。详细失败原因与preflight输入笔误均公开区分，不计作额外成功场景。
+
+这是filesystem-wide fixed4MiB测试负载及额外TEST ONLY seccomp/NNP/BPF观察层，不是per-project IO隔离。Linux只读syncfs可noop返回0，不能虚构物理EROFS验收。完整quota切换/并发、重复clear/listener-loss/partial-copy、shared snapshot pins组合、owner unlink/dirfsync及节点总预算仍未完成；PR19继续Draft。
 
 ## TEST ONLY 夹具的边界
 

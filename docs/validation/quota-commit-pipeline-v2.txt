@@ -1,0 +1,46 @@
+work/quota-commit-source-v2.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/tagrace10/tagvet/rootPython52/CGO0 kernel filter proof
+....................................................
+----------------------------------------------------------------------
+Ran 52 tests in 0.050s
+
+OK
+bin/sandboxd-quota-commit-v2: 成功
+bin/xandbox-template-quota-commit-v2: 成功
+bin/xandbox-warden-quota-commit-v2: 成功
+bin/fixture-quota-commit-v2: 成功
+bin/builder-quota-commit-v2: 成功
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-quota-commit-v2
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-quota-commit-v2
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-commit-v2
+452c8cf8e968fa2691295a535e79c7137379d02f77cd5de8613e3b6e77bb6e15  bin/fixture-quota-commit-v2
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-quota-commit-v2
+stage: actual syncfs writeback EIO, direct kernel exit and own L1 cold recovery
+46819 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: release preclear actual kernel syncfs hold and own L1 cold recovery
+46819 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: release postclear actual kernel syncfs hold and own L1 cold recovery
+46819 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: original reserve actual kernel hold regression
+46819 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: six fixed quota syscall errno plus normal cold3 regression
+46819 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: exact post-clear owner-pin crash regression
+46819 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: normal snapshot shared2/cold3 regression
+46819 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: quota whole-state IO4 regression
+46819 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+stage: default nil-quota IO4 regression
+46689 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+quota filesystem commit fault partial gate passed; overall quota and production acceptance still unfinished
