@@ -1,6 +1,6 @@
 # ext4 project quota：前置证据与实现中的驱动协议
 
-**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold及snapshot的有限恢复与共享pin检查，quota清零已移出catalog pin锁；耗尽/故障矩阵、全部持久窗口和完整新运行时回归仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
+**开发中，不能按生产能力启用。** 本分支已接入实验性普通驱动quota，并打通cold及snapshot的有限恢复与共享pin检查，quota清零已移出catalog pin锁；block/inode耗尽与启动拒绝已有有限实测；quota专属I/O/崩溃、全部持久窗口和完整新运行时回归仍在验收。以下先区分当前实现与PR18已合并的历史前置证据，再列出未完成协议要求。M2完整磁盘/节点预算仍未完成。
 
 ## 为什么不能只设一个 hard limit
 
@@ -12,7 +12,7 @@ Linux6.8 的 `ignore_hardlimit()` 对持有 `CAP_SYS_RESOURCE` 的进程允许�
 
 - `Config.Quota` 为操作员不可变策略：完整ext4 UUID、独占project范围、block/inode硬上限；mount-ID、实际enforcement与所有controller线程的capability均检查。旧state不可直接加/删/改策略，缺省仍是原有无quota实验规格。
 - projectID与既有durable UID slot一一对应，owner v3/v4分别支持cold/snapshot；`quota_attempted`必须持久化后才允许设置限额。未知或未attempt的非空quota记录不能收养；准备失败也保留owner直到准确清理。
-- 全部私有jail/root在复制前设置project/继承，快照共享链接仅在可信pre-fork区间进入并reseal，fork前读回。cold与snapshot均已有有限实机检查；**全部耗尽/故障、并发与初始化窗口仍未完成**。
+- 全部私有jail/root在复制前设置project/继承，快照共享链接仅在可信pre-fork区间进入并reseal，fork前读回。cold与snapshot均已有有限实机检查；**全部quota I/O/崩溃、并发与初始化窗口仍未完成**。
 - Root无CAP_SYS_RESOURCE不是全部边界：init user namespace内文件owner可修改project属性，见[固定内核fileattr权限检查](https://github.com/torvalds/linux/blob/v6.8/fs/ioctl.c)。quota模式warden额外继承seccomp，阻止后代quotactl/quotactl_fd、FSSETXATTR及SETFLAGS，保留Firecracker默认filter；READY前检查NNP与过滤器。Go race/cgo不能同步all-thread prctl时严格拒绝，实际kernel/exec继承证明另在CGO0运行，不单线程回退。
 - Stop/drain、文件清理、quota清零/Q_SYNC/读回、owner删除/目录fsync与容量归还是不同阶段；quota I/O或用量不归零就不能提前释放UID/project。恢复不把jailer的PID文件当成身份或kill依据。
 
@@ -43,7 +43,30 @@ snapshot running/stopped各观察到私有charge为137,920,512字节/14 inode，
 
 原始报告limitations中“snapshot save/restore”一词指**外层QEMU/L1故障注入没有保存/恢复快照**；L2 Firecracker的完整create/load确实执行。保留原报告原样，在provenance说明这个容易混淆的旧措辞，不改写原始结果。旧v7与其失败前序也全部保留。
 
-**合并前还必须完成**：普通驱动block/inode实际EDQUOT、启动拒绝、quota专属I/O/崩溃/存储错误与全部并发持久窗口；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。有限snapshot/pin/cold通过不等于这些要求、M2完整预算或生产验收完成。
+### 普通daemon的EDQUOT与启动拒绝（新有限证据）
+
+[本轮精确provenance、SHA与未完成清单](validation/quota-negative-provenance-v3.json)覆盖源码 `100a155…` / `c7e0026…`。变化仅为TEST ONLY夹具/测试：普通daemon仍为 `ab547783…`、warden仍 `b290a5ed…`，原guest未改；两轮各五个native ELF均与独立交叉构建精确匹配。不是把PR18的内核worker实验当成普通驱动集成。
+
+每个场景有独立的新state/runtime/cgroup/backend binding；负向场景全部结束且固定测试project记录清零后，才启动同盘正向普通服务。没有在线改已绑定实例的策略。
+
+| 普通daemon场景 | 实际检查 |
+|---|---|
+| CAP_SYS_RESOURCE仍在root能力集合 | 明确的capability构造器错误；拒绝启动且无API socket |
+| 错filesystem UUID | 明确的UUID错误；不能降级或忽略配置 |
+| 未知非空quota记录 | 普通驱动拒绝，独立读回记录完全不变；reap后仅由PID1清理**夹具自己注入的固定记录**，不是驱动收养或批量清外部ID |
+| 已绑定策略变化 | 健康空daemon正常退出，再把其测试输入策略加4096字节；新构造器拒绝，原durable binding完整hash不变 |
+| block hard=16MiB、inode hard=128 | 普通API Create500，实际Prepare私有日志确认EDQUOT；正常GC后durable DESTROYED、精确资源消失、旧key410 |
+| block hard=192MiB、inode hard=1 | 同样实际EDQUOT及回收；限制的是host私有jail inode，不是guest内文件数量 |
+
+[首轮普通负向/冷恢复](validation/kvm-quota-negative-v1.json)与[加入独立无enforcement场景后的重跑](validation/kvm-quota-negative-v3.json)都通过。每轮block/inode各做两次实际Prepare耗尽：第一次回收后重启同一binding的普通daemon，确认旧账本仍DESTROYED/旧key410；再用新key取得容量并再次500/EDQUOT，而不是残留容量503，第二代也完整回收。这里验证的是**pre-fork准备耗尽**，不是guest文件系统满、持续租户压力或所有运行中增长窗口；错误原文/Ref/路径仅在私有日志中核对，不投射到tenant API或公开报告。
+
+另用一个全新的普通ext4文件盘、匹配的实际UUID、无quota格式化/初始挂载选项，验证[缺少enforcement明确拒绝](validation/kvm-quota-negative-unenforced-v3.json)。没有quotaon/off、在线改挂载策略或改共享L0。此profile只有1次L1开机、**0个L2 VM**：检查具体的mount enforcement构造器错误、child reaped、无API/owner/代际执行域；不把它计作guest执行、冷恢复或quota清零证明。
+
+两轮分别另通过真实[cold恢复](validation/kvm-quota-negative-v3.json)、[真正L1-built snapshot/shared-pin检查与cold恢复](validation/kvm-quota-negative-snapshot-v3.json)、[默认健康掉电3例](validation/kvm-quota-negative-default-power-v3.json)和[默认EIO/held-fsync4例](validation/kvm-quota-negative-default-state-io-v3.json)；首轮同类原始报告也保留。每轮Linux full race×3/vet、fixture race×10/vet、实际CGO0过滤器proof×3通过，root Python分别42/43项；最终冻结源码Darwin race×3/vet通过。[独立只读复核](validation/quota-negative-independent-cleanup-v3.txt)确认9个scope、35个外层L1执行代际/root/control全部不存在。enforced profile中的quota零值来自销盘前的L1实际读回，独立路径复核和unenforced profile不替代它。
+
+中间一次[私有runner预检失败原文](validation/quota-negative-preflight-failed-v2.txt)原样保留：文件名替换误把已固定的initrd-v10写成不存在的v20，SHA预检在源码解压/native测试/L1分配前退出1，0次开机、无KVM报告；新v3只修正runner文件名，源码仍是相同 `c7e0026…`，guest和生产代码未改。两轮实际runner均退出0；旧冷路径失败前序、旧部分验收清单仍按历史源码保留，不改写成当前结果。
+
+**合并前还必须完成**：quota专属真实EIO/EROFS/held-quota syscall、quota设置/清零及owner/catalog各持久窗口的崩溃与并发；全部新native默认冷路径/快照/初始化/IO/故障服务回归、完整独立清理和最终CI。上述有限EDQUOT/拒绝/snapshot/cold通过，不等于这些要求、M2完整物理预算或生产验收完成。
 
 以下TEST ONLY部分是PR18已合并的内核前置实验，不是上述普通驱动验收的替代品。
 
