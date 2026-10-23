@@ -1,0 +1,38 @@
+{
+  "actually_executed_read_only": true,
+  "all_four_runners_terminal_and_absent": true,
+  "old_first_false_intact": true,
+  "no_supplemental_cleanup": true,
+  "scopes": [
+    {
+      "source_experiment": "v1",
+      "mode": "live",
+      "outer_generations_absent": 1,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "source_experiment": "v2",
+      "mode": "live",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "source_experiment": "v2",
+      "mode": "budget",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "source_experiment": "v3",
+      "mode": "live",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "source_experiment": "v3",
+      "mode": "budget",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    }
+  ]
+}

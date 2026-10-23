@@ -1,6 +1,6 @@
 # Xandbox 生产化计划与发布门槛
 
-最后更新：2026-10-23。
+最后更新：2026-10-24。
 
 ## 当前状态
 
@@ -15,6 +15,8 @@
 部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。
 
 ## 信任与隔离边界
+
+新增[独立TLS接入与凭证边界](TLS_GATEWAY.md)：新gateway程序实际完成专用UID/caps0/NNP/chroot/cwd/继承FD及root无TCP核对、真实双租户TLS→KVM、外部key/leaf持久轮换、无效reload/旧revision拒绝、健康同盘cold与普通schema3回归，共最终2scope/4次启动。普通4ee五个ELF不变，前序false保留。此有限子门槛不勾选完整M4；PKI/分发、policy提交故障、资源/日志/审计、真实operator部署与长负载尚未完成。
 
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。

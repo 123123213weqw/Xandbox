@@ -6,6 +6,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 **状态：生产化开发中，尚未生产就绪。**
 
+新增 [独立TLS接入与外部凭证边界](docs/TLS_GATEWAY.md)：root固定连接broker无TCP listener，专用UID/caps0/NNP/chroot的网络child；真实TLS→KVM双租户、key/证书轮换不重启controller/guest、无效reload关闭入口、旧revision拒绝及同盘冷恢复有限验收通过。最终2 scope/4次外层启动，原首轮失败及两项真实cwd/继承FD修正分别保留；普通4ee五个ELF不变。这不是完整PKI、DoS、operator部署或生产SLO验收。
+
 开发分支新增 [节点持久准入控制](docs/NODE_CONTROL.md)：私有同宿主 UID 管理 socket 与 `xandbox-node status/drain/resume`，停止新预留但允许已接受操作、已有执行及独立 Stop/Cleanup 继续；包含 epoch/revision CAS、精确重试和重启保持。**这次修改了生产程序；新 ELF 的 DEFAULT/IO 与 quota 命名兼容子矩阵现已另行复验，但最坏节点资源压力及剩余 operator 窗口尚未完成**。下面各报告只证明其自身冻结的源码/ELF，不能相互替代。mock 进程及模拟持久化错误测试不代替真实故障窗口。
 
 新增 [operator 有限 KVM 与同盘冷恢复验收](docs/NODE_OPERATOR_KVM.md)：新生产 ELF `4ee09d0a…` 的实际异 UID 连接在 HTTP 前被拒绝、drain 下真实 raw/session 执行与私有回收、ACK drain 的 cold 保持均通过；同一新程序的 node-budget 有限兼容用例亦通过。4 个 scope/6 个外层代际（4通过＋2失败）独立核验清理，失败及零 boot 前序保留。N=1 约16ms执行域停止、370ms私有回收，不是物理擦除或SLO；这一批健康测试未覆盖提交故障窗口，后续有限补充及新运行时兼容子矩阵见下方，不作为其余窗口或完整生产验收。
@@ -209,6 +211,7 @@ python3 scripts/smoke.py \
 cmd/sandboxd          宿主机管理服务（mock / 实验性 Firecracker）
 cmd/sandboxctl        Unix-socket 客户端
 cmd/xandbox-keygen    私有令牌与摘要配置生成器
+cmd/xandbox-gateway   Linux 独立权限分离 TLS 接入（有限实机验收）
 cmd/xandbox-agent     Linux guest 专用执行组件
 cmd/xandbox-guestctl  Firecracker vsock 诊断客户端
 cmd/xandbox-warden    Linux 可信租约/硬截止监督进程

@@ -1,6 +1,6 @@
-# 独立 TLS 接入与凭证边界（开发中）
+# 独立 TLS 接入与凭证边界（有限实机验收）
 
-当前正在实现 Linux `xandbox-gateway`，**尚未完成原生 Linux 权限隔离/KVM 端到端验收，不是可用生产部署声明**。普通 `sandboxd` 仍只监听私有 Unix socket；没有放宽其状态目录、operator/metrics socket 权限，也不增加 root 网络监听器。完整生产门槛仍见 [PRODUCTION.md](PRODUCTION.md)。
+Linux `xandbox-gateway` 已完成原生权限隔离、实际 TLS→KVM 与同盘冷恢复的有限验收，冻结源为 `93c5be6c…`。**不是生产就绪、完整 TLS/PKI 或操作员部署验收声明**。普通 `sandboxd` 仍只监听私有 Unix socket；没有放宽其状态目录、operator/metrics socket 权限，也不增加 root 网络监听器。完整生产门槛仍见 [PRODUCTION.md](PRODUCTION.md)。
 
 ## 边界决策
 
@@ -16,13 +16,13 @@
 
 ## 凭证与TLS生命周期
 
-外部256位随机Bearer凭证仅保存摘要，并必须有not_before/expires_at（最长90天有效区间）。每个外部摘要映射到一个**不同的私有backend credential**；root对照启动时普通daemon的digest authority校验tenant/quota。外部key不是直接可用于私有controller的token，不能伪造tenant请求头。
+操作员应生成独立的256位随机外部Bearer；程序保存其SHA-256摘要，并要求not_before/expires_at（最长90天有效区间）。摘要格式检查不能证明原始凭证的熵。每个外部摘要映射到一个**不同的私有backend credential**；root对照启动时普通daemon的digest authority校验tenant/quota。外部key不是直接可用于私有controller的token，不能伪造tenant请求头。
 
 外部策略有持久policy_revision及独立root0700 StateDir。独占lock与identity绑定固定socket/进程/后端authority；完整snapshot摘要和revision先原子写入并完成文件/目录Sync，随后才能向子进程发布。首次只接受空目录的revision1，之后仅允许revision+1或重启时同revision同摘要；缺少identity/record、回滚或复用revision均拒绝启动。未ACK的新策略可能已落盘，不能退回旧key。生产state journal不是fixture手写的准入元数据。其物理掉电/所有I/O故障窗口尚未验收。
 
 SIGHUP重新读取完整root私有config/cert/key并传一份新snapshot；证书、私钥和外部key表整体校验后原子发布，进程绑定/tenant socket/backend authority路径不允许暗改。外部key可在不重启daemon/guest的情况下增加/撤销/轮换；空key表明确全部401，不变成无鉴权。普通daemon私有backend credential本身仍是启动配置，更新其authority依然需要单独设计/验收。
 
-新请求读取新snapshot；已准入请求可继续使用其旧snapshot，撤销key不等于取消已接受工作或停止guest。无效reload/传输/ACK超时或root连续3s无消息/心跳会结束ingress子进程并撤回broker连接，不无限保留旧策略。普通daemon独立存活，恢复ingress不自动恢复/删除guest。
+新请求读取新snapshot；已准入请求可继续使用其旧snapshot，撤销key不等于取消已接受工作或停止guest。无效reload/传输/ACK超时会关闭ingress并撤回broker连接；child连续3s收不到root消息/心跳也会退出。但root卡在文件系统I/O时，不能保证所有backend socket副本立即被root撤回，仍受普通controller/lease/guardian自身预算约束；本轮没有测试该policy I/O挂起窗口。普通daemon独立存活，恢复ingress不自动恢复/删除guest。
 
 仅TLS1.3、精确SNI/Host、HTTP/1.1；禁用会话票据，握手和每次请求都检查当前证书时间。新握手取不可变certificate对象，已经建立的TLS连接不会换证书，但后续请求仍重新鉴权。这里不承诺安全擦除旧heap中的key，也不宣称已有外部PKI自动签发/分发/续期。[Go TLS配置及不可变callback约束](https://pkg.go.dev/crypto/tls#Config)
 
@@ -34,20 +34,80 @@ SIGHUP重新读取完整root私有config/cert/key并传一份新snapshot；证�
 
 这些是实现的固定预算，不是已实测的最坏资源SLO、公平性或完整DoS防护。还需要单独的生产cgroup/日志预算、审计、长负载与真实operator/systemd验收；不允许在共享L0开放公网端口或修改系统服务来代替隔离测试。
 
-## 当前证据状态
+## 实际证据与测量边界
 
-- 已有可跨平台运行的package级真实TLS握手、外部key原子轮换/撤销、私有token替换、路由/歧义/响应预算负例和race测试，目前实际执行于Darwin；不证明root子进程权限/chroot/broker路径。
-- Linux定长IPC/FD/seal/取消后迟到FD回收测试已编写，当前尚待远程原生执行；不能把交叉编译标记为执行通过。
-- 专属L1中的真实UID/cap/NNP/chroot/no-root-listener、KVM经TLS执行/切换/停止/完整回收、证书/key更新及失败关闭验收仍待执行。
+[最终原始报告](validation/kvm-tls-gateway-live-v3.json)、[普通node-budget回归](validation/kvm-tls-gateway-budget-v3.json)、[来源绑定](validation/tls-gateway-provenance-v3.json)、[独立清理核验](validation/tls-gateway-independent-cleanup-v3.json)：
 
-没有新的生产就绪或完整Goal完成声明。既有实机报告仍绑定其原冻结源，不用新网关的unit结果给旧runtime或新网络边界背书。
+- 冻结源`93c5be6c…`实际执行Linux Go1.27.3全量race×3/vet、tagged fixture race×10/vet、CGO0真实quota filter×3、root Python107项零skip、mock6对象；同冻结源Darwin race×3/vet通过。7个原生ELF与独立交叉构建SHA逐项相等，不把交叉编译当成执行。
+- 实际root broker无TCP listener；唯一listener属于UID/GID60001、无附加组/caps0/NNP的child；真实chroot/cwd同inode、rlimits及NodeControl归属核对。特意向root launcher传入外部目录FD10，确认child未继承外部目录能力；自根目录瞬时内部FD不误判成外部目录。
+- 两租户经验证CA/SNI的TLS1.3执行真实guest命令；UID、boot、workspace独立，跨租户404，私有backend token不能直接登录外部入口；operator/metrics、歧义鉴权/转发头、TLS1.2及错误SNI均拒绝。
+- policy revision2的外部key+leaf轮换不重启普通controller/guest；旧key在**已复用连接**上401，新key经**真正新握手**确认leaf2。无效reload关闭ingress而guest继续；旧revision1重启在listen前拒绝；恢复当前revision2无需重启controller。
+- 实际忙任务session切换创建独立新guest，旧revision409。并发观察旧执行域为空、私有回收/持久DESTROYED/四个project quota0，而非用删除外层VM推断guest清理。前三代全部GC、gateway与controller全部reap后才生成私有receipt并进入原盘第二次L1启动。
+- 冷恢复在启动daemon前验证原始config/auth/policy journal与3代DESTROYED记录；普通启动无额外TEST通知层、open/pending0；revision2重放journal hash不变，旧raw/session key与关闭路由410；第四个独立真实guest经TLS运行并完成GC。
+- 最终TLS与旧正常schema3回归分别2次L1启动，共2 scope/4外层代际。独立只读审计还核对前序f698的4代与9d失败的1代，所有精确root/control/parent/group均不存在；四个runner终态且已退出，没有追加清理操作。
+
+同一switch起点的最终N=1外部观测：
+
+| 事件 | ms |
+|---|---:|
+| 新binding响应 | 3615.820 |
+| 新guest首条验证命令 | 3680.394 |
+| 旧执行域确认为空 | 3657.223 |
+| 旧私有回收、持久销毁及quota0 | 3986.491 |
+
+测试客户端故意每50ms发起请求（20req/s）；数字包含节流与独立采样/读回，**不是内部阶段耗时、优化对比、百分位、公平性或生产SLO**。环境为既有8GiB/12GiB/CPU8的owned L1、无业务NIC，L2为512MiB/2vCPU/128MiB workspace；未在共享L0开放端口或部署服务。
+
+本次新增独立gateway生产程序，但普通daemon/admin/warden/node/builder五个ELF仍与既有`4ee09d0a…`组合完全一致，旧六份验收manifest不改写、不重新贴标签。普通node-budget原报告中静态的更广runtime复验限制原样保留；是否复用历史结果以精确ELF/source绑定为准。
 
 
-## 未公开候选的修正前序
+## 保留的失败与修正前序
 
-首个组件源`19092f4…`的原生unit gates通过，但不能证明特权启动边界。首个实机候选`9d9bfb8…`在证书检查失败：新key已接受的连接可能在policy发布前就完成TLS握手，因此仍显示旧leaf。修正测试为先确认新key可用，再主动关闭测试客户端idle连接、验证真正新握手的leaf2；不能把旧连接换证书当成必要条件。原实机false报告保留。
+首个组件源`19092f4…`原生unit gates通过，但无实机启动。首个实机候选`9d9bfb8…`证书检查失败：新key已接受的连接可能在policy发布前就完成TLS握手，因此仍显示旧leaf。修正测试为先确认新key可用，再关闭新客户端idle连接、验证真正新握手的leaf2；保留另一条旧连接验证撤销。[原false报告](validation/kvm-tls-gateway-live-v1.json)与[诊断派生](validation/tls-gateway-failure-diagnostic-v1.json)保留：1次L1、无成功checkpoint/无cold/未开始普通回归；静态limitations描述计划范围，不代表已完成断言。
 
-独立代码审查同时发现候选没有显式改变chroot后的cwd。启动器现设置`Dir=/`，子进程校验`.`与`/`同inode，实机另外核对`/proc/child/cwd`与私有root同inode；不能仅检查`/proc/child/root`就声称无外部cwd。[Linux chroot语义](https://man7.org/linux/man-pages/man2/chroot.2.html)。这是真实生产代码修正，不把它藏成测试预期调整；修正后需重新冻结与完整原生/实机验收，旧候选不是可部署版本。
+独立代码审查同时发现候选没有显式改变chroot后的cwd。启动器现设置`Dir=/`，子进程校验`.`与`/`同inode，实机另外核对`/proc/child/cwd`与私有root同inode；不能仅检查`/proc/child/root`就声称无外部cwd。[Linux chroot语义](https://man7.org/linux/man-pages/man2/chroot.2.html)。这是真实生产代码修正，不藏成测试预期调整。修正后f698源另有原生及两scope/4次启动的功能基线；但它尚无后续FD继承修正，不能给最终93源代签。
 
 
-进一步按实际Go启动实现核对descriptor继承：`ExtraFiles`不负责关闭外部launcher遗留的全部non-CLOEXEC FD。root supervisor在fork前对>=3执行进程本地CLOEXEC标记，显式capability再由exec映射；子进程stdio不继承调用者能力。新增子进程测试与实机故意传入outside目录FD10，核对网络child无directory FD；这不涉及修改共享L0内核或关闭其他进程FD。
+进一步按实际Go启动实现核对descriptor继承：`ExtraFiles`不负责关闭外部launcher遗留的全部non-CLOEXEC FD。root supervisor在fork前对>=3执行进程本地CLOEXEC标记，显式capability再由exec映射；子进程stdio不继承调用者能力。新增子进程测试与实机故意传入outside目录FD10，核对网络child无外部directory FD；这不涉及修改共享L0内核或关闭其他进程FD。最终93源另行完成全部原生及实际两scope验收。
+
+## 操作员配置契约（不是已验收安装器）
+
+仅Linux静态ELF；非Linux CLI失败关闭，不回退host执行。在Linux构建：
+
+```sh
+GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+  -o /absolute/private/build/xandbox-gateway ./cmd/xandbox-gateway
+```
+
+部署前由操作员提供独立root私有目录、固定NodeControl出生归属与总cgroup/日志预算，见[操作约束](OPERATIONS.md)。本程序**不创建systemd unit、不自动把自身迁入cgroup，也不配置公网、CA签发或防火墙**。root需要chroot/setuid/setgid等权限；内核必须支持seqpacket/SCM_RIGHTS、sealed memfd与close_range(CLOEXEC)，不支持时失败，不能放宽目录或去掉检查。
+
+`-config /absolute/private/gateway/config.json`必须root-owned0600，父目录0700且由可信root控制。示意结构如下；路径、域名需由操作员替换，不可原样当作已配置服务：
+
+```json
+{
+  "version": 1,
+  "policy_revision": 1,
+  "state_dir": "/var/lib/xandbox-gateway/policy",
+  "uid": 60001,
+  "gid": 60001,
+  "listen": "127.0.0.1:9443",
+  "server_name": "gateway.example.invalid",
+  "empty_root": "/var/lib/xandbox-gateway/root",
+  "tenant_socket": "/var/lib/xandbox/state/api.sock",
+  "backend_auth_file": "/var/lib/xandbox/auth.json",
+  "certificate_file": "/var/lib/xandbox-gateway/server-chain.pem",
+  "private_key_file": "/var/lib/xandbox-gateway/server-key.pem",
+  "keys": []
+}
+```
+
+- `keys: []`明确拒绝所有外部身份（包括gateway health/ready请求），不是无鉴权。条目字段为`token_sha256`、`tenant_id`、`max_instances`、`backend_token`、RFC3339 `not_before`/`expires_at`。backend token必须不同于对应外部key，且普通daemon启动authority内tenant/quota完全相同。
+- **config包含明文私有backend token**，cert key及child内存snapshot也包含私钥；“外部只存摘要”不等于整个config无秘密。禁止commit、日志或把值放argv/env，不能将操作员配置给租户。被攻破的gateway可冒用所委托的租户backend能力，本设计不声称抵御此情形。
+- `empty_root`必须root-owned0555且只含普通静态`gateway`文件；文件与root supervisor ELF哈希相同、单link独立文件（不能hardlink），父目录root0700。不挂载proc/dev/state，不留下宿主cwd/stdio/目录FD。可执行文件必须root所有、不可group/other写，安装时确保无并发替换。fixture证明固定启动，不是通用chroot逃逸防护认证。
+- `state_dir`独立root0700，首次空目录、revision1；随后仅由生产代码创建lock/identity/journal，不手工复制/删改来“恢复”。config/auth/cert/key均root0600、拒绝symlink；tenant api.sock为root0600，state目录0700。tenant/operator/metrics socket不能混用或放宽。
+- 明确预留专用UID/GID，不与guest/其他服务复用。listen为数值IP:port、port>=1024；server_name为精确DNS名，leaf必须有效并匹配，客户端独立验证可信CA。程序不替代issuer、时钟管理及外部信任链分发。
+- 操作员原子替换完整私有config/cert/key、将policy_revision严格加1，向**确切持有的root supervisor进程**发SIGHUP。进程绑定不能改；backend authority启动时缓存，不能靠改路径文件偷偷更新。新revision可能已落盘但未成功ACK；只能以该已提交revision的精确snapshot恢复或后续revision，不回滚旧key。
+- 本轮只检查健康同步policy后冷启动、无效reload与旧revision启动拒绝；未覆盖两个journal文件之间/每个fsync/介质错误/掉电窗口。不能把删除policy目录、重建identity或重置revision当作修复流程。
+
+## 仍需完成
+
+生产cgroup与日志/archive硬预算、真正operator/systemd部署验收、结构化持久审计/告警、issuer/续期/凭证分发及backend authority升级、policy逐提交故障矩阵、长时间与开放到达饱和/公平性、升级备份回滚及其余M1–M4。不开生产就绪声明；PR保持Draft，Goal保持进行中。

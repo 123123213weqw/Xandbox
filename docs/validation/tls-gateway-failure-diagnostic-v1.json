@@ -1,0 +1,11 @@
+{
+  "original_false_report": "kvm-tls-gateway-live-v1.json",
+  "original_false_report_sha256": "4485faf107d732c647528345fe9dab2f4817698e0e31c5cc219723cc58b09001",
+  "selected_fixed_diagnostic": "private node step failure: rotated certificate chain not observed",
+  "private_console_sha256": "492f39674a9f3a41ad7ef27f81a0ae0a5a18a4baa30010204ca60a92672d9ffc",
+  "private_console_bytes": 179,
+  "raw_private_console_exported": false,
+  "diagnostic_derivation": "Exactly one fixed diagnostic line selected from original console. No keys/certificates/receipts/identities exported. Static report limitations describe planned scope, not completed assertions; cases/checkpoint_progress are empty.",
+  "fix": "TEST waits for new key acceptance, closes only new client idle connections, verifies a genuinely new leaf2 handshake. Warm old authenticated connection is retained separately and must return401 with Reused=true.",
+  "separate_production_fixes": "f698 binds cwd to chroot and checks inode. 93 marks inherited descriptors CLOEXEC and gives child null stdio; actual final fixture injects outside directoryFD10 and verifies exclusion. Original9d/f698 evidence is not relabelled to93."
+}
