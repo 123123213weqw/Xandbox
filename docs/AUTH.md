@@ -2,6 +2,8 @@
 
 本页描述已实现的控制面契约，**不是虚拟机隔离验收**。该契约适用于 mock 与实验性 Firecracker 后端；真实 KVM 证据见 [guardian 报告](GUARDIAN.md)。普通daemon仍只监听私有 Unix socket，不直接监听公网 TCP。独立Linux [TLS接入网关](TLS_GATEWAY.md)已有权限分离/真实KVM有限验收，其外部key热轮换与本文的私有backend authority是不同层。
 
+外部策略另有[固定提交挂起与入口心跳专项](TLS_POLICY_COMMIT.md)：入口关闭但已接受任务继续，未提交/已持久化策略的冷恢复语义不同。两个通知窗口通过不等于所有媒体故障/持久撤销窗口或backend authority热更新已完成。
+
 ## 生成凭证并运行
 
 ```sh

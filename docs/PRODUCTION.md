@@ -18,6 +18,8 @@
 
 新增[独立TLS接入与凭证边界](TLS_GATEWAY.md)：新gateway程序实际完成专用UID/caps0/NNP/chroot/cwd/继承FD及root无TCP核对、真实双租户TLS→KVM、外部key/leaf持久轮换、无效reload/旧revision拒绝、健康同盘cold与普通schema3回归。当前0b源含持久lock标记修正，另行通过2scope/4次启动；bootstrap记录丢失仅有原生unit失败对照与修正回归，不宣称物理丢失故障已测。普通4ee五个ELF不变，各前序false/冻结源保留。此有限子门槛不勾选完整M4；PKI/分发、policy提交故障、资源/日志/审计、真实operator部署与长负载尚未完成。
 
+后续[固定policy提交窗口/入口watchdog有限验收](TLS_POLICY_COMMIT.md)已通过：83d为测试修改，同一生产ELF在pre-file FSYNC、post-durable pre-snapshot MEMFD_CREATE两入口实际hold；child在root仍挂起时退出，普通忙任务继续，冷恢复区分真实journal1与2，另有健康TLS/普通schema3回归，共4scope/8代独立审计。未覆盖其余policy介质/提交窗口、孤立临时元数据预算或完整M4，不用通知等待代替真实文件系统D。
+
 - 不信任 guest 中的任务代码、文件名、输出或终止行为。
 - 信任经过维护的宿主内核、KVM、操作员配置和经过固定版本/校验的模板。
 - 一实例一独立 guest、写盘、进程资源组和执行代际；不把已使用实例直接交给另一租户。

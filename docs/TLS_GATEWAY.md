@@ -22,7 +22,7 @@ Linux `xandbox-gateway` 已完成原生权限隔离、实际 TLS→KVM 与同盘
 
 SIGHUP重新读取完整root私有config/cert/key并传一份新snapshot；证书、私钥和外部key表整体校验后原子发布，进程绑定/tenant socket/backend authority路径不允许暗改。外部key可在不重启daemon/guest的情况下增加/撤销/轮换；空key表明确全部401，不变成无鉴权。普通daemon私有backend credential本身仍是启动配置，更新其authority依然需要单独设计/验收。
 
-新请求读取新snapshot；已准入请求可继续使用其旧snapshot，撤销key不等于取消已接受工作或停止guest。无效reload/传输/ACK超时会关闭ingress并撤回broker连接；child连续3s收不到root消息/心跳也会退出。但root卡在文件系统I/O时，不能保证所有backend socket副本立即被root撤回，仍受普通controller/lease/guardian自身预算约束；本轮没有测试该policy I/O挂起窗口。普通daemon独立存活，恢复ingress不自动恢复/删除guest。
+新请求读取新snapshot；已准入请求可继续使用其旧snapshot，撤销key不等于取消已接受工作或停止guest。无效reload/传输/ACK超时会关闭ingress并撤回broker连接；child连续3s收不到root消息/心跳也会退出。但root卡在文件系统I/O时，不能保证所有backend socket副本立即被root撤回，仍受普通controller/lease/guardian自身预算约束。另有[固定策略提交通知挂起窗口](TLS_POLICY_COMMIT.md)实际验证child在root仍活着时退出、旧工作继续；它不是文件系统D/物理介质挂起。普通daemon独立存活，恢复ingress不自动恢复/删除guest。
 
 仅TLS1.3、精确SNI/Host、HTTP/1.1；禁用会话票据，握手和每次请求都检查当前证书时间。新握手取不可变certificate对象，已经建立的TLS连接不会换证书，但后续请求仍重新鉴权。这里不承诺安全擦除旧heap中的key，也不宣称已有外部PKI自动签发/分发/续期。[Go TLS配置及不可变callback约束](https://pkg.go.dev/crypto/tls#Config)
 
@@ -37,6 +37,8 @@ SIGHUP重新读取完整root私有config/cert/key并传一份新snapshot；证�
 ## 实际证据与测量边界
 
 [最终原始报告](validation/kvm-tls-gateway-live-v4.json)、[普通node-budget回归](validation/kvm-tls-gateway-budget-v4.json)、[当前来源绑定](validation/tls-gateway-bootstrap-provenance-v4.json)、[独立清理核验](validation/tls-gateway-independent-cleanup-v4.json)；[前四个冻结阶段的来源绑定](validation/tls-gateway-provenance-v3.json)及全部原始报告原样保留：
+
+上述为0b生产基线的冻结证据。随后新增[83d测试源的策略提交挂起专项](TLS_POLICY_COMMIT.md)：未修改的同一gateway/普通程序通过pre-file和post-commit两窗口、入口watchdog/guest继续与各自原盘cold，并另做健康TLS及普通node-budget回归，共4scope/8次启动。新报告不改写本节0b数据；只有两个固定通知窗口，不是完整policy故障矩阵。
 
 - 冻结源`0b4eb8cf…`实际执行Linux Go1.27.3全量race×3/vet、tagged fixture race×10/vet、CGO0真实quota filter×3、root Python107项零skip、mock6对象；同冻结源Darwin race×3/vet通过。7个原生ELF与独立交叉构建SHA逐项相等，不把交叉编译当成执行。
 - 实际root broker无TCP listener；唯一listener属于UID/GID60001、无附加组/caps0/NNP的child；真实chroot/cwd同inode、rlimits及NodeControl归属核对。特意向root launcher传入外部目录FD10，确认child未继承外部目录能力；自根目录瞬时内部FD不误判成外部目录。
@@ -112,4 +114,4 @@ GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go build -trimpath -buildvcs=false \
 
 ## 仍需完成
 
-生产cgroup与日志/archive硬预算、真正operator/systemd部署验收、结构化持久审计/告警、issuer/续期/凭证分发及backend authority升级、policy逐提交故障矩阵、长时间与开放到达饱和/公平性、升级备份回滚及其余M1–M4。不开生产就绪声明；PR保持Draft，Goal保持进行中。
+生产cgroup与日志/archive硬预算、真正operator/systemd部署验收、结构化持久审计/告警、issuer/续期/凭证分发及backend authority升级、其余policy逐提交故障/孤立临时元数据保留矩阵、长时间与开放到达饱和/公平性、升级备份回滚及其余M1–M4。不开生产就绪声明；PR保持Draft，Goal保持进行中。
