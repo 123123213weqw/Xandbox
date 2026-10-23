@@ -13,6 +13,7 @@ import http.client
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import select
 import shutil
@@ -59,6 +60,48 @@ def same_owned_directory(path, identity):
             and current.st_ino == identity.st_ino)
 
 
+def resume_legacy_fixture(node, state, committed, log):
+    """Explicitly authorize ONLY the recovered disposable legacy fixture.
+
+    This is deliberately not part of start(): ordinary cold recovery must
+    preserve a durable drain. Epoch/command IDs and CLI diagnostics stay private.
+    Resource observations are sampled, not a transactional cleanup certificate.
+    """
+    assert committed == {'version': 1, 'epoch': committed.get('epoch'),
+                         'revision': 1, 'mode': 'drained', 'last_request_id': '',
+                         'last_expected_revision': 0}, 'unexpected legacy admission state'
+    assert isinstance(committed['epoch'], str) and re.fullmatch('[0-9a-f]{32}', committed['epoch'])
+
+    def invoke(fields):
+        reply = subprocess.run([str(node), '-state-dir', str(state), *fields],
+                               stdout=subprocess.PIPE, stderr=log, timeout=10)
+        assert reply.returncode == 0, 'legacy fixture operator CLI failed; inspect private log'
+        assert len(reply.stdout) <= 8192, 'oversized operator CLI reply'
+        return json.loads(reply.stdout)
+
+    def check(reply, expected, opened):
+        control = reply['control']
+        assert control['version'] == 1 and control['phase'] == 'ready'
+        assert control['committed'] == expected and control['desired_mode'] == expected['mode']
+        assert control['admission_open'] is opened
+        assert not control.get('pending_request_id') and control['pending_session_reservations'] == 0
+        resources = reply['resource_observation']
+        assert resources['backend'] == 'firecracker'
+        assert resources['records'] == resources['record_capacity'] == resources['tenant_record_capacity'] == 1
+        assert resources['active'] == resources['recovering'] == 0
+
+    check(invoke(['status']), committed, False)
+    request_id = secrets.token_hex(16)
+    expected = dict(committed, revision=2, mode='open', last_request_id=request_id,
+                    last_expected_revision=1)
+    check(invoke(['-epoch', committed['epoch'], '-revision', '1',
+                  '-request-id', request_id, 'resume']), expected, True)
+    check(invoke(['status']), expected, True)
+    assert json.loads((state / 'admission/state.json').read_text()) == expected
+    return {'imported_root_started_drained': True, 'same_uid_explicit_cas_resume': True,
+            'resume_persisted_and_requeried': True, 'retained_destroyed_records': 1}
+
+
 class UnixHTTP(http.client.HTTPConnection):
     def __init__(self, path):
         super().__init__('localhost', timeout=40)
@@ -88,10 +131,13 @@ def main():
     parser.add_argument('--session-test', help='optional patched Linux session test binary, also enables HTTP session acceptance')
     parser.add_argument('--legacy-daemon', help='optional trusted pre-ledger-v1 binary for actual KVM crash/upgrade acceptance')
     parser.add_argument('--legacy-source-revision')
+    parser.add_argument('--node', help='trusted same-UID operator CLI; required with --legacy-daemon')
     parser.add_argument('--load-cycles', type=int, default=0, help='1..50 closed-loop switches; requires --metrics and --session-test')
     parser.add_argument('--metrics', action='store_true', help='exercise the separate bounded operator metrics socket')
     parser.add_argument('--source-revision', default='uncommitted')
     args = parser.parse_args()
+    if args.legacy_daemon and not args.node:
+        parser.error('--legacy-daemon requires --node for explicit disposable-fixture CAS resume')
     os.umask(0o077)
     if args.load_cycles and (not 1 <= args.load_cycles <= 50 or not args.metrics or not args.session_test):
         parser.error('--load-cycles requires1..50, --metrics and --session-test')
@@ -105,6 +151,8 @@ def main():
     if args.legacy_daemon:
         assert args.legacy_source_revision, 'legacy source revision is required'
         inputs['legacy_daemon'] = Path(args.legacy_daemon).resolve()
+    if args.node:
+        inputs['node'] = Path(args.node).resolve()
     report = Path(args.report).resolve()
     assert not report.exists(), 'refusing to overwrite report'
     logs = Path(args.log_dir).resolve()
@@ -140,7 +188,7 @@ def main():
         for name, path in inputs.items():
             target = assets / name
             shutil.copyfile(path, target)
-            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test', 'legacy_daemon', 'session_test') else 0o444)
+            target.chmod(0o555 if name in ('daemon', 'warden', 'jailer', 'firecracker', 'queue_test', 'legacy_daemon', 'session_test', 'node') else 0o444)
             assert digest(target) == result['artifacts_sha256'][name]
             copied[name] = target
         workspace = assets / 'empty.ext4'
@@ -552,6 +600,7 @@ def main():
                 before = ledger_path.read_bytes()
                 assert subprocess.run(base, stdout=log, stderr=log, timeout=10).returncode != 0
                 assert ledger_path.read_bytes() == before, 'new startup rewrote legacy ownership without migration'
+                legacy_admission = json.loads((state / 'admission/state.json').read_text())
                 migration = subprocess.run([str(copied['daemon']), '-state-dir', str(state), '-migrate-ledger'],
                                            stdout=subprocess.PIPE, stderr=log, timeout=30)
                 assert migration.returncode == 0 and json.loads(migration.stdout)['upgraded'] == 1
@@ -563,7 +612,10 @@ def main():
                 process = start(); destroyed(legacy_vm)
                 assert call('POST', '/v1/sandboxes', {'ttl_ms': 60000, 'limits': {'max_exec_ms': 60000}},
                             expected=410, key=legacy_key)['error']['code'] == 'IDEMPOTENCY_GONE'
-                assert call('POST', '/v1/sandboxes', {}, expected=503, key=secrets.token_hex(16))['error']['code'] == 'METADATA_CAPACITY'
+                capacity_key = secrets.token_hex(16)
+                assert call('POST', '/v1/sandboxes', {}, expected=503, key=capacity_key)['error']['code'] == 'NODE_DRAINING'
+                legacy_control = resume_legacy_fixture(copied['node'], state, legacy_admission, log)
+                assert call('POST', '/v1/sandboxes', {}, expected=503, key=capacity_key)['error']['code'] == 'METADATA_CAPACITY'
                 process.terminate(); assert process.wait(timeout=15) == 0; process = None
                 assert not [p for p in cgroup.iterdir() if p.is_dir()]
                 assert not list((runtime / 'j/firecracker').iterdir())
@@ -571,6 +623,7 @@ def main():
                 result['legacy_migration'] = {'source_revision': args.legacy_source_revision,
                                              'historical_setup_umask': '0022; current recovery0077',
                                              'new_api_admission_at_capacity': 'rejected; ownership/key retained',
+                                             'admission_control': legacy_control,
                                              'old_kvm_recovered': True}
                 result['checks'].append('actual old-daemon KVM SIGKILL ownership explicitly migrated then durably reclaimed at metadata capacity without key reuse')
             if args.session_test:
