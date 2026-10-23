@@ -226,7 +226,16 @@ func (c *switchAPI) create(ctx context.Context, key string) (sandbox.Record, err
 }
 func (c *switchAPI) job(ctx context.Context, ref sandbox.Ref, j sandbox.Job) (sandbox.Job, error) {
 	var out sandbox.Job
+	if !switchRefValid(ref) || !hex32Pattern(j.ID) || j.Ref != ref {
+		return out, errors.New("invalid fixed execution lookup binding")
+	}
 	e := c.call(ctx, "GET", switchPath(ref)+"/executions/"+j.ID, "", nil, &out, 200)
+	if e == nil && (out.ID != j.ID || out.Generation != ref.Generation) {
+		e = errors.New("execution lookup returned wrong job or generation")
+	}
+	if e == nil {
+		out.Ref = ref // Sandbox ID is carried by the lookup path, not Job JSON.
+	}
 	return out, e
 }
 func (c *switchAPI) finish(ctx context.Context, ref sandbox.Ref, j sandbox.Job) (sandbox.Output, error) {
@@ -250,6 +259,10 @@ func (c *switchAPI) executeVM(ctx context.Context, ref sandbox.Ref, argv []strin
 	if e != nil {
 		return sandbox.Output{}, e
 	}
+	if !hex32Pattern(j.ID) || j.Generation != ref.Generation {
+		return sandbox.Output{}, errors.New("fixed execution response generation mismatch")
+	}
+	j.Ref = ref
 	return c.finish(ctx, ref, j)
 }
 func (c *switchAPI) destroyed(ctx context.Context, ref sandbox.Ref) error {

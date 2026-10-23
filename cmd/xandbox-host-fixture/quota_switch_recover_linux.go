@@ -19,9 +19,11 @@ import (
 type switchSavedBinding struct {
 	Binding   session.Result
 	Key, Boot string
-	Job       sandbox.Job
-	Owner     []byte
-	Quota     driverQuotaReceipt
+	// Explicit fields avoid Job.ID shadowing its embedded Ref.ID in JSON.
+	JobID  string
+	JobRef sandbox.Ref
+	Owner  []byte
+	Quota  driverQuotaReceipt
 }
 type switchCrashReceipt struct {
 	Version                      int
@@ -56,7 +58,7 @@ func (n *node) quotaSwitchCheckpoint(ctx context.Context) (map[string]any, error
 	return result, e
 }
 func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (map[string]any, error) {
-	saved := switchCrashReceipt{Version: 1, L1Boot: n.boot, Template: n.switchTemplate}
+	saved := switchCrashReceipt{Version: 2, L1Boot: n.boot, Template: n.switchTemplate}
 	hash, e := fileHash("/srv/config/backend.json")
 	if e != nil {
 		return nil, e
@@ -94,7 +96,7 @@ func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (ma
 		if e != nil {
 			return nil, e
 		}
-		saved.Bindings[i] = switchSavedBinding{Binding: b, Key: key, Boot: boot, Job: job, Owner: owner, Quota: q}
+		saved.Bindings[i] = switchSavedBinding{Binding: b, Key: key, Boot: boot, JobID: job.ID, JobRef: job.Ref, Owner: owner, Quota: q}
 	}
 	status, e := n.fixedCatalogStatus(ctx)
 	if e != nil {
@@ -107,7 +109,8 @@ func (n *node) switchCrashCheckpoint(ctx context.Context, api [2]*switchAPI) (ma
 		return nil, errors.New("checkpoint sessions share private project")
 	}
 	for i := 0; i < 2; i++ {
-		live, e := api[i].job(ctx, saved.Bindings[i].Binding.Current, saved.Bindings[i].Job)
+		old := saved.Bindings[i]
+		live, e := api[i].job(ctx, old.Binding.Current, sandbox.Job{ID: old.JobID, Ref: old.JobRef})
 		if e != nil || live.Status != "RUNNING" {
 			return nil, errors.New("checkpoint old writers no longer running")
 		}
@@ -157,7 +160,7 @@ func (n *node) quotaSwitchRecover(ctx context.Context) (map[string]any, error) {
 	if e = strictjson.Decode(b, &saved); e != nil {
 		return nil, e
 	}
-	if saved.Version != 1 || saved.L1Boot == "" || saved.L1Boot == n.boot || !hashPattern.MatchString(saved.Template) {
+	if saved.Version != 2 || saved.L1Boot == "" || saved.L1Boot == n.boot || !hashPattern.MatchString(saved.Template) {
 		return nil, errors.New("invalid saved switch host incarnation")
 	}
 	if _, e = fixedSwitchConfig(); e != nil {
@@ -183,7 +186,7 @@ func (n *node) quotaSwitchRecover(ctx context.Context) (map[string]any, error) {
 	n.switchTemplate = saved.Template
 	for i := 0; i < 2; i++ {
 		old := saved.Bindings[i]
-		if !switchRefValid(old.Binding.Current) || !hex32Pattern(old.Binding.ID) || len(old.Key) != 64 || strings.Trim(old.Key, "0123456789abcdef") != "" || old.Boot == "" || old.Job.Ref != old.Binding.Current || !hex32Pattern(old.Job.ID) {
+		if !switchRefValid(old.Binding.Current) || !hex32Pattern(old.Binding.ID) || len(old.Key) != 64 || strings.Trim(old.Key, "0123456789abcdef") != "" || old.Boot == "" || old.JobRef != old.Binding.Current || !hex32Pattern(old.JobID) {
 			return nil, errors.New("invalid private switch binding receipt")
 		}
 		owner, b, e := switchReadOwner(old.Binding.Current)
@@ -231,7 +234,7 @@ func (n *node) quotaSwitchRecover(ctx context.Context) (map[string]any, error) {
 		if e = api[i].call(ctx, "POST", "/v1/sessions", old.Key, switchGuestSpec(), nil, 410); e != nil {
 			return nil, e
 		}
-		if e = api[i].call(ctx, "GET", switchPath(old.Binding.Current)+"/executions/"+old.Job.ID, "", nil, nil, 404); e != nil {
+		if e = api[i].call(ctx, "GET", switchPath(old.Binding.Current)+"/executions/"+old.JobID, "", nil, nil, 404); e != nil {
 			return nil, e
 		}
 	}

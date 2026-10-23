@@ -92,8 +92,14 @@ func (c *switchAPI) sessionJob(ctx context.Context, b session.Result, argv []str
 		Job      sandbox.Job `json:"job"`
 	}
 	e := c.call(ctx, "POST", "/v1/sessions/"+b.ID+"/exec", "", map[string]any{"revision": b.Revision, "argv": argv, "timeout_ms": 60000}, &out, 202)
-	if e == nil && (out.Revision != b.Revision || out.Sandbox != b.Current || out.Job.Ref != b.Current) {
+	// Job.ID shadows its embedded Ref.ID on the public JSON wire. The separate
+	// envelope supplies the sandbox ID; never compare a decoded Job.Ref as if
+	// that missing field had been sent, or substitute the job ID for it.
+	if e == nil && (out.Revision != b.Revision || out.Sandbox != b.Current || out.Job.Generation != b.Current.Generation || !hex32Pattern(out.Job.ID)) {
 		e = errors.New("session execution bound to wrong generation")
+	}
+	if e == nil {
+		out.Job.Ref = out.Sandbox
 	}
 	return out.Job, e
 }

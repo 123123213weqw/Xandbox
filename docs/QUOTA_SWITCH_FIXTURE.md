@@ -2,6 +2,8 @@
 
 新增夹具尚在验收，**本文件不是通过报告**。生产 Go/daemon 不增加测试接口或故障开关；不把历史默认 nil-quota 的240次切换当作 quota 验收。
 
+首次固定源 `fb836bf` 的真实 L1 已完成 setup/preflight，但负载在 initial 阶段失败、零次切换；原始 false 报告及单个执行域的清理证据保留。原因是 TEST 客户端误把 public Job JSON 中未携带的 sandbox ID 当成完整 Ref：Job 的显式任务 `id` 会遮蔽嵌入 Ref 的 `id`。修订夹具先校验独立 session envelope 的 revision/ref 和 job 的 generation/id，再从已校验 envelope/lookup path 恢复完整内存 Ref；坏绑定继续拒绝。私有 crash receipt v2 改用独立 JobID/JobRef 字段，防止同一 JSON 遮蔽问题；不改生产 wire/API。这是夹具错误修复，不把失败改写成通过或据此推断配额错误。
+
 ## 独立且明确的新规格
 
 固定 `--quota-switch` / launch profile `quota-switch-v1`：L1 RAM **3GiB**、raw disk **4GiB**、外层自有 cgroup memory.max **4GiB**，CPU4、pids128、swap0、无NIC、hard15min不变。启动前要求L0 MemAvailable≥8GiB及测试目录free≥12GiB；这只是有界实验前置检查，不是生产全局 admission。旧 profile 的2GiB RAM/2GiB盘/3GiB cgroup和固定dm 2GiB guard不放宽。未知profile拒绝。

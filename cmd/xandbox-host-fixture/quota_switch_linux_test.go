@@ -5,12 +5,98 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
 )
+
+type switchTestTransport func(*http.Request) (*http.Response, error)
+
+func (f switchTestTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestSwitchSessionJobUsesActualPublicWireContractAndRejectsWrongBindings(t *testing.T) {
+	ref := sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
+	binding := session.Result{ID: strings.Repeat("c", 32), Current: ref, Revision: 7}
+	job := sandbox.Job{ID: strings.Repeat("d", 32), Ref: ref, Status: "RUNNING", StartedAt: time.Now()}
+	// Match execSession's actual production response, not an invented nested Ref.
+	wire := func(revision uint64, r sandbox.Ref, j sandbox.Job) []byte {
+		b, e := json.Marshal(map[string]any{"revision": revision, "sandbox": r, "job": j})
+		if e != nil {
+			t.Fatal(e)
+		}
+		return b
+	}
+	good := wire(binding.Revision, ref, job)
+	var decoded struct {
+		Job sandbox.Job `json:"job"`
+	}
+	if json.Unmarshal(good, &decoded) != nil || decoded.Job.ID != job.ID || decoded.Job.Ref.ID != "" || decoded.Job.Generation != ref.Generation {
+		t.Fatal("test no longer models the public embedded-ID JSON contract")
+	}
+	response := good
+	lookup := false
+	client := &switchAPI{token: "fixture-test", http: &http.Client{Transport: switchTestTransport(func(r *http.Request) (*http.Response, error) {
+		wantPath, status := "/v1/sessions/"+binding.ID+"/exec", 202
+		if lookup {
+			wantPath, status = switchPath(ref)+"/executions/"+job.ID, 200
+		}
+		if r.URL.Path != wantPath || r.Header.Get("Authorization") != "Bearer fixture-test" {
+			t.Fatal("wrong fixed API request")
+		}
+		return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(string(response))), Header: make(http.Header)}, nil
+	})}}
+	actual, e := client.sessionJob(context.Background(), binding, []string{"true"})
+	if e != nil || actual.ID != job.ID || actual.Ref != ref {
+		t.Fatal("valid session job binding not reconstructed", e)
+	}
+	wrongRef := ref
+	wrongRef.ID = strings.Repeat("e", 32)
+	wrongGen := job
+	wrongGen.Generation = strings.Repeat("f", 32)
+	invalidID := job
+	invalidID.ID = "bad"
+	for _, bad := range [][]byte{wire(6, ref, job), wire(7, wrongRef, job), wire(7, ref, wrongGen), wire(7, ref, invalidID), []byte(`{"revision":7}`)} {
+		response = bad
+		if _, e = client.sessionJob(context.Background(), binding, []string{"true"}); e == nil {
+			t.Fatal("wrong session execution binding accepted")
+		}
+	}
+	lookup = true
+	response, _ = json.Marshal(job)
+	if got, e := client.job(context.Background(), ref, actual); e != nil || got.Ref != ref || got.ID != job.ID {
+		t.Fatal("valid job lookup binding", e)
+	}
+	wrongID := job
+	wrongID.ID = strings.Repeat("e", 32)
+	for _, bad := range []sandbox.Job{wrongID, wrongGen} {
+		response, _ = json.Marshal(bad)
+		if _, e = client.job(context.Background(), ref, actual); e == nil {
+			t.Fatal("wrong lookup identity accepted")
+		}
+	}
+	if _, e = client.job(context.Background(), wrongRef, actual); e == nil {
+		t.Fatal("caller bound job to a different sandbox")
+	}
+}
+
+func TestSwitchPrivateCrashReceiptPreservesExplicitJobReference(t *testing.T) {
+	ref := sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
+	saved := switchCrashReceipt{Version: 2}
+	saved.Bindings[0] = switchSavedBinding{Binding: session.Result{Current: ref}, JobRef: ref, JobID: strings.Repeat("c", 32)}
+	b, e := json.Marshal(saved)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var got switchCrashReceipt
+	if json.Unmarshal(b, &got) != nil || got.Version != 2 || got.Bindings[0].JobRef != ref || got.Bindings[0].JobID != saved.Bindings[0].JobID || got.Bindings[0].Binding.Current != ref {
+		t.Fatal("private receipt lost sandbox ID through embedded job-ID collision")
+	}
+}
 
 func TestSwitchResourceProfileIsExplicitAndOldBoundsStayFixed(t *testing.T) {
 	p := testPolicy()
