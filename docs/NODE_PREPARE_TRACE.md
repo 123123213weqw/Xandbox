@@ -37,3 +37,6 @@ frontend 在真实 backend staging 之前保留 generation。排队中的 Creati
 离线汇总生成脚本另修正了 profile/audit 标题的机械重命名错误；早先 Darwin 运行缺来源/版本 header，未拿来冒充完整可发布证据，而是按真实 frozen HEAD 检查、实际 toolchain header 重跑 race×3/vet 并确认退出 0。原始失败 checker/log SHA 及修正范围在来源清单中保留；不改实机源码/输入/配额/namespace/超时或通过条件，不重新采样硬件。
 
 **下一步仍是**相同生产 ELF 的真实排队取消、持有 workspace WRITE 时独立 Stop/Cleanup 与后续许可恢复。更广的完整物理内存/祖先/affinity、外部日志上界、可靠 metadata/catalog 锁、archive/rotation、部署/backup/upgrade/rollback、长期 open-loop/fairness/SLO 和完整 M1–M4 依然未验收；Goal 不因此完成。
+
+
+后续有限进展：[原始排队请求取消与 held-copy 下独立停止、回收](NODE_PREPARE_CANCELLATION.md)已另有实机证据。本文冻结的 calibration-only 数据及 false claim 不事后重标，新证明仅在独立 `prepare_cancellation` 对象中限定范围；仍非完整生产验收。

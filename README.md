@@ -32,6 +32,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [真实准备许可入口校准](docs/NODE_PREPARE_TRACE.md)：保持生产 ELF 不变，9 个固定 entry-only uprobes 校验两个真实并发创建的 12 条去身份转换链；8 相关 scope/19 个 passing 代际和前序 1 个失败代际均独立审计回收，原生前序零 boot 单测失败也保留。仅校准，不冒充排队取消、持有 copy 时独立清理、精确线性化或 SLO 证明。
 
+新增 [原始排队取消与 held-copy 下独立停止、回收](docs/NODE_PREPARE_CANCELLATION.md)：相同生产 ELF 的15条实际转换确认取消者不取token，另一代16MiB workspace WRITE仍暂停时keeper完成执行停止及持久私有回收；后续两个原始请求都真实KVM Ready，最终全部quota/pins/池清零。8相关scope/19代际审计通过。本次单次观测约36ms停止、159ms回收，不是filesystem D、物理擦除或p99/SLO。
+
 新增 [owner删除后目录提交未返回的冷恢复](docs/OWNER_COMMIT_FIXTURE.md)：断电前owner名已消失，冷后原owner字节重新出现而quota清零保留；RECLAIMING/capacity503及普通回收/新真实guest/pins/GC通过。失败前序保留；不是全局catalog不阻塞或完整生产验收。
 
 新增 [未主动同步的部分复制宿主掉电](docs/PARTIAL_COPY_CUT_FIXTURE.md)：固定16MiB在途窗口原盘冷恢复通过；冷后workspace名消失、两目录8192字节/两inodes独立核账，普通回收/旧键拒绝/新真实guest与keeper pins通过。失败前序保留；不是介质错误或完整生产验收。
