@@ -15,8 +15,10 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
+	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
+	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
 
 func TestDiagnosticNoL0OrGenericRPC(t *testing.T) {
@@ -241,14 +243,30 @@ func TestDiagnosticContenderBaselineMustFollowOrdinarySessionClose(t *testing.T)
 	if e = broker.CloseSession("diagnostic-unit", first.ID, first.Revision); e != nil {
 		t.Fatal(e)
 	}
+	// Load is a startup/recovery operation that may collect temp files. It must
+	// never race the live journal writer, even in this private unit fixture.
+	readNamed := func() (session.Record, error) {
+		var env struct {
+			Version int            `json:"version"`
+			Record  session.Record `json:"record"`
+		}
+		data, e := privatefile.Read(filepath.Join(root, "sessions", first.ID+".json"), 16384)
+		if e != nil {
+			return env.Record, e
+		}
+		if e = strictjson.Decode(data, &env); e != nil {
+			return env.Record, e
+		}
+		if env.Version != 1 || env.Record.ID != first.ID {
+			return env.Record, fmt.Errorf("wrong named unit session")
+		}
+		return env.Record, nil
+	}
 	var before session.Record
 	for {
-		records, e := journal.Load()
-		if e != nil {
-			t.Fatal(e)
-		}
-		if len(records) == 1 && records[0].State == session.Closed {
-			before = records[0]
+		r, e := readNamed()
+		if e == nil && r.State == session.Closed {
+			before = r
 			break
 		}
 		select {
@@ -260,11 +278,10 @@ func TestDiagnosticContenderBaselineMustFollowOrdinarySessionClose(t *testing.T)
 	if e = broker.Close(ctx); e != nil {
 		t.Fatal(e)
 	}
-	records, e := journal.Load()
-	if e != nil || len(records) != 1 {
+	after, e := readNamed()
+	if e != nil {
 		t.Fatal(e)
 	}
-	after := records[0]
 	if !after.UpdatedAt.After(before.UpdatedAt) || after.State != session.Closed || after.Current != first.Current {
 		t.Fatal("normal final closed-session write not observed")
 	}
