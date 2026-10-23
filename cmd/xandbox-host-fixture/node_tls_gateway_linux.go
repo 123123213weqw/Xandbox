@@ -270,6 +270,16 @@ func startGateway(ctx context.Context, label int) (*gatewayProcess, error) {
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "GOMAXPROCS=2"}
 	cmd.Stdout, cmd.Stderr = log, log
 	cmd.SysProcAttr = &syscall.SysProcAttr{UseCgroupFD: true, CgroupFD: int(cg.Fd())}
+	// Deliberately inherit an OUTSIDE directory at fd10 into the supervisor.
+	// It must not survive into the network child; fixture never gives it a path
+	// selector. This models an external launcher's non-CLOEXEC descriptor.
+	outside, e := os.Open("/srv")
+	if e != nil {
+		return nil, e
+	}
+	defer outside.Close()
+	cmd.ExtraFiles = make([]*os.File, 8)
+	cmd.ExtraFiles[7] = outside
 	if e = cmd.Start(); e != nil {
 		return nil, e
 	}
@@ -481,6 +491,12 @@ func gatewayRoles(p *gatewayProcess) error {
 		}
 		found := false
 		for _, fd := range fds {
+			if row.want {
+				info, e := os.Stat(fmt.Sprintf("/proc/%d/fd/%s", row.pid, fd.Name()))
+				if e == nil && info.IsDir() && !os.SameFile(info, want) {
+					return errors.New("network child inherited an outside directory descriptor")
+				}
+			}
 			target, _ := os.Readlink(fmt.Sprintf("/proc/%d/fd/%s", row.pid, fd.Name()))
 			found = found || target == inode
 		}
@@ -979,7 +995,7 @@ func (n *node) nodeTLSGatewayCheckpoint(ctx context.Context) (out map[string]any
 	if e = privateWrite(gatewayReceipt, saved); e != nil {
 		return nil, e
 	}
-	return map[string]any{"real_nested_kvm_through_verified_tls13": true, "root_broker_no_tcp_listener_child_uid_caps_nnp_chroot_cwd_rlimits_and_control_checked": true, "two_tenants_independent_real_guest_uid_boot_workspace_cross404": true, "private_backend_tokens401_at_external_frontend": true, "operator_metrics_routes_ambiguous_headers_and_tls12_wrong_sni_rejected": true, "durable_policy_revision2_key_and_leaf_rotation_without_controller_or_guest_restart": true, "old_external_key401_on_existing_tls_connection_new_key_and_leaf2_verified": true, "invalid_reload_closes_ingress_root_child_reaped_backend_guest_continue": true, "actual_old_policy_revision1_startup_refused_no_listener": true, "same_current_policy_gateway_restart_without_controller_restart": true, "session_switch_busy_old_job_new_real_guest_old_revision409": true, "old_execution_stop_private_quota0_and_durable_destroy_independent_observations": true, "all_three_generations_destroyed_all_four_projects_zero_pools_idle": true, "gateway_and_ordinary_controller_reaped_before_private_receipt_and_cold": true, "fixture_http_pacing_ms": 50, "verified_real_guest_generations_before_cold": 3, "policy_revision": 2, "switch_to_binding_observed_ms": bindingMS, "switch_to_first_validated_new_guest_observed_ms": newCommandMS, "switch_to_old_execution_empty_observed_ms": measured.stop, "switch_to_old_private_destroy_quota_zero_observed_ms": measured.reclaim, "production_slo_or_full_tls_qualification_claim": false, "physical_policy_media_fault_or_complete_dos_claim": false}, nil
+	return map[string]any{"real_nested_kvm_through_verified_tls13": true, "root_broker_no_tcp_listener_child_uid_caps_nnp_chroot_cwd_fd_hygiene_rlimits_and_control_checked": true, "two_tenants_independent_real_guest_uid_boot_workspace_cross404": true, "private_backend_tokens401_at_external_frontend": true, "operator_metrics_routes_ambiguous_headers_and_tls12_wrong_sni_rejected": true, "durable_policy_revision2_key_and_leaf_rotation_without_controller_or_guest_restart": true, "old_external_key401_on_existing_tls_connection_new_key_and_leaf2_verified": true, "invalid_reload_closes_ingress_root_child_reaped_backend_guest_continue": true, "actual_old_policy_revision1_startup_refused_no_listener": true, "same_current_policy_gateway_restart_without_controller_restart": true, "session_switch_busy_old_job_new_real_guest_old_revision409": true, "old_execution_stop_private_quota0_and_durable_destroy_independent_observations": true, "all_three_generations_destroyed_all_four_projects_zero_pools_idle": true, "gateway_and_ordinary_controller_reaped_before_private_receipt_and_cold": true, "fixture_http_pacing_ms": 50, "verified_real_guest_generations_before_cold": 3, "policy_revision": 2, "switch_to_binding_observed_ms": bindingMS, "switch_to_first_validated_new_guest_observed_ms": newCommandMS, "switch_to_old_execution_empty_observed_ms": measured.stop, "switch_to_old_private_destroy_quota_zero_observed_ms": measured.reclaim, "production_slo_or_full_tls_qualification_claim": false, "physical_policy_media_fault_or_complete_dos_claim": false}, nil
 }
 
 func validateTLSGatewaySaved(s tlsGatewaySaved, boot string) error {

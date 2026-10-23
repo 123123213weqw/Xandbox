@@ -100,12 +100,18 @@ func leaseID(active map[uint64]lease) (uint64, error) {
 	return 0, errors.New("lease entropy collision")
 }
 
+// Go-created files already use CLOEXEC. Also constrain any descriptors the
+// root command itself inherited from an external launcher: ExtraFiles alone
+// does not close arbitrary non-CLOEXEC descriptors above its mapped range.
+func sanitizeInheritedFDs() error { return unix.CloseRange(3, ^uint(0), unix.CLOSE_RANGE_CLOEXEC) }
+
 func childCommand(c Config, childFD, policyFD *os.File) *exec.Cmd {
 	cmd := exec.Command("/gateway", "-child")
 	cmd.Dir = "/" // chroot does not change cwd; never inherit an outside directory.
 	cmd.Env = []string{"PATH=/", "GOMAXPROCS=2", "GOTRACEBACK=none"}
 	cmd.ExtraFiles = []*os.File{childFD, policyFD}
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	// Nil standard streams become /dev/null opened by os/exec before chroot.
+	// Never delegate caller-provided stdio files/sockets/directory capabilities.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: c.EmptyRoot, Credential: &syscall.Credential{Uid: c.UID, Gid: c.GID, Groups: []uint32{}}, Pdeathsig: syscall.SIGKILL}
 	return cmd
 }
@@ -169,6 +175,9 @@ func RunRoot(configPath string) error {
 	}
 	defer childFD.Close()
 	cmd := childCommand(c, childFD, policyFD)
+	if e = sanitizeInheritedFDs(); e != nil {
+		return errors.New("cannot constrain gateway descriptor inheritance")
+	}
 	if e = cmd.Start(); e != nil {
 		return errors.New("cannot start unprivileged gateway child")
 	}

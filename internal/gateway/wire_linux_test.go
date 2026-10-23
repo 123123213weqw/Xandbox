@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -249,12 +250,50 @@ func TestGatewayInvalidHeartbeatEpochFailsClosed(t *testing.T) {
 func TestGatewayChildExecMustChdirIntoNewRootAndPassOnlyCapabilities(t *testing.T) {
 	cfg := Config{UID: 60001, GID: 60001, EmptyRoot: "/operator/private/root"}
 	cmd := childCommand(cfg, nil, nil)
-	if cmd.Path != "/gateway" || cmd.Dir != "/" || cmd.SysProcAttr.Chroot != cfg.EmptyRoot || cmd.SysProcAttr.Credential == nil || cmd.SysProcAttr.Credential.Uid != 60001 || cmd.SysProcAttr.Credential.Gid != 60001 || len(cmd.SysProcAttr.Credential.Groups) != 0 || len(cmd.ExtraFiles) != 2 {
+	if cmd.Path != "/gateway" || cmd.Dir != "/" || cmd.SysProcAttr.Chroot != cfg.EmptyRoot || cmd.SysProcAttr.Credential == nil || cmd.SysProcAttr.Credential.Uid != 60001 || cmd.SysProcAttr.Credential.Gid != 60001 || len(cmd.SysProcAttr.Credential.Groups) != 0 || len(cmd.ExtraFiles) != 2 || cmd.Stdin != nil || cmd.Stdout != nil || cmd.Stderr != nil {
 		t.Fatal("outside cwd/privileged exec or descriptor capability contract widened")
 	}
 	for _, arg := range cmd.Args {
 		if arg == cfg.EmptyRoot || arg == testBackend {
 			t.Fatal("parent-only path or secret in child argv")
 		}
+	}
+}
+
+func TestGatewayExternalLauncherDirectoryFDDoesNotReachNextExec(t *testing.T) {
+	const env = "XANDBOX_TEST_GATEWAY_INHERITED_FD"
+	switch os.Getenv(env) {
+	case "check":
+		var st unix.Stat_t
+		if e := unix.Fstat(10, &st); e == nil && st.Mode&unix.S_IFMT == unix.S_IFDIR {
+			t.Fatal("outside directory survived exec")
+		}
+		return
+	case "sanitize":
+		var st unix.Stat_t
+		if e := unix.Fstat(10, &st); e != nil || st.Mode&unix.S_IFMT != unix.S_IFDIR {
+			t.Fatal("fixture did not supply actual inherited dir FD")
+		}
+		if e := sanitizeInheritedFDs(); e != nil {
+			t.Fatal(e)
+		}
+		cmd := exec.Command(os.Args[0], "-test.run=^TestGatewayExternalLauncherDirectoryFDDoesNotReachNextExec$")
+		cmd.Env = append(os.Environ(), env+"=check")
+		if out, e := cmd.CombinedOutput(); e != nil {
+			t.Fatalf("sanitized exec failed: %v %s", e, out)
+		}
+		return
+	}
+	dir, e := os.Open(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer dir.Close()
+	cmd := exec.Command(os.Args[0], "-test.run=^TestGatewayExternalLauncherDirectoryFDDoesNotReachNextExec$")
+	cmd.Env = append(os.Environ(), env+"=sanitize")
+	cmd.ExtraFiles = make([]*os.File, 8)
+	cmd.ExtraFiles[7] = dir
+	if out, e := cmd.CombinedOutput(); e != nil {
+		t.Fatalf("descriptor inheritance check failed: %v %s", e, out)
 	}
 }

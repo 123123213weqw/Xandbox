@@ -7,7 +7,7 @@
 普通 API 为 root0600、state为0700，无特权反向代理不能凭空访问它。本实现选择小型 root **固定连接 broker**，不改普通 daemon 的权限与协议：
 
 - root supervisor不创建 TCP listener、不处理网络HTTP/TLS流量或握手。只校验操作员提供的私有配置/证书、校验静态同源可执行文件，并将子进程降为显式专用UID/GID（1000–65534、相同ID、无附加组）。
-- 网络子进程进入root-owned0555且只含同一`/gateway`静态ELF的chroot，显式设置cwd为新根并在子进程再次核对`.`与`/`的inode一致，capabilities为空、NNP开启，nofile192/nproc64/core0/fsize0硬限制。它不读取宿主状态目录或凭证文件；不使用shell，不执行租户程序。
+- 网络子进程进入root-owned0555且只含同一`/gateway`静态ELF的chroot，显式设置cwd为新根并在子进程再次核对`.`与`/`的inode一致，capabilities为空、NNP开启，nofile192/nproc64/core0/fsize0硬限制。父进程将所有额外继承FD标记CLOEXEC，仅显式传递IPC/policy；子进程stdio改接`/dev/null`，不委托操作员的日志socket/文件/目录能力。它不读取宿主状态目录或凭证文件；不使用shell，不执行租户程序。
 - root创建的私有`SOCK_SEQPACKET` socketpair通过继承FD成为能力；不是可由其他进程连接的broker socket。24字节定长消息只有连接、释放、完整policy更新/确认和liveness心跳，无path/argv/任意syscall选择器。socketpair凭证在创建时确定，不能把其root peer误称为子进程当前UID证明。[Linux Unix socket/SCM_RIGHTS语义](https://man7.org/linux/man-pages/man7/unix.7.html)
 - root只连接启动时固定且经过root-owned0700目录、0600 `api.sock` inode与root peer检查的tenant端点，最多16个lease、45秒硬寿命，并对控制消息/新连接限速。子进程拿到的是这个已连接socket的FD，不能请求operator/metrics或其他路径；超时用`shutdown`影响所有dup，不能只close父FD假装撤回。
 - 全部policy通过root-owned、只读、全seal的memfd传递，最大512KiB；没有token/cert/key出现在argv、env、日志或公开报告。只读FD和write/grow/shrink/seal锁同时检查，不能把“已传FD”视为不可变。[Linux memfd/sealing语义](https://man7.org/linux/man-pages/man2/memfd_create.2.html)
@@ -48,3 +48,6 @@ SIGHUP重新读取完整root私有config/cert/key并传一份新snapshot；证�
 首个组件源`19092f4…`的原生unit gates通过，但不能证明特权启动边界。首个实机候选`9d9bfb8…`在证书检查失败：新key已接受的连接可能在policy发布前就完成TLS握手，因此仍显示旧leaf。修正测试为先确认新key可用，再主动关闭测试客户端idle连接、验证真正新握手的leaf2；不能把旧连接换证书当成必要条件。原实机false报告保留。
 
 独立代码审查同时发现候选没有显式改变chroot后的cwd。启动器现设置`Dir=/`，子进程校验`.`与`/`同inode，实机另外核对`/proc/child/cwd`与私有root同inode；不能仅检查`/proc/child/root`就声称无外部cwd。[Linux chroot语义](https://man7.org/linux/man-pages/man2/chroot.2.html)。这是真实生产代码修正，不把它藏成测试预期调整；修正后需重新冻结与完整原生/实机验收，旧候选不是可部署版本。
+
+
+进一步按实际Go启动实现核对descriptor继承：`ExtraFiles`不负责关闭外部launcher遗留的全部non-CLOEXEC FD。root supervisor在fork前对>=3执行进程本地CLOEXEC标记，显式capability再由exec映射；子进程stdio不继承调用者能力。新增子进程测试与实机故意传入outside目录FD10，核对网络child无directory FD；这不涉及修改共享L0内核或关闭其他进程FD。
