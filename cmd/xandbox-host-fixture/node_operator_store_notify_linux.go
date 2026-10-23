@@ -84,10 +84,10 @@ func runOperatorStoreDaemon() error {
 }
 
 type operatorStoreSnapshot struct {
-	HeldID                                        uint64
-	FileEntries, AdmissionDirEntries, RootEntries int
-	Continued, OtherWhileHeld, Injected           int
-	Err                                           error
+	HeldID                                               uint64
+	FileEntries, AdmissionDirEntries, RootEntries        int
+	Continued, OtherWhileHeld, Injected, TicketContinued int
+	Err                                                  error
 }
 type operatorStoreObserver struct {
 	mu                          sync.Mutex
@@ -96,12 +96,14 @@ type operatorStoreObserver struct {
 	identity                    string
 	mode                        operatorStoreMode
 	before, next                nodecontrol.State
+	ticket                      *sessionTicketBoundary
 	armed                       bool
 	tempPath                    string
 	tempInfo, rootInfo, dirInfo os.FileInfo
 	snapshotValue               operatorStoreSnapshot
 	held                        chan struct{}
 	inject                      chan struct{}
+	ticketContinue              chan struct{}
 	stop, done                  chan struct{}
 }
 
@@ -167,7 +169,7 @@ func (o *operatorStoreObserver) heldValid() error {
 	if s.Err != nil {
 		return s.Err
 	}
-	if s.HeldID == 0 || s.Injected != 0 {
+	if s.HeldID == 0 || s.Injected != 0 || s.TicketContinued != 0 {
 		return errors.New("operator fsync not pending")
 	}
 	id := s.HeldID
@@ -221,7 +223,14 @@ func (o *operatorStoreObserver) descriptor(q quotaNotif) (string, os.FileInfo, b
 	if e != nil {
 		return "", nil, false, e
 	}
-	if target != "/srv/state" && target != "/srv/state/admission" && !(filepath.Dir(target) == "/srv/state/admission" && operatorTempPattern.MatchString(filepath.Base(target))) {
+	o.mu.Lock()
+	ticket := o.ticket != nil
+	o.mu.Unlock()
+	allowed := target == "/srv/state" || target == "/srv/state/admission" || (filepath.Dir(target) == "/srv/state/admission" && operatorTempPattern.MatchString(filepath.Base(target)))
+	if ticket {
+		allowed = sessionTicketPath(target)
+	}
+	if !allowed {
 		return "", nil, false, nil
 	}
 	direct, e := os.Lstat(target)
@@ -248,6 +257,12 @@ func operatorStoreControlMember(value string) bool {
 // alone is not completion; the NEXT ordinary directory FSYNC proves progress
 // through the frozen code's checked return/rename, with the same temp inode.
 func (o *operatorStoreObserver) match(q quotaNotif) (bool, error) {
+	o.mu.Lock()
+	ticket := o.ticket != nil
+	o.mu.Unlock()
+	if ticket {
+		return o.matchSessionTicket(q)
+	}
 	target, info, owned, e := o.descriptor(q)
 	if e != nil || !owned {
 		return false, e
@@ -320,6 +335,13 @@ func (o *operatorStoreObserver) serve() {
 		case <-o.stop:
 			return
 		case <-o.inject:
+			o.mu.Lock()
+			ticket := o.ticket != nil
+			o.mu.Unlock()
+			if ticket {
+				o.fail(errors.New("ticket observer never injects a synthetic errno"))
+				return
+			}
 			if target.ID == 0 || time.Now().After(deadline) {
 				o.fail(errors.New("operator target missing/expired before EIO"))
 				return
@@ -352,6 +374,24 @@ func (o *operatorStoreObserver) serve() {
 			}
 			o.mu.Lock()
 			o.snapshotValue.Injected++
+			o.mu.Unlock()
+			deadline = time.Time{}
+		case <-o.ticketContinue:
+			if target.ID == 0 || time.Now().After(deadline) {
+				o.fail(errors.New("ticket target missing/expired before CONTINUE"))
+				return
+			}
+			if e := o.validateSessionTicketHeld(target); e != nil {
+				o.fail(e)
+				return
+			}
+			response := quotaNotifResponse{ID: target.ID, Flags: unix.SECCOMP_USER_NOTIF_FLAG_CONTINUE}
+			if e := quotaNotifyIO(o.fd, unix.SECCOMP_IOCTL_NOTIF_SEND, unsafe.Pointer(&response)); e != nil {
+				o.fail(e)
+				return
+			}
+			o.mu.Lock()
+			o.snapshotValue.TicketContinued++
 			o.mu.Unlock()
 			deadline = time.Time{}
 		default:
@@ -424,7 +464,7 @@ func (o *operatorStoreObserver) serve() {
 		}
 		o.mu.Lock()
 		o.snapshotValue.Continued++
-		if o.snapshotValue.HeldID != 0 && o.snapshotValue.Injected == 0 {
+		if o.snapshotValue.HeldID != 0 && o.snapshotValue.Injected == 0 && o.snapshotValue.TicketContinued == 0 {
 			o.snapshotValue.OtherWhileHeld++
 		}
 		o.mu.Unlock()
@@ -506,7 +546,7 @@ func (n *node) startOperatorStoreObserved(ctx context.Context) (*operatorStoreOb
 		n.process = nil
 		return nil, e
 	}
-	o := &operatorStoreObserver{fd: fd, pid: cmd.Process.Pid, identity: identity, held: make(chan struct{}, 1), inject: make(chan struct{}, 1), stop: make(chan struct{}), done: make(chan struct{})}
+	o := &operatorStoreObserver{fd: fd, pid: cmd.Process.Pid, identity: identity, held: make(chan struct{}, 1), inject: make(chan struct{}, 1), ticketContinue: make(chan struct{}, 1), stop: make(chan struct{}), done: make(chan struct{})}
 	go o.serve()
 	e = waitNode(ctx, func() (bool, error) {
 		if e := o.snapshot().Err; e != nil {
