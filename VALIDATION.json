@@ -117,17 +117,19 @@
   },
   "validation_history_note": "All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
   "current_status": {
-    "updated_on": "2026-10-22",
+    "updated_on": "2026-10-23",
     "backends": [
       "mock",
       "experimental firecracker-linux-kvm"
     ],
     "production_ready": false,
     "goal_complete": false,
-    "latest_runtime_validation": "pristine_cold_service_regression",
+    "latest_runtime_validation": "node_aggregate_admission_foundation",
     "latest_component_validation": "pristine_bootstrap_component",
     "snapshot_execution_enabled_in_verified_baseline": false,
-    "snapshot_execution_enabled_by_default": false
+    "snapshot_execution_enabled_by_default": false,
+    "latest_frozen_runtime_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+    "full_new_runtime_requalification": "pending_separate_default_quota240_dual_cold_and_failure_reports"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -1180,5 +1182,29 @@
     "failed_outer_generations": 1,
     "runner_exit_status": 0,
     "scope": "N1 original daemon post-unlink FSYNC held without target reply, private outerL0 receipt/no observer L1sync. Actual cold owner reappears; ordinary cleanup and freshKVM/pins/GC. NOT actual filesystemD, physical media fault, every persistence outcome, global nonblocking catalog or full production acceptance."
+  },
+  "node_aggregate_admission_foundation": {
+    "production_ready": false,
+    "goal_complete": false,
+    "complete_pr19_acceptance": false,
+    "production_changed": true,
+    "schema": 3,
+    "design": "docs/NODE_BUDGET.md",
+    "provenance": "docs/validation/node-budget-provenance-v2.json",
+    "report": "docs/validation/kvm-node-budget-node-v2.json",
+    "failed_predecessor_report": "docs/validation/kvm-node-budget-node-failed-v1.json",
+    "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+    "daemon_sha256": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "new_case_l1_boots": 2,
+    "actual_simultaneous_guests": 4,
+    "guest_touched_memory_bytes_each": 8388608,
+    "passing_related_scopes_including_new": 7,
+    "passing_outer_execution_generations": 17,
+    "failed_scopes": 1,
+    "failed_outer_execution_generations": 0,
+    "failed_attempted_group_independently_absent": 1,
+    "runner_exit_status": 0,
+    "new_production_full_requalification": "Pending separately named DEFAULT/quota240/dual-live-cold/failure reports, historical522 does not certify new3ea.",
+    "scope": "Immutable schema3 node envelope/complete service limits/owned parent-control placement and conservative resource planning, real cold4guests/capacity503/safe4KiB drift with newPrepare500 but liveStopCleanupExec/healthy synced originaldisk cold recovery. NOT full512MiB saturation/OOM, nodewide disk quota, physical media, uniqueRAM billing, schema3 snapshot, longduration/fairness/SLO or production certification."
   }
 }

@@ -1,6 +1,6 @@
-# Version 3 节点总资源准入（实现中，尚未完成实机验收）
+# Version 3 节点总资源准入（有限实机门槛通过，仍未生产就绪）
 
-当前分支新增了生产代码的节点策略，**不是只新增 TEST hook**。新 ELF 必须重新进行 Linux/KVM、默认路径、quota240/双活cold及相关故障回归；历史 daemon `522da68e…` 只能证明它自己的冻结基线。本文不是生产就绪声明，PR19/Goal的完整门槛仍未完成。
+当前分支新增了生产代码的节点策略，**不是只新增 TEST hook**。新 ELF 已通过本文限定的 Linux/KVM 节点基础门槛及相关故障回归，默认路径、quota240/双活cold的完整新运行时复验仍须单独完成；历史 daemon `522da68e…` 只能证明它自己的冻结基线。本文不是生产就绪声明，PR19/Goal的完整门槛仍未完成。
 
 ## 不再把单实例上限当成节点预算
 
@@ -34,6 +34,22 @@ Version 1/2 保持实验性兼容格式，不自动扩容、迁移或获得生�
 
 ## 当前测试边界
 
-已有边界/溢出/逐资源拒绝、schema与binding漂移、服务参数/导入计数、owner未确认时容量保留、CPU/RAM/层级输入、磁盘/inode压力边界、准备并发/取消及读接口安全测试。新增固定8GiB L1 RAM/12GiB disk/10GiB outer cgroup/CPU8测试规格，不修改旧2GiB/3GiB规格。实机证据完成前不要把这些单元测试当作完整节点生产验收。
+已有边界/溢出/逐资源拒绝、schema与binding漂移、服务参数/导入计数、owner未确认时容量保留、CPU/RAM/层级输入、磁盘/inode压力边界、准备并发/取消及读接口安全测试。新增固定8GiB L1 RAM/12GiB disk/10GiB outer cgroup/CPU8测试规格，不修改旧2GiB/3GiB规格。下列有限实机证据仍不能替代完整节点压力与生产验收。
 
-待验收：新程序全部相关native回归、新Version3正负实机/原盘cold/资源压力、实际并行copy与共享页归属测量、开放到达/公平性/长期资源曲线、其他元数据故障/可靠catalog锁协议及完整M1–M4。`production_ready`维持false。
+## 首轮有限实机证据
+
+冻结源码 `2e514fe9d0b0ce8097b4baca67c9761afdfdbf48`；新普通daemon `3ea1e247…`、admin `19bbd460…`，没有生产故障开关、假guest或宿主执行回退。[原始节点报告](validation/kvm-node-budget-node-v2.json)与[精确来源/16个输入文件hash](validation/node-budget-provenance-v2.json)已保留。
+
+- 启动参数与节点声明不匹配、控制器不在control子树，均在创建API/binding前按明确原因拒绝。
+- 4个真实嵌套KVM guest同时存在并检查UID/boot/数据/过滤器，第5个Create503；每guest只触碰8MiB内存，**不是512MiB满载或OOM实验**。
+- 先完整回收一代，再仅安全收紧父级memory.max 4KiB；新Prepare500、不回退执行。限制漂移期间，另一个guest的Stop/Cleanup及存活guest的Exec仍正常；恢复原声明后失败key410、同slot新guest正常。
+- 健康Q_SYNC+syncfs及私有receipt完成后切断自己的L1，原盘cold首先核对精确policy/已知owner/namespace/project quota，再由普通daemon回收；旧key410、4个project全零、新guest UID/新boot/干净workspace、控制器与整个节点子树移除均通过。**这是健康同步检查点，不是在途提交掉电窗口。**
+- 外层执行域停止88.638ms只是一例观测，不是生产销毁时延、物理介质断电或SLO。
+
+本次另跑owner目录提交cut、未同步partial-copy cut、稳定partial write EIO、真正L1-built snapshot、clear-owner-pin、6个固定syscall errno相关回归。7个通过scope/17个外层执行代际已独立只读核验全部资源消失；quota/namespace证据在删盘前从L1读取，不从删盘推断quota清零。原生完整race×3/vet、fixture race×10/vet、root Python72、CGO-free实际内核/exec过滤×3及5个ELF独立交叉构建比对通过。Darwin测试实际源码为`8b951bb…`，与最终Go代码完全一致，仅Python producer修复不同；日志没有冒充执行过另一源码。
+
+[失败前序](validation/kvm-node-budget-node-failed-v1.json)也保留：Python还设置CPU4/pids128，新Go launcher按CPU8/pids256严格拒绝，**QEMU启动前即失败，实际L1 boot=0**。修复producer而非放宽guard；单个attempted cgroup已独立核验清理，不计为VM执行代际。原始报告的计划资源/limitations字段不是那些阶段已执行的证据。
+
+## 仍未完成
+
+新程序完整DEFAULT与quota240/双活cold/其余故障复验单独进行，不能沿用历史522的通过结论。当前Version3实机正例为cold；schema3 snapshot、完整节点资源压力、真实并发copy permit轨迹、独立共享页归属、开放到达/公平性/长期曲线、外部日志/导出约束、其他元数据故障/可靠catalog锁及完整M1–M4仍待验收。`production_ready`维持false。
