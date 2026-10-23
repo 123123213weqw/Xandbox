@@ -19,7 +19,7 @@ import shutil
 import subprocess
 import time
 
-from kvm_driver_smoke import UnixHTTP, digest, wait
+from kvm_driver_smoke import UnixHTTP, digest, wait, private_resource_receipt, same_owned_directory
 from kvm_resources import cgroup_empty
 
 
@@ -69,11 +69,16 @@ def main():
     cgroup = Path('/sys/fs/cgroup/xandbox-snapshot-service-proof-' + nonce)
     assert len(os.fsencode(root / 'r/j/firecracker' / ('0' * 64) / 'root/api.sock')) <= 107
     assert not root.exists() and not cgroup.exists()
-    root.mkdir(mode=0o700)
     runtime, state, assets = root / 'r', root / 's', root / 'a'
+    private_resource_receipt(logs / 'resource-receipt.json', {'version': 1,
+        'source_revision': args.source_revision, 'kind': 'snapshot-service', 'root': str(root),
+        'runtime': str(runtime), 'cgroup': str(cgroup)})
+    root.mkdir(mode=0o700)
     assets.mkdir(mode=0o700); state.mkdir(mode=0o700)
     result = {'test': 'experimental_snapshot_catalog_service', 'production_ready': False, 'passed': False,
               'source_revision': args.source_revision, 'harness_sha256': digest(__file__),
+              'helper_sha256': {name: digest(Path(__file__).with_name(name)) for name in
+                  ('kvm_driver_smoke.py', 'kvm_resources.py', 'kvm_mixed_load.py', 'kvm_io_probe.py')},
               'builder_source_revision': manifest['source_revision'],
               'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'host_kernel': os.uname().release, 'architecture': os.uname().machine,
@@ -89,6 +94,7 @@ def main():
     process = None
     log = (logs / 'controller.log').open('ab', buffering=0)
     restored_owner = None
+    cgroup_identity = None
     try:
         memory_info = {line.split(':')[0]: int(line.split()[1]) * 1024
                        for line in Path('/proc/meminfo').read_text().splitlines()
@@ -122,6 +128,7 @@ def main():
             else:
                 raise AssertionError('proof UID assigned')
         cgroup.mkdir(mode=0o700)
+        cgroup_identity = cgroup.lstat()
         (cgroup / 'cgroup.subtree_control').write_text('+memory +pids +cpu')
         config = {'version': 2, 'runtime_root': str(runtime), 'cgroup_root': str(cgroup),
                   'uid_start': uid, 'uid_count': 16, 'reserved_uid_range': True,
@@ -415,7 +422,8 @@ def main():
         log.close()
         # Only this invocation's exclusive namespace may be killed/removed.
         safe = True
-        if cgroup.exists():
+        if cgroup.exists() and not same_owned_directory(cgroup, cgroup_identity): safe = False
+        if cgroup.exists() and same_owned_directory(cgroup, cgroup_identity):
             for g in cgroup.iterdir():
                 if not g.is_dir(): continue
                 try:

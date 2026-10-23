@@ -18,6 +18,7 @@ import select
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import tempfile
 import threading
@@ -30,6 +31,32 @@ def digest(path):
         for block in iter(lambda: source.read(1024 * 1024), b''):
             h.update(block)
     return h.hexdigest()
+
+
+def private_resource_receipt(path, value):
+    """Persist bounded operator-only cleanup identities before using resources.
+
+    Never include this file in sanitized public reports, or use its paths as
+    authority to kill/detach resources without the independent ownership checks.
+    """
+    encoded = (json.dumps(value) + '\n').encode('utf8')
+    if len(encoded) > 8192:
+        raise ValueError('oversized private resource receipt')
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as out:
+        out.write(encoded); out.flush(); os.fsync(out.fileno())
+    directory = os.open(Path(path).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try: os.fsync(directory)
+    finally: os.close(directory)
+
+
+def same_owned_directory(path, identity):
+    """An absent/failed mkdir or a replacement is never cleanup authority."""
+    if identity is None: return False
+    try: current = os.lstat(path)
+    except FileNotFoundError: return False
+    return (stat.S_ISDIR(current.st_mode) and current.st_dev == identity.st_dev
+            and current.st_ino == identity.st_ino)
 
 
 class UnixHTTP(http.client.HTTPConnection):
@@ -86,10 +113,12 @@ def main():
     runtime = Path('/srv/xb' + suffix)
     noexec_runtime = Path('/run/xb' + suffix)
     cgroup = Path('/sys/fs/cgroup') / ('xandbox-driver-proof-' + suffix)
-    assert not runtime.exists() and not cgroup.exists()
+    assert not any(p.exists() for p in (runtime, noexec_runtime, Path(str(runtime) + 'z'), cgroup))
     result = {'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'test': 'experimental_sandboxd_firecracker_driver', 'production_ready': False,
-              'source_revision': args.source_revision, 'host_kernel': os.uname().release,
+              'source_revision': args.source_revision, 'harness_sha256': digest(__file__),
+              'helper_sha256': {'kvm_session_load.py': digest(Path(__file__).with_name('kvm_session_load.py'))} if args.load_cycles else {},
+              'host_kernel': os.uname().release,
               'architecture': os.uname().machine, 'guest_memory_mib': 512, 'vcpus': 2,
               'workspace_bytes': 128 << 20, 'guest_network_interfaces': 0,
               'metrics_note': 'Small sequential acceptance samples; warm cache and load uncontrolled; not percentiles or SLO. Stop observations include observer overhead; baseline RSS not measured. Only optional closed_loop_load has separately scoped sampled resources.',
@@ -98,8 +127,13 @@ def main():
     process = None
     watch_stop = threading.Event()
     watcher = None
+    cgroup_identity = None
     root = Path(tempfile.mkdtemp(prefix='xandbox-driver-proof-', dir='/var/lib'))
     try:
+        private_resource_receipt(logs / 'resource-receipt.json', {'version': 1,
+            'source_revision': args.source_revision, 'kind': 'cold-driver', 'root': str(root),
+            'runtime': str(runtime), 'noexec_runtime': str(noexec_runtime),
+            'alternate_runtime': str(runtime) + 'z', 'cgroup': str(cgroup)})
         assets = root / 'assets'
         assets.mkdir(mode=0o700)
         copied = {}
@@ -116,6 +150,7 @@ def main():
         workspace.chmod(0o444)
         result['workspace_template_sha256'] = digest(workspace)
         cgroup.mkdir(mode=0o700)
+        cgroup_identity = cgroup.lstat()
         (cgroup / 'cgroup.subtree_control').write_text('+memory +pids +cpu')
         uid = 400000 + secrets.randbelow(30000)
         config = {'version': 1, 'runtime_root': str(runtime), 'cgroup_root': str(cgroup),
@@ -685,6 +720,7 @@ def main():
         if process is not None and process.poll() is None:
             process.kill(); process.wait(timeout=5)
         if cgroup.exists():
+            assert same_owned_directory(cgroup, cgroup_identity), 'not our created cgroup; retain without cleanup'
             (cgroup / 'cgroup.kill').write_text('1')
             wait(lambda: stopped(cgroup), 'test cleanup', seconds=5)
             for child in cgroup.iterdir():
