@@ -87,3 +87,19 @@ CPU8、pids256、无 NIC；原2GiB primitive profile不变。九项资产逐项�
 独立操作员、负载与资源饱和、可靠审计/保留策略和生产 SLO。
 历史 a161 push CI 的 auth-smoke 非零退出原因尚未证明；信号顺序修正不是它的已证实归因。
 测试现保留原退出码断言与超时，失败时只提供整数退出状态及受限闭集诊断，未放宽通过标准。
+
+## 首轮实机失败：能力集合 oracle 校准
+
+v1（e1aec85）真实普通 daemon/guest 启动后，新的测试把五个 capability sets 全部要求为0，
+在 VMM 检查失败。v2（0200a19）**保留该断言，只增加闭集诊断**，实测确认
+CapInh/CapPrm/CapEff/CapAmb 为0，唯独 CapBnd 非0，五组均无 CAP_SYS_RESOURCE。
+两个失败原件与独立只读资源消失复核保留，不能改写成通过或完成后续回收/冷恢复。
+
+这不是把 bounding 忽略：新 oracle 要求四个实际/可继承集合为0，五组及已验证 main 的
+bounding 均无 CAP_SYS_RESOURCE，且 VMM CapBnd **精确等于**普通 main 的继承上限；
+缺字段、坏编码、额外/丢失 bounding 位、任一活动能力都拒绝。UID、NNP、双 seccomp、
+固定 ELF 与进程身份检查仍在。生产 Go 后端和九个资产未因该测试校准而修改。
+bounding 与活动集合的含义不同，见 [Linux capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html)；
+固定 [jailer v1.17.0 源码](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/src/jailer/src/env.rs)
+通过 uid/gid 配置 exec，并未承诺 bounding 全清零。后续结果必须来自新的实际运行，
+不能仅凭上述解释宣布通过。

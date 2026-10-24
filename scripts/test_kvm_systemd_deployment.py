@@ -45,17 +45,28 @@ class SystemdDeploymentControls(unittest.TestCase):
             with self.assertRaises(AssertionError):validate_deployment_reply(operation,{**good,'private_ref':'forbidden'})
         with self.assertRaises(AssertionError):validate_deployment_reply('deployment-probe',{**{k:True for k in DEPLOYMENT_PROBE_FLAGS},'instance_capacity':True})
 
-    def test_vmm_failure_projection_retains_all_five_zero_assertions(self):
+    def test_vmm_active_empty_and_bounding_exact_parent(self):
         from systemd_deployment_guest import observe_vmm_capabilities
         fields=('CapInh','CapPrm','CapEff','CapBnd','CapAmb')
-        good={name:'0000000000000000' for name in fields}
-        observe_vmm_capabilities(good)
+        good={name:'0000000000000000' for name in fields};good['CapBnd']='0000000000000003'
+        observe_vmm_capabilities(good,good['CapBnd'])
+        for name in ('CapInh','CapPrm','CapEff','CapAmb'):
+            with self.assertRaisesRegex(RuntimeError,'active or inheritable'):
+                observe_vmm_capabilities({**good,name:'0000000000000001'},good['CapBnd'])
+        for value in ('0000000000000000','0000000000000001','0000000000000007'):
+            with self.assertRaisesRegex(RuntimeError,'ceiling changed'):observe_vmm_capabilities({**good,'CapBnd':value},good['CapBnd'])
         for name in fields:
-            with self.assertRaisesRegex(RuntimeError,'ordinary VMM capability zero flags'):
-                observe_vmm_capabilities({**good,name:'0000000000000001'})
             bad=good.copy();del bad[name]
-            with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities(bad)
-        with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities({**good,'CapBnd':'secret-not-relayed'})
+            with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities(bad,good['CapBnd'])
+        with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities({**good,'CapBnd':'secret-not-relayed'},good['CapBnd'])
+        with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities(good,'invalid')
+
+    def test_resource_capability_rejected_in_every_set_and_parent(self):
+        from systemd_deployment_guest import observe_vmm_capabilities
+        fields=('CapInh','CapPrm','CapEff','CapBnd','CapAmb');good={name:'0000000000000000' for name in fields}
+        for name in fields:
+            with self.assertRaisesRegex(RuntimeError,'quota bypass'):observe_vmm_capabilities({**good,name:'0000000001000000'},good['CapBnd'])
+        with self.assertRaisesRegex(RuntimeError,'quota bypass'):observe_vmm_capabilities(good,'0000000001000000')
 
     def test_unmarked_host_guard_cannot_fall_back_to_console(self):
         with patch('systemd_delegate_probe.guard',side_effect=RuntimeError('unmarked')),patch('systemd_delegate_probe.failure_console') as output:

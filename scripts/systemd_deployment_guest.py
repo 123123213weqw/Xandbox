@@ -139,21 +139,28 @@ def owner(row):
     return value
 
 
-def observe_vmm_capabilities(status):
+def observe_vmm_capabilities(status,parent_bounding):
+    # Bounding is an exec ceiling, not the active capability set. The pinned
+    # jailer changes UID but does not empty that inherited ceiling. Preserve an
+    # exact parent comparison; never substitute a permissive "ignore CapBnd".
     fields=('CapInh','CapPrm','CapEff','CapBnd','CapAmb')
     values={}
     for name in fields:
         raw=status.get(name,'').strip()
         if not re.fullmatch('[0-9a-fA-F]{16}',raw):raise RuntimeError('ordinary VMM capability observation malformed')
         values[name]=int(raw,16)
-    if any(values.values()):
-        closed=','.join(name+'='+str(int(value==0)) for name,value in values.items())
-        resource_absent=all(value&(1<<24)==0 for value in values.values())
-        raise RuntimeError('ordinary VMM capability zero flags '+closed+';resource_absent='+str(int(resource_absent)))
+    if not re.fullmatch('[0-9a-fA-F]{16}',parent_bounding.strip()):raise RuntimeError('ordinary parent capability observation malformed')
+    parent=int(parent_bounding,16)
+    if parent&(1<<24) or any(value&(1<<24) for value in values.values()):raise RuntimeError('ordinary quota bypass capability present')
+    if any(values[name] for name in ('CapInh','CapPrm','CapEff','CapAmb')):raise RuntimeError('ordinary VMM active or inheritable capability present')
+    if values['CapBnd']!=parent:raise RuntimeError('ordinary VMM bounding capability ceiling changed')
 
 
 def verify_vm(row,tenant):
     assets=json.loads((CONFIG/'assets.json').read_bytes());owned=owner(row)
+    main_pid,_=main_identity()
+    parent_status=dict(line.split(':',1) for line in Path('/proc',str(main_pid),'status').read_text().splitlines() if ':' in line)
+    parent_bounding=parent_status['CapBnd']
     if execute(row,['id','-u'],tenant).strip()!='65534':raise RuntimeError('guest UID boundary failed')
     boot=execute(row,['cat','/proc/sys/kernel/random/boot_id'],tenant).strip()
     if not re.fullmatch('[a-f0-9-]{36}',boot):raise RuntimeError('real guest boot ID required')
@@ -166,9 +173,7 @@ def verify_vm(row,tenant):
         status=dict(line.split(':',1) for line in Path('/proc',str(pid),'status').read_text().splitlines() if ':' in line)
         if set(status['Uid'].split())!={str(owned['uid'])} or status['NoNewPrivs'].strip()!='1' or status['Seccomp'].strip()!='2' or int(status['Seccomp_filters'])<2:
             raise RuntimeError('ordinary VMM identity/filter boundary failed')
-        # Retain the original all-five-zero assertion while diagnosing the first
-        # hardware failure; report only closed booleans, never raw process state.
-        observe_vmm_capabilities(status)
+        observe_vmm_capabilities(status,parent_bounding)
         if identity(pid)!=start:raise RuntimeError('ordinary VMM start identity changed')
         found=True
     if not found:raise RuntimeError('real exact Firecracker ELF not observed in owned group')
