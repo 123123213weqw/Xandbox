@@ -1,7 +1,7 @@
-# Opt-in fresh managed-v2 owned-L1 fixture — first actual attempt failed
+# Opt-in fresh managed-v2 owned-L1 fixture — actual predecessors retained
 
 **No complete new root CLI, real kernel-positive, TLS/KVM or cold acceptance
-is claimed. The first actual populated-gate attempt failed and is retained.**
+is claimed. Two actual populated-gate predecessors failed and are retained.**
 The [new proposal supersession code](PENDING_POLICY_SUPERSESSION.md) and its
 changed binaries cannot inherit old installation/ingress reports. Runtime Go
 source remains pinned to `9db9603`; the launcher must require a successful fresh
@@ -76,6 +76,9 @@ shared host service/module/mount/quota/sysctl/network mutation or task fallback.
    durable DELETE/reclaim and capacity, then the existing warm-drain/session and
    original-disk cold workflows, no implicit resume, quota/private-resource release
    and independent external owned-scope cleanup.
+   The warm workflow deliberately stops main **after** maintenance continuity was
+   checked. Its separate fixed root operator must start main again before policy
+   reconciliation; policy reconcile itself must never implicitly start main.
 
 All task argv crosses ordinary controller/guest APIs, never a host task route.
 The inert negative-control child only blocks on its own pipe; it is not a task
@@ -124,3 +127,19 @@ fixture code/control tests, not Go artifacts, runtime limits or deadlines. The
 failed original's report/console remain private and hash-bound; independent
 read-only audit found its one declared outer generation and all owned paths
 absent without supplemental cleanup. A corrected fresh run is still required.
+
+The [second actual original](validation/managed-policy-l1-populated-failed-v2.json)
+used frozen `a966af9` and 250 Linux pure tests/zero skips. It passed the corrected
+TLS sequence but failed later in the warm-drain callback: the test had explicitly
+stopped main, then incorrectly expected policy reconciliation to start main.
+The production policy manager intentionally refuses an inactive main. This is
+another fixture-contract error, not a reason to add implicit main start to policy
+maintenance. Code review had identified that callback while the frozen original
+was still running; its eventual failure matched that location.
+
+The corrected callback proves main is already stopped, performs a separate
+fixed owned root `systemctl start` for this intentional warm restart, then checks
+TLS and exact policy reconciliation. No maintenance continuity check is removed,
+no resume is implicit, and no production Go byte or deadline changes. The second
+original and independent one-generation absence audit are retained separately;
+it is not accepted or merged with the first attempt into a pass.

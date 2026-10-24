@@ -248,6 +248,15 @@ def old_key_rejection():
     ingress.tls_call('GET','/healthz')
 
 
+def restart_after_explicit_warm_stop(request):
+    # drain.warm has explicitly stopped main, after all maintenance continuity
+    # checks. Policy reconcile MUST NOT start main; only this separate owned
+    # root operator action may restart it for the named warm-restart test.
+    guard()
+    if run('systemctl','show','--property=MainPID','--value',base.UNIT)!='0' or run('systemctl','show','--property=ActiveState','--value',base.UNIT) not in ('inactive','failed'):raise RuntimeError('explicit warm main stop required')
+    run('systemctl','start',base.UNIT);ingress.tls_ready();call('reconcile',3,request)
+
+
 def checkpoint():
     global PHASE
     probe();rows=[];boots=[];PHASE='managed-four-kvm'
@@ -290,7 +299,7 @@ def checkpoint():
     drain.change('resume',drain.state('drained',drained)['control']['committed']);drain.health('open')
     PHASE='managed-stop-reclaim';ms=install.stop_destroy(rows[0][0],'alpha',True)
     for r,t in rows[1:]:install.stop_destroy(r,t)
-    PHASE='managed-warm-drain';warm=drain.warm(lambda:call('reconcile',3,request))
+    PHASE='managed-warm-drain';warm=drain.warm(lambda:restart_after_explicit_warm_stop(request))
     fresh=base.create('alpha','managed-before-cold');boot=base.verify_vm(fresh,'alpha')
     if boot in boots:raise RuntimeError('reused old guest boot')
     base.execute(fresh,['test','!','-e','/workspace/heartbeat'],'alpha');running=base.progressing_writer(fresh,'alpha')

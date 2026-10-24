@@ -114,6 +114,19 @@ class ManagedControls(unittest.TestCase):
         with patch.object(guest.Path,'read_bytes',return_value=b'{"tokens":{"alpha":"synthetic-test-only"}}'),patch.object(guest.ingress,'TLSHTTP',return_value=conn),patch.object(guest.ingress,'transport_identity',return_value=original),patch.object(guest.ingress,'tls_call'):
             with self.assertRaisesRegex(RuntimeError,'401 transport did not close'):guest.old_key_rejection()
         self.assertIsNone(conn.sock)
+    def test_only_explicit_warm_operator_starts_already_stopped_main(self):
+        with patch.object(guest,'guard'),patch.object(guest,'run',side_effect=['0','inactive','']) as run,patch.object(guest.ingress,'tls_ready') as ready,patch.object(guest,'call') as call:
+            guest.restart_after_explicit_warm_stop('a'*32)
+            self.assertEqual(run.call_args_list[-1].args,('systemctl','start',guest.base.UNIT));ready.assert_called_once_with();call.assert_called_once_with('reconcile',3,'a'*32)
+        for observed in (['42'],['0','active']):
+            with patch.object(guest,'guard'),patch.object(guest,'run',side_effect=observed) as run,patch.object(guest,'call') as call:
+                with self.assertRaisesRegex(RuntimeError,'explicit warm main stop required'):guest.restart_after_explicit_warm_stop('a'*32)
+                self.assertFalse(any(c.args==('systemctl','start',guest.base.UNIT) for c in run.call_args_list));call.assert_not_called()
+        with patch.object(guest,'guard',side_effect=RuntimeError('unmarked')),patch.object(guest,'run') as run:
+            with self.assertRaises(RuntimeError):guest.restart_after_explicit_warm_stop('a'*32)
+            run.assert_not_called()
+        s=inspect.getsource(guest.checkpoint)
+        self.assertLess(s.index("PHASE='managed-continuity'"),s.index('restart_after_explicit_warm_stop(request)'))
     def test_real_receipt_and_exact_refusal_not_exec_failure(self):
         v={'version':1,'revision':3,'files_committed':True,'manager_reconciled':True,'production_ready':False}
         def reply(v):return subprocess.CompletedProcess([],0,json.dumps(v).encode(),b'')

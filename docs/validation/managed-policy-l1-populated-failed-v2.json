@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "scope": "preserved_failed_managed_populated_gate_original_not_hardware_acceptance",
+  "harness_source_revision": "a966af9c9c4fcba589867f7ab33f4da2bc4f8564",
+  "runtime_go_source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+  "native_harness_source_revision": "617352753f4c32d2b57769c472db657977f64a89",
+  "source_archive_sha256": "04cb4e61dc4942ba725530bce1fad1d1e6a73015ac019179ce566dc1a5c0b759",
+  "runner_sha256": "4a7f58fb1adb366f5ace09b1d44f84fc469673e4c2d056682e3175b445416608",
+  "original_terminal": 1,
+  "passed": false,
+  "l1_boots": 1,
+  "failed_stage": "managed-warm-drain",
+  "failure": "Fixture explicitly stopped main for warm restart, then incorrectly expected policy reconcile to start it. Managed policy reconcile deliberately requires an active main and must not implicitly start it.",
+  "actual_gateway_behaviour_not_changed": true,
+  "correction_preserves_refusal_on_existing_transport_and_requires_expected_401_close": true,
+  "all23_native_artifacts_reverified_before_launch": true,
+  "linux_python_pure_tests": 250,
+  "python_skips": 0,
+  "independent_audit": {
+    "read_only": true,
+    "runner_absent": true,
+    "owned_outer_generations_absent": 1,
+    "all_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "receipt_sha256": "3ccf43db21edfaf30893f7caa4c7a4f6e555601f0d6802c937715d40c7282c5e"
+  },
+  "raw_sha256": {
+    "work/managed-profile-populated-gate-v2.status": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "work/managed-profile-populated-gate-v2-private/resource-receipt.json": "3ccf43db21edfaf30893f7caa4c7a4f6e555601f0d6802c937715d40c7282c5e",
+    "work/managed-profile-populated-gate-v2-report.json": "cea2be42ab8c2311aa44436daa8364fbb68e05cff48000fdaa7b712514f70225",
+    "work/managed-profile-populated-gate-v2-private/final-private-console.log": "9f8d34db2cae16684b20e6eb7fd743d39a5a0d184b54d63e1058d0ac2eacc150",
+    "work/managed-profile-populated-gate-v2-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+    "work/run-managed-profile-populated-gate-v2.sh": "4a7f58fb1adb366f5ace09b1d44f84fc469673e4c2d056682e3175b445416608",
+    "work/managed-profile-populated-gate-v2-assets.json": "fd7833d5946c4226c653850704a2c5691e54ea7ed87abbe7aaec54f191919e7d",
+    "work/managed-profile-populated-gate-v2-root-pure.log": "dfbe6cd44a7da421f531f9c62709dc8791ae987f1392a9a10468cb6c154c8b09",
+    "work/managed-profile-populated-gate-v2-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+  },
+  "complete_case_accepted": false,
+  "cold_accepted": false,
+  "production_ready": false,
+  "goal_complete": false,
+  "correction_explicit_fixed_root_warm_start_separate_from_maintenance_and_policy_reconcile": true
+}
