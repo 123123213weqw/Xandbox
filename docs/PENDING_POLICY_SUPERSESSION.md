@@ -116,8 +116,23 @@ actual **test-process** exits. Their installer manager/ACK/store effects remain
 models; the real gateway store has separate confirmation/inventory tests. No CLI,
 environment or RPC accepts these alternate roots or model observations.
 
-Full current-source race/vet/concurrency qualification, all changed artifact
-rebuilds, fresh owned-L1 root CLI, real positive/negative kernel empty proof,
+The [source-bound native software checkpoint](validation/pending-policy-supersession-native-v2.json)
+has now passed Linux whole-package race x3/vet, all 17 meaningful focused parents
+x3, 19 returned-error and 19 actual test-process cut boundaries x3, three actual
+recovery-settlement process cuts x3 and both four-process CAS groups x3. The
+empty process-helper entry is excluded from that parent count. All 23 designated
+native artifacts were actually rebuilt and rehashed; seven independently
+cross-built amd64 artifacts match byte-for-byte. macOS race x3/vet and two arm64
+compile-only artifacts are separately identified. No arm64 runtime claim follows.
+
+Runtime Go source is `9db9603`, native execution harness source is `6173527` and
+the later two-case fixture source is `848b814`; all `cmd`, `internal`, `go.mod`
+and `go.sum` bytes are unchanged between them. Native frozen-harness Python tests
+passed 247/zero skips; later fixture pure controls passed 249/zero skips on Linux
+and 249 with five platform skips on macOS. These are not root-runtime evidence.
+All 627 older validation files remain byte-unchanged.
+
+Fresh owned-L1 root CLI, real positive/negative kernel empty proof,
 coherent TLS revocation, continuing KVM writer, unchanged main/guest incarnation,
 persisted drain, source absence, actual cuts/ACK/cold and independent cleanup are
 still required. Older software or hardware records must not be re-signed.
@@ -150,8 +165,12 @@ cross-root/inter-iteration coverage, test is dropped, detector option changed or
 failure hidden. Runtime service/guest limits, CLI/maintenance deadlines, owned-L1
 resources and Stop/GC/switch limits are unchanged. The new entire run must still
 actually finish successfully; neither a projection nor a larger alarm is a pass.
+That second original has now exited zero, including the complete remaining
+qualification/build stages. Its full installtxn race x3 package took 953.137
+seconds. This is software-runner timing, not a sandbox switch/Stop/GC SLO.
 
 A [fresh managed-v2 owned-L1 harness](MANAGED_POLICY_L1_FIXTURE.md) is now
 implemented with pure controls only. It has not executed or qualified root/TLS/KVM
-checks; its first planned populated/empty-gate scope also does not cover the
-production active-ingress stop branch or uncommitted supersession hardware.
+checks. Independently selected populated/empty-gate and active-ingress-stop cases
+need separate actual reports; neither can satisfy the other's flags. Uncommitted
+supersession hardware remains a further independent gate.

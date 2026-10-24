@@ -96,3 +96,9 @@ negative-control ownership, case isolation/cold binding and failure reporting.
 They do not execute the above
 actual checks. Only actual source-bound reports and independent resource audits
 can change their acceptance status.
+
+The frozen two-case source `848b814` passed 249 pure tests on Linux with zero
+skips, and 249 on macOS with five platform skips; the native Go qualification
+used `6173527` and its earlier 247 pure tests. All runtime Go bytes remain the
+same `9db9603` composition. See the [separate software evidence](validation/pending-policy-supersession-native-v2.json).
+Neither these pure tests nor rebuilt binaries make either L1 case an actual pass.
