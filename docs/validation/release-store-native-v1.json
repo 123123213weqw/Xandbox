@@ -48,7 +48,8 @@
     "privileged_production_cli_owned_L1_passed": false,
     "installation_or_upgrade_or_catalog_passed": false,
     "production_ready": false,
-    "goal_complete": false
+    "goal_complete": false,
+    "python_skips": 0
   },
   "offline_verifier_correction": {
     "original_error_preserved": true,

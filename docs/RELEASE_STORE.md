@@ -8,8 +8,8 @@ CAS 提交，不是 systemd 安装器。它**不**写 unit、操作服务、改�
 冻结源 `0a51f39893fd8d317c4905a603294d6028f92dcf` 已实际通过Linux Go1.27.3完整race(count3)/
 vet、新文件系统/8处进程退出控制(count3)、fixture/helper及quota回归；新CLI/test的原生与
 交叉字节一致。13个既有程序已重新构建并逐项确认仍等于9e4原生摘要，不给旧程序改贴来源。
-[脱敏原生摘要](validation/release-store-native-v1.json)保留这些绑定及实际Python197/skip1结果；
-此原生控制不取代原readiness在root条件下197/zero-skip的独立原件。
+[脱敏原生摘要](validation/release-store-native-v1.json)保留这些绑定及实际Python197/zero-skip结果；
+此原生控制不取代真实readiness/KVM的独立原件。
 
 ## 输入和信任根
 
