@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "scope": "bounded_artifact_publication_native_unit_process_crash_controls_not_service_installation",
+  "qualification": {
+    "source_revision": "0a51f39893fd8d317c4905a603294d6028f92dcf",
+    "source_archive_sha256": "2633c850fefe3eb7cd94be6ad847d8b793414382a761e06830f221a4c25fc7f7",
+    "actual_full_linux_go1_27_3_race_count3_and_vet_passed": true,
+    "new_linux_filesystem_and_eight_abrupt_process_death_controls_count3_passed": true,
+    "all_thirteen_previous_programs_rebuilt_byte_equal": true,
+    "previous_program_native_source": "9e4da26d1ec4bda9b678966e88c7adb0b3133965",
+    "new_cli_and_test_native_cross_equal": true,
+    "artifacts_sha256": {
+      "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+      "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+      "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+      "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+      "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+      "xandbox-ingress-launch": "3da0c06a0f440b73a438280de0b2d4f93ee5457d28bc7b16e611de114ae5be8a",
+      "xandbox-ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+      "deploy-helper": "897afa0e619f6e634df74d1f65b884afb3b4d1d6e5c6cabd93efc0123a66cf6e",
+      "fixture": "bac82851ad34af5e4c5c4bffac909095986ac1679f2b802d1ad98ce6f10ae988",
+      "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+      "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+      "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568",
+      "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+      "releasestore.test": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3"
+    },
+    "fixture_and_deploy_helper_race_count3": true,
+    "quota_filter_count3": true,
+    "python_count": 197,
+    "python_result": "OK",
+    "runner_absent": true,
+    "raw_sha256": {
+      "release-store-native-v2.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "run-release-store-native-v2.sh": "1bb7f256a51b8d566aad3bf819802aa99bc7eb4d582a3f0c4e3691bf09bd2f2f",
+      "release-store-native-v2.pipeline.log": "3c92160a0fe86aa3466c48cc76948bc5d456929e146574f7dc176b119e331bc1",
+      "release-store-native-full-race-v2.log": "9dc5986cda3b66cbf4b0105c97b0566b7273e61b1fb055e6eef9910284289612",
+      "release-store-native-controls-v2.log": "2776535d61cec10397389c5409fadb6373d1195366e5945103805ea92ed192bc",
+      "release-store-native-vet-v2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "release-store-native-fixture-v2.log": "0adeb410090c5cc9c96fbe082392a6d584d999a64ac34172a102efb2b0d3b2f6",
+      "release-store-native-helper-v2.log": "4f0baf606ef627b083078b46d2cea6be6ff89f891929cea66ce394a7fbef7d08",
+      "release-store-native-quota-v2.log": "8c90face94e08b739b7b1f5ef10c1bf6e38cfa012cd51aabedeaad12eeba7b8a",
+      "release-store-native-python-v2.log": "e8ab66213b3f79746e09a83f16242af6139cda48aeb2d3e7f8c86584625a5c20",
+      "release-store-thirteen-old-bytes-v2.log": "1b27351a7df6ae962779597812c8ff2cc8c01cdc5ccbbea99d7b8b340318819b",
+      "release-store-native-v2.sha256": "bd11aeba577fcc724eb3de11aad3de2814d9a2564ec4e89fbf391ed75cf5b8ed"
+    },
+    "privileged_production_cli_owned_L1_passed": false,
+    "installation_or_upgrade_or_catalog_passed": false,
+    "production_ready": false,
+    "goal_complete": false
+  },
+  "offline_verifier_correction": {
+    "original_error_preserved": true,
+    "actual_native_status_zero_and_runner_absent": true,
+    "localized_sha256sum_success_text_not_english_OK": true,
+    "all_thirteen_actual_binary_digests_already_exactly_compared": true,
+    "no_native_or_hardware_rerun_no_raw_measurement_change": true
+  },
+  "limitations": [
+    "input_build_metadata_is_operator_declaration_not_supply_chain_attestation",
+    "eight_process_crash_points_are_test_binary_hooks_not_production_cli_power_loss",
+    "root_production_CLI_owned_L1_and_service_guest_continuity_not_yet_accepted",
+    "no_install_activation_upgrade_rollback_backup_catalog_or_full_production_acceptance",
+    "retained_publication_reference_is_not_running_node_release_authority",
+    "all_prior_ELF_and_source_bound_runtime_reports_remain_unchanged"
+  ],
+  "production_ready": false,
+  "goal_complete": false
+}

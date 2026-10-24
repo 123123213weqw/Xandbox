@@ -5,6 +5,12 @@ CAS 提交，不是 systemd 安装器。它**不**写 unit、操作服务、改�
 恢复 guest、处理 catalog pin 或删除旧发布物；不能用它代替升级/回滚/备份与独立操作员验收。
 既有真实 KVM 报告仍只绑定各自的源码/ELF，本项没有新的 privileged CLI / owned-L1 验收声明。
 
+冻结源 `0a51f39893fd8d317c4905a603294d6028f92dcf` 已实际通过Linux Go1.27.3完整race(count3)/
+vet、新文件系统/8处进程退出控制(count3)、fixture/helper及quota回归；新CLI/test的原生与
+交叉字节一致。13个既有程序已重新构建并逐项确认仍等于9e4原生摘要，不给旧程序改贴来源。
+[脱敏原生摘要](validation/release-store-native-v1.json)保留这些绑定及实际Python197/skip1结果；
+此原生控制不取代原readiness在root条件下197/zero-skip的独立原件。
+
 ## 输入和信任根
 
 - 生产入口仅限 Linux、真实/有效 UID0；固定仓库 `/srv/xandbox-releases`，无 root 参数、shell、
@@ -12,8 +18,8 @@ CAS 提交，不是 systemd 安装器。它**不**写 unit、操作服务、改�
 - 私有 manifest 严格解码，拒绝重复/未知字段、额外 JSON、越界及非规范路径。声明 source
   revision、工具链和目标架构只是受信操作员的构建来源声明，**不是本工具证明了原生构建**。
 - 固定13个角色：daemon/firecracker/gateway/ingress/initrd/jailer/kernel/launcher/node/ready/
-  template/warden/workspace。角色是闭集，不允许提供目标文件名/目录树、凭证或可变节点状态。
-  每项必须给出 source、实际 SHA256 和精确字节数；重复源、缺项及仓库内自引用拒绝。
+  template/warden/workspace。角色是闭集，不允许提供目标文件名/目录树；没有凭证或可变节点状态字段。它不按内容识别
+  被操作员误标的秘密，也不在本阶段认证ELF/guest格式。每项必须给出 source、实际 SHA256 和精确字节数；重复源、缺项及仓库内自引用拒绝。
 - 每个普通角色最多128MiB、workspace最多512MiB、单发布物总计最多1GiB。最多保留当前和
   前一个发布物；第三个拒绝，不做隐式GC。这是逻辑/拷贝上界，不是物理磁盘预留或 quota。
 - source/manifest 的完整 ancestry 用 anchored NOFOLLOW FD 打开，root 所有、不可被group/other
@@ -63,6 +69,10 @@ production_ready；不输出输入路径、request ID、资源身份、令牌或
 锁竞争与取消、每一固定持久化边界的未确认结果及精确恢复、匹配partial与未知库存拒绝、
 双保留容量、无源文件的已提交重试，以及测试进程在8个实际文件操作边界突然退出后用新FD
 恢复。测试hook仅在包内测试构造器设置，没有生产flag/环境入口。
+
+这批原件的离线核对最初假设sha256sum成功行一定是英文OK，实际系统输出“成功”，
+导致离线核对失败；原错误保留。逐项二进制摘要核对已通过，仅补闭集的实际本地化文本核对，
+未重跑原生/硬件或改变原始日志。
 
 这些是本地/原生unit与进程级故障控制，不是 privileged生产CLI、系统宿主掉电、真实服务
 安装/升级或KVM组合验收。后续须在独占L1运行普通CLI，核对root/权限/原盘恢复、实际服务
