@@ -14,13 +14,13 @@
 
 新增[固定初始安装事务](docs/INITIAL_INSTALL.md)：Go 安装器将已提交 release、25 个固定目标、持久 intent/commit 与服务管理器协调连接起来；[新的真实双启动有限验收](docs/INITIAL_INSTALL_KVM.md)覆盖 cap0 提交前闸门、精确恢复、TLS→四并行 KVM、drain 与缺源冷恢复，并修正 VMM 静态 PIE 校验。7 scopes/8 代际独立核验清理；不继承旧报告，也不是升级、轮换或生产就绪声明。
 
-[策略通道的历史独立组件验收](docs/POLICY_OPERATOR_COMPONENT.md)之后，新增[受管策略 v2 原生候选](docs/MANAGED_POLICY_NATIVE.md)：接入监督进程、24 目标新安装、原子完整策略授权、CAS 与缺源协调，分别确认文件提交和子进程 ACK。**当前不代表普通 root CLI / TLS-KVM / 冷轮换已经验收；旧 v1 节点不能据此原地升级，仍不可生产部署。**
+[策略通道的历史独立组件验收](docs/POLICY_OPERATOR_COMPONENT.md)之后，新增[受管策略 v2 原生候选](docs/MANAGED_POLICY_NATIVE.md)：接入监督进程、24 目标新安装、原子完整策略授权、CAS 与缺源协调，分别确认文件提交和子进程 ACK。**这一早期软件检查点本身不证明后来的普通 root CLI / TLS-KVM / 冷轮换；下述命名实机结果另行取证。旧 v1 节点仍不能据此原地升级，仍不可生产部署。**
 
-后续[过期策略恢复地基](docs/POLICY_RECOVERY_FOUNDATION.md)新增只打开既有策略状态的持久化原语，以及覆盖文件提交到 ACK 的整段操作锁；原生 race/vet 与进程死亡测试通过。后续已接入[显式 ingress-only 前向恢复候选](docs/MANAGED_POLICY_RECOVERY.md)，已完成独立 Linux 原生 race×3/vet/错误与进程死亡回归（保留两次失败前序），另有独立短时证书测试输入生成器；真实 root CLI/TLS/KVM 维护验收及未提交过期候选的恢复仍未完成。
+后续[过期策略恢复地基](docs/POLICY_RECOVERY_FOUNDATION.md)新增只打开既有策略状态的持久化原语，以及覆盖文件提交到 ACK 的整段操作锁；原生 race/vet 与进程死亡测试通过。后续已接入[显式 ingress-only 前向恢复候选](docs/MANAGED_POLICY_RECOVERY.md)，已完成独立 Linux 原生 race×3/vet/错误与进程死亡回归（保留两次失败前序），另有独立短时证书测试输入生成器；这些早期软件记录不代替下述新命名实机结果；未提交候选的完整故障/恢复矩阵仍未完成。
 
 新增[未消费候选的显式替换实现](docs/PENDING_POLICY_SUPERSESSION.md)，已完成新源码原生 race×3/vet、进程死亡/CAS 回归与 23 个产物重建。另有[已提交过期策略恢复的两条独立实机路径](docs/MANAGED_POLICY_L1_FIXTURE.md)：普通 root CLI、真实 TLS→四并行 KVM、残留进程拒绝与运行中 ingress 停止、drain、原盘冷恢复均取得有限验证；2 scopes/4 boots 独立核验清理，251 项 Linux 纯测试零跳过，两个失败前序保留。未消费候选替换本身的硬件矩阵及完整生产验收仍未完成。
 
-[新的未消费候选/普通热轮换命名验收](docs/MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)新增独立同 epoch 测试材料、真实 rename/fsync 切点及私有生命周期观测；冻结 `91b2949` 的重复替换流程取得一份独立双启动有限通过，首轮失败仍保留且原因未证实。更新后的阻塞观察器和更严格的 Stop 前忙任务/四 VMM 复核需要新的实测，不能继承这份通过；完整故障矩阵和生产验收继续开放。
+[新的未消费候选/普通热轮换命名验收](docs/MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)已取得三条独立有限实证：未发布候选缺源重复替换、已发布 epoch 不可复用而前向恢复、普通 1→2→3 热轮换保持原 TLS 连接上的旧凭证拒绝。3 scopes/6 boots 独立核验清理，261 项 Linux 纯测试零跳过；原 45 秒任务及全部资源/期限未放宽，Stop 前另行复核四 VMM 与原忙任务。更早的诊断通过和原因未证实的失败分开保留，不是完整故障矩阵或生产就绪声明。
 
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 

@@ -1,8 +1,8 @@
-# New managed policy L1 cases — one diagnostic repeat case accepted
+# Managed policy L1 — three independent limited named cases accepted
 
-One diagnostic-source repeat case has limited actual acceptance; its failed
-predecessor remains retained. Visible-publication recovery, ordinary hot rotation
-and the newer blocking-observer source have no independent accepted scope yet.
+Three separately frozen-source named protocols now have limited actual acceptance
+at `8974967`. The earlier diagnostic repeat result and its failed predecessor
+remain separate, never relabeled as these newer scopes.
 The two accepted [committed recovery cases](MANAGED_POLICY_L1_FIXTURE.md) remain
 bound to their own source, reports and inputs. They do not certify these cases.
 
@@ -83,7 +83,7 @@ stopped main; policy maintenance never implicitly starts main or resumes admissi
 
 The new cut points observe real child syscalls, not production test hooks or
 service PID attachment. Pure predicate/shape/file-loss controls do not execute
-those syscalls or the production maintenance protocol. Only the diagnostic repeat result below is accepted; the full cut/media/runtime/SLO matrix,
+those syscalls or the production maintenance protocol. The three source-bound results below remain limited; the full cut/media/runtime/SLO matrix,
 partial-declaration/lost-source liveness gap and the whole production goal remain
 open. Do not expand a future named-case pass to the full supersession matrix.
 
@@ -139,3 +139,42 @@ incarnations and the actual busy writer are rechecked immediately before Stop,
 after source-free retry/CAS/resume. No 300-second TTL, 45-second job, service,
 CLI, socket or operator limit is increased. These stricter/new-observer paths
 require fresh actual scopes and do not inherit the diagnostic-source pass.
+
+## Three new source-bound actual results
+
+The [combined current evidence](validation/managed-policy-supersession-hot-l1-v3.json)
+binds frozen `8974967`, unchanged runtime Go `9db9603`, qualified opt-in producer
+`0ba79e1`, all 23 actual current artifact hashes and the same 16 separately
+rehashed composition inputs. All three originals exited zero and passed complete
+closed typed messages plus independent read-only absence audits: **three scopes,
+six L1 boots and six outer generations absent**, without supplemental cleanup.
+Each scope passed 261 Linux pure tests/zero skips before its actual launch;
+macOS pure controls passed 261 with five platform skips.
+
+- `supersession-repeat`: actual pre-publication rename cuts, expired unconsumed
+  C2, exact owned A source/proposal loss without metadata deletion, source-free
+  A settlement without ACK, B2 consuming only the still-unconsumed 2, and normal
+  hot2-to3 before the common mandatory tail.
+- `supersession-visible-recovery`: actual successful directory-fsync exit after
+  B2 publication but before ingress start/ACK; state1, refusal to reuse file2's
+  epoch, then actual recovery3 advancing only installed2 before new child ACK3.
+- `hot-rotation`: ordinary 1-to2 and 2-to3, original held TLS1/TLS2 transport old-key
+  refusal and no main/ingress restart, with fresh coherent leaf/new-key checks.
+  A 401 intentionally closes each held transport; there is no post-401 reuse claim.
+
+Every scope retains four real guests, main/VMM/boot identities, busy progress and
+committed drain across policy changes. The newer source also verifies all four
+VMM incarnations and the actual progressing original writer immediately before
+Stop, after source-free retry/CAS/resume. Cold, quota/private-resource release and
+external cleanup are actual per-scope checks, not inherited older reports.
+
+Per-case n=1 Stop observations were 111.943/117.351/117.584 ms; durable reclaim
+was 374.933/389.254/393.515 ms. These are distinct observations, not SLO percentiles,
+production maintenance latency, physical media erasure or a full pressure matrix.
+The new repeat's traced A observation was 6.556 s and its before-Stop writer age
+29.749 s, versus 20.944 s and 44.253 s in the older diagnostic sample. This
+compares observer samples with unchanged runtime binaries/budgets; it does not
+retroactively prove the first failed original's cause. All 634 earlier public
+validation files remain byte-unchanged. Full syscall-cut/kernel-negative/media/
+runtime/SLO matrices, partial-declaration liveness and the production goal remain
+open; the report deliberately keeps full supersession-matrix acceptance false.

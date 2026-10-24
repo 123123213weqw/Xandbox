@@ -6,12 +6,13 @@ remains bound to its old source/artifacts. It does not qualify this new command,
 changed gateway/installer, actual root operation, kernel observation or TLS/KVM.
 The full production goal and independent hardware acceptance remain open.
 
-Follow-up: one [diagnostic-source named repeat case](MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)
-at `91b2949` now has a complete limited root/TLS/KVM/cold report and independent
-two-generation absence audit. Its failed predecessor remains unattributed. The
-newer observer/stricter Stop proof, independent visible-publication recovery and
-ordinary hot1-to2 case, full cut/media/runtime/SLO matrix and production goal are
-not qualified by that single older-source pass. No historical record is re-signed.
+Follow-up: [three independent limited named cases](MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)
+at frozen `8974967` now cover actual repeated unconsumed replacement, visible-file
+recovery and ordinary hot rotation, with six boots/six independently absent
+outer generations. The older diagnostic result and unattributed failed original
+remain separate. Full syscall-cut/kernel-negative/media/runtime/SLO matrices,
+the partial-declaration liveness gap and the production goal remain open. No
+historical record is re-signed.
 
 ```text
 xandbox-install replace-pending-policy -plan PRIVATE_PLAN -expected-revision N -request-id NEW -replaces-request-id PENDING
@@ -139,7 +140,7 @@ passed 247/zero skips; later fixture pure controls passed 249/zero skips on Linu
 and 249 with five platform skips on macOS. These are not root-runtime evidence.
 All 627 older validation files remain byte-unchanged.
 
-Beyond that one diagnostic-source case, this **unconsumed supersession command**
+Beyond these limited named cases, this **unconsumed supersession command**
 still requires the remaining source-bound root CLI,
 real positive/negative kernel empty proof,
 coherent TLS revocation, continuing KVM writer, unchanged main/guest incarnation,
