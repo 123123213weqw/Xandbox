@@ -14,6 +14,7 @@ import subprocess
 import sys
 import termios
 import time
+import traceback
 
 MARKER='Xandbox owned systemd delegation fixture v1\n'
 UNIT='xandbox-delegate-probe.service'
@@ -42,7 +43,7 @@ def save(path,value):
 
 def run(*args):
     r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=20,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
-    if r.returncode:raise RuntimeError('fixed systemd operation failed')
+    if r.returncode:raise RuntimeError('fixed systemd operation failed: '+':'.join(args[:2]))
     return r.stdout.decode().strip()
 
 
@@ -183,7 +184,8 @@ def failure_console(operation):
     # Failure-only private diagnostics must finish BEFORE the error reply;
     # otherwise the outer harness can kill L1 before the journal is captured.
     with open('/dev/console','w') as console:
-        console.write('XANDBOX_SYSTEMD_HOST_FAILED operation='+operation+'\n');console.flush()
+        console.write('XANDBOX_SYSTEMD_HOST_FAILED operation='+operation+'\n')
+        traceback.print_exc(file=console);console.flush()
         subprocess.run(['journalctl','--no-pager','-n','50','-u',UNIT,'-u','xandbox-systemd-operator.service'],stdout=console,stderr=console,timeout=10)
 
 
