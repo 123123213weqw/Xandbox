@@ -39,6 +39,20 @@ func (f *filesystem) rootInventory(version int, committed bool) error {
 	if e != nil {
 		return e
 	}
+	if version == 2 {
+		lock, e := f.open(Root+"/.lock", unix.O_RDONLY, 0600)
+		if e != nil {
+			return e
+		}
+		info, e := lock.Stat()
+		lock.Close()
+		if e != nil {
+			return e
+		}
+		if info.Size() != 0 {
+			return ErrInventory
+		}
+	}
 	allowed := map[string]bool{".lock": true, "intent.json": true, ".intent.next": true, "commit.json": true, ".commit.next": true}
 	for _, name := range configNamesFor(version) {
 		allowed[name] = true

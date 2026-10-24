@@ -214,7 +214,7 @@ func TestRotationReconcileSourceAbsentRequiresACKThenRemovesOnlyMatchingIntent(t
 }
 
 func TestRotationRejectsUnknownScratchAndBadSourceWithoutRepair(t *testing.T) {
-	for _, kind := range []string{"source-hash", "unknown-policy-scratch", "unknown-intent-scratch", "unknown-intent", "unknown-file", "foreign-payload"} {
+	for _, kind := range []string{"source-hash", "unknown-policy-scratch", "unknown-intent-scratch", "unknown-intent", "unknown-file", "foreign-payload", "bad-lock"} {
 		t.Run(kind, func(t *testing.T) {
 			f, tx, p := rotationFixture(t, false)
 			var path string
@@ -231,6 +231,8 @@ func TestRotationRejectsUnknownScratchAndBadSourceWithoutRepair(t *testing.T) {
 				path = Root + "/foreign"
 			case "foreign-payload":
 				path = gateway.ManagedPolicyPath
+			case "bad-lock":
+				path = Root + "/.lock"
 			}
 			if path != "" {
 				if os.WriteFile(f.root.Name()+path, []byte("unrecognized"), 0600) != nil {
