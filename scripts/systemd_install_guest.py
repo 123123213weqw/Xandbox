@@ -62,7 +62,7 @@ def arguments(operation,request=None,plan=None,bootstrap=False):
     if operation in ('apply','reconcile'):
         if type(request) is not str or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('private exact installer request required')
         if operation=='apply':
-            if not isinstance(plan,Path) or plan.parent!=CONFIG or not re.fullmatch('[a-z-]+\.json',plan.name):raise RuntimeError('private fixed fixture plan required')
+            if not isinstance(plan,Path) or plan.parent!=CONFIG or not re.fullmatch(r'[a-z-]+\.json',plan.name):raise RuntimeError('private fixed fixture plan required')
             args+=['-plan',str(plan),'-expected-revision','0']
         args+=['-request-id',request]
     elif request is not None or plan is not None:raise RuntimeError('read-only shape')

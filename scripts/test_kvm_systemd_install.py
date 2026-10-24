@@ -128,5 +128,10 @@ class InstallControls(unittest.TestCase):
         self.assertLess(s.index('traceback.print_exc'),s.index('XANDBOX_SYSTEMD_HOST_FAILED'))
         self.assertLess(s.index("subprocess.run(['journalctl'"),s.index('XANDBOX_SYSTEMD_HOST_FAILED'))
         self.assertIn('c.flush()',s)
+    def test_thread_exit_is_not_main_exit_and_diagnostic_is_closed(self):
+        s=inspect.getsource(trace.interrupt_before_commit)
+        self.assertIn('not hit and tid==pid',s)
+        self.assertIn("'closed_cli_refusal':raw==refusal",s)
+        self.assertNotIn('print(raw',s)
 
 if __name__=='__main__':unittest.main()

@@ -5,6 +5,7 @@ creation, reap every traced thread. Never attach another service or an L0 PID.
 """
 import ctypes
 import errno
+import json
 import os
 from pathlib import Path
 import signal
@@ -43,7 +44,7 @@ def interrupt_before_commit(args,output,expected_sha,sha):
             ptrace(0,0);os.kill(os.getpid(),signal.SIGSTOP)
             os.execve(args[0],args,{'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
         finally:os._exit(91)
-    threads={pid};hit=False;executed=False;options=1|8|16|(1<<20);end=time.monotonic()+60
+    threads={pid};hit=False;executed=False;options=1|8|16|(1<<20);end=time.monotonic()+60;other_exits=0;last_leaf='none'
     try:
         got,status=os.waitpid(pid,0)
         if got!=pid or not os.WIFSTOPPED(status) or os.WSTOPSIG(status)!=signal.SIGSTOP:raise RuntimeError('owned trace handshake failed')
@@ -54,7 +55,17 @@ def interrupt_before_commit(args,output,expected_sha,sha):
             if not tid:time.sleep(.0005);continue
             if os.WIFEXITED(status) or os.WIFSIGNALED(status):
                 threads.discard(tid)
-                if not hit:raise RuntimeError('installer exited before fixed commit boundary')
+                if not hit and tid==pid:
+                    # Closed private diagnostic only, never replay a raw child
+                    # error/config/credential. A runtime thread exit is not the
+                    # installer process exit; wait for the actual main Tgid.
+                    raw=Path(output).read_bytes()[:8192]
+                    refusal=b'xandbox-install: installation unconfirmed; preserve the exact request and inspect before reconcile\n'
+                    root=Path('/etc/xandbox-install')
+                    diag={'main_exit':os.WEXITSTATUS(status) if os.WIFEXITED(status) else -os.WTERMSIG(status),'exec_pin_seen':executed,'other_thread_exits':other_exits,'last_known_leaf':last_leaf,'closed_cli_refusal':raw==refusal,'output_bytes':len(raw),'intent_present':(root/'intent.json').is_file(),'commit_present':(root/'commit.json').is_file(),'state_created':Path('/srv/xi/s').is_dir()}
+                    print('XANDBOX_INSTALL_PRIVATE_TRACE '+json.dumps(diag,sort_keys=True),flush=True)
+                    raise RuntimeError('actual installer main exited before fixed commit boundary')
+                other_exits+=1
                 continue
             if not os.WIFSTOPPED(status):raise RuntimeError('unexpected trace state')
             sig=os.WSTOPSIG(status);event=status>>16
@@ -65,7 +76,11 @@ def interrupt_before_commit(args,output,expected_sha,sha):
                 executed=True
             if sig==(signal.SIGTRAP|0x80) and executed and not hit:
                 r=Registers();ptrace(12,tid,0,ctypes.addressof(r))
-                if r.orig_rax==257 and r.rax==((1<<64)-errno.ENOSYS) and string_at(tid,r.rsi)==b'.commit.next':
+                leaf=string_at(tid,r.rsi) if r.orig_rax==257 and r.rax==((1<<64)-errno.ENOSYS) else None
+                if leaf:
+                    known={b'backend.json',b'auth.json',b'gateway.json',b'tls.pem',b'tls.key',b'firecracker',b'jailer',b'kernel',b'initrd',b'workspace',b'daemon',b'gateway',b'ingress',b'launcher',b'node',b'ready',b'template',b'warden',b'.intent.next',b'intent.json',b'.commit.next',b'commit.json'}
+                    if leaf in known:last_leaf=leaf.decode()
+                if leaf==b'.commit.next':
                     if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!='/etc/xandbox-install':raise RuntimeError('commit dirfd outside fixed install root')
                     if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('installer identity drift')
                     hit=True;os.kill(pid,signal.SIGKILL)
