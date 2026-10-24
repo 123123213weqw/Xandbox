@@ -20,6 +20,8 @@
 
 新增[未消费候选的显式替换实现](docs/PENDING_POLICY_SUPERSESSION.md)，已完成新源码原生 race×3/vet、进程死亡/CAS 回归与 23 个产物重建。另有[已提交过期策略恢复的两条独立实机路径](docs/MANAGED_POLICY_L1_FIXTURE.md)：普通 root CLI、真实 TLS→四并行 KVM、残留进程拒绝与运行中 ingress 停止、drain、原盘冷恢复均取得有限验证；2 scopes/4 boots 独立核验清理，251 项 Linux 纯测试零跳过，两个失败前序保留。未消费候选替换本身的硬件矩阵及完整生产验收仍未完成。
 
+[新的未消费候选/普通热轮换命名验收](docs/MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)新增独立同 epoch 测试材料、真实 rename/fsync 切点及私有生命周期观测；冻结 `91b2949` 的重复替换流程取得一份独立双启动有限通过，首轮失败仍保留且原因未证实。更新后的阻塞观察器和更严格的 Stop 前忙任务/四 VMM 复核需要新的实测，不能继承这份通过；完整故障矩阵和生产验收继续开放。
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。
