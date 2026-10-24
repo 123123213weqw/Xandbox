@@ -1,9 +1,12 @@
-# New owned-L1 draft-discard protocol (hardware acceptance pending)
+# Two limited actual owned-L1 draft-discard cases
 
 The production Go operation and its [software-only proof](supersession-draft-discard.md)
-are frozen at `df679bb`. These new named fixture cases must use its 23 actually
-rebuilt native artifacts, including the changed installer. No older root-runtime
-report qualifies the new command. Full production readiness remains false.
+are frozen at `df679bb`. The [new source-bound actual proof](validation/draft-discard-l1-v3.json)
+uses all 23 actually rebuilt native artifacts, including the changed installer,
+with harness `a536f482d546703ad9d1b2167b46e249d7683617`. Both separate named
+cases have now passed their complete two-boot protocol and independent cleanup
+audit. No older root-runtime report is re-signed to qualify the new command.
+Full production readiness remains false.
 
 ## Separate cases, unchanged bounds
 
@@ -64,6 +67,40 @@ They are not hardware acceptance. The observer has no attach/service PID, arbitr
 path/count/fd/argv selector or production fault hook. It retains the existing
 one-shot 60-second alarm, monotonic bound, restoration and bounded child reap.
 
-Both actual cases and their independent cleanup audits must still finish and be
-source-bound before any acceptance claim. Even then, the full negative-kernel,
-concurrency, storage/media/pressure and production SLO matrix remains separate.
+## Frozen actual result and failed predecessors
+
+Both successful originals exited zero. Each independently rehashed all 23 native
+artifacts and 16 inputs, ran 269 Linux root pure tests with zero skips, and bound
+all 15 guest harness source hashes before its own two actual boots. Across these
+**two accepted scopes only**, four outer generations and all declared paths were
+independently observed absent, without supplemental cleanup. The four VMMs,
+original guest boots/main, progressing original busy writer and persisted drain
+all retained their required continuity, including the final immediate Stop checks.
+
+| Named case | Actual busy Stop sample (ms) | Durable reclaim sample (ms) |
+| --- | ---: | ---: |
+| `draft-discard` | 112.673962 | 384.410407 |
+| `draft-discard-cut` | 113.951069 | 384.852278 |
+
+These are independent **single samples**, not percentiles, switch latency,
+benchmarks or production SLOs. Resources, task/TTL/trace/CLI deadlines and the
+mandatory TLS/cold/cleanup predicates were not relaxed.
+
+Two failed predecessors are preserved separately, not counted as accepted:
+
+- [First actual attempt](validation/draft-discard-failed-v1.json), harness
+  `36a11e3`, exited one after one boot. Its observer attempted a TLS busy check
+  while ingress was correctly stopped. It was corrected to authenticated
+  controller-UDS guest-API observation during only that stopped window; no
+  production Go code or resumed-ingress TLS requirement changed. Its one outer
+  generation/all paths were independently absent, without supplemental cleanup.
+- A later private-runner version substitution referenced a nonexistent Ubuntu
+  `v2` archive rather than the already verified `v1` asset. It failed **before
+  any boot**; declared paths and zero generations were independently absent.
+  Reusing the existing correct archive path required no host/source/runtime
+  modification or download. The failed original and raw hashes remain recorded
+  in the combined proof rather than being reclassified as a successful retry.
+
+All 636 validation files public before this work remain byte-unchanged. These
+new results do **not** complete the negative-kernel (populated/frozen), concurrency,
+storage/media/pressure, full supersession fault matrix or production SLO gates.

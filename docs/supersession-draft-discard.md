@@ -1,4 +1,4 @@
-# Hash-bound supersession draft discard (software-qualified, not hardware-qualified)
+# Hash-bound supersession draft discard (limited named hardware evidence)
 
 This narrowly scoped administrative operation addresses an unfinished
 `.policy-supersession.next` when its original replacement source has been lost.
@@ -96,6 +96,10 @@ failed before reaching the discard operation. Its failed original is preserved;
 the fixture was corrected, not the production path or runtime limits. That
 failed attempt is not counted as acceptance.
 
-**Owned-L1 qualification of this new production operation is still required.**
-Older runtime binaries and named hardware-case reports do not qualify it. There
-is no new switch/Stop/reclaim runtime latency claim or production readiness.
+The separate [two new source-bound actual named cases](DRAFT_DISCARD_L1_FIXTURE.md)
+now exercise the production operation with its fresh native artifacts: real
+short-write/source loss, normal present receipt and absent retry, and a separate
+actual unlink/root-fsync cut before receipt plus cold recovery and independent
+cleanup. They use harness `a536f48`, not older runtime binaries/reports. The full
+negative-kernel, concurrency/media/pressure hardware matrix remains open. There
+is no new switch/Stop/reclaim SLO claim or production readiness.
