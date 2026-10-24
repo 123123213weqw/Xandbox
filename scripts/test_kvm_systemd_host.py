@@ -89,6 +89,24 @@ class SystemdFixtureControls(unittest.TestCase):
         value={**{k:True for k in STOP_FLAGS},'stop_return_ms':True}
         with self.assertRaises(AssertionError):validate_reply('stop-restart',value)
 
+    def test_clean_gc_unloaded_unit_is_started_without_reset_failed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            old={'main_pid':11,'main_start':'old','writer_pid':12,'writer_start':'oldchild'}
+            new={'main_pid':21,'main_start':'new','writer_pid':22,'writer_start':'newchild'}
+            (root/'ready.json').write_text(json.dumps(old));(root/'heartbeat').write_text('1')
+            calls=[]
+            def fake_run(*args):
+                calls.append(args)
+                if args[1]=='start':(root/'ready.json').write_text(json.dumps(new))
+                if args[1]=='reset-failed':raise RuntimeError('actual unloaded-unit behavior')
+                return ''
+            with patch.object(systemd_delegate_probe,'RUN',root),patch.object(systemd_delegate_probe,'UNIT_ROOT',root/'removed-unit'),patch.object(systemd_delegate_probe,'probe',return_value={}),patch.object(systemd_delegate_probe,'identity',return_value=None),patch.object(systemd_delegate_probe,'run',side_effect=fake_run):
+                result=systemd_delegate_probe.stop_restart()
+            self.assertEqual(calls,[('systemctl','stop',systemd_delegate_probe.UNIT),('systemctl','start',systemd_delegate_probe.UNIT)])
+            self.assertTrue(result['unit_cgroup_removed_without_fixture_cleanup'])
+            self.assertTrue(result['clean_unit_started_without_reset_failed_assumption'])
+
     def test_checkpoint_first_and_cold_boot_are_not_interchangeable(self):
         value={k:True for k in CHECKPOINT_FLAGS}
         validate_reply('checkpoint',value,True)

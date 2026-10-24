@@ -27,7 +27,7 @@ PROBE_FLAGS=('pid1_systemd','manager_main_pid_verified','all_four_controllers','
              'cap_sys_resource_absent_all_sets','no_new_privileges','nested_kvm_create_vm_fd_closed','owned_child_progress')
 RELOAD_FLAGS=('real_exec_reload_helper_in_unit_dot_control_outside_node','strict_node_inventory_unchanged','main_and_child_still_running')
 STOP_FLAGS=('both_old_process_identities_absent','unit_cgroup_removed_without_fixture_cleanup','new_main_incarnation_verified',
-            'fresh_child_progress_and_node_checks','not_production_stop_or_gc_slo')
+            'fresh_child_progress_and_node_checks','not_production_stop_or_gc_slo','clean_unit_started_without_reset_failed_assumption')
 CHECKPOINT_FLAGS=('checkpoint_fsynced','previous_checkpoint_present','boot_changed_vs_previous',
                   'machine_id_preserved_vs_previous','not_sandbox_lifecycle_recovery')
 

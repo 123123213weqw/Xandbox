@@ -162,11 +162,15 @@ def stop_restart():
     wait(lambda:identity(old['main_pid'])!=old['main_start'] and identity(old['writer_pid'])!=old['writer_start'])
     wait(lambda:not UNIT_ROOT.exists())
     (RUN/'ready.json').unlink();(RUN/'heartbeat').unlink()
-    run('systemctl','reset-failed',UNIT);run('systemctl','start',UNIT)
+    # Clean inactive units may already be GC-unloaded. ResetFailedUnit does
+    # not load them; StartUnit loads the declared unit. Keep all old-process
+    # and cgroup-absence checks above, rather than treating reset as cleanup.
+    run('systemctl','start',UNIT)
     wait(lambda:(RUN/'ready.json').is_file());probe();new=json.loads((RUN/'ready.json').read_bytes())
     if (new['main_pid'],new['main_start'])==(old['main_pid'],old['main_start']):raise RuntimeError('main incarnation reused')
     return {'stop_return_ms':elapsed,'both_old_process_identities_absent':True,'unit_cgroup_removed_without_fixture_cleanup':True,
-            'new_main_incarnation_verified':True,'fresh_child_progress_and_node_checks':True,'not_production_stop_or_gc_slo':True}
+            'new_main_incarnation_verified':True,'fresh_child_progress_and_node_checks':True,'not_production_stop_or_gc_slo':True,
+            'clean_unit_started_without_reset_failed_assumption':True}
 
 
 def checkpoint():
