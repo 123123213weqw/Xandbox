@@ -25,6 +25,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/ingresslaunch"
 	"github.com/123123213weqw/Xandbox/internal/launch"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
+	"github.com/123123213weqw/Xandbox/internal/serviceready"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
@@ -352,9 +353,55 @@ func configure(revision uint64) (ret error) {
 	}
 	return save(configDir+"/ingress-client-fixture.json", cli)
 }
+func setupReadiness() error {
+	if e := guard(); e != nil {
+		return e
+	}
+	b, e := os.ReadFile("/etc/xandbox-systemd-readiness-fixture")
+	if e != nil || string(b) != "Xandbox owned systemd readiness fixture v1\n" {
+		return errors.New("owned readiness L1 marker required")
+	}
+	var assets map[string]firecracker.Asset
+	if e = load(configDir+"/readiness-assets.json", &assets, 4096); e != nil || len(assets) != 1 || assets["ready"].Path != serviceready.HelperPath {
+		return errors.New("fixed ready asset required")
+	}
+	asset := assets["ready"]
+	b, e = os.ReadFile(asset.Path)
+	if e != nil || digest(b) != asset.SHA256 {
+		return errors.New("ready asset pin required")
+	}
+	nodeBytes, e := read(configDir+"/launch.json", 16384)
+	if e != nil {
+		return e
+	}
+	n, e := launch.Decode(nodeBytes)
+	if e != nil {
+		return e
+	}
+	var backend firecracker.Config
+	if e = load(n.Backend.Path, &backend, 16384); e != nil || backend.IO == nil {
+		return errors.New("node IO required")
+	}
+	m := serviceready.Manifest{Version: 1, NodeLaunch: firecracker.Asset{Path: configDir + "/launch.json", SHA256: digest(nodeBytes)}, Helper: asset, Device: backend.IO.Device}
+	unit, e := m.DaemonUnit(n, configDir+"/readiness.json", "/dev/vda")
+	if e != nil {
+		return e
+	}
+	if e = save(configDir+"/readiness.json", m); e != nil {
+		return e
+	}
+	return put("/etc/systemd/system/xandbox.service", []byte(unit))
+}
 func main() {
-	if len(os.Args) != 2 || (os.Args[1] != "setup" && os.Args[1] != "rotate") {
+	if len(os.Args) != 2 || (os.Args[1] != "setup" && os.Args[1] != "rotate" && os.Args[1] != "readiness-setup") {
 		os.Exit(1)
+	}
+	if os.Args[1] == "readiness-setup" {
+		if e := setupReadiness(); e != nil {
+			fmt.Fprintln(os.Stderr, "owned readiness setup failed")
+			os.Exit(1)
+		}
+		return
 	}
 	r := uint64(1)
 	if os.Args[1] == "rotate" {

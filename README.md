@@ -6,6 +6,8 @@
 
 [独立 ingress 启动器](docs/INGRESS_LAUNCHER.md)：固定清单/单独资源域已在[真实systemd TLS→KVM、轮换、崩溃及原盘cold有限验证](docs/SYSTEMD_INGRESS_FIXTURE.md)通过；安装升级、自动readiness编排与生产验收仍未完成。
 
+新增 [systemd readiness/enablement 组合](docs/SERVICE_READINESS.md)：固定 Go 后置闸门与自动启动验证代码已实现，实机尚待验，不继承上面的手动启动报告。
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。

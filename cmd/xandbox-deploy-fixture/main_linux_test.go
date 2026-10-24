@@ -67,3 +67,8 @@ func TestBudgetIncludesIngressAndHostReserve(t *testing.T) {
 		t.Fatal("fixed profile budget drift")
 	}
 }
+func TestReadinessSetupCannotRunOnUnmarkedL0(t *testing.T) {
+	if e := setupReadiness(); e == nil {
+		t.Fatal("readiness setup escaped owned L1 guard")
+	}
+}

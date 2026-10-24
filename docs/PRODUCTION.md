@@ -14,7 +14,7 @@
 [脱敏证据](validation/systemd-ingress-tls-v1.json)绑定冻结源、归档、12产物、10个harness摘要、
 前序失败与独立清理复核。所有原始console/CA/令牌/进程和资源身份保持私有。
 
-## 新规格，不扩张既有profile
+自动启动/readiness 的[新独立组合](SERVICE_READINESS.md)现为未验收代码；不因旧手动 operator 流程通过而勾选生产安装或 M4。
 
 当前普通 sandboxd 为新 `5bfb2394…`（SIGTERM注册先于Serve），新增[固定清单 Go 启动器](GO_LAUNCHER.md)
 `26f35a3d…`。真实systemd→普通认证UDS→四并行KVM、busy Stop/GC、main SIGKILL与原盘cold

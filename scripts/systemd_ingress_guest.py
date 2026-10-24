@@ -203,6 +203,10 @@ def probe():
     return {k:True for k in ('ordinary_tls_firecracker_health','manager_main_is_pinned_gateway','root_and_child_in_separate_exact_ingress_domain','root_three_caps_child_unprivileged_nnp_root_cwd_fds','actual_parent_budgets_and_no_root_tcp_listener','no_mock_or_host_fallback')}
 
 
+def recover_services():
+    run('systemctl','start',base.UNIT);uds_ready();start_ingress()
+
+
 def checkpoint():
     if CHECKPOINT.exists() or not NEGATIVES:raise RuntimeError('new first ingress checkpoint required')
     probe();rows=[];boots=[]
@@ -254,7 +258,7 @@ def checkpoint():
     run('systemctl','kill','--kill-whom=main','--signal=SIGKILL',base.UNIT)
     wait_ingress_gone(old_gateway)
     wait(lambda:identity(old_daemon[0])!=old_daemon[1] and not base.UNIT_ROOT.exists() and not Path('/run/xandbox-inputs').exists(),20)
-    run('systemctl','start',base.UNIT);uds_ready();start_ingress()
+    recover_services()
     for item in rows:
         base.reclaimed(item['row'],item['tenant'],item['owner']['project_id']);base.call('POST','/v1/sandboxes',base.create_spec(),tenant=item['tenant'],key=item['key'],expected=410)
     if json.loads(Path('/srv/xb/policy/policy.json').read_bytes())['revision']!=2:raise RuntimeError('durable gateway revision lost after daemon restart')

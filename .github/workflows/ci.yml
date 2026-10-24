@@ -66,7 +66,7 @@ jobs:
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
           python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
-          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/build_systemd_ingress.py scripts/systemd_ingress_guest.py scripts/process_exit.py
+          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/build_systemd_ingress.py scripts/systemd_ingress_guest.py scripts/build_systemd_readiness.py scripts/systemd_readiness_guest.py scripts/readiness_fixture_gate.py scripts/process_exit.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
@@ -94,6 +94,7 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-node-$arch" ./cmd/xandbox-node
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-launch-$arch" ./cmd/xandbox-launch
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-ingress-launch-$arch" ./cmd/xandbox-ingress-launch
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-ready-$arch" ./cmd/xandbox-ready
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-keygen-$arch" ./cmd/xandbox-keygen
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-agent-$arch" ./cmd/xandbox-agent
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-warden-$arch" ./cmd/xandbox-warden

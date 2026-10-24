@@ -10,8 +10,7 @@ ASSETS=BASE_ASSETS+EXTRA
 MARKER='Xandbox owned systemd ingress fixture v1\n'
 
 
-def load_assets(path):
-    value=json.loads(Path(path).read_text())
+def validate_ingress_assets(value):
     if set(value)!=set(ASSETS):raise ValueError('exact ingress deployment asset schema required')
     validate_assets({k:value[k] for k in BASE_ASSETS})
     for name in EXTRA:
@@ -22,6 +21,10 @@ def load_assets(path):
             raise ValueError('pinned bounded regular ingress asset required')
         static_elf(p.read_bytes())
     return value
+
+
+def load_assets(path):
+    return validate_ingress_assets(json.loads(Path(path).read_bytes()))
 
 
 def operator_unit():
