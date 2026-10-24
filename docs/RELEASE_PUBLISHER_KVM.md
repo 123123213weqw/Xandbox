@@ -53,3 +53,14 @@ directory给出mode=None，private umask077下实际创建/usr为0700。旧build
 无残留审计。当前原件没有该时刻的guest状态/计时，不能认定是60秒任务超时、TTL、OOM或
 发布程序改变了guest。后续仅补私有闭集阶段elapsed/guest状态/执行状态采样，仍保留最终
 同writer推进断言，不提高协议时限、扩大资源、削减真资产或将旧失败回写成通过。
+
+第三轮 `926cca3` 的实际阶段原件显示：writer启动1.508s、source负例7.715s、第一次CAS
+17.607s、库存负例42.008s、第二次CAS56.429s均为READY/RUNNING；最终检查在70.488s，
+状态采样不可用并仍得409。整scope保持失败，不回推第二轮的精确原因，也不伪称已读到
+第三轮的TIMED_OUT。这个时序已越过原声明60秒执行窗，不能再要求同任务必定RUNNING。
+
+后续仅去重TEST observer对未变原资产的重复SHA读取：首次与最终强制全摘要，每次仍核对
+全部inode/device/size/mtime/ctime/mode/owner/link及配置摘要，每次仍哈希普通CLI；身份漂移
+直接拒绝而非更新cache。发布程序本身的全部SHA/复制/fsync/status深校验、两个4进程CAS、
+所有负例、13个真实角色及最终每份密封字节核对都保留，不提高60秒上限或扩大资源。
+这是测试器减少重复观测，不是发布程序加速比或SLO证明；修正后仍须新原件验收。

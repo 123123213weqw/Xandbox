@@ -38,12 +38,31 @@ def guard():
 def encoded(v):return (json.dumps(v,separators=(',',':'),ensure_ascii=True)+'\n').encode()
 
 
-def assets():
-    guard();value=json.loads((CONFIG/'assets.json').read_bytes())
+ASSET_CACHE=None
+
+
+def source_facts(p):
+    s=p.lstat()
+    if not p.is_absolute() or not stat.S_ISREG(s.st_mode) or s.st_nlink!=1:raise RuntimeError('real single-link regular publication source required')
+    return (s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns,s.st_mode,s.st_uid,s.st_gid,s.st_nlink)
+
+
+def assets(force=False):
+    global ASSET_CACHE
+    guard();raw=(CONFIG/'assets.json').read_bytes();value=json.loads(raw)
     if set(value)!=set(ROLES)|{'release'} or value['release']['path']!=CLI:raise RuntimeError('fixed ordinary publisher inventory required')
+    signature=hashlib.sha256(raw).hexdigest();facts={}
     for name,a in value.items():
-        if set(a)!={'path','sha256'} or not re.fullmatch('[0-9a-f]{64}',a['sha256']) or base.sha(a['path'])!=a['sha256']:raise RuntimeError('actual publication source hash mismatch')
-        if not Path(a['path']).is_absolute() or Path(a['path']).is_symlink() or not stat.S_ISREG(Path(a['path']).stat().st_mode):raise RuntimeError('real regular publication source required')
+        if set(a)!={'path','sha256'} or not re.fullmatch('[0-9a-f]{64}',a['sha256']):raise RuntimeError('fixed publication source hash required')
+        facts[name]=source_facts(Path(a['path']))
+    if ASSET_CACHE is not None and ASSET_CACHE!=(signature,facts):raise RuntimeError('immutable fixture source identity or configuration changed')
+    # This cache removes duplicate TEST observer I/O, not publisher validation.
+    # Actual CLI publish/status still performs its full unchanged verification.
+    # Every call checks all source identities, and always hashes the actual CLI.
+    for name,a in value.items():
+        if ASSET_CACHE is None or force or name=='release':
+            if base.sha(a['path'])!=a['sha256']:raise RuntimeError('actual publication source hash mismatch')
+    if ASSET_CACHE is None:ASSET_CACHE=(signature,facts)
     return value
 
 
@@ -208,6 +227,7 @@ def milestone(stage,row,execution,started):
     view={'stage':stage,'elapsed_ms':int((time.monotonic()-started)*1000),'sandbox_state':'UNAVAILABLE','execution_status':'UNAVAILABLE'}
     try:
         state=ingress.tls_call('GET',base.refpath(row)).get('state')
+        view['sandbox_state']=state if state in {'PREPARING','READY','STOPPING','STOPPED','RECLAIMING','DESTROYED'} else 'OTHER'
         status=ingress.tls_call('GET',base.refpath(row)+'/executions/'+execution).get('status')
         allowed={'PREPARING','READY','RUNNING','STOPPING','STOPPED','RECLAIMING','DESTROYED','EXITED','CANCELLED','FAILED','TIMED_OUT'}
         view['sandbox_state']=state if state in allowed else 'OTHER';view['execution_status']=status if status in allowed else 'OTHER'
@@ -237,7 +257,7 @@ def warm():
     call(p1,2,secrets.token_hex(16),want=1)
     if store(2)!=snapshot:raise RuntimeError('third retained publication grew metadata')
     rename_sync(INCOMING,PARKED);call(p2,1,r2,revision=2,retained=2)
-    drain.state('open',committed);milestone('before_final_busy_check',row,writer['id'],started);drain.busy(row,writer['id'])
+    assets(force=True);drain.state('open',committed);milestone('before_final_busy_check',row,writer['id'],started);drain.busy(row,writer['id'])
     if base.main_identity()!=main or ingress.ingress_identity()!=gateway:raise RuntimeError('artifact publication restarted actual services')
     drain.destroy(row);drain.state('open',committed)
     save(CONFIG/'warm.json',{'snapshot':snapshot,'second_request':r2,'first_request':r1})

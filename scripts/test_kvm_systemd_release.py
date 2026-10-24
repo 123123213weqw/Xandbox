@@ -130,6 +130,24 @@ class ReleaseControls(unittest.TestCase):
         for text in (".get('state')",".get('status')",'elapsed_ms','XANDBOX_RELEASE_PRIVATE_PHASE'):self.assertIn(text,source)
         self.assertNotIn(".get('output')",source);self.assertNotIn('argv',source.split('def milestone',1)[1].split('view=',1)[-1])
         warm=inspect.getsource(guest.warm);self.assertIn("milestone('before_final_busy_check'",warm);self.assertGreaterEqual(warm.count("drain.busy(row,writer['id'])"),2)
+    def test_observer_cache_keeps_all_sources_pinned_and_forced_verification(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);value={}
+            for role in (*guest.ROLES,'release'):
+                p=root/role;p.write_bytes(role.encode());value[role]={'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+            (root/'assets.json').write_text(json.dumps(value));real=guest.base.sha
+            with patch.object(guest,'guard'),patch.object(guest,'CONFIG',root),patch.object(guest,'CLI',value['release']['path']),patch.object(guest,'ASSET_CACHE',None),patch.object(guest.base,'sha',wraps=real) as sha:
+                guest.assets();self.assertEqual(sha.call_count,14)
+                guest.assets();self.assertEqual(sha.call_count,15)
+                guest.assets(force=True);self.assertEqual(sha.call_count,29)
+                p=Path(value['daemon']['path']);p.chmod(0o400)
+                with self.assertRaises(RuntimeError):guest.assets()
+    def test_cache_refuses_configuration_rebind_and_final_force_is_mandatory(self):
+        source=inspect.getsource(guest.assets)
+        self.assertIn('ASSET_CACHE!=(signature,facts)',source);self.assertIn("name=='release'",source)
+        self.assertIn('s.st_ctime_ns',inspect.getsource(guest.source_facts));self.assertIn('s.st_nlink!=1',inspect.getsource(guest.source_facts))
+        self.assertIn('assets(force=True)',inspect.getsource(guest.warm))
+        self.assertIn('base.sha(p)',inspect.getsource(guest.store))
     def test_no_secret_or_control_identity_flags(self):
         for flags in (guest.PROBE_FLAGS,guest.CHECKPOINT_FLAGS,guest.RECOVERY_FLAGS):
             self.assertEqual(len(flags),len(set(flags)))
