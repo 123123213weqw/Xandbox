@@ -147,3 +147,12 @@ sandboxd，且位于 node/control，backend/auth 为清单固定字节的 Runtim
 升级/备份或独立人类操作员。没有以该有限流程替代新 ELF 的25组运行/10组边界/TLS矩阵，
 没有切换时延分位、Stop/GC SLO或任意D-state回收保证。所有原始失败/成功报告与console
 留在私有证据目录；公开摘要只有源/程序摘要、闭集断言和计数，不含凭证或运行态身份。
+
+## 后续 source21bb 重建的8f launcher
+
+独立[ingress启动组件](INGRESS_LAUNCHER.md)复用launch的root FD读取与只读资源校验，新增
+导出入口使普通launcher重建字节改为 `8f612a9d…`，虽然原Run/嵌套创建流程未修改，也不能
+沿用26f3的ELF验收。8f已另完成同一普通UDS/四KVM/Stop-GC/SIGKILL/cold两启动闭集回归，
+独立1 scope/2外层代际全部消失、无补充清理；[新摘要](validation/ingress-component-v1.json)
+明确该profile没有启动新ingressguard或TLS。daemon/gateway等九个既有产物逐字相同；
+此前37个scope仍保留各自原始source/ELF绑定，不重新贴成source21bb的硬件报告。

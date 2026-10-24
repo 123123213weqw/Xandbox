@@ -101,3 +101,23 @@ root/manager/发布流程仍是信任根：配置摘要检查后，gateway 会�
 启动前漂移拒绝且无 TCP child、正常 stop/main crash 与独立 ingress 关闭、key/leaf轮换和
 同盘 cold 恢复。然后补 catalog、可复现安装升级/备份及独立操作员。未做共享 L0 部署修改。
 整体[生产门槛](PRODUCTION.md)仍未完成。
+
+## source21bb 的实际原生检查与普通 launcher 回归
+
+[脱敏摘要](validation/ingress-component-v1.json)保留精确源码/归档/程序与私有原件摘要。
+Go1.27.3 Linux 原生完整 race×3/vet、fixture race×3/vet、CGO-free quota filter×3，
+152项 Python 控制零skip通过；11个 Linux amd64 产物与相同源的交叉构建逐字相同。
+macOS完整race×3/vet/七个mock烟测、依赖校验和Linux arm64新入口交叉构建另通过。
+
+普通 launcher 重建为 `8f612a9d…`；其余九个已有产物（包括普通daemon `5bfb2394…`、
+gateway `41e97356…`、fixture `320109a4…`）与前序对应字节完全相同。新 ingress 入口为
+`cb581237…`。`8f612a9d…` 已另在真实systemd/普通认证UDS→四KVM、busy Stop/GC、
+main SIGKILL/manager清场与重启、原盘cold/旧key410/新guest的既有闭集流程中通过两次L1
+启动；单独1 scope/2个外层代际的root/cgroup/目录独立只读复核均已消失，无补充清理。
+**这个profile没有启动新 ingress guard，也没有经过TLS**，不能把它写成新组合部署通过。
+
+首次离线提取错误地要求冻结harness从不在最终finally输出的console-2和第二cut counter，
+原始失败及文件缺失诊断保留；按实际源的console-1/final-console输出修正提取，不修改任何
+实测原件、不伪造缺失产物、不重跑硬件，不减少receipt/独立路径消失或原语义门禁。
+候选unit在实现期间按官方文档核对，使用实际支持的OOMPolicy=kill，不用不存在的
+MemoryOOMGroup字段代替内核读回。以上仍不改变完整组合/安装/运营门槛未通过的状态。

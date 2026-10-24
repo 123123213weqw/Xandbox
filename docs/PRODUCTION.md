@@ -6,7 +6,7 @@
 
 **开发中，不能按生产隔离服务部署。** 已有 Mock 控制面验收及独立 jailed KVM 组件验收，并新增实验性 Firecracker 服务集成；整体门槛尚未完成。Public 仓库不等于生产就绪。
 
-新增[独立 ingress 启动器](INGRESS_LAUNCHER.md)实现固定清单、只读预算/能力校验及候选unit生成；尚无该组合的真实systemdTLS验收或安装器，不能由已有普通UDS或自定义PID1 TLS报告代签。
+新增[独立 ingress 启动器](INGRESS_LAUNCHER.md)实现固定清单、只读预算/能力校验及候选unit生成；尚无该组合的真实systemdTLS验收或安装器，不能由已有普通UDS或自定义PID1 TLS报告代签。重建的普通launcher8f已另完成UDS/KVM两启动回归及独立2代际清理；此profile没有启动新ingressguard，详见[精确摘要](validation/ingress-component-v1.json)。
 
 当前普通 sandboxd 为新 `5bfb2394…`（SIGTERM注册先于Serve），新增[固定清单 Go 启动器](GO_LAUNCHER.md)
 `26f35a3d…`。真实systemd→普通认证UDS→四并行KVM、busy Stop/GC、main SIGKILL与原盘cold
