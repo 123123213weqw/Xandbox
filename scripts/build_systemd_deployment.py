@@ -11,7 +11,10 @@ MAX_ASSET={'launcher':64<<20,'daemon':64<<20,'warden':32<<20,'firecracker':32<<2
 
 
 def load_assets(path):
-    value=json.loads(Path(path).read_text())
+    return validate_assets(json.loads(Path(path).read_text()))
+
+
+def validate_assets(value):
     if set(value)!=set(ASSETS):raise ValueError('exact frozen deployment assets required')
     for name,asset in value.items():
         if set(asset)!={'path','sha256'} or not re.fullmatch('[0-9a-f]{64}',asset['sha256']):raise ValueError('fixed asset schema required')

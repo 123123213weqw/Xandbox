@@ -18,7 +18,7 @@ import time
 
 from build_systemd_host import build, ROOT_BYTES
 from build_nested_host import digest, validate_manifest
-from kvm_nested_host import JSONSocket, qmp_probe, nested_group_limits, nested_resources, nested_node_resources, replace_private_json, private_group_counters
+from kvm_nested_host import JSONSocket, qmp_probe, nested_group_limits, nested_resources, nested_node_resources, replace_private_json, private_group_counters, nested_ingress_resources
 from kvm_driver_smoke import wait, same_owned_directory
 from kvm_resources import cgroup_empty
 from kvm_snapshot_smoke import private_json
@@ -62,15 +62,29 @@ def validate_deployment_reply(operation,value):
     if extra:assert type(value['instance_capacity']) is int and value['instance_capacity']==4
 
 
+INGRESS_PROBE_FLAGS=('ordinary_tls_firecracker_health','manager_main_is_pinned_gateway','root_and_child_in_separate_exact_ingress_domain','root_three_caps_child_unprivileged_nnp_root_cwd_fds','actual_parent_budgets_and_no_root_tcp_listener','no_mock_or_host_fallback')
+INGRESS_CHECKPOINT_FLAGS=('three_real_preflight_refusals_no_child_or_tcp','four_simultaneous_real_guests_via_tls','two_tenant_auth_quota_and_node_refusals','guest_uid_boot_vmm_caps_filters_and_quota_checked','busy_stop_distinct_from_durable_gc_capacity','reused_slot_fresh_guest_and_workspace','ingress_stop_restart_did_not_stop_busy_guest','live_key_leaf_rotation_two_no_daemon_or_guest_restart','old_token_rejected_on_existing_tls_connection','daemon_sigkill_binds_to_closed_ingress_and_manager_removed_groups','same_policy_daemon_and_gateway_recovered_old_guests_revision_two','old_create_keys_refused410','fresh_live_guest_checkpoint_fsynced','explicit_start_after_backend_ready_not_automatic_install')
+INGRESS_RECOVERY_FLAGS=('original_disk_new_l1_boot_same_machine','gateway_revision_two_leaf_and_new_credentials_survived','old_token_refused401','old_guest_durably_destroyed_and_exact_quota_resources_absent','old_create_key_refused410','new_real_guest_boot_pristine_workspace_and_destroyed','all_four_projects_zero_and_private_generations_absent','manager_clean_stop_removed_both_units_and_inputs','not_installer_catalog_backup_or_production_slo')
+def validate_ingress_reply(operation,value):
+    flags={'ingress-probe':INGRESS_PROBE_FLAGS,'ingress-checkpoint':INGRESS_CHECKPOINT_FLAGS,'ingress-recover':INGRESS_RECOVERY_FLAGS}[operation]
+    assert type(value) is dict and set(value)==set(flags) and all(value[k] is True for k in flags)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('ubuntu','alpine','fixture','warden','source-revision','report','log-dir'):parser.add_argument('--'+name,required=True)
-    parser.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
+    profiles=parser.add_mutually_exclusive_group()
+    profiles.add_argument("--ingress-assets",help="TEST ONLY explicit16GiB/CPU12/24GiB ordinary daemon + separate bounded ingress profile")
+    profiles.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
     args=parser.parse_args();os.umask(0o077)
-    deployment=None
+    deployment=None;ingress=None
     if args.deployment_assets:
         from build_systemd_deployment import load_assets
         deployment=load_assets(args.deployment_assets)
+    if args.ingress_assets:
+        from build_systemd_ingress import load_assets
+        ingress=load_assets(args.ingress_assets)
+    deployed=deployment is not None or ingress is not None
     assert os.geteuid()==0 and os.uname().sysname=='Linux' and os.uname().machine=='x86_64'
     assert len(bytes.fromhex(args.source_revision))==20
     report=Path(args.report).resolve();logs=Path(args.log_dir).resolve()
@@ -79,31 +93,31 @@ def main():
     kernel=Path('/boot/vmlinuz-'+policy['l1_kernel_release'])
     assert digest(kernel)==policy['l1_kernel_sha256'] and digest('/usr/bin/qemu-system-x86_64')==policy['qemu_sha256']
     assert Path('/sys/module/kvm_intel/parameters/nested').read_text().strip() in ('Y','1')
-    assert os.statvfs('/srv').f_bavail*os.statvfs('/srv').f_frsize>(24 if deployment is not None else 8)<<30
+    assert os.statvfs('/srv').f_bavail*os.statvfs('/srv').f_frsize>(48 if ingress is not None else (24 if deployed else 8))<<30
     available=[int(l.split()[1])*1024 for l in Path('/proc/meminfo').read_text().splitlines() if l.startswith('MemAvailable:')]
-    assert len(available)==1 and available[0]>=(32 if deployment is not None else 8)<<30
+    assert len(available)==1 and available[0]>=(64 if ingress is not None else (32 if deployed else 8))<<30
     suffix=secrets.token_hex(3);root=Path('/srv/nh-'+suffix);control=Path('/var/lib/xandbox-nested-proof-'+suffix)
     parent=Path('/sys/fs/cgroup/xandbox-nested-proof-'+suffix);group=parent/secrets.token_hex(32)
-    resources=nested_node_resources(False) if deployment is not None else nested_resources(False);owned={};groups=[];process=None;lifetime=None;channel=None;launcher_log=None
+    resources=nested_ingress_resources() if ingress is not None else (nested_node_resources(False) if deployed else nested_resources(False));owned={};groups=[];process=None;lifetime=None;channel=None;launcher_log=None
     l0_boot=Path('/proc/sys/kernel/random/boot_id').read_bytes()
     def create(path):path.mkdir(mode=0o700);owned[path]=path.stat()
     def ours(path):return same_owned_directory(path,owned.get(path))
     def receipt():
         replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),'cgroup_parent':str(parent),'all_cgroups':[str(g) for g in groups]})
-    result={'test':'owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployment is not None else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive','source_revision':args.source_revision,
+    result={'test':'owned_l1_systemd_separate_ingress_tls_kvm_cold' if ingress is not None else ('owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployed else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive'),'source_revision':args.source_revision,
             'production_ready':False,'sandboxd_deployment_accepted':False,'l2_task_execution_accepted':False,
             'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],
             'resources':resources,'l1_boots':0,'cases':[],'passed':False,'cleanup_confirmed':False,
             'harness_files_sha256':{name:digest(Path(__file__).with_name(name)) for name in
-                (('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')+('build_systemd_deployment.py','systemd_deployment_guest.py') if deployment is not None else ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json'))},
+                (('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')+('build_systemd_deployment.py','systemd_deployment_guest.py')+ (('build_systemd_ingress.py','systemd_ingress_guest.py') if ingress is not None else ()) if deployed else ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json'))},
             'limitations':['Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.',
                            'Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.',
                            'No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private.']}
     try:
         create(root);create(control);receipt()
-        if deployment is not None:
-            result['deployment_assets_sha256']={k:v['sha256'] for k,v in deployment.items()}
-            result['limitations'][0]='Experimental ordinary UDS Go-launcher/unit KVM and cold recovery only; no TLS, catalog, installer, upgrade or independent human operator acceptance.'
+        if deployed:
+            result['deployment_assets_sha256']={k:v['sha256'] for k,v in (ingress if ingress is not None else deployment).items()}
+            result['limitations'][0]='Experimental separate ingress TLS/KVM/cold profile only, explicit operator start after UDS readiness; no automatic combined install, catalog, upgrade, backup, human operator or SLO acceptance.' if ingress is not None else 'Experimental ordinary UDS Go-launcher/unit KVM and cold recovery only; no TLS, catalog, installer, upgrade or independent human operator acceptance.'
         uid=850000+secrets.randbelow(30000)
         try:pwd.getpwuid(uid)
         except KeyError:pass
@@ -112,7 +126,7 @@ def main():
             shutil.copyfile(Path(getattr(args,argument)).resolve(),control/name);(control/name).chmod(0o555)
         shutil.copyfile(kernel,root/'kernel');(root/'kernel').chmod(0o444)
         result['build']=build(ubuntu=Path(args.ubuntu).resolve(),alpine=Path(args.alpine).resolve(),
-                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment)
+                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment,ingress_assets=ingress)
         result['fixture_sha256']=digest(control/'fixture');result['warden_sha256']=digest(control/'warden')
         for path in root.iterdir():os.chown(path,uid,uid);path.chmod(0o600 if path.name=='disk.raw' else 0o400)
         os.chown(root,uid,uid)
@@ -126,7 +140,7 @@ def main():
             launch={'version':1,'root':str(root),'cgroup':str(group),'uid':uid,'kvm_group':os.stat('/dev/kvm').st_gid,
                     'warden':str(control/'warden'),'warden_sha256':result['warden_sha256'],'fixture_sha256':result['fixture_sha256'],
                     'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],'initrd_sha256':result['build']['initrd_sha256']}
-            if deployment is not None:launch['profile']='node-budget-v1'
+            if deployed:launch['profile']='systemd-ingress-v1' if ingress is not None else 'node-budget-v1'
             replace_private_json(cfg,launch)
             for name in ('control.sock','qmp.sock','console.log'):
                 if (root/name).exists():(root/name).unlink()
@@ -141,12 +155,13 @@ def main():
                     assert b'XANDBOX_SYSTEMD_HOST_FAILED' not in p.read_bytes(),'owned systemd operation failed; inspect private console'
                 return p.exists() and b'XANDBOX_SYSTEMD_HOST_READY' in p.read_bytes()
             wait(ready,'owned systemd L1 readiness',seconds=120)
-            qmp_probe(root/'qmp.sock',resources['memory_mib']);channel=JSONSocket(root/'control.sock',210 if deployment is not None else 30)
+            qmp_probe(root/'qmp.sock',resources['memory_mib']);channel=JSONSocket(root/'control.sock',210 if deployed else 30)
             result['l1_boots']+=1
         def request(operation):
             channel.send({'version':1,'operation':operation});reply=channel.read()
             assert reply['ok'] is True,'fixed L1 systemd operation failed; inspect private console'
-            if deployment is not None:validate_deployment_reply(operation,reply['result'])
+            if ingress is not None:validate_ingress_reply(operation,reply['result'])
+            elif deployed:validate_deployment_reply(operation,reply['result'])
             else:validate_reply(operation,reply['result'],result['l1_boots']==2)
             return reply['result']
         def cut():
@@ -160,14 +175,15 @@ def main():
             group.rmdir()
         boot()
         result['cases'].append({'boot':1})
-        for operation in (('deployment-probe','deployment-checkpoint') if deployment is not None else ('probe','reload','stop-restart','checkpoint')):
+        for operation in (('ingress-probe','ingress-checkpoint') if ingress is not None else (('deployment-probe','deployment-checkpoint') if deployed else ('probe','reload','stop-restart','checkpoint'))):
             result['cases'][-1][operation]=request(operation)
         cut();boot()
         result['cases'].append({'boot':2})
-        for operation in (('deployment-probe','deployment-recover') if deployment is not None else ('probe','reload','checkpoint')):
+        for operation in (('ingress-probe','ingress-recover') if ingress is not None else (('deployment-probe','deployment-recover') if deployed else ('probe','reload','checkpoint'))):
             result['cases'][-1][operation]=request(operation)
         result['limited_ordinary_uds_launch_passed']=deployment is not None
-        result['l2_task_execution_accepted']=deployment is not None
+        result['l2_task_execution_accepted']=deployed
+        result['limited_separate_ingress_tls_passed']=ingress is not None
         result['passed']=True
     finally:
         if ours(group):

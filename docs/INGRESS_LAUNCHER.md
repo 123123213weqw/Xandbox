@@ -140,3 +140,5 @@ Linux原生154项Python零skip、8项退出控制及新45轮mock烟测通过，�
 另用实际5bfb/ea48、Linux Go1.27.3、GOMAXPROCS1在有界100次新观测harness调用中完成
 4500次mock重启，84.206秒未复现；这不是原Go1.25 CI环境/退出码/原因的证明，不称flake
 或已修复。未再重复同样的100次实验；后续失败将保留原退出断言并输出闭集元数据。
+
+后续新增[显式16GiB独立systemd ingress fixture](SYSTEMD_INGRESS_FIXTURE.md)，复用候选unit/API并覆盖TLS→KVM与轮换/crash/cold的代码路径；当前只有代码，实机验收尚未通过，不把它当成安装器或旧profile扩容。

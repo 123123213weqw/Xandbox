@@ -363,8 +363,15 @@ NODE_BUDGET_RECOVERY_FLAGS = ('l1_boot_changed','exact_node_policy_and_owner_quo
 
 
 def nested_group_limits(resources):
+    if resources['profile']=='systemd-ingress-v1':
+        if resources!=nested_ingress_resources():raise ValueError('fixed ingress resource envelope required')
+        return {'memory.max':str(18<<30),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'512','cpu.max':'1200000 100000'}
     large=resources['profile'] in ('node-budget-v1','node-snapshot-v1')
     return {'memory.max':str(resources['cgroup_memory_max']),'memory.swap.max':'0','memory.oom.group':'1','pids.max':'256' if large else '128','cpu.max':'800000 100000' if large else '400000 100000'}
+
+
+def nested_ingress_resources():
+    return {'profile':'systemd-ingress-v1','memory_mib':16384,'disk_bytes':24<<30,'cgroup_memory_max':18<<30}
 
 
 def nested_node_resources(snapshot=False):
