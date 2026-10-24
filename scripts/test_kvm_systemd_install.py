@@ -101,6 +101,7 @@ class InstallControls(unittest.TestCase):
     def test_cold_probe_has_no_activation_or_source_regeneration(self):
         s=inspect.getsource(guest.probe)
         self.assertIn('sources_absent()',s);self.assertIn('drain.probe_mode()',s)
+        self.assertLess(s.index('ingress.tls_ready()'),s.index("call('status')"))
         self.assertNotIn('reconcile',s);self.assertNotIn('setup',s);self.assertNotIn('start',s)
         s=inspect.getsource(guest.recover)
         self.assertLess(s.index('probe()'),s.index('drain.restore_and_resume()'))
@@ -122,5 +123,10 @@ class InstallControls(unittest.TestCase):
         self.assertLess(s.index("v['state']!='STOPPED'"),s.index("'install-stopped-still-full'"))
         self.assertLess(s.index("'install-stopped-still-full'"),s.index("'DELETE'"))
         self.assertIn('tenant=tenant',s)
+    def test_boot_failure_sentinel_follows_flushed_diagnostics(self):
+        s=inspect.getsource(guest.failure)
+        self.assertLess(s.index('traceback.print_exc'),s.index('XANDBOX_SYSTEMD_HOST_FAILED'))
+        self.assertLess(s.index("subprocess.run(['journalctl'"),s.index('XANDBOX_SYSTEMD_HOST_FAILED'))
+        self.assertIn('c.flush()',s)
 
 if __name__=='__main__':unittest.main()

@@ -27,6 +27,7 @@ BOOTSTRAP='/usr/libexec/xandbox-install-bootstrap'
 CHECKPOINT=CONFIG/'checkpoint.json'
 ERROR=b'xandbox-install: installation unconfirmed; preserve the exact request and inspect before reconcile\n'
 ROLES=('daemon','firecracker','gateway','ingress','initrd','jailer','kernel','launcher','node','ready','template','warden','workspace')
+PHASE='entry'
 PROBE_FLAGS=('ordinary_install_committed_and_two_services_enabled','fixed_installer_and_same_pid_daemon_ingress_pinned','real_authenticated_tls_health_and_exact_admission','source_inputs_and_bootstrap_not_required_after_commit','not_upgrade_rotation_backup_or_production_slo')
 CHECKPOINT_FLAGS=('actual_installer_killed_before_commit_scratch_creation','uncommitted_start_refused_before_daemon_and_binding','actual_pregate_all_threads_caps_zero_nnp_one_exact_control','actual_nonroot_cli_body_and_bad_source_revision_refusals','same_request_recovered_without_reset_or_repair','four_simultaneous_real_tls_kvm_guests','tenant_node_capacity_and_auth_refusals','busy_stop_distinct_from_durable_reclaim_capacity','ordinary_reconcile_kept_existing_service_identities','source_absent_exact_reconcile_and_conflict_refused','fresh_guest_pristine_after_reuse','original_installed_files_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
 RECOVERY_FLAGS=('original_disk_boot_changed_machine_preserved','installed_commit_and_source_absence_preserved','automatic_two_service_cold_start_without_operator_activation','old_key_refused_and_assigned_guest_not_revived','all_four_project_limits_and_generation_resources_released','manager_clean_stop_removed_domains_and_runtime_inputs')+drain.RECOVERY_FLAGS
@@ -155,8 +156,10 @@ def copy_snapshot(name):
     finally:os.close(fd)
 
 def setup():
+    global PHASE
     guard()
     if CHECKPOINT.exists():bind_observers();return
+    PHASE='source-pins'
     base.STATE=Path('/srv/xi/s');base.RUNTIME=Path('/srv/xi/r')
     programs=json.loads((CONFIG/'programs.json').read_bytes());source=json.loads((CONFIG/'source-assets.json').read_bytes())
     if set(source)!=set(ROLES):raise RuntimeError('fixed real thirteen publisher roles')
@@ -164,11 +167,12 @@ def setup():
         if base.sha(a['path'])!=a['sha256']:raise RuntimeError('frozen original asset mismatch')
     manifest={'version':1,'source_revision':json.loads((CONFIG/'production-source.json').read_bytes())['source_revision'],'toolchain':'go1.27.3','goarch':'amd64','files':[{'role':r,'source':source[r]['path'],'sha256':source[r]['sha256'],'bytes':Path(source[r]['path']).stat().st_size} for r in ROLES]}
     save(CONFIG/'publish.json',manifest)
+    PHASE='publication'
     p=subprocess.run([programs['release']['path'],'publish','-manifest',str(CONFIG/'publish.json'),'-expected-revision','0','-request-id',secrets.token_hex(16)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30)
     if p.returncode or p.stderr:raise RuntimeError('ordinary root publisher failed')
     receipt=json.loads(p.stdout)
     if receipt!={'version':1,'revision':1,'retained':1,'publication_durable':True,'services_changed':False,'production_ready':False}:raise RuntimeError('actual closed publisher commit required')
-    run(programs['setup']['path'],'setup')
+    PHASE='pki';run(programs['setup']['path'],'setup')
     uuid=run('/usr/sbin/blkid','-s','UUID','-o','value','/dev/vda').replace('-','')
     if not re.fullmatch('[0-9a-f]{32}',uuid):raise RuntimeError('real root block UUID required')
     device=str(os.major(os.stat('/').st_dev))+':'+str(os.minor(os.stat('/').st_dev))
@@ -183,22 +187,25 @@ def setup():
     for name,values in {'parent':(15<<29,512,800000,512<<20,16384),'ingress':(512<<20,64,200000,64<<20,2048),'reserve':(2<<30,64,200000,128<<20,4096),'capacity':(12<<30,1024,1200000,1<<30,32768)}.items():
         plan[name]=dict(zip(('memory_max','pids_max','cpu_quota','io_bytes_per_second','io_operations_per_second'),values))
     request=secrets.token_hex(16);save(CONFIG/'request.json',{'request':request});save(CONFIG/'plan.json',plan)
-    call('status',want=1,bootstrap=True,nonroot=True)
+    PHASE='input-negatives';call('status',want=1,bootstrap=True,nonroot=True)
     for kind in ('bad-source','stale-release'):
         bad=json.loads(json.dumps(plan))
         if kind=='bad-source':bad['auth']['sha256']='f'*64
         else:bad['release_revision']=2
         path=CONFIG/(kind+'.json');save(path,bad);call('apply',request,path,want=1,bootstrap=True)
         if (ROOT/'intent.json').exists() or Path('/etc/systemd/system/xandbox.service').exists():raise RuntimeError('invalid input materialized a candidate')
-    interrupt_before_commit(arguments('apply',request,CONFIG/'plan.json',True),str(CONFIG/'trace-child-output'),programs['install']['sha256'],base.sha)
-    pregate_pending()
+    PHASE='commit-interrupt';interrupt_before_commit(arguments('apply',request,CONFIG/'plan.json',True),str(CONFIG/'trace-child-output'),programs['install']['sha256'],base.sha)
+    PHASE='pending-gate';pregate_pending()
+    PHASE='apply-recovery'
     call('apply',request,CONFIG/'plan.json',bootstrap=True)
+    PHASE='observer-snapshots'
     for name in ('backend.json','auth.json','launch.json'):copy_snapshot(name)
     save(CONFIG/'assets.json',assets);save(CONFIG/'ingress-assets.json',{r:assets[r] for r in ('gateway','ingress')});bind_observers()
     call('verify',want=1)
     call('apply','b'*32,CONFIG/'plan.json',want=1)
     call('apply',request,CONFIG/'plan.json')
     # No committed target is modified. Only declared original sources go away.
+    PHASE='source-removal'
     for a in source.values():
         p=Path(a['path'])
         if p.parent!=Path('/srv/install-bootstrap') or base.sha(p)!=a['sha256']:raise RuntimeError('source removal outside exact frozen staging')
@@ -212,7 +219,9 @@ def sources_absent():
     if (CONFIG/'input').exists() or Path('/srv/install-bootstrap').exists() or Path(BOOTSTRAP).exists():raise RuntimeError('original inputs unexpectedly restored')
 
 def probe():
-    bind_observers();sources_absent();call('status');ingress.tls_ready();base.main_identity();ingress.ingress_identity();drain.probe_mode()
+    # On cold boot the independent TEST operator can run before either ordinary
+    # service reaches readiness. Observe bounded TLS health, never activate.
+    bind_observers();sources_absent();ingress.tls_ready();call('status');base.main_identity();ingress.ingress_identity();drain.probe_mode()
     return {k:True for k in PROBE_FLAGS}
 
 def stop_destroy(row,tenant,expect_full=False):
@@ -264,8 +273,11 @@ def recover():
 
 def failure():
     with open('/dev/console','w') as c:
-        c.write('XANDBOX_SYSTEMD_HOST_FAILED installer\n');traceback.print_exc(file=c);c.flush()
+        # The outer boot watcher reacts immediately to the terminal sentinel.
+        # Emit it only AFTER bounded private diagnostics have been flushed.
+        c.write('XANDBOX_INSTALL_PRIVATE_FAILURE phase='+PHASE+'\n');traceback.print_exc(file=c);c.flush()
         subprocess.run(['journalctl','--no-pager','-n','65','-u',base.UNIT,'-u',ingress.UNIT,'-u','xandbox-systemd-operator.service'],stdout=c,stderr=c,timeout=10)
+        c.write('XANDBOX_SYSTEMD_HOST_FAILED installer\n');c.flush()
 
 def entry():
     guard();os.umask(0o077)
