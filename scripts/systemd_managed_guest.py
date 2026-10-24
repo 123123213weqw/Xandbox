@@ -33,6 +33,7 @@ COMMITTED_CHECKPOINT_FLAGS=('own_actual_cli_killed_after_policy2_file_before_ope
 COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','old_key_refused_on_existing_policy3_tls_transport_and_closed','fresh_policy3_tls_and_new_key_accepted_after_expected_401_close','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
 CASE_FLAGS={'supersession-repeat':('unconsumed_file_and_runtime1_old_proposal2_expired_and_source_absent','actual_supersession_a_killed_before_publication_source_and_proposal_data_lost','actual_supersession_b_settled_a_without_ack_and_consumed2_only_once','ordinary_2_to_3_hot_rotation_old_token_refused_on_original_tls2_transport'),'supersession-visible-recovery':('actual_supersession2_fsynced_before_ingress_start_no_ack','actual_replace_refused_reuse_of_published2','actual_recovery3_advanced_installed2_then_new_child_ack'),'hot-rotation':('normal_1_to_2_rotation_retained_original_tls1_transport','normal_2_to_3_rotation_retained_original_tls2_transport','both_normal_rotations_kept_ingress_and_main_incarnations'),'populated-gate':('real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack'),'active-stop':('actual_cli_stopped_active_ingress_old_incarnations_absent','actual_active_stop_to_fresh_epoch3_child_ack')}
 CASE_FLAGS.update({'draft-discard':('actual_nonempty_partial_draft_write_cut_and_source_lost','fresh_candidate_and_wrong_hash_pending_refused_before_draft_clear','actual_present_draft_receipt_removed_true_then_absent_different_hash_false','only_fresh_replacement_consumed2_after_discard_then_normal_hot3'),'draft-discard-cut':('actual_nonempty_partial_draft_cut_and_source_absence_before_unlink_cut','actual_root_directory_fsync_after_draft_unlink_killed_before_receipt','fresh_current_absence_retry_removed_false_not_historic_discard_receipt','unconsumed2_replaced_then_normal_hot3_after_durable_discard_cut')})
+CASE_FLAGS['draft-kernel-guard']=('actual_owned_populated_descendant_refused_draft_discard','actual_empty_frozen_descendant_refused_despite_zero_parent_events','kernel_refusals_preserved_partial_draft_policy_epoch_and_main','same_discard_after_owned_leaf_removal_then_full_replacement_cold_tail')
 CHECKPOINT_FLAGS=COMMON_CHECKPOINT_FLAGS+COMMITTED_CHECKPOINT_FLAGS+CASE_FLAGS['populated-gate']
 
 RECOVERY_FLAGS=('original_disk_new_boot_same_machine','installed_epoch3_and_source_absence_preserved','automatic_cold_tls_epoch3_no_operator_activation','old_guest_recovered_no_implicit_resume_and_old_key_refused','all_four_kernel_projects_and_private_generations_released','manager_clean_stop_removed_both_units_and_inputs')+drain.RECOVERY_FLAGS
@@ -407,7 +408,11 @@ def draft_call(pending,sha,removed=False,want=0):
     started=time.monotonic()
     try:result=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
     finally:private_timing('discard-supersession-draft',time.monotonic()-started)
-    if want==1:return receipt(result,1,1)
+    if want==1:
+        if result.returncode==0:
+            draft_receipt(result,pending,sha,True)
+            raise RuntimeError('negative condition returned actual present draft-clear receipt instead of refusal')
+        return receipt(result,1,1)
     if type(want) is not int or want!=0:raise RuntimeError('closed actual draft outcome required')
     return draft_receipt(result,pending,sha,removed)
 
@@ -434,9 +439,53 @@ def stopped_ingress_busy(row,execution):
     stopped_original_ingress()
 
 
+def draft_kernel_negatives(pending,sha,main_before):
+    # Marked owned L1 ONLY, inert own child only, no task argv or L0 migration.
+    guard();run('systemctl','--job-mode=ignore-dependencies','stop',ingress.UNIT)
+    wait(lambda:run('systemctl','show','--property=MainPID','--value',ingress.UNIT)=='0' and run('systemctl','show','--property=ActiveState','--value',ingress.UNIT) in ('inactive','failed'),15)
+    group=ingress.GROUP
+    if not group.exists():group.mkdir(mode=0o755)
+    leaf=group/'xandbox-owned-draft-negative';leaf.mkdir(mode=0o755)
+    pin=leaf.stat();r,w=os.pipe();pid=os.fork()
+    if pid==0:
+        os.close(w)
+        try:os.read(r,1)
+        finally:os._exit(0)
+    os.close(r);born=identity(pid);reaped=False
+    snapshot={p.name:base.sha(p) for p in ROOT.iterdir() if p.name!='.lock'};durable=Path('/srv/xi/p/policy.json').read_bytes()
+    def unchanged():
+        if {p.name:base.sha(p) for p in ROOT.iterdir() if p.name!='.lock'}!=snapshot or base.sha(ROOT/'.policy-supersession.next')!=sha or Path('/srv/xi/p/policy.json').read_bytes()!=durable or policy_state(1)['revision']!=1 or base.main_identity()!=main_before:raise RuntimeError('kernel refusal changed draft/authority/runtime/main')
+    try:
+        (leaf/'cgroup.procs').write_text(str(pid))
+        if identity(pid)!=born or 'populated 1' not in read(leaf/'cgroup.events') or 'populated 1' not in read(group/'cgroup.events') or read(group/'cgroup.procs').strip():raise RuntimeError('actual descendant-only populated condition required')
+        draft_call(pending,sha,want=1);unchanged()
+        if identity(pid)!=born:raise RuntimeError('owned inert child incarnation changed')
+        os.kill(pid,signal.SIGKILL);got,status=os.waitpid(pid,0);reaped=True
+        os.close(w);w=None
+        if got!=pid or not os.WIFSIGNALED(status) or os.WTERMSIG(status)!=signal.SIGKILL:raise RuntimeError('own inert child not reaped')
+        wait(lambda:set(read(leaf/'cgroup.events').splitlines())=={'populated 0','frozen 0'},5)
+        (leaf/'cgroup.freeze').write_text('1')
+        wait(lambda:set(read(leaf/'cgroup.events').splitlines())=={'populated 0','frozen 1'},5)
+        if set(read(group/'cgroup.events').splitlines())!={'populated 0','frozen 0'} or read(leaf/'cgroup.procs').strip():raise RuntimeError('empty frozen child with unfrozen empty parent required')
+        draft_call(pending,sha,want=1);unchanged()
+    finally:
+        if w is not None:os.close(w)
+        if not reaped:
+            if identity(pid)==born:
+                try:os.kill(pid,signal.SIGKILL)
+                except ProcessLookupError:pass
+            got,status=os.waitpid(pid,0)
+            if got!=pid or not (os.WIFEXITED(status) or os.WIFSIGNALED(status)):raise RuntimeError('own inert child not reaped during cleanup')
+        now=leaf.stat()
+        if (now.st_dev,now.st_ino)!=(pin.st_dev,pin.st_ino):raise RuntimeError('foreign negative leaf must not be modified')
+        (leaf/'cgroup.freeze').write_text('0')
+        wait(lambda:set(read(leaf/'cgroup.events').splitlines())=={'populated 0','frozen 0'},5)
+        leaf.rmdir()
+
+
 def draft_case(case,rows,main_before,ingress_before):
     guard()
-    if case not in ('draft-discard','draft-discard-cut'):raise RuntimeError('closed draft case required')
+    if case not in ('draft-discard','draft-discard-cut','draft-kernel-guard'):raise RuntimeError('closed draft case required')
     pending,drained=unconsumed_prelude(ingress_before)
     first=secrets.token_hex(16)
     proof=trace_policy('replace-pending-policy',first,'rotation-replacement-2a.json',1,'supersession-draft-short',pending)
@@ -453,7 +502,8 @@ def draft_case(case,rows,main_before,ingress_before):
     # Start the original-budget writer AFTER fault creation and negative controls,
     # but BEFORE the actual ingress-only discard under test. No budget increase.
     writer=new_busy_writer(rows[0][0]);drain.busy(rows[0][0],writer['id'])
-    if case=='draft-discard':
+    if case=='draft-kernel-guard':draft_kernel_negatives(pending,proof['sha256'],main_before)
+    if case in ('draft-discard','draft-kernel-guard'):
         draft_call(pending,proof['sha256'],removed=True)
         draft_call(pending,wrong,removed=False)
     else:
@@ -477,7 +527,7 @@ def draft_case(case,rows,main_before,ingress_before):
 
 def new_case(case,rows,main_before,ingress_before):
     guard()
-    if case in ('draft-discard','draft-discard-cut'):return draft_case(case,rows,main_before,ingress_before)
+    if case in ('draft-discard','draft-discard-cut','draft-kernel-guard'):return draft_case(case,rows,main_before,ingress_before)
     if case=='hot-rotation':
         drained=drain.change('drain',drain.state('open')['control']['committed'])
         writer=new_busy_writer(rows[0][0]);drain.busy(rows[0][0],writer['id'])

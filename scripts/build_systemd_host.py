@@ -131,7 +131,7 @@ exec switch_root -c /dev/console /newroot /sbin/init
 
 
 def build(*, ubuntu, alpine, probe, output_disk, output_initrd, deployment_assets=None, ingress_assets=None, readiness_assets=None, release_assets=None, install_assets=None, managed_assets=None, managed_case='populated-gate'):
-    if managed_case not in ('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut') or managed_assets is None and managed_case!='populated-gate':raise ValueError('explicit managed profile required for case selection')
+    if managed_case not in ('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut','draft-kernel-guard') or managed_assets is None and managed_case!='populated-gate':raise ValueError('explicit managed profile required for case selection')
     if sum(a is not None for a in (deployment_assets,ingress_assets,readiness_assets,release_assets,install_assets,managed_assets))>1:raise ValueError("exclusive systemd deployment profile required")
     disk_bytes = 24<<30 if ingress_assets is not None or readiness_assets is not None or release_assets is not None or install_assets is not None or managed_assets is not None else (12<<30 if deployment_assets is not None else ROOT_BYTES)
     lock = json.loads(Path(__file__).with_name('systemd_host_assets.json').read_text())

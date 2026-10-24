@@ -140,7 +140,7 @@ def main():
     profiles.add_argument("--readiness-assets",help="TEST ONLY explicit16GiB automatic readiness/enablement composition; not a release installer")
     profiles.add_argument("--ingress-assets",help="TEST ONLY explicit16GiB/CPU12/24GiB ordinary daemon + separate bounded ingress profile")
     profiles.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
-    parser.add_argument('--managed-case',choices=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut'),help='closed independent managed fixture case, requires --managed-assets')
+    parser.add_argument('--managed-case',choices=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut','draft-kernel-guard'),help='closed independent managed fixture case, requires --managed-assets')
     args=parser.parse_args()
     if args.managed_case is not None and args.managed_assets is None:parser.error('--managed-case requires --managed-assets')
     managed_case=args.managed_case or 'populated-gate';os.umask(0o077)
@@ -279,7 +279,7 @@ def main():
         if managed is not None:
             if managed_case in ('populated-gate','active-stop'):result['limited_managed_v2_committed_recovery_passed']=True
             elif managed_case=='hot-rotation':result['limited_managed_v2_ordinary_hot_rotation_passed']=True
-            elif managed_case in ('draft-discard','draft-discard-cut'):result['limited_managed_v2_named_draft_discard_passed']=True
+            elif managed_case in ('draft-discard','draft-discard-cut','draft-kernel-guard'):result['limited_managed_v2_named_draft_discard_passed']=True
             else:result['limited_managed_v2_named_unconsumed_supersession_passed']=True
         result['passed']=True
     finally:

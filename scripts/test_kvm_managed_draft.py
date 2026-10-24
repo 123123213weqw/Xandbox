@@ -162,4 +162,16 @@ class DraftControls(unittest.TestCase):
         for forbidden in ('subprocess','base.call(','tls_call(','os.system'):self.assertNotIn(forbidden,source)
         self.assertIn('stopped_ingress_busy',inspect.getsource(guest.draft_case))
 
+    def test_kernel_negative_profile_requires_child_frozen_parent_zero_and_exact_receipt_refusal(self):
+        self.assertIn('draft-kernel-guard',builder.MAINTENANCE_CASES)
+        source=inspect.getsource(guest.draft_kernel_negatives)
+        self.assertIn("{'populated 0','frozen 1'}",source);self.assertIn("{'populated 0','frozen 0'}",source)
+        self.assertEqual(source.count('draft_call(pending,sha,want=1)'),2)
+        self.assertLess(source.index('os.kill(pid,signal.SIGKILL)'),source.index('os.close(w);w=None'))
+        self.assertIn('foreign negative leaf must not be modified',source)
+        self.assertIn('leaf.rmdir()',source);self.assertNotIn('ROOT/',source.replace("ROOT/'.policy-supersession.next'",''))
+        result=subprocess.CompletedProcess([],0,json.dumps({'version':1,'revision':1,'pending_request_id':PENDING,'requested_draft_sha256':'c'*64,'draft_removed':True,'draft_absent':True,'ingress_stopped':True,'production_ready':False}).encode(),b'')
+        with patch.object(guest,'guard'),patch.object(guest.base,'sha',return_value='pin'),patch.object(guest.CONFIG.__class__,'read_bytes',return_value=b'{"install":{"sha256":"pin"}}'),patch.object(guest.subprocess,'run',return_value=result),patch.object(guest,'private_timing'):
+            with self.assertRaisesRegex(RuntimeError,'actual present draft-clear receipt instead of refusal'):guest.draft_call(PENDING,'c'*64,want=1)
+
 if __name__=='__main__':unittest.main()

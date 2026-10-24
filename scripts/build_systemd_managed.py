@@ -7,7 +7,7 @@ from build_systemd_install import ASSETS, ROLES, load_assets
 
 MARKER='Xandbox owned managed policy fixture v1\n'
 CONFIG='etc/xandbox-managed-fixture'
-MAINTENANCE_CASES=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut')
+MAINTENANCE_CASES=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut','draft-kernel-guard')
 # The launcher must independently compare every ELF to this source's native
 # qualification. This is a composition pin, not inheritance of an old report.
 PRODUCTION_SOURCE='df679bb868f8fbab68b9b7563b9aee5824ea771e'

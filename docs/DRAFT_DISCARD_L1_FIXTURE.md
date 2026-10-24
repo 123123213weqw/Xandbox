@@ -104,3 +104,14 @@ Two failed predecessors are preserved separately, not counted as accepted:
 All 636 validation files public before this work remain byte-unchanged. These
 new results do **not** complete the negative-kernel (populated/frozen), concurrency,
 storage/media/pressure, full supersession fault matrix or production SLO gates.
+
+## Pending descendant-kernel regression profile
+
+The later `draft-kernel-guard` candidate must separately establish a populated
+**child** while the unit's own `cgroup.procs` is empty, then an empty frozen
+child whose parent reports `populated 0` and `frozen 0`. Both must actually refuse
+discard and leave the draft/intent/policy/runtime/main unchanged. Only an inert
+owned pipe-blocked child is migrated; only the exclusively created fixed test
+leaf is unfrozen/removed. No metadata is removed by the fixture. The same request
+may then run normally and still owes the full original two-boot/TLS/Stop tail.
+This regression is not accepted merely because the two earlier cases passed.
