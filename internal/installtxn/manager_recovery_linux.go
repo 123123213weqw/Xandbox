@@ -17,7 +17,13 @@ func validManagedUnit(o observation, unit string) bool {
 // No file flock is held across this method. The caller's operation EX excludes
 // competing installers until the callback's final ACK/receipt work finishes.
 func (m systemManager) maintainIngress(ctx context.Context, work func() error) error {
-	if work == nil {
+	return m.maintainIngressProof(ctx, work, m.fs.ingressEmpty)
+}
+
+// The public manager always supplies the fixed read-only kernel proof. Tests
+// model that observation, never by fabricating a cgroup on an ordinary FS.
+func (m systemManager) maintainIngressProof(ctx context.Context, work func() error, empty func() error) error {
+	if work == nil || empty == nil {
 		return ErrPolicy
 	}
 	if e := m.enabledLinks(); e != nil {
@@ -72,6 +78,12 @@ func (m systemManager) maintainIngress(ctx context.Context, work func() error) e
 	}
 	if !validManagedUnit(stopped, IngressUnit) || stopped.pid != 0 || stopped.active != "inactive" && stopped.active != "failed" {
 		return ErrInventory
+	}
+	if e = sameMain(); e != nil {
+		return e
+	}
+	if e = empty(); e != nil {
+		return e
 	}
 	if e = sameMain(); e != nil {
 		return e

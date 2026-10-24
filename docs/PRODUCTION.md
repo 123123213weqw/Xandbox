@@ -7,7 +7,7 @@
 
 ## 当前状态
 
-新增[受管策略 v2 软件/原生候选](MANAGED_POLICY_NATIVE.md)，已实现文件事务与实际监督代码连接，但普通 root CLI、真实 TLS/KVM 连续性和冷轮换仍待独立验收。另有过期未 ACK 提交的前向恢复缺口，[状态持久化与整段操作锁地基](POLICY_RECOVERY_FOUNDATION.md)已分离实现，但尚未开放维护命令或完成该恢复流程；不据此勾选生产里程碑，不继承旧 ELF 的硬件报告。
+新增[受管策略 v2 软件/原生候选](MANAGED_POLICY_NATIVE.md)，已实现文件事务与实际监督代码连接，但普通 root CLI、真实 TLS/KVM 连续性和冷轮换仍待独立验收。另有过期未 ACK 提交的前向恢复缺口，[状态持久化与整段操作锁地基](POLICY_RECOVERY_FOUNDATION.md)已分离实现，后续[显式维护恢复候选](MANAGED_POLICY_RECOVERY.md)已接入并正在独立回归，真实维护验收及未提交过期候选恢复仍未完成；不据此勾选生产里程碑，不继承旧 ELF 的硬件报告。
 
 **开发中，不能按生产隔离服务部署。** 已有 Mock 控制面验收及独立 jailed KVM 组件验收，并新增实验性 Firecracker 服务集成；整体门槛尚未完成。Public 仓库不等于生产就绪。
 

@@ -5,6 +5,7 @@ package installtxn
 import (
 	"context"
 	"errors"
+	"golang.org/x/sys/unix"
 	"os"
 	"strings"
 	"testing"
@@ -25,7 +26,7 @@ func managerLinks(t *testing.T, f *filesystem) {
 	}
 }
 func TestRecoveryManagerStopsOnlyIngressAndPinsMainThroughFinalCallback(t *testing.T) {
-	for _, kind := range []string{"active", "already-stopped", "inactive-main", "foreign-main", "foreign-ingress", "foreign-link", "stop-error", "not-stopped", "main-change-after-stop", "main-change-after-work", "work-error"} {
+	for _, kind := range []string{"active", "already-stopped", "inactive-main", "foreign-main", "foreign-ingress", "foreign-link", "stop-error", "not-stopped", "main-change-after-stop", "main-change-after-work", "work-error", "subtree-populated", "subtree-frozen", "events-missing", "fake-kernel-fs"} {
 		t.Run(kind, func(t *testing.T) {
 			f, _, _ := fixture(t)
 			managerLinks(t, f)
@@ -70,12 +71,27 @@ func TestRecoveryManagerStopsOnlyIngressAndPinsMainThroughFinalCallback(t *testi
 				stopped = true
 				return nil, nil
 			}}
-			e := m.maintainIngress(context.Background(), func() error {
+			emptyObserved := false
+			work := func() error {
 				worked = true
 				if kind == "work-error" {
 					return interrupted
 				}
 				return nil
+			}
+			e := m.maintainIngressProof(context.Background(), work, func() error {
+				emptyObserved = true
+				switch kind {
+				case "subtree-populated":
+					return parseIngressEmptyEvents([]byte("populated 1\nfrozen 0\n"))
+				case "subtree-frozen":
+					return parseIngressEmptyEvents([]byte("populated 0\nfrozen 1\n"))
+				case "events-missing":
+					return unix.ENOENT
+				case "fake-kernel-fs":
+					return f.ingressEmpty()
+				}
+				return nil // manager and kernel population are modeled here
 			})
 			wantOK := kind == "active" || kind == "already-stopped"
 			if (e == nil) != wantOK {
@@ -89,10 +105,13 @@ func TestRecoveryManagerStopsOnlyIngressAndPinsMainThroughFinalCallback(t *testi
 					t.Fatal("unsafe precondition reached stop/work")
 				}
 			}
-			if kind == "stop-error" || kind == "not-stopped" || kind == "main-change-after-stop" {
+			if kind == "stop-error" || kind == "not-stopped" || kind == "main-change-after-stop" || kind == "subtree-populated" || kind == "subtree-frozen" || kind == "events-missing" || kind == "fake-kernel-fs" {
 				if worked {
 					t.Fatal("work before stopped/same-main proof")
 				}
+			}
+			if (kind == "active" || kind == "already-stopped") && !emptyObserved {
+				t.Fatal("maintenance bypassed whole-subtree empty proof")
 			}
 			if kind == "already-stopped" && len(mutations) != 0 {
 				t.Fatal("unneeded destructive command")

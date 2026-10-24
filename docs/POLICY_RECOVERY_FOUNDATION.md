@@ -1,6 +1,10 @@
 # Forward policy recovery — persistence and locking foundation only
 
-**Experimental and incomplete. There is no expired-policy recovery command.**
+**Historical foundation checkpoint (source `fc1d709`), experimental and incomplete.**
+At that checkpoint there was no expired-policy recovery command. The subsequent
+[explicit recovery implementation](MANAGED_POLICY_RECOVERY.md) is a new candidate,
+not a re-signing of the foundation evidence. The description below records the
+foundation state, not the later candidate’s command set.
 The [managed v2 candidate](MANAGED_POLICY_NATIVE.md) still cannot supersede an
 installed, never-ACKed policy after its certificate expires. This checkpoint
 provides prerequisites, not a workaround, feature acceptance or production SLO.

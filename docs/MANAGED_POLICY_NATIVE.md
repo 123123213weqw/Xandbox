@@ -1,3 +1,7 @@
+Latest candidate: [explicit ingress-only forward recovery](MANAGED_POLICY_RECOVERY.md)
+is under separate regression/acceptance; the historical native record below does
+not certify that later workflow.
+
 # Managed policy v2 — native candidate, not hardware acceptance
 
 Follow-up: [forward-recovery foundation only](POLICY_RECOVERY_FOUNDATION.md) adds
