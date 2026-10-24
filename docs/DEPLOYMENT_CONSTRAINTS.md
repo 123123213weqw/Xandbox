@@ -1,4 +1,4 @@
-# systemd 部署前置约束（设计审查，未实现/未验收）
+# systemd 部署契约（L1地基通过，生产启动器未实现）
 
 当前没有可按生产部署的 systemd unit/安装器。不能把样例 unit、静态 lint 或已有自定义
 PID1 的 owned-L1 KVM 试验当成独立 systemd 操作员安装/恢复通过。
@@ -15,12 +15,17 @@ ExecReload/ExecStartPost/ExecStop/Post 等控制进程采用 `.control`，不是
 [cgroup delegation](https://systemd.io/CGROUP_DELEGATION/)。
 所以不能直接套上带 ExecStartPre/ExecReload 清理脚本的常见模板。
 
-## 待实施、待实测的契约
+## 已选择的层级与待实施契约
 
-1. 由 systemd 创建并限制委派的专用 service root，不写共享 root/slice 资源设置。
-   单一 ExecStart launcher 位于 `DelegateSubgroup=control`，在同 PID 上验证 manifest、
-   配置摘要、所属层级和精确资源读回，创建/验证本 unit 的 instances 后 exec 普通 daemon。
-   不使用额外 Exec* hooks；配置/密钥管理走单独受控操作流程，不能以 hook 暗增 helper。
+后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已完成独立 operator、实际 `.control`
+reload、严格 node 库存、stop/start 与原盘第二次启动。选择与 OPERATIONS.md 一致的
+**unit root 下再嵌套 node/control、node/instances**，不再把 NodeRoot 直接等同 service root。
+这是对前序单一 ExecStart/unit-root 候选的明确取舍，不代表生产安装器已实现。
+
+1. systemd 管理专用 unit root 的父预算；Go launcher 从 `DelegateSubgroup=bootstrap`
+   开始，在自身 unit 的委派子树中建立/验证 node/control、node/instances，精确读回预算，
+   只移动自身到 node/control 后 exec 普通 daemon。helper 的 `.control` 留在 node 外且受
+   unit 父预算；其生产并发/独立预算仍需验收，不因嵌套而免除资源归属。
 2. manager 与 launcher 各有单一 writer 范围。使用既有 operator config 验证器，不复制一套
    可漂移的准入规则；state/runtime 保持已验收的同 ext4、quota、backing queue 与短 socket 路径要求。
 3. 明确 jailer 所需 capabilities；必须排除可绕过 project quota 的 CAP_SYS_RESOURCE。

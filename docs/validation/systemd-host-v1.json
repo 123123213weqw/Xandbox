@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "production_ready": false,
+  "goal_complete": false,
+  "sandboxd_deployment_accepted": false,
+  "l2_task_execution_accepted": false,
+  "source_revision": "97753b1f963769089266d13c35252580b7e2b9b1",
+  "source_archive_sha256": "e70d321c1fa66a8fc63ccf693f09e47a0177db4be49a3246f9f8eb749e161650",
+  "harness_files_sha256": {
+    "build_systemd_host.py": "5919e79cbbb7c045dcd496e4c77629deaf45c5ffab60d2b390ac6e4e1883fc62",
+    "systemd_delegate_probe.py": "7d32194c2176c21cc2b205b1d92e412e6a33c570c638d47f7523bb66f93eda3f",
+    "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+    "kvm_systemd_host.py": "15b8d72be605a60a09040b4656894083a06ea1c89e477fa4efb6a922fa7dc846",
+    "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925"
+  },
+  "original_report_name": "kvm-systemd-host-v6.json",
+  "original_report_sha256": "80224f8b70aa3db42eb661eb072895028ba5fbe577dd732c81232ebb13682f28",
+  "artifacts_sha256": {
+    "outer_fixture": "b02d69ae99ede4363ad97f9a5713e2c5c0cbcefb2551eea85de304fb11eed0f5",
+    "outer_warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "qemu": "55862c768c21fa7d3e72ca1b24797d8ab5b406eb5ef4c9ab9c2280f4e0b8f330",
+    "l1_kernel": "492fa9eeab6454056d5790adce18c4d5178b4545557a8611f7bbcdaea8856a20",
+    "l1_bootstrap_initrd": "3cff5aee4c13d432df28069d401973c0895411aafac7b733fa303fffe02e7ede"
+  },
+  "l1_boots": 2,
+  "resources": {
+    "profile": "",
+    "memory_mib": 2048,
+    "disk_bytes": 2147483648,
+    "cgroup_memory_max": 3221225472
+  },
+  "ubuntu_rootfs_sha256": "15def31708587e1a6ffc9864caa8203ed81dc0fd68d9aa060e86799bd7ef24bf",
+  "downloaded_device_headers_omitted": 8,
+  "actual_results": [
+    {
+      "boot": 1,
+      "probe": {
+        "all_four_controllers": true,
+        "cap_sys_resource_absent_all_sets": true,
+        "exact_node_control_instances_inventory": true,
+        "exact_resource_readbacks": true,
+        "main_in_nested_node_control": true,
+        "manager_main_pid_verified": true,
+        "nested_kvm_api": 12,
+        "nested_kvm_create_vm_fd_closed": true,
+        "no_new_privileges": true,
+        "node_empty_internal_domains": true,
+        "owned_child_progress": true,
+        "pid1_systemd": true,
+        "runtime_major": 255
+      },
+      "reload": {
+        "main_and_child_still_running": true,
+        "real_exec_reload_helper_in_unit_dot_control_outside_node": true,
+        "strict_node_inventory_unchanged": true
+      },
+      "stop-restart": {
+        "both_old_process_identities_absent": true,
+        "clean_unit_started_without_reset_failed_assumption": true,
+        "fresh_child_progress_and_node_checks": true,
+        "new_main_incarnation_verified": true,
+        "not_production_stop_or_gc_slo": true,
+        "stop_return_ms": 123.531,
+        "unit_cgroup_removed_without_fixture_cleanup": true
+      },
+      "checkpoint": {
+        "boot_changed_vs_previous": false,
+        "checkpoint_fsynced": true,
+        "machine_id_preserved_vs_previous": false,
+        "not_sandbox_lifecycle_recovery": true,
+        "previous_checkpoint_present": false
+      }
+    },
+    {
+      "boot": 2,
+      "probe": {
+        "all_four_controllers": true,
+        "cap_sys_resource_absent_all_sets": true,
+        "exact_node_control_instances_inventory": true,
+        "exact_resource_readbacks": true,
+        "main_in_nested_node_control": true,
+        "manager_main_pid_verified": true,
+        "nested_kvm_api": 12,
+        "nested_kvm_create_vm_fd_closed": true,
+        "no_new_privileges": true,
+        "node_empty_internal_domains": true,
+        "owned_child_progress": true,
+        "pid1_systemd": true,
+        "runtime_major": 255
+      },
+      "reload": {
+        "main_and_child_still_running": true,
+        "real_exec_reload_helper_in_unit_dot_control_outside_node": true,
+        "strict_node_inventory_unchanged": true
+      },
+      "checkpoint": {
+        "boot_changed_vs_previous": true,
+        "checkpoint_fsynced": true,
+        "machine_id_preserved_vs_previous": true,
+        "not_sandbox_lifecycle_recovery": true,
+        "previous_checkpoint_present": true
+      }
+    }
+  ],
+  "native_controls": {
+    "new_tests": 10,
+    "existing_safe_extraction_tests": 3,
+    "all_python_tests": 136,
+    "all_python_skips": 0
+  },
+  "independent_read_only_audit": {
+    "actually_read_only": true,
+    "all_four_runners_absent": true,
+    "defined_resource_paths_absent": true,
+    "outer_generations_absent": 5,
+    "qualified_generations_absent": 2,
+    "failed_generations_absent": 3,
+    "no_supplemental_cleanup": true
+  },
+  "preserved_failed_predecessors": {
+    "3": {
+      "source_revision": "31e5e83b4725aa7ccb29f5301d0b9b1dd09eef6e",
+      "original_report_sha256": "8c5f7276e68cc70a16add73e680815081e85635855a27691fbee765f7613da72",
+      "passed": false,
+      "l1_boots": 1,
+      "retained_step_names": []
+    },
+    "4": {
+      "source_revision": "4d8045bdd26a192fe6e229b14fe3364199c98ee0",
+      "original_report_sha256": "501ec4ce278e5f748ef4ad06216969f2b9131be554e6dc5792793012ce24b502",
+      "passed": false,
+      "l1_boots": 1,
+      "retained_step_names": [
+        [
+          "boot",
+          "probe",
+          "reload"
+        ]
+      ]
+    },
+    "5": {
+      "source_revision": "0548d34926da1e773475199db1b2807b35c6dc4b",
+      "original_report_sha256": "8f1ac6357247895b750f19f9e9385f314a1683cfe919fb6530f90e5ed35f61d1",
+      "passed": false,
+      "l1_boots": 1,
+      "retained_step_names": [
+        [
+          "boot",
+          "probe",
+          "reload"
+        ]
+      ]
+    }
+  },
+  "limitations": [
+    "Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.",
+    "Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.",
+    "No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private.",
+    "Only runtime major255 tested under the one pinned Ubuntu rootfs. No production Go launcher/unit/installer, actual ordinary TLS-to-KVM deployment, backup/upgrade or independent human operator acceptance.",
+    "Private receipts, their hashes, raw console and runtime identities are not published."
+  ]
+}

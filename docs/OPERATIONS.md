@@ -22,7 +22,7 @@ systemd与服务各自管理不同层级：系统管理器拥有委派点及其�
 
 **schema3 NodeRoot不是任意service cgroup的别名。** 当前代码只允许NodeRoot直属目录`control`和`instances`。systemd的某些Exec*辅助命令会在委派service根创建`.control`；`DelegateSubgroup=`也只接收单个名称而非路径，不能写`node/control`。它从systemd254提供，且不替代辅助命令的`.control`行为。[systemd资源控制手册](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#DelegateSubgroup=)描述了这一差异。
 
-一种待实机验收的层级契约是把**节点根再嵌套一层**，而非放宽驱动的未知子树拒绝：
+已在[真实 systemd L1 原语试验](SYSTEMD_HOST_FIXTURE.md)验证下列**节点根再嵌套一层**的基本机制，而非放宽驱动的未知子树拒绝；普通 daemon 部署、Go启动器及完整操作员验收仍未完成：
 
 ```text
 系统管理器拥有：.../<operator-unit>.service       # 委派点；实际名字由节点清单确认
@@ -36,7 +36,7 @@ systemd与服务各自管理不同层级：系统管理器拥有委派点及其�
 
 schema3的catalog管理命令（包括status/gc，不只是publish）也会打开并核验节点包络；从普通SSH/root shell直接运行，不会因是root就免除control位置检查。管理命令需由受信任启动器在同一`node/control`中运行，不能靠更改配置或临时放宽NodeRoot绕过。
 
-操作员的单一、可信启动器需要在准入前完成自己的子树准备与读回，并只将**自身**放入`node/control`后exec daemon。它不能先启动VM再搬PID，不能移动或清理其他服务进程，也不能根据名字猜测遗留资源归属。自动启动器及上述systemd布局**尚未发布/验收**；现有节点实验由独占L1的PID1准备，不证明systemd集成已通过。
+操作员的单一、可信启动器需要在准入前完成自己的子树准备与读回，并只将**自身**放入`node/control`后exec daemon。它不能先启动VM再搬PID，不能移动或清理其他服务进程，也不能根据名字猜测遗留资源归属。生产自动启动器**尚未发布/验收**；后续 systemd255 的 Python TEST probe 仅通过委派/reload/stop与原盘启动原语，不是普通 daemon/TLS/Firecracker 的部署通过。早期自定义 PID1 节点实验也不能替代它。
 
 检查至少覆盖：
 
