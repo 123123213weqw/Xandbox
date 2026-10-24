@@ -109,7 +109,7 @@ def main():
             'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],
             'resources':resources,'l1_boots':0,'cases':[],'passed':False,'cleanup_confirmed':False,
             'harness_files_sha256':{name:digest(Path(__file__).with_name(name)) for name in
-                (('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')+('build_systemd_deployment.py','systemd_deployment_guest.py')+ (('build_systemd_ingress.py','systemd_ingress_guest.py') if ingress is not None else ()) if deployed else ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json'))},
+                (('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')+('build_systemd_deployment.py','systemd_deployment_guest.py')+ (('build_systemd_ingress.py','systemd_ingress_guest.py','ingress_guard_probe.py') if ingress is not None else ()) if deployed else ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json'))},
             'limitations':['Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.',
                            'Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.',
                            'No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private.']}
