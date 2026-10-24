@@ -1,6 +1,7 @@
 # systemd 部署契约（Go启动器已实现，完整部署未验收）
 
-新增[实验性 Go 启动器](GO_LAUNCHER.md)，当前仍没有可按生产部署的 systemd unit/安装器。不能把样例 unit、静态 lint 或已有自定义
+新增[实验性 Go 启动器](GO_LAUNCHER.md)，真实 systemd/普通认证 UDS→KVM 与原盘恢复的
+有限验证已通过；当前仍没有可按生产部署的 systemd unit/安装器。不能把样例 unit、静态 lint 或已有自定义
 PID1 的 owned-L1 KVM 试验当成独立 systemd 操作员安装/恢复通过。
 
 ## 已确认的接口冲突

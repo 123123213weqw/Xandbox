@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "production_ready": false,
+  "goal_complete": false,
+  "sandboxd_deployment_accepted": false,
+  "limited_ordinary_uds_launch_passed": true,
+  "l2_task_execution_accepted": true,
+  "source_revision": "921508dcf73746372f47eb2a3e03e23cdd88f261",
+  "source_archive_sha256": "5200857ab2d82e095f5beaa23ddb45c5c02a38255daa0e3b9785fce59828e5c0",
+  "artifacts_sha256": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "xandbox-launch": "26f35a3df792fb4044b559d8dcbd4e74933105281d24c8f0b0666eb53415588e",
+    "fixture": "b02d69ae99ede4363ad97f9a5713e2c5c0cbcefb2551eea85de304fb11eed0f5",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "deployment_assets_sha256": {
+    "launcher": "26f35a3df792fb4044b559d8dcbd4e74933105281d24c8f0b0666eb53415588e",
+    "daemon": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954"
+  },
+  "native_controls": {
+    "go_source_revision": "e1aec854b63c33396ae6741eefc93b56df503867",
+    "later_cmd_internal_go_mod_go_sum_byte_unchanged": true,
+    "toolchain": "go1.27.3 linux/amd64",
+    "full_go_race_count": 3,
+    "vet": true,
+    "fixture_race_count": 3,
+    "quota_filter_count": 3,
+    "initial_python_tests": 147,
+    "final_python_tests": 150,
+    "python_skips": 0,
+    "mock_process_smokes": 7,
+    "cross_native_ten_artifacts_equal": true
+  },
+  "independent_read_only_audit": {
+    "actually_read_only": true,
+    "all_named_runners_absent": true,
+    "all_declared_root_control_parent_and_generation_paths_absent": true,
+    "scopes": 5,
+    "outer_generations_absent": 7,
+    "no_supplemental_cleanup": true
+  },
+  "preserved_failed_predecessors": {
+    "1": {
+      "source_revision": "e1aec854b63c33396ae6741eefc93b56df503867",
+      "source_archive_sha256": "1dc76694987f8d16c826ae0057660870f0740a0b7f1eb4a6a313928b15a5baa7",
+      "original_report_sha256": "9035de20d4883f7e27b4a9b01588eb43a4c9d9411b49702b850fcb0881382c66",
+      "passed": false,
+      "l1_boots": 1,
+      "acknowledged_steps": [
+        "deployment-probe"
+      ]
+    },
+    "2": {
+      "source_revision": "0200a19a829051ae0ef3fa4b89c178ae99fb5cd4",
+      "source_archive_sha256": "4e419c9838a30f71c08ecb72d52cc64f0276d20e2e276f6381e4c11567809654",
+      "original_report_sha256": "dc1606daf377d72a8d98e4f4f86c90ad80fb80f81882b421dca293032a6b9c5e",
+      "passed": false,
+      "l1_boots": 1,
+      "acknowledged_steps": [
+        "deployment-probe"
+      ]
+    },
+    "3": {
+      "source_revision": "83f205ab178b3badf14a3d720e30e818805ccfac",
+      "source_archive_sha256": "2cde85d95ed1fe80074de8ae0466e65716a9eb74489541d1827ad7b616da6440",
+      "original_report_sha256": "ea3f739990a5c2a601522317e69041400432e8711be4df48d0fe7d98f5ff49e4",
+      "passed": false,
+      "l1_boots": 1,
+      "acknowledged_steps": [
+        "deployment-probe"
+      ]
+    }
+  },
+  "profiles": {
+    "default": {
+      "source_revision": "e1aec854b63c33396ae6741eefc93b56df503867",
+      "original_report_sha256": "9d5150308739c53e6b351611277b447074d769f6e4135d56ac1a02cc93f8b5bd",
+      "l1_boots": 2,
+      "resources": {
+        "profile": "",
+        "memory_mib": 2048,
+        "disk_bytes": 2147483648,
+        "cgroup_memory_max": 3221225472
+      },
+      "harness_files_sha256": {
+        "build_systemd_host.py": "23079177f8db5428e62ac6e5d9a3d3152734362670ed044b40d9c56688fc7c13",
+        "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+        "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+        "kvm_systemd_host.py": "cbe87018b25f5a8522ed1dd8ab7f247fec2f99be0b155634e6a81054e72c1851",
+        "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925"
+      },
+      "actual_results": [
+        {
+          "boot": 1,
+          "probe": {
+            "all_four_controllers": true,
+            "cap_sys_resource_absent_all_sets": true,
+            "exact_node_control_instances_inventory": true,
+            "exact_resource_readbacks": true,
+            "main_in_nested_node_control": true,
+            "manager_main_pid_verified": true,
+            "nested_kvm_api": 12,
+            "nested_kvm_create_vm_fd_closed": true,
+            "no_new_privileges": true,
+            "node_empty_internal_domains": true,
+            "owned_child_progress": true,
+            "pid1_systemd": true,
+            "runtime_major": 255
+          },
+          "reload": {
+            "main_and_child_still_running": true,
+            "real_exec_reload_helper_in_unit_dot_control_outside_node": true,
+            "strict_node_inventory_unchanged": true
+          },
+          "stop-restart": {
+            "both_old_process_identities_absent": true,
+            "clean_unit_started_without_reset_failed_assumption": true,
+            "fresh_child_progress_and_node_checks": true,
+            "new_main_incarnation_verified": true,
+            "not_production_stop_or_gc_slo": true,
+            "stop_return_ms": 113.287,
+            "unit_cgroup_removed_without_fixture_cleanup": true
+          },
+          "checkpoint": {
+            "boot_changed_vs_previous": false,
+            "checkpoint_fsynced": true,
+            "machine_id_preserved_vs_previous": false,
+            "not_sandbox_lifecycle_recovery": true,
+            "previous_checkpoint_present": false
+          }
+        },
+        {
+          "boot": 2,
+          "probe": {
+            "all_four_controllers": true,
+            "cap_sys_resource_absent_all_sets": true,
+            "exact_node_control_instances_inventory": true,
+            "exact_resource_readbacks": true,
+            "main_in_nested_node_control": true,
+            "manager_main_pid_verified": true,
+            "nested_kvm_api": 12,
+            "nested_kvm_create_vm_fd_closed": true,
+            "no_new_privileges": true,
+            "node_empty_internal_domains": true,
+            "owned_child_progress": true,
+            "pid1_systemd": true,
+            "runtime_major": 255
+          },
+          "reload": {
+            "main_and_child_still_running": true,
+            "real_exec_reload_helper_in_unit_dot_control_outside_node": true,
+            "strict_node_inventory_unchanged": true
+          },
+          "checkpoint": {
+            "boot_changed_vs_previous": true,
+            "checkpoint_fsynced": true,
+            "machine_id_preserved_vs_previous": true,
+            "not_sandbox_lifecycle_recovery": true,
+            "previous_checkpoint_present": true
+          }
+        }
+      ],
+      "qemu_sha256": "55862c768c21fa7d3e72ca1b24797d8ab5b406eb5ef4c9ab9c2280f4e0b8f330",
+      "l1_kernel_sha256": "492fa9eeab6454056d5790adce18c4d5178b4545557a8611f7bbcdaea8856a20",
+      "bootstrap_initrd_sha256": "3cff5aee4c13d432df28069d401973c0895411aafac7b733fa303fffe02e7ede",
+      "limitations": [
+        "Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.",
+        "Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.",
+        "No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private."
+      ]
+    },
+    "node": {
+      "source_revision": "921508dcf73746372f47eb2a3e03e23cdd88f261",
+      "original_report_sha256": "186c986bf2de42acf482413791b805307c4c00f181dc46cf68f2f4b64af5879c",
+      "l1_boots": 2,
+      "resources": {
+        "profile": "node-budget-v1",
+        "memory_mib": 8192,
+        "disk_bytes": 12884901888,
+        "cgroup_memory_max": 10737418240
+      },
+      "harness_files_sha256": {
+        "build_systemd_host.py": "23079177f8db5428e62ac6e5d9a3d3152734362670ed044b40d9c56688fc7c13",
+        "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+        "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+        "kvm_systemd_host.py": "cbe87018b25f5a8522ed1dd8ab7f247fec2f99be0b155634e6a81054e72c1851",
+        "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925",
+        "build_systemd_deployment.py": "c6a894b3f8e2b7dea6455306ab4c8ee0e21312d37c38693c95ebc5826766e135",
+        "systemd_deployment_guest.py": "5dfa9fe053ffc5d1b755ffd18616827a763ad44af9f840b725712554a11d2d02"
+      },
+      "actual_results": [
+        {
+          "boot": 1,
+          "deployment-probe": {
+            "immutable_backend_auth_snapshots": true,
+            "instance_capacity": 4,
+            "main_in_nested_control": true,
+            "manager_main_is_pinned_daemon": true,
+            "no_mock_or_host_fallback": true,
+            "ordinary_firecracker_health": true
+          },
+          "deployment-checkpoint": {
+            "busy_stop_separate_from_durable_gc_and_capacity": true,
+            "exact_private_resources_and_quota_released_before_reuse": true,
+            "four_simultaneous_real_kvm_guests": true,
+            "fresh_live_guest_checkpoint_fsynced": true,
+            "fresh_real_guest_after_slot_reuse": true,
+            "guest_uid_boots_and_exact_vmm_elf_caps_filters_checked": true,
+            "live_kernel_project_limits_checked": true,
+            "main_sigkill_manager_killed_unit_and_removed_runtime_inputs": true,
+            "not_tls_or_full_production_deployment": true,
+            "old_create_keys_refused410": true,
+            "same_policy_daemon_recovered_all_four_old_guests": true,
+            "two_tenant_auth_and_node_tenant_refusals": true
+          }
+        },
+        {
+          "boot": 2,
+          "deployment-probe": {
+            "immutable_backend_auth_snapshots": true,
+            "instance_capacity": 4,
+            "main_in_nested_control": true,
+            "manager_main_is_pinned_daemon": true,
+            "no_mock_or_host_fallback": true,
+            "ordinary_firecracker_health": true
+          },
+          "deployment-recover": {
+            "fresh_destroyed_all_four_projects_zero": true,
+            "fresh_real_guest_boot_and_pristine_workspace": true,
+            "l1_boot_changed_same_machine_disk": true,
+            "no_private_generation_cgroups_or_jails": true,
+            "not_tls_or_full_production_deployment": true,
+            "old_key_refused410": true,
+            "old_live_guest_durably_destroyed_exact_resources_quota_absent": true,
+            "original_policy_auth_snapshots_preserved": true
+          }
+        }
+      ],
+      "qemu_sha256": "55862c768c21fa7d3e72ca1b24797d8ab5b406eb5ef4c9ab9c2280f4e0b8f330",
+      "l1_kernel_sha256": "492fa9eeab6454056d5790adce18c4d5178b4545557a8611f7bbcdaea8856a20",
+      "bootstrap_initrd_sha256": "3cff5aee4c13d432df28069d401973c0895411aafac7b733fa303fffe02e7ede",
+      "limitations": [
+        "Experimental ordinary UDS Go-launcher/unit KVM and cold recovery only; no TLS, catalog, installer, upgrade or independent human operator acceptance.",
+        "Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.",
+        "No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private."
+      ]
+    }
+  },
+  "limitations": [
+    "Experimental authenticated ordinary UDS deployment only; not TLS, catalog, installer, upgrade/backup or independent human operator acceptance.",
+    "New sandboxd ELF differs from d163: this profile does not replace full runtime25/boundary10/TLS requalification.",
+    "Bounding ceiling is verified equal to main, not all zero; active/inheritable sets zero and CAP_SYS_RESOURCE absent from all five sets. Preserved v2 confirms original all-five-zero oracle mismatch.",
+    "No latency percentiles or production stop/GC SLO; finite four-guest test on reserved idle-node resources.",
+    "Original a161 macOS CI auth nonzero exit cause remains unknown; independent signal-registration-order fix preserves exit/time limits.",
+    "Private raw console, tokens, refs, boot/process/resource identities and receipts are not published."
+  ]
+}

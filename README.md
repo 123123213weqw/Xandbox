@@ -2,7 +2,7 @@
 
 > 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 
-新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)，普通 sandboxd 信号注册已前移；新 daemon ELF 尚需全量实机复验，不能继承旧矩阵。
+新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新 daemon ELF 尚需全量实机复验，不能继承旧矩阵或宣称完整部署通过。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/TLS部署仍未验收；旧原语报告不代表普通服务部署通过。
 

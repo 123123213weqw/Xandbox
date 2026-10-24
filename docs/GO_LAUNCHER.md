@@ -2,7 +2,8 @@
 
 `cmd/xandbox-launch` / `internal/launch` 新增真实 Linux 启动路径，不再由 Python probe
 代替普通 daemon。它只接受 `xandbox-launch -manifest /absolute/root-owned/launch.json`；
-不接受租户命令、不启动 mock、不提供宿主执行 fallback。非 Linux、非 root、PID1 不是
+不接受租户命令、不启动 mock、不提供宿主执行 fallback。真实普通 UDS→KVM 的有限验收已通过，
+见[脱敏摘要](validation/go-launcher-uds-v1.json)；不是完整生产部署。非 Linux、非 root、PID1 不是
 systemd、任何预检失败都直接退出。完整生产门槛仍未完成。
 
 ## 单一 writer 的层级
@@ -109,3 +110,40 @@ v3（83f205a）通过 capability 检查后，在启动45秒 heartbeat writer 的
 v4 测试创建时显式请求现有上限60000，所有旧 key 重放共用相同 spec；新增纯控制确认
 参数一致性，不扩大生产默认值、不提高执行/Stop/GC 超时。API失败信息现区分整数
 actual/expected状态与frame越界，不回显响应体或凭证。v3原件和清理审计继续保留。
+
+## v4 实际通过的有限普通 UDS 部署
+
+冻结 harness 源 **921508d**，不是把失败报告回写为通过。Go源码与原生构建源 e1aec85 的
+cmd/internal/go.mod/go.sum 逐字相同，十个 Linux amd64 产物的原生/交叉 SHA-256 完全一致。
+新 sandboxd 为 `5bfb2394…`，新 launcher 为 `26f35a3d…`；其余八个产物与前序对应字节相同。
+原生完整 Go race×3、vet、fixture race×3、quota filter×3、七个 mock 进程烟测通过；
+初始147、后续148/149/150个 Linux Python 控制全部通过，零 skip。
+
+真实 systemd 255 管理 Type=exec unit，独立 operator 核对 MainPID 的实际 ELF 就是普通
+sandboxd，且位于 node/control，backend/auth 为清单固定字节的 RuntimeDirectory 副本。
+实际通过以下闭集流程：
+
+1. 两租户共四个同时存活的真实 KVM guest；guest UID65534、四个不同启动身份、
+   精确 VMM ELF、reserved UID、能力/NNP/双 seccomp 以及 live kernel project quota 均核对。
+   验证租户满额429发生时 node 仍有空位，再验证全节点503、跨租户404、未鉴权401。
+2. heartbeat writer 实际推进时 Stop，确认 STOPPED 与 cgroup 空；仍满额503。
+   DELETE202 后只有 durable DESTROYED、私有cgroup/jail/owner消失且 kernel quota八字段全0，
+   才进行新实例复用；新 guest 启动身份不同且没有旧 heartbeat。
+3. 只对 manager MainPID 发 SIGKILL。unit cgroup 与 RuntimeDirectory 由 manager 清除，
+   没有 operator rmdir 补救；重新启动真实 Go launcher，同策略普通 daemon 回收四个旧 guest，
+   核对旧 key410及各私有资源/quota归零，再创建新的真实 guest。
+4. 新 guest 保持 writer 实际运行，健康 checkpoint 与 guest marker 同步；外层切断自己的
+   L1 执行域，原盘第二次启动。核对 L1 boot变化/machine-id保留、旧 guest持久销毁与旧key410，
+   新 guest可执行且没有旧 marker，最终四个 kernel project全0、无私有代际cgroup/jail。
+
+修改后的默认2GiB primitive profile另以原源 e1aec85通过两次启动，组件文件摘要与 v4 相同，
+仍保持它不是 L2 任务验收的原范围，不给历史977报告换标签。
+本批独立只读复核覆盖 **5 scopes / 7个外层代际**：默认通过2、普通部署通过2、失败前序3，
+所有声明root/control/parent/代际cgroup和五个runner均消失，无补充清理。
+前置原生 runner 也已退出；它的首次非特权资产读取失败发生在任何KVM/资源创建之前，
+随后只用既有授权 sudo 路径读取固定资产，不重跑或伪装原生测试。
+
+本次只经认证的私有 UDS，不经 TLS gateway、不含 snapshot/catalog、生产安装器、
+升级/备份或独立人类操作员。没有以该有限流程替代新 ELF 的25组运行/10组边界/TLS矩阵，
+没有切换时延分位、Stop/GC SLO或任意D-state回收保证。所有原始失败/成功报告与console
+留在私有证据目录；公开摘要只有源/程序摘要、闭集断言和计数，不含凭证或运行态身份。
