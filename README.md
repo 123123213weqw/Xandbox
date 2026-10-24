@@ -4,6 +4,8 @@
 
 新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新 daemon ELF 尚需全量实机复验，不能继承旧矩阵或宣称完整部署通过。
 
+[新5bfb全量复验进行中](docs/FIVEB_REQUALIFICATION.md)：首个冷路径30项与两份各9条展开报告已实测/清理复核；新目标九指令只读校准和原生152项Python通过，live trace/25组完整矩阵仍未验收。
+
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/TLS部署仍未验收；旧原语报告不代表普通服务部署通过。
 
 [![CI](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml)

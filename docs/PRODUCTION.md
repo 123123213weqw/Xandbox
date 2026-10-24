@@ -12,6 +12,8 @@
 复验，下文 d163 及更早报告仍为各自历史 ELF，不给新程序代签。完整TLS部署/安装升级/备份和独立
 操作员仍未完成，不据此勾选M1–M4。
 
+[新5bfb复验](FIVEB_REQUALIFICATION.md)现有首个冷scope及离线探针校准的独立新证据；完整25组、10边界和live trace仍在执行，不提前勾选通过。
+
 当前新增生产代码[Version3节点总资源准入](NODE_BUDGET.md)：精确父/控制器cgroup、完整服务计数与恢复库存绑定、保守磁盘/inode余量及有界准备池已实现；新3ea ELF的4真实KVM/漂移拒绝但回收继续/健康同步原盘cold与相关回归通过。仅7 scope/17外层代际的有限基础门槛，不是全部节点压力或完整M2；[新程序DEFAULT/IO全量兼容复验](RUNTIME_REQUALIFICATION.md)已单独通过13个scope，[quota240/双活cold及故障矩阵](QUOTA_REQUALIFICATION.md)也已另通过12个scope/34外层代际；旧522报告不得冒充新ELF认证。
 
 目标：用 Go 实现面向云端短生命周期任务的单节点执行服务，优先验证快速切换、可靠停止和完整回收。第一版不包含 GPU、桌面、跨节点迁移或通用集群调度。
