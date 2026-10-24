@@ -11,6 +11,17 @@ import subprocess
 import tempfile
 import time
 from smoke import UnixHTTP
+from process_exit import require_clean_exit
+
+
+def terminate_cleanly(process, node, state, cycle):
+    process.terminate()
+    try:
+        require_clean_exit(process, node, state)
+    except AssertionError as error:
+        # The shared helper only projects integer status / timeout and closed
+        # diagnostic enums. Never inspect or drain the inherited full streams.
+        raise AssertionError(f'diagnostics restart cycle {cycle}: {error}') from None
 
 
 def main():
@@ -108,7 +119,7 @@ def main():
                 # Independent view works while the actual ordinary writer lives.
                 observed = view()
                 assert observed['observed_sequence'] >= cycle * 3
-                proc.terminate(); assert proc.wait(timeout=10) == 0; proc = None
+                terminate_cleanly(proc, node, state, cycle); proc = None
                 observed = view()
                 assert observed['observed_sequence'] == (cycle + 1) * 3
                 assert observed['records'][-1]['event']['kind'] == 'collector_closed'

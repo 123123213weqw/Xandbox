@@ -38,5 +38,24 @@ class ClosedProcessExitTests(unittest.TestCase):
         def pending(timeout):raise subprocess.TimeoutExpired('unexecuted',timeout)
         with self.assertRaisesRegex(AssertionError,'wait_timeout'):require_clean_exit(SimpleNamespace(wait=pending),'/unexecuted','/private')
 
+    def test_diagnostic_restart_keeps_nonzero_assertion_and_cycle_context(self):
+        from diagnostics_smoke import terminate_cleanly
+        calls=[]
+        process=SimpleNamespace(terminate=lambda:calls.append('terminate'),wait=lambda timeout:1)
+        with patch('process_exit.failure_summary',return_value={'exit_status':1,'closed_records':[]}):
+            with self.assertRaisesRegex(AssertionError,'diagnostics restart cycle 44:.*"exit_status": 1'):
+                terminate_cleanly(process,'/unexecuted','/private',44)
+        self.assertEqual(calls,['terminate'])
+        process=SimpleNamespace(terminate=lambda:None,wait=lambda timeout:0)
+        terminate_cleanly(process,'/unexecuted','/private',0)
+
+    def test_diagnostic_restart_keeps_original_cycles_pipe_and_record_gates(self):
+        import inspect
+        import diagnostics_smoke
+        source=inspect.getsource(diagnostics_smoke.main)
+        for gate in ('range(45)',"os.set_blocking(write_fd, True)","stdout=write_fd, stderr=write_fd",'terminate_cleanly(proc, node, state, cycle)',"observed['observed_sequence'] == (cycle + 1) * 3","observed['observed_sequence'] == 135",'assert total == filled'):
+            self.assertIn(gate,source)
+        self.assertNotIn('assert proc.wait(timeout=10) == 0',source)
+
 
 if __name__=='__main__':unittest.main()

@@ -121,3 +121,16 @@ main SIGKILL/manager清场与重启、原盘cold/旧key410/新guest的既有闭�
 实测原件、不伪造缺失产物、不重跑硬件，不减少receipt/独立路径消失或原语义门禁。
 候选unit在实现期间按官方文档核对，使用实际支持的OOMPolicy=kill，不用不存在的
 MemoryOOMGroup字段代替内核读回。以上仍不改变完整组合/安装/运营门槛未通过的状态。
+
+## a147 CI 的未解决退出问题
+
+a147 的 push CI（run40053194342）五个job通过，Ubuntu/Go1.25的进程烟测在
+`diagnostics_smoke.py` 原45轮的零退出断言失败；失败job120750201332原日志留存私有，
+SHA256 `ad3bf629c6c1e40564c0bfb970200d30da0ea33f15cbd18d3ceb4279e1aa1114`。
+该断言原来未记录实际退出码/闭集原因，**精确原因未知**，不归因到新增ingress、不称已修复。
+
+后续仅让这个harness复用既有`process_exit.require_clean_exit`：仍须10秒内退出0，
+仍45轮/135记录及满管道不读取门禁；失败时补整数cycle、退出状态/超时及最多6条闭集
+kind/reason，不导出stdout/stderr、路径、凭证或时间/记录身份。新增控制确认非零仍失败、
+原计数和管道门禁保留。此修改不改普通daemon或其他生产Go字节；新CI成功也不能回溯
+证明旧失败原因。尚未取得的复现或组合TLS验收不写成通过。
