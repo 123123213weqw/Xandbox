@@ -56,6 +56,8 @@ def configure(root,assets):
     (root/'etc/xandbox-systemd-ingress-fixture').write_text(MARKER)
     source=Path(__file__).with_name('systemd_ingress_guest.py')
     shutil.copyfile(source,root/'opt/xandbox/systemd_ingress_guest.py');(root/'opt/xandbox/systemd_ingress_guest.py').chmod(0o444)
+    probe=Path(__file__).with_name('ingress_guard_probe.py')
+    shutil.copyfile(probe,root/'opt/xandbox/ingress_guard_probe.py');(root/'opt/xandbox/ingress_guard_probe.py').chmod(0o444)
     (root/'etc/systemd/system/multi-user.target.wants/xandbox-deployment-operator.service').unlink()
     (root/'etc/systemd/system/xandbox-ingress-operator.service').write_text(operator_unit())
     (root/'etc/systemd/system/multi-user.target.wants/xandbox-ingress-operator.service').symlink_to('../xandbox-ingress-operator.service')

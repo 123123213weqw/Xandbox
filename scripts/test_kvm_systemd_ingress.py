@@ -102,5 +102,16 @@ class IngressDeploymentControls(unittest.TestCase):
         self.assertIn('owned journal diagnostic unavailable',text)
         self.assertTrue(text.endswith('XANDBOX_SYSTEMD_HOST_FAILED ingress\n'))
 
+    def test_birth_probe_is_guarded_fixed_exec_and_diagnostic_not_qualification(self):
+        import ingress_guard_probe as probe
+        with patch.object(probe,'guard',side_effect=RuntimeError('unmarked')),patch.object(probe.os,'execve') as execute:
+            with self.assertRaises(RuntimeError):probe.observe()
+            execute.assert_not_called()
+        self.assertTrue(guest.GUARD_DIAGNOSTIC_ONLY)
+        source=inspect.getsource(probe.entry)
+        self.assertIn("os.execve('/usr/libexec/xandbox-ingress-launch'",source)
+        self.assertIn('len(sys.argv)!=1',source)
+        self.assertIn('fixed guard birth diagnostic only, never qualification',inspect.getsource(guest.operator))
+
 
 if __name__=='__main__':unittest.main()

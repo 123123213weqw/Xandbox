@@ -75,3 +75,12 @@ primitive与8GiB普通UDS各两启动通过。新16GiB TLS scope在READY前实�
 后续只调整新fixture失败报告顺序：有界traceback/journal先完成，再写终止footer；journal
 超时也必须写footer。旧顺序已有实际RED控制，新顺序控制通过。不改生产程序、预算、能力
 或任何成功断言；**这只是诊断修正，不是已查明/修复的TLS启动根因**。后续须新scope实测。
+
+第二次（78f1fb6）完整诊断确认：第一个故意错误pin负例没有到预期composition阶段，实际
+先在placement阶段失败；该scope仍失败，独立只读复核其一个外层代际/全部声明路径消失。
+尚不能据此判定是cgroup namespace还是capability不符，不能放宽guard或直接改预算。
+
+下一冻结版本临时采用**诊断专用**同PID Python pre-exec observer：只输出位置分类、namespace
+关系可观测性、root UID/GID/NNP布尔值、五个cap bitset与可继承FD计数，再exec固定Go guard。
+不输出PID/cgroup实际路径、凭证或任意用户字段。它改变了候选unit的入口，因此这个模式
+无条件拒绝资格通过；用于获得出生状态后还必须恢复真正candidate入口并另行实测。

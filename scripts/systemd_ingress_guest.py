@@ -30,6 +30,7 @@ HELPER='/usr/libexec/xandbox-deploy-fixture'
 MASK=(1<<6)|(1<<7)|(1<<18)
 UDS_CALL=base.call
 NEGATIVES=False
+GUARD_DIAGNOSTIC_ONLY=True
 
 
 def guard():
@@ -279,6 +280,15 @@ def failure_console():
 def operator():
     global NEGATIVES
     guard();base.setup();run(HELPER,'setup');run('systemctl','daemon-reload');run('systemctl','start',base.UNIT);uds_ready()
+    if GUARD_DIAGNOSTIC_ONLY:
+        unit=Path('/etc/systemd/system')/UNIT;raw=unit.read_bytes()
+        expected=b'ExecStart=/usr/libexec/xandbox-ingress-launch -manifest /etc/xandbox/ingress-launch.json'
+        if raw.count(expected)!=1:raise RuntimeError('fixed diagnostic unit entry required')
+        unit.write_bytes(raw.replace(expected,b'ExecStart=/usr/bin/python3 /opt/xandbox/ingress_guard_probe.py'))
+        run('systemctl','daemon-reload')
+        subprocess.run(['systemctl','start',UNIT],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=20)
+        wait(lambda:run('systemctl','show','--property=MainPID','--value',UNIT)=='0' or tcp()[1],15)
+        raise RuntimeError('fixed guard birth diagnostic only, never qualification')
     if not CHECKPOINT.exists():negative_preflights();NEGATIVES=True
     start_ingress();base.call=tls_call
     fd=os.open('/dev/ttyS1',os.O_RDWR|os.O_NOCTTY);attr=termios.tcgetattr(fd);attr[0]=attr[1]=attr[3]=0;attr[6][termios.VMIN]=1;attr[6][termios.VTIME]=0;termios.tcsetattr(fd,termios.TCSANOW,attr)
