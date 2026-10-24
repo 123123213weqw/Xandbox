@@ -1,0 +1,466 @@
+{
+  "version": 1,
+  "scope": "managed_policy_v2_native_software_candidate_not_root_cli_hardware_acceptance",
+  "source_revision": "d363489ade8b94f03d512ecfd69fc234e5731259",
+  "source_archive_sha256": "ddb007a55b72d3b9bcd07ebb7733a3cc0687735742f414f160439e28a6fe7f04",
+  "native_runner_sha256": "e5e5225e9ba845878ebda804a7b4e70825c302a3732537e1badc9e5811718c1d",
+  "toolchain": "go1.27.3",
+  "source_files": [
+    {
+      "path": "cmd/xandbox-install/main.go",
+      "sha256": "4f6ad1c69e6cdf9f1ca5091fe47ac2cdeda5417e3054db7e2783668c49ab19a2"
+    },
+    {
+      "path": "cmd/xandbox-install/main_test.go",
+      "sha256": "56c480f380a69fee4fc679a5a0472d51202cf4726b6d5d7704e8c75883daec81"
+    },
+    {
+      "path": "internal/gateway/broker_linux.go",
+      "sha256": "d33582aefd35ae1b4b782696186865f85a3e0ac04e9c43443d92dd93b2e92e96"
+    },
+    {
+      "path": "internal/gateway/config_linux.go",
+      "sha256": "ac8e2378a5cef408674dbc0d348e09ca4e13764c354c5f36603a742fec53a586"
+    },
+    {
+      "path": "internal/gateway/envelope_linux.go",
+      "sha256": "cf9cefd36ff63104b8d341492692d2c36347e8533a4594a9b88a700b820d8630"
+    },
+    {
+      "path": "internal/gateway/managed_linux.go",
+      "sha256": "e3f2c95acbc9d4c33da397d1497b53c5bbb3a1b275f0c4f64095ac99edfca296"
+    },
+    {
+      "path": "internal/gateway/managed_linux_test.go",
+      "sha256": "8c93bf5f45d162dae95b4f46834d7547406a5a6b8d64c3969b565455de4e0547"
+    },
+    {
+      "path": "internal/gateway/policy.go",
+      "sha256": "b49e0dbb908b8d3b48178d3b9e569aa8eaf57b761373fb315271818b067d41c0"
+    },
+    {
+      "path": "internal/gateway/state_linux.go",
+      "sha256": "ef3566b1b8b57fd1c2a4789b67c684bf48cbf0246979f6d12b0b007a038898b2"
+    },
+    {
+      "path": "internal/installtxn/crash_linux_test.go",
+      "sha256": "0b8dd7638c48dcb6ef2af80d9f01f162f5e0a04eb3ef10a39bad0d5a3355ab06"
+    },
+    {
+      "path": "internal/installtxn/engine_linux.go",
+      "sha256": "108ffb86457542bf3133226c55a21012fe09001cb7a5afdd291343d4a014f46d"
+    },
+    {
+      "path": "internal/installtxn/managed_linux_test.go",
+      "sha256": "5085f66d51318cdb60d76538c23afacac010c500dc82c91f8cbf0ef4f75b7f6b"
+    },
+    {
+      "path": "internal/installtxn/manager_linux.go",
+      "sha256": "a4e73e69673a80141ed05b527964a68dc78867a64a98a64a9cb672cdd8900cf6"
+    },
+    {
+      "path": "internal/installtxn/manager_linux_test.go",
+      "sha256": "70d290593ebf472eb2c2a6fabc73b3849f3f48f91fae36ad7da9289b58216f52"
+    },
+    {
+      "path": "internal/installtxn/manager_policy_linux.go",
+      "sha256": "8f701f95ddaaf13edb14a0949a2283fd801c8e37527732e627f915d3029d9244"
+    },
+    {
+      "path": "internal/installtxn/payload_linux.go",
+      "sha256": "3701cb412f61309690f5de78bcff543cee4df6cb64e24b0747ba9c26eeaac75e"
+    },
+    {
+      "path": "internal/installtxn/payload_linux_test.go",
+      "sha256": "bb34b4c21ce32092e76aa22a8a591596de0260f1ddd5358d9c7a9c420304e49e"
+    },
+    {
+      "path": "internal/installtxn/plan.go",
+      "sha256": "ac43ba26f836a8e7e3b719bbe246ea690482b97e19be61dbd769cc83d9fe101c"
+    },
+    {
+      "path": "internal/installtxn/plan_test.go",
+      "sha256": "ab999567f8755d70ca78f1e0a95adb8805feaf68fb3a67d78fb4b7db57fef4d4"
+    },
+    {
+      "path": "internal/installtxn/rotation_crash_linux_test.go",
+      "sha256": "417296c034409007899745998768c566481d36e44dbf658ffa9ebefdb7765ea1"
+    },
+    {
+      "path": "internal/installtxn/rotation_linux.go",
+      "sha256": "a9743ab56f703f06c8e8f3286ae8a1774673554b4eb8510d3af81ae5f270331e"
+    },
+    {
+      "path": "internal/installtxn/rotation_linux_test.go",
+      "sha256": "178027fa628f9e34c31b1b1088d8fae129d4ce78075b20db96699ae1cdeb9fae"
+    },
+    {
+      "path": "internal/installtxn/run_linux.go",
+      "sha256": "0ff27952d8582d0f6e948b1e020956edc4e59289237cbb5fbe0a1d7fade2d1e8"
+    },
+    {
+      "path": "internal/installtxn/run_other.go",
+      "sha256": "606fbc9d80b4f5ebd8f81e4bb63e68ae5045e2903b938bcc0d2c2670f78aaa60"
+    },
+    {
+      "path": "internal/policycontrol/operator.go",
+      "sha256": "ec0e37086bf0b0944a09330be01ed074a6510f3cea9962b8b9bcad483270ee89"
+    },
+    {
+      "path": "internal/policycontrol/operator_linux.go",
+      "sha256": "0d5422f2ef151af4c1ba562b2edab5eebbdf8bc3d8c8fe050f85df2a8bc6953b"
+    }
+  ],
+  "composition": {
+    "fresh_opt_in_install_plan_version": 2,
+    "initial_targets": 24,
+    "legacy_plan_version": 1,
+    "legacy_targets": 25,
+    "single_atomic_policy_authority_and_snapshot": true,
+    "initial_commit_rewritten": false,
+    "old_self_pinned_install_upgraded": false,
+    "immutable_backend_node_release_self_bindings_preserved": true
+  },
+  "validation": {
+    "linux_amd64": {
+      "terminal_exit": 0,
+      "runner_observed_gone": true,
+      "full_race_repetitions": 3,
+      "vet_exit": 0,
+      "focused_meaningful_parent_tests": 22,
+      "focused_repetitions": 3,
+      "helper_excluded_from_acceptance": "TestRotationCrashHelper",
+      "new_initial_returned_error_boundaries": 82,
+      "new_initial_boundary_repetitions": 3,
+      "rotation_returned_error_boundaries": 10,
+      "rotation_boundary_repetitions": 3,
+      "actual_rotation_test_process_death_boundaries": 11,
+      "rotation_process_death_repetitions": 3,
+      "initial_process_death_tests_cover_both_plan_versions": true,
+      "four_process_same_and_competing_rotation_cas": true,
+      "host_deploy_install_fixture_race_repetitions_each": 3,
+      "cgo_free_quota_repetitions": 3,
+      "python_tests": 235,
+      "python_skips": 0,
+      "pinned_static_pie_data_parser_enabled": true
+    },
+    "darwin_arm64": {
+      "terminal_exit": 0,
+      "source_header_verified": true,
+      "full_race_repetitions": 3,
+      "vet_exit": 0
+    },
+    "cross_compile": {
+      "five_amd64_artifacts_byte_equal_to_native": [
+        "xandbox-install",
+        "xandbox-gateway",
+        "installtxn.test",
+        "gateway.test",
+        "policycontrol.test"
+      ],
+      "artifacts": [
+        {
+          "name": "gateway.test",
+          "sha256": "cd8e79cc74523abe063d950951cda9fc80e1612e54f1a9ca23bad15d19e5e06e",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "installtxn.test",
+          "sha256": "38b6613ffc21decbb92f6abf4c096523b8e5e03c2f31be1b43b49a607616ce80",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "policycontrol.test",
+          "sha256": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-gateway",
+          "sha256": "0c64d6cbdba411510414a311f23eb90693bb9e324b3fc55287c3593ba3ee6264",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-gateway-arm64",
+          "sha256": "ca2e0aa8afe760fdf88cac9537084ada9c6d45dfef72a4e404004693dd8234b7",
+          "architecture": "arm64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-install",
+          "sha256": "3e0d83de2bc05999d50674b234ea1137e9f04588af0e08a2b3c7e58b5128841b",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-install-arm64",
+          "sha256": "3b21568b20f2cf92a4c35852463b78ac002da247c78e5b9f13d42cdaa3652889",
+          "architecture": "arm64",
+          "executed_on_arm64": false
+        }
+      ],
+      "arm64_execution_claim": false
+    },
+    "artifacts_built": [
+      {
+        "name": "sandboxd",
+        "sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+      },
+      {
+        "name": "xandbox-template",
+        "sha256": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d"
+      },
+      {
+        "name": "xandbox-warden",
+        "sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0"
+      },
+      {
+        "name": "xandbox-node",
+        "sha256": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071"
+      },
+      {
+        "name": "xandbox-gateway",
+        "sha256": "0c64d6cbdba411510414a311f23eb90693bb9e324b3fc55287c3593ba3ee6264"
+      },
+      {
+        "name": "xandbox-launch",
+        "sha256": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c"
+      },
+      {
+        "name": "xandbox-ingress-launch",
+        "sha256": "eee6837f45d03bea71b4c7f19b5b75ea70e4bdb354d305fc71003d18dcf3cc62"
+      },
+      {
+        "name": "xandbox-ready",
+        "sha256": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff"
+      },
+      {
+        "name": "deploy-helper",
+        "sha256": "ead3c34ee4722af45efae21a287b9f5b70bf4d068248b90fc6ee9ea7160e713c"
+      },
+      {
+        "name": "fixture",
+        "sha256": "6f58c312d48e2d783c8198b7cc4fee4ab54a2ee0e85a25fc63640ab92940faac"
+      },
+      {
+        "name": "builder",
+        "sha256": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e"
+      },
+      {
+        "name": "firecracker.test",
+        "sha256": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16"
+      },
+      {
+        "name": "session.test",
+        "sha256": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+      },
+      {
+        "name": "xandbox-release",
+        "sha256": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb"
+      },
+      {
+        "name": "releasestore.test",
+        "sha256": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3"
+      },
+      {
+        "name": "xandbox-install",
+        "sha256": "3e0d83de2bc05999d50674b234ea1137e9f04588af0e08a2b3c7e58b5128841b"
+      },
+      {
+        "name": "installtxn.test",
+        "sha256": "38b6613ffc21decbb92f6abf4c096523b8e5e03c2f31be1b43b49a607616ce80"
+      },
+      {
+        "name": "setup",
+        "sha256": "96127c8d2eb6f9ebece457ce0d66ecf63799a0f840e1a7abd1c47cf0a33ebf91"
+      },
+      {
+        "name": "setup.test",
+        "sha256": "b6a8ff81dae275186a078f28589f35c746c47dfe49710a5be9426360a9333af2"
+      },
+      {
+        "name": "gateway.test",
+        "sha256": "cd8e79cc74523abe063d950951cda9fc80e1612e54f1a9ca23bad15d19e5e06e"
+      },
+      {
+        "name": "policycontrol.test",
+        "sha256": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97"
+      }
+    ],
+    "artifact_delta_from_prior_nineteen": {
+      "unchanged": [
+        "sandboxd",
+        "xandbox-template",
+        "xandbox-warden",
+        "xandbox-node",
+        "xandbox-launch",
+        "xandbox-ready",
+        "builder",
+        "firecracker.test",
+        "session.test",
+        "xandbox-release",
+        "releasestore.test"
+      ],
+      "changed": [
+        "xandbox-gateway",
+        "xandbox-ingress-launch",
+        "deploy-helper",
+        "fixture",
+        "xandbox-install",
+        "installtxn.test",
+        "setup",
+        "setup.test"
+      ],
+      "added": [
+        "gateway.test",
+        "policycontrol.test"
+      ]
+    },
+    "private_evidence": [
+      {
+        "name": "managed-rotation-controls-first-v2.log",
+        "sha256": "2ff2e8a66df69153fced3aaafcd6159e132dcc9f29a3ca58ca2c83b71af09867",
+        "bytes": 30635
+      },
+      {
+        "name": "managed-rotation-controls-v2.log",
+        "sha256": "42b34bc3196bd8e8181de7a8537d6cc865e02441119a05e30dc53f4df2c4ae1a",
+        "bytes": 91490
+      },
+      {
+        "name": "managed-rotation-deploy-v2.log",
+        "sha256": "2993143db39315d26de8fbb05c630c24d4e750044022f3ce46f0c5d5dbe76116",
+        "bytes": 72
+      },
+      {
+        "name": "managed-rotation-full-race-v2.log",
+        "sha256": "e056af21774733b28830c382d7266d7e80307d71de6b56653006be3b82e267b6",
+        "bytes": 2707
+      },
+      {
+        "name": "managed-rotation-host-v2.log",
+        "sha256": "2f5bf34e6c5e4fd008cf42ba0c8f7b634c014107fbb39f1661aa847274b6621b",
+        "bytes": 70
+      },
+      {
+        "name": "managed-rotation-install-v2.log",
+        "sha256": "0783a67018ff4bfea5df393b3e0b2c2f80e3abc14161f9ba43101319d8a85088",
+        "bytes": 73
+      },
+      {
+        "name": "managed-rotation-native-v2.sha256",
+        "sha256": "d7e5340e72cff2d86671b908e35b922a7346a8ed5c7275cd7696728293a98d4a",
+        "bytes": 1683
+      },
+      {
+        "name": "managed-rotation-native-v2.status",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      {
+        "name": "managed-rotation-python-v2.log",
+        "sha256": "1715d8dd58d8928b3c8103cdcb7771dc258a868f6324717d644c4add95f77941",
+        "bytes": 335
+      },
+      {
+        "name": "managed-rotation-quota-v2.log",
+        "sha256": "54694bd2c30ad0f4776e0c036b2478e2b42a6ad244c784c53b5868e218af9a8c",
+        "bytes": 61
+      },
+      {
+        "name": "managed-rotation-vet-v2.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "managed-rotation-native-audit-v2.json",
+        "sha256": "fa114d0abbae9a4e68482565b182eae3ae0e23222b28a66502575991a92d10d0",
+        "bytes": 681
+      },
+      {
+        "name": "managed-rotation-darwin-v2.log",
+        "sha256": "a47d0809d10211c855dfb855990fbaa76c9f6ebc9fc2f6b9f8a9fd9d19d3f66c",
+        "bytes": 2610
+      }
+    ],
+    "successful_predecessor": {
+      "source_revision": "24c2b5025be5dc358fea4ea0be29d08890fbb695",
+      "source_archive_sha256": "e846fb404571d89bca6565dc60576534575f6f6935ce2a56d47d0f43cab6fb2c",
+      "terminal_exit": 0,
+      "original_summary_sha256": "d97f5d682db1d0c76e57e79dbdaca878195bd33ff7044aebd057483c386a6716",
+      "superseded_by_new_actual_run_not_relabelled": true
+    }
+  },
+  "evidence_scope": {
+    "actual_linux_policy_store_io": true,
+    "actual_sealed_memfd_and_inherited_seqpacket_transfer": true,
+    "ack_receiver_modeled": true,
+    "installer_filesystem_root_is_shadow": true,
+    "installer_artifacts_and_manager_responses_modeled": true,
+    "real_test_process_exit_without_defers": true,
+    "returned_error_hooks_are_real_syscall_errors": false,
+    "real_block_device_fault_injection": false,
+    "actual_power_loss": false,
+    "ordinary_root_cli_positive_qualification": false,
+    "actual_runroot_tls_child_positive_qualification": false,
+    "new_systemd_tls_kvm_or_cold_rotation_qualification": false,
+    "changed_artifact_full_runtime_matrix_requalified": false,
+    "historical_hardware_re_signed": false
+  },
+  "historical_proofs_unchanged": [
+    {
+      "path": "docs/validation/diagnostic-cycle-observability-v1.json",
+      "sha256": "6f0efd5a06b46b57483b96f7bd0dc9249a2472386bb71cdf1a8260e003fa21be"
+    },
+    {
+      "path": "docs/validation/initial-install-kvm-v1.json",
+      "sha256": "f4082aa1aa09af21f95bd5afa33dc247e9d1ec580f843067598f0e8a405c9cd6"
+    },
+    {
+      "path": "docs/validation/initial-install-native-v1.json",
+      "sha256": "46d28bac0a0a291af7aa761e56c6abcbcd15c183b3e01b5230d38c69c84100ef"
+    },
+    {
+      "path": "docs/validation/policy-operator-component-v1.json",
+      "sha256": "9a8ef250f6f4567469c8811c8c99dae5f50232f9888b2cb465390a44aeb7ebf4"
+    },
+    {
+      "path": "docs/validation/readiness-drain-v1.json",
+      "sha256": "a75b68e958421ce27366fca6fcc6c3fcd34b69fd7ac7233207c87b59758e3928"
+    },
+    {
+      "path": "docs/validation/release-publisher-kvm-v1.json",
+      "sha256": "da8da5ec61bd694e0a536d683610baa33d430e692f5aa260ecec5037d83b6f9b"
+    },
+    {
+      "path": "docs/validation/release-store-native-v1.json",
+      "sha256": "11ea7ffa0c1afe7ac4baaadd944a16d4e929ebba36e5f91a1c92256a084cb516"
+    },
+    {
+      "path": "docs/validation/service-readiness-v1.json",
+      "sha256": "fc4b03fb8af1c60c0503197b6ea3a22fe3c617c16d904f080bf354072e2c2fac"
+    },
+    {
+      "path": "docs/validation/systemd-ingress-tls-v1.json",
+      "sha256": "c5d5ccfab3363c489ae4ae4fd758340f841518298888f78f9a973bcca20c062b"
+    }
+  ],
+  "claims": {
+    "gateway_supervisor_and_installer_code_wired": true,
+    "software_candidate_native_checked": true,
+    "installed_node_rotation_hardware_accepted": false,
+    "production_ready": false,
+    "goal_complete": false
+  },
+  "remaining_gates": [
+    "Explicit bounded forward recovery after an unacknowledged committed policy expires; current pending-intent API cannot supersede it.",
+    "Owned L1 ordinary root CLI, real TLS child/manager identity, same-transport old-token rejection and new certificate.",
+    "Continuing real KVM writer, unchanged controller/guest identities and persisted drain.",
+    "Real publication/ACK process and filesystem faults, source-independent original-disk cold recovery and independent cleanup.",
+    "Changed runtime and fixture artifacts need new hardware qualification, not old ELF reports.",
+    "Backend authority migration, self-upgrade/rollback, backup/catalog operations, full installation filesystem-fault matrix, audit retention and saturation/SLO."
+  ]
+}

@@ -14,7 +14,7 @@
 
 新增[固定初始安装事务](docs/INITIAL_INSTALL.md)：Go 安装器将已提交 release、25 个固定目标、持久 intent/commit 与服务管理器协调连接起来；[新的真实双启动有限验收](docs/INITIAL_INSTALL_KVM.md)覆盖 cap0 提交前闸门、精确恢复、TLS→四并行 KVM、drain 与缺源冷恢复，并修正 VMM 静态 PIE 校验。7 scopes/8 代际独立核验清理；不继承旧报告，也不是升级、轮换或生产就绪声明。
 
-新增[策略操作控制通道组件](docs/POLICY_OPERATOR_COMPONENT.md)：独立的本地有界协议区分持久策略与子进程 ACK，处理精确重试、对端身份、FD 拒收和限额。当前没有生产命令调用；**尚未接入安装器，也不代表安装后轮换已经支持**。
+[策略通道的历史独立组件验收](docs/POLICY_OPERATOR_COMPONENT.md)之后，新增[受管策略 v2 原生候选](docs/MANAGED_POLICY_NATIVE.md)：接入监督进程、24 目标新安装、原子完整策略授权、CAS 与缺源协调，分别确认文件提交和子进程 ACK。**当前不代表普通 root CLI / TLS-KVM / 冷轮换已经验收；旧 v1 节点不能据此原地升级，仍不可生产部署。**
 
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 

@@ -1,12 +1,13 @@
 # Policy operator transport — component only
 
-**Not installed-node rotation.** `internal/policycontrol` is an independent,
-currently unused building block. No existing command imports it, `RunRoot` does
-not start it, and the v1 installer still accepts only its original immutable
-25-target installation. Do not create the reserved runtime socket, alter the
-install commit, replace pinned TLS files, or replay SIGHUP to use this component.
-The [ordinary initial-install KVM evidence](INITIAL_INSTALL_KVM.md) remains bound
-to its original source and artifacts; it is not a rotation or upgrade receipt.
+This is the historical independent transport checkpoint at
+`f74ac631a02b44e074cc6d6448881ec64fdc2e15`: at that source, no production command
+imported this module. The [new managed v2 native candidate](MANAGED_POLICY_NATIVE.md)
+now wires it to gateway/installation code, but has no new root CLI/TLS/KVM/cold
+rotation acceptance. The component record below is not re-signed as integration
+or hardware proof. The [ordinary initial-install KVM evidence](INITIAL_INSTALL_KVM.md)
+also retains its original source and artifacts. Do not manually replace pinned
+TLS files, rewrite the install commit or replay SIGHUP to perform managed rotation.
 
 ## Why a separate operator channel
 
@@ -89,8 +90,9 @@ Their supervisor, durable progress and ACKs are **synthetic**; no policy-store
 commit, `RunRoot` integration, root fixed-path positive test, real frontend ACK,
 installed root CLI, KVM continuity or cold rotation is asserted.
 
-The 19 artifacts in the prior installer qualification are rebuilt and compared,
-rather than treating new component tests as new KVM evidence. Historical hardware proofs remain unchanged.
+At that historical component checkpoint, the 19 prior installer-qualification
+artifacts were rebuilt byte-identically. This does not describe the new managed
+runtime binaries. Historical hardware proofs remain unchanged.
 
 ## Next required integration gates
 
