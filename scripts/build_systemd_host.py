@@ -130,7 +130,8 @@ exec switch_root -c /dev/console /newroot /sbin/init
 '''
 
 
-def build(*, ubuntu, alpine, probe, output_disk, output_initrd):
+def build(*, ubuntu, alpine, probe, output_disk, output_initrd, deployment_assets=None):
+    disk_bytes = 12<<30 if deployment_assets is not None else ROOT_BYTES
     lock = json.loads(Path(__file__).with_name('systemd_host_assets.json').read_text())
     policy = json.loads(Path(__file__).with_name('nested_host_assets.json').read_text())
     validate_manifest(policy)
@@ -148,8 +149,11 @@ def build(*, ubuntu, alpine, probe, output_disk, output_initrd):
             source.extractall(root, members=regular, filter=safe_guest_filter)
         root.chmod(0o755)
         configure_root(root, probe)
+        if deployment_assets is not None:
+            from build_systemd_deployment import configure
+            configure(root, deployment_assets)
         with output_disk.open('xb') as out:
-            os.posix_fallocate(out.fileno(), 0, ROOT_BYTES); os.fsync(out.fileno())
+            os.posix_fallocate(out.fileno(), 0, disk_bytes); os.fsync(out.fileno())
         subprocess.run(['mke2fs', '-q', '-t', 'ext4', '-F', '-m', '0', '-O', 'project,quota', '-E',
                         'root_owner=0:0,quotatype=prjquota', '-I', '256', '-b', '4096', '-d', str(root), str(output_disk)],
                        check=True, timeout=120)
@@ -180,6 +184,6 @@ def build(*, ubuntu, alpine, probe, output_disk, output_initrd):
             with output_initrd.open('xb') as out:
                 with gzip.GzipFile(filename='',fileobj=out,mode='wb',mtime=0) as packed: shutil.copyfileobj(cpio,packed)
                 out.flush();os.fsync(out.fileno())
-    return {'test_only':True,'rootfs_sha256':lock['rootfs_sha256'],'root_disk_bytes':ROOT_BYTES,'downloaded_device_headers_omitted':omitted_devices,
+    return {'test_only':True,'rootfs_sha256':lock['rootfs_sha256'],'root_disk_bytes':disk_bytes,'downloaded_device_headers_omitted':omitted_devices,
             'initrd_sha256':digest(output_initrd),'probe_sha256':digest(probe),'kernel_sha256':policy['l1_kernel_sha256'],
             'host_chroot_or_guest_execution':False,'host_mount_or_service_or_module_change':False}

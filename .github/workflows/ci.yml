@@ -58,11 +58,12 @@ jobs:
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py
           python3 -m unittest discover -s scripts -p test_guest_fault_fixture.py
+          python3 -m unittest discover -s scripts -p test_process_exit.py
           python3 -m py_compile scripts/kvm_mixed_load.py scripts/kvm_resources.py
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
           python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
-          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py
+          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/process_exit.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
@@ -86,6 +87,7 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxd-$arch" ./cmd/sandboxd
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxctl-$arch" ./cmd/sandboxctl
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-node-$arch" ./cmd/xandbox-node
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-launch-$arch" ./cmd/xandbox-launch
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-keygen-$arch" ./cmd/xandbox-keygen
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-agent-$arch" ./cmd/xandbox-agent
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-warden-$arch" ./cmd/xandbox-warden

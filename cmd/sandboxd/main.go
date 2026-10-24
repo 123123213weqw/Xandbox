@@ -365,10 +365,12 @@ func runArgs(args []string) (retErr error) {
 		ReadTimeout: 10 * time.Second, WriteTimeout: writeTimeout,
 		IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192,
 	}
-	serveErr := make(chan error, 1)
-	go func() { serveErr <- server.Serve(listener) }()
+	// Install termination handling before any request can be served. A health
+	// response must not race the default SIGTERM action during startup.
 	signalCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- server.Serve(listener) }()
 	if *backend == "mock" {
 		slog.Warn("MOCK BACKEND: lifecycle simulation only; no sandbox isolation or host shell", "socket", socket)
 	} else {

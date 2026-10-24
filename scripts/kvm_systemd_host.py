@@ -2,7 +2,8 @@
 """TEST ONLY real systemd delegation/stop/cold primitive inside an owned KVM L1.
 
 Reuses the existing hash-pinned, UID/netns/cgroup/lease-bounded QEMU launcher.
-No sandboxd deployment, L2 workload, physical media fault or production SLO claim.
+Explicit opt-in ordinary UDS deployment profile is separate from the legacy
+primitive; neither is a full production deployment or SLO certification.
 """
 import argparse
 import hashlib
@@ -17,7 +18,7 @@ import time
 
 from build_systemd_host import build, ROOT_BYTES
 from build_nested_host import digest, validate_manifest
-from kvm_nested_host import JSONSocket, qmp_probe, nested_group_limits, nested_resources, replace_private_json, private_group_counters
+from kvm_nested_host import JSONSocket, qmp_probe, nested_group_limits, nested_resources, nested_node_resources, replace_private_json, private_group_counters
 from kvm_driver_smoke import wait, same_owned_directory
 from kvm_resources import cgroup_empty
 from kvm_snapshot_smoke import private_json
@@ -50,10 +51,26 @@ def validate_reply(operation,value,second_boot=False):
     else:raise ValueError('fixed systemd primitive operation required')
 
 
+DEPLOYMENT_PROBE_FLAGS=('ordinary_firecracker_health','manager_main_is_pinned_daemon','main_in_nested_control','immutable_backend_auth_snapshots','no_mock_or_host_fallback')
+DEPLOYMENT_CHECKPOINT_FLAGS=('four_simultaneous_real_kvm_guests','guest_uid_boots_and_exact_vmm_elf_caps_filters_checked','live_kernel_project_limits_checked','two_tenant_auth_and_node_tenant_refusals','busy_stop_separate_from_durable_gc_and_capacity','exact_private_resources_and_quota_released_before_reuse','fresh_real_guest_after_slot_reuse','main_sigkill_manager_killed_unit_and_removed_runtime_inputs','same_policy_daemon_recovered_all_four_old_guests','old_create_keys_refused410','fresh_live_guest_checkpoint_fsynced','not_tls_or_full_production_deployment')
+DEPLOYMENT_RECOVERY_FLAGS=('l1_boot_changed_same_machine_disk','original_policy_auth_snapshots_preserved','old_live_guest_durably_destroyed_exact_resources_quota_absent','old_key_refused410','fresh_real_guest_boot_and_pristine_workspace','fresh_destroyed_all_four_projects_zero','no_private_generation_cgroups_or_jails','not_tls_or_full_production_deployment')
+def validate_deployment_reply(operation,value):
+    assert type(value) is dict
+    flags={'deployment-probe':DEPLOYMENT_PROBE_FLAGS,'deployment-checkpoint':DEPLOYMENT_CHECKPOINT_FLAGS,'deployment-recover':DEPLOYMENT_RECOVERY_FLAGS}[operation]
+    extra={'instance_capacity'} if operation=='deployment-probe' else set()
+    assert set(value)==set(flags)|extra and all(value[k] is True for k in flags)
+    if extra:assert type(value['instance_capacity']) is int and value['instance_capacity']==4
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('ubuntu','alpine','fixture','warden','source-revision','report','log-dir'):parser.add_argument('--'+name,required=True)
+    parser.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
     args=parser.parse_args();os.umask(0o077)
+    deployment=None
+    if args.deployment_assets:
+        from build_systemd_deployment import load_assets
+        deployment=load_assets(args.deployment_assets)
     assert os.geteuid()==0 and os.uname().sysname=='Linux' and os.uname().machine=='x86_64'
     assert len(bytes.fromhex(args.source_revision))==20
     report=Path(args.report).resolve();logs=Path(args.log_dir).resolve()
@@ -62,28 +79,31 @@ def main():
     kernel=Path('/boot/vmlinuz-'+policy['l1_kernel_release'])
     assert digest(kernel)==policy['l1_kernel_sha256'] and digest('/usr/bin/qemu-system-x86_64')==policy['qemu_sha256']
     assert Path('/sys/module/kvm_intel/parameters/nested').read_text().strip() in ('Y','1')
-    assert os.statvfs('/srv').f_bavail*os.statvfs('/srv').f_frsize>8<<30
+    assert os.statvfs('/srv').f_bavail*os.statvfs('/srv').f_frsize>(24 if deployment is not None else 8)<<30
     available=[int(l.split()[1])*1024 for l in Path('/proc/meminfo').read_text().splitlines() if l.startswith('MemAvailable:')]
-    assert len(available)==1 and available[0]>=8<<30
+    assert len(available)==1 and available[0]>=(32 if deployment is not None else 8)<<30
     suffix=secrets.token_hex(3);root=Path('/srv/nh-'+suffix);control=Path('/var/lib/xandbox-nested-proof-'+suffix)
     parent=Path('/sys/fs/cgroup/xandbox-nested-proof-'+suffix);group=parent/secrets.token_hex(32)
-    resources=nested_resources(False);owned={};groups=[];process=None;lifetime=None;channel=None;launcher_log=None
+    resources=nested_node_resources(False) if deployment is not None else nested_resources(False);owned={};groups=[];process=None;lifetime=None;channel=None;launcher_log=None
     l0_boot=Path('/proc/sys/kernel/random/boot_id').read_bytes()
     def create(path):path.mkdir(mode=0o700);owned[path]=path.stat()
     def ours(path):return same_owned_directory(path,owned.get(path))
     def receipt():
         replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),'cgroup_parent':str(parent),'all_cgroups':[str(g) for g in groups]})
-    result={'test':'owned_l1_systemd_delegation_reload_stop_and_cold_primitive','source_revision':args.source_revision,
+    result={'test':'owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployment is not None else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive','source_revision':args.source_revision,
             'production_ready':False,'sandboxd_deployment_accepted':False,'l2_task_execution_accepted':False,
             'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],
             'resources':resources,'l1_boots':0,'cases':[],'passed':False,'cleanup_confirmed':False,
             'harness_files_sha256':{name:digest(Path(__file__).with_name(name)) for name in
-                ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')},
+                (('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')+('build_systemd_deployment.py','systemd_deployment_guest.py') if deployment is not None else ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json'))},
             'limitations':['Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.',
                            'Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.',
                            'No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private.']}
     try:
         create(root);create(control);receipt()
+        if deployment is not None:
+            result['deployment_assets_sha256']={k:v['sha256'] for k,v in deployment.items()}
+            result['limitations'][0]='Experimental ordinary UDS Go-launcher/unit KVM and cold recovery only; no TLS, catalog, installer, upgrade or independent human operator acceptance.'
         uid=850000+secrets.randbelow(30000)
         try:pwd.getpwuid(uid)
         except KeyError:pass
@@ -92,7 +112,7 @@ def main():
             shutil.copyfile(Path(getattr(args,argument)).resolve(),control/name);(control/name).chmod(0o555)
         shutil.copyfile(kernel,root/'kernel');(root/'kernel').chmod(0o444)
         result['build']=build(ubuntu=Path(args.ubuntu).resolve(),alpine=Path(args.alpine).resolve(),
-                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz')
+                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment)
         result['fixture_sha256']=digest(control/'fixture');result['warden_sha256']=digest(control/'warden')
         for path in root.iterdir():os.chown(path,uid,uid);path.chmod(0o600 if path.name=='disk.raw' else 0o400)
         os.chown(root,uid,uid)
@@ -106,6 +126,7 @@ def main():
             launch={'version':1,'root':str(root),'cgroup':str(group),'uid':uid,'kvm_group':os.stat('/dev/kvm').st_gid,
                     'warden':str(control/'warden'),'warden_sha256':result['warden_sha256'],'fixture_sha256':result['fixture_sha256'],
                     'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],'initrd_sha256':result['build']['initrd_sha256']}
+            if deployment is not None:launch['profile']='node-budget-v1'
             replace_private_json(cfg,launch)
             for name in ('control.sock','qmp.sock','console.log'):
                 if (root/name).exists():(root/name).unlink()
@@ -120,12 +141,13 @@ def main():
                     assert b'XANDBOX_SYSTEMD_HOST_FAILED' not in p.read_bytes(),'owned systemd operation failed; inspect private console'
                 return p.exists() and b'XANDBOX_SYSTEMD_HOST_READY' in p.read_bytes()
             wait(ready,'owned systemd L1 readiness',seconds=120)
-            qmp_probe(root/'qmp.sock',2048);channel=JSONSocket(root/'control.sock',30)
+            qmp_probe(root/'qmp.sock',resources['memory_mib']);channel=JSONSocket(root/'control.sock',210 if deployment is not None else 30)
             result['l1_boots']+=1
         def request(operation):
             channel.send({'version':1,'operation':operation});reply=channel.read()
             assert reply['ok'] is True,'fixed L1 systemd operation failed; inspect private console'
-            validate_reply(operation,reply['result'],result['l1_boots']==2)
+            if deployment is not None:validate_deployment_reply(operation,reply['result'])
+            else:validate_reply(operation,reply['result'],result['l1_boots']==2)
             return reply['result']
         def cut():
             nonlocal process,lifetime,channel,launcher_log
@@ -138,12 +160,14 @@ def main():
             group.rmdir()
         boot()
         result['cases'].append({'boot':1})
-        for operation in ('probe','reload','stop-restart','checkpoint'):
+        for operation in (('deployment-probe','deployment-checkpoint') if deployment is not None else ('probe','reload','stop-restart','checkpoint')):
             result['cases'][-1][operation]=request(operation)
         cut();boot()
         result['cases'].append({'boot':2})
-        for operation in ('probe','reload','checkpoint'):
+        for operation in (('deployment-probe','deployment-recover') if deployment is not None else ('probe','reload','checkpoint')):
             result['cases'][-1][operation]=request(operation)
+        result['limited_ordinary_uds_launch_passed']=deployment is not None
+        result['l2_task_execution_accepted']=deployment is not None
         result['passed']=True
     finally:
         if ours(group):

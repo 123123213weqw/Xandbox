@@ -216,11 +216,18 @@ def operator():
             raise
 
 
-if __name__=='__main__':
+def entry(mode):
     modes={'main':main_service,'writer':writer,'reload':reload_service,'operator':operator}
-    if len(sys.argv)!=2 or sys.argv[1] not in modes:raise SystemExit('fixed owned L1 mode required')
-    try:modes[sys.argv[1]]()
+    if mode not in modes:raise SystemExit('fixed owned L1 mode required')
+    # Guard outside the diagnostic handler: an unmarked host must never open
+    # /dev/console merely because its guard failed.
+    guard()
+    try:modes[mode]()
     except Exception:
-        if sys.argv[1]=='operator':
-            failure_console('startup-or-unhandled')
+        if mode=='operator':failure_console('startup-or-unhandled')
         raise
+
+
+if __name__=='__main__':
+    if len(sys.argv)!=2:raise SystemExit('fixed owned L1 mode required')
+    entry(sys.argv[1])
