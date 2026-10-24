@@ -16,6 +16,7 @@ build:
 	go build -o "$(BIN_DIR)/xandbox-launch" ./cmd/xandbox-launch
 	go build -o "$(BIN_DIR)/xandbox-ingress-launch" ./cmd/xandbox-ingress-launch
 	CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-ready" ./cmd/xandbox-ready
+	CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-release" ./cmd/xandbox-release
 
 	go build -o "$(BIN_DIR)/xandbox-keygen" ./cmd/xandbox-keygen
 	go build -o "$(BIN_DIR)/xandbox-guestctl" ./cmd/xandbox-guestctl

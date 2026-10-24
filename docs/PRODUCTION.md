@@ -34,6 +34,8 @@
 
 部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。[systemd接口冲突与部署契约](DEPLOYMENT_CONSTRAINTS.md)记录 `.control` 边界；后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已通过两次启动、独立 operator/委派/reload/stop-start，136项原生Python零skip及含失败前序5代际只读复核。选择 nested node 布局，后续Go启动器与普通UDS/KVM有限通过见上方新报告；自动安装仍未完成；自动readiness与TLS→KVM有限组合已另取上方独立证据，不据此勾选M4。
 
+新增[有界发布物仓库](RELEASE_STORE.md)作为安装事务地基：固定清单复制/密封、持久意图及CAS发布引用、精确重试和中断恢复代码已加入；没有unit/服务变更，也尚无privileged CLI/owned-L1安装验收，不勾选安装或升级门槛。
+
 ## 信任与隔离边界
 
 新增[独立TLS接入与凭证边界](TLS_GATEWAY.md)：新gateway程序实际完成专用UID/caps0/NNP/chroot/cwd/继承FD及root无TCP核对、真实双租户TLS→KVM、外部key/leaf持久轮换、无效reload/旧revision拒绝、健康同盘cold与普通schema3回归。当前0b源含持久lock标记修正，另行通过2scope/4次启动；bootstrap记录丢失仅有原生unit失败对照与修正回归，不宣称物理丢失故障已测。普通4ee五个ELF不变，各前序false/冻结源保留。此有限子门槛不勾选完整M4；PKI/分发、policy提交故障、资源/日志/审计、真实operator部署与长负载尚未完成。
