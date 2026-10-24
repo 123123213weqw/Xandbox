@@ -42,3 +42,23 @@
 
 上述是新增代码与验收门槛，不是已经通过的实机结果。仍不等于生产安装事务、catalog、
 升级回滚/备份、可靠审计/长期元数据治理、人类operator、饱和负载或停止/回收/切换SLO通过。
+
+## 失败前序与验证路径修正（新实机仍待执行）
+
+首个编排脚本在创建任何L1之前，用非root身份重复读取root-private workspace摘要而被拒。
+未改资产权限或共享L0设置；保留失败脚本/原件，后续只复制清单，由原有sudo KVM parser在
+任何L1创建前逐项验证13个角色/摘要。该编排失败不是一个额外KVM scope。
+
+`a8ccb5a`首个真正L1在warm session检查失败：测试复用了plain sandbox exec来验证managed
+session目标，得到正确的409。生产 `sandbox.Admission` 能力要求session目标只能经带版本的
+session exec；这不是服务没启动，更不能放开plain exec。该失败原件及其一个外层代际/
+全部声明路径的独立只读回收复核保留，不回写为通过。
+
+后续只修测试路径：相同guest UID/boot、精确VMM/caps/seccomp/quota仍全部核对，但session
+任务改经原session API，核对响应revision和实际Ref；在真实guest验证前后都要求plain exec
+409/NOT_READY。writer、计数和workspace工具同样保留版本路径，不做全局路由替换或host fallback。
+旧CAS拒绝还要求CLI实际409/CONFLICT，而非把任意非零退出算成CAS成功负例。
+
+另补TEST ONLY错误帧：完整私有诊断后立即返回固定ok=false，使L0按原失败门禁清理，不再
+等串口请求210秒超时；避免重复诊断，不改变任务停止/回收或任何成功断言。离线collector
+最初误指资产清单文件名也单独留档，仅按失败脚本的实际文件名修正，无原始测量改写或重跑。

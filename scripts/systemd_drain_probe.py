@@ -14,7 +14,7 @@ from systemd_delegate_probe import read,run,save,wait
 base=ingress.base
 MARKER='Xandbox owned systemd drain extension v1'
 CHECKPOINT=base.CONFIG/'drain-checkpoint.json'
-CHECKPOINT_FLAGS=('real_existing_session_and_writer_continue_while_drained','raw_session_switch_denied_without_metadata_growth','drain_exact_retry_and_bad_cas_and_tenant_admin_refused','drained_stop_gc_and_quota_release','warm_auto_restart_preserved_entire_drain_commit','explicit_warm_root_resume_and_denied_keys_reusable','cold_checkpoint_same_busy_execution_continues_drained','durable_drain_checkpoint_fsynced')
+CHECKPOINT_FLAGS=('real_existing_session_and_writer_continue_while_drained','raw_session_switch_denied_without_metadata_growth','drain_exact_retry_and_bad_cas_and_tenant_admin_refused','drained_stop_gc_and_quota_release','warm_auto_restart_preserved_entire_drain_commit','explicit_warm_root_resume_and_denied_keys_reusable','cold_checkpoint_same_busy_execution_continues_drained','durable_drain_checkpoint_fsynced','managed_raw_exec_refused_and_versioned_session_exec_used')
 RECOVERY_FLAGS=('cold_automatic_health_up_admission_remains_drained','cold_original_epoch_revision_request_preserved','old_guest_recovered_and_quota_zero_while_drained','cold_stale_cas_and_tenant_admin_refused','explicit_cold_root_resume_one_revision_exact_retry','cold_denied_raw_session_keys_reused_real_pristine_guests')
 
 
@@ -29,6 +29,7 @@ def parse_reply(value):
     if type(c) is not dict or set(c)!={'version','committed','phase','desired_mode','admission_open','pending_session_reservations'} or type(c['version']) is not int or c['version']!=1 or c['phase']!='ready' or type(c['admission_open']) is not bool or type(c['pending_session_reservations']) is not int or c['pending_session_reservations']!=0:raise RuntimeError('quiescent committed control view required')
     s=c['committed']
     if type(s) is not dict or set(s)!={'version','epoch','revision','mode','last_request_id','last_expected_revision'} or type(s['version']) is not int or s['version']!=1 or type(s['epoch']) is not str or not re.fullmatch('[0-9a-f]{32}',s['epoch']) or type(s['revision']) is not int or not 1<=s['revision']<(1<<64) or s['mode'] not in ('open','drained') or c['desired_mode']!=s['mode'] or c['admission_open'] is not (s['mode']=='open'):raise RuntimeError('exact durable control state required')
+    if s['revision']==(1<<64)-1 and s['mode']!='drained':raise RuntimeError('exhausted authority must stay drained')
     if type(s['last_expected_revision']) is not int or type(s['last_request_id']) is not str:raise RuntimeError('fixed last operator request required')
     if s['revision']==1:
         if s['last_expected_revision']!=0 or s['last_request_id']!='':raise RuntimeError('initial authority mismatch')
@@ -49,8 +50,9 @@ def control(operation,before=None,request=None,want=0):
     else:
         if type(before) is not dict or type(before.get('revision')) is not int or not 1<=before['revision']<(1<<64) or type(before.get('epoch')) is not str or not re.fullmatch('[0-9a-f]{32}',before['epoch']) or type(request) is not str or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed private CAS required')
         args+=['-epoch',before['epoch'],'-revision',str(before['revision']),'-request-id',request]
-    result=subprocess.run(args+[operation],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
-    if result.returncode!=want or len(result.stdout)>8192:raise RuntimeError('fixed operator outcome mismatch')
+    result=subprocess.run(args+[operation],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=10,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
+    if result.returncode!=want or len(result.stdout)>8192 or len(result.stderr)>4096:raise RuntimeError('fixed operator outcome mismatch')
+    if want==1 and (result.stdout or not result.stderr.splitlines() or result.stderr.splitlines()[-1]!=b'operator HTTP409: CONFLICT'):raise RuntimeError('actual stale CAS conflict required, not another CLI error')
     return parse_reply(json.loads(result.stdout)) if want==0 else None
 
 
@@ -108,10 +110,10 @@ def denials(label,session=None):
     if after['resource_observation']['records']!=before['resource_observation']['records'] or sessions_inventory()!=inventory:raise RuntimeError('refused admission consumed metadata or changed history')
 
 
-def busy(row,execution):
+def busy(row,execution,session=None):
     if type(execution) is not str or not re.fullmatch('[0-9a-f]{32}',execution):raise RuntimeError('original busy execution identity required')
     def counter():
-        text=base.execute(row,['cat','/workspace/heartbeat'],'alpha').strip()
+        text=(base.execute(row,['cat','/workspace/heartbeat'],'alpha') if session is None else execute_session(session,row,['cat','/workspace/heartbeat'])).strip()
         if not text.isdecimal():raise RuntimeError('actual guest counter required')
         return int(text)
     before=counter();time.sleep(.2)
@@ -124,6 +126,43 @@ def open_session(key):
     row=ingress.tls_call('GET','/v1/sandboxes/'+value['current']['id'])
     if {'id':row['id'],'generation':row['generation']}!=value['current']:raise RuntimeError('actual session target mismatch')
     return value,row
+
+
+def session_job(session,row,argv,timeout_ms=5000,tenant='alpha'):
+    value=ingress.tls_call('POST','/v1/sessions/'+session['id']+'/exec',{'revision':session['revision'],'argv':argv,'timeout_ms':timeout_ms},tenant=tenant,expected=202)
+    if value.get('sandbox')!={'id':row['id'],'generation':row['generation']} or value.get('revision')!=session['revision'] or type(value.get('job')) is not dict or type(value['job'].get('id')) is not str or not re.fullmatch('[0-9a-f]{32}',value['job']['id']):raise RuntimeError('exact versioned session execution required')
+    return value['job']
+
+
+def execute_session(session,row,argv,tenant='alpha'):
+    job=session_job(session,row,argv,tenant=tenant);result={}
+    def done():
+        nonlocal result
+        result=ingress.tls_call('GET',base.refpath(row)+'/executions/'+job['id'],tenant=tenant);return result['status']!='RUNNING'
+    wait(done,15)
+    if result['status']!='EXITED' or result['output']['exit_code']!=0:raise RuntimeError('real versioned session command failed')
+    return result['output']['stdout']
+
+
+def verify_session_vm(session,row):
+    # Rejection is required before AND after live guest proof, not a retryable
+    # startup state and never permission to route around the session capability.
+    def raw_refused():
+        value=ingress.tls_call('POST',base.refpath(row)+'/exec',{'generation':row['generation'],'argv':['echo','forbidden-raw-managed-route'],'timeout_ms':5000},expected=409)
+        if value.get('error',{}).get('code')!='NOT_READY':raise RuntimeError('plain managed execution bypass was not refused')
+    raw_refused()
+    boot=base.verify_vm(row,'alpha',guest_exec=lambda ref,argv,tenant:execute_session(session,ref,argv,tenant))
+    raw_refused();return boot
+
+
+def session_writer(session,row):
+    argv=['sh','-c','i=0; while :; do i=$((i+1)); printf "%s\\n" "$i" > /workspace/heartbeat.next; mv /workspace/heartbeat.next /workspace/heartbeat; sleep 0.05; done']
+    job=session_job(session,row,argv,timeout_ms=45000)
+    def started():
+        text=execute_session(session,row,['sh','-c','test ! -f /workspace/heartbeat || cat /workspace/heartbeat']).strip()
+        return text.isdecimal() and int(text)>0
+    wait(started,10);busy(row,job['id'],session)
+    return job
 
 
 def destroy(row,session=None):
@@ -140,19 +179,12 @@ def destroy(row,session=None):
 
 def warm(restart):
     guard();before=state('open')['control']['committed']
-    session,row=open_session('drain-warm-session');old_boot=base.verify_vm(row,'alpha')
-    base.execute(row,['sh','-c','printf warm-drain > /workspace/drain-warm-marker; sync'],'alpha')
-    writer=base.progressing_writer(row,'alpha')
-    drained=change('drain',before);denials('drain-warm-initial',session);busy(row,writer['id']);no_stale_resume(drained)
+    session,row=open_session('drain-warm-session');old_boot=verify_session_vm(session,row)
+    execute_session(session,row,['sh','-c','printf warm-drain > /workspace/drain-warm-marker; sync'])
+    writer=session_writer(session,row)
+    drained=change('drain',before);denials('drain-warm-initial',session);busy(row,writer['id'],session);no_stale_resume(drained)
     # Session execution is independently allowed on the existing binding.
-    job=ingress.tls_call('POST','/v1/sessions/'+session['id']+'/exec',{'revision':session['revision'],'argv':['echo','session-continues'],'timeout_ms':5000},expected=202)
-    if job['sandbox']!={'id':row['id'],'generation':row['generation']}:raise RuntimeError('session execution switched binding while drained')
-    result={}
-    def done():
-        nonlocal result
-        result=ingress.tls_call('GET',base.refpath(row)+'/executions/'+job['job']['id']);return result['status']!='RUNNING'
-    wait(done,10)
-    if result['status']!='EXITED' or result['output']['exit_code']!=0 or result['output']['stdout']!='session-continues\n':raise RuntimeError('existing real session execution failed during drain')
+    if execute_session(session,row,['echo','session-continues'])!='session-continues\n':raise RuntimeError('existing real session execution failed during drain')
     destroy(row,session);state('drained',drained)
     old_main=base.main_identity();old_gateway=ingress.ingress_identity();run('systemctl','stop',base.UNIT)
     wait(lambda:not base.UNIT_ROOT.exists() and not Path('/run/xandbox-inputs').exists() and not ingress.GROUP.exists() and not ingress.tcp()[1],25)
@@ -163,7 +195,7 @@ def warm(restart):
     fresh=base.create('alpha','drain-warm-restarted-raw-alpha');boot=base.verify_vm(fresh,'alpha')
     if boot==old_boot:raise RuntimeError('drain restart reused old guest')
     base.execute(fresh,['test','!','-e','/workspace/drain-warm-marker'],'alpha');destroy(fresh);state('open',opened)
-    return {k:True for k in CHECKPOINT_FLAGS[:6]}
+    return {k:True for k in (*CHECKPOINT_FLAGS[:6],CHECKPOINT_FLAGS[8])}
 
 
 def seal_cold():
@@ -172,7 +204,7 @@ def seal_cold():
     guest=json.loads(ingress.CHECKPOINT.read_bytes());drained=change('drain',state('open')['control']['committed'])
     denials('drain-cold');busy(guest['row'],guest['writer_execution_id']);state('drained',drained)
     save(CHECKPOINT,{'committed':drained})
-    return {k:True for k in CHECKPOINT_FLAGS[6:]}
+    return {k:True for k in CHECKPOINT_FLAGS[6:8]}
 
 
 def probe_mode():
@@ -190,7 +222,7 @@ def restore_and_resume():
     fresh=base.create('alpha','drain-cold-restarted-raw-alpha');boot=base.verify_vm(fresh,'alpha')
     if boot==guest['guest_boot']:raise RuntimeError('old assigned guest boot revived')
     base.execute(fresh,['test','!','-e','/workspace/cold-marker'],'alpha');destroy(fresh)
-    session,row=open_session('drain-cold-restarted-session-alpha');boot2=base.verify_vm(row,'alpha')
+    session,row=open_session('drain-cold-restarted-session-alpha');boot2=verify_session_vm(session,row)
     if boot2 in (boot,guest['guest_boot']):raise RuntimeError('fresh session guest required')
-    base.execute(row,['test','!','-e','/workspace/cold-marker'],'alpha');destroy(row,session);state('open',opened)
+    execute_session(session,row,['test','!','-e','/workspace/cold-marker']);destroy(row,session);state('open',opened)
     return {k:True for k in RECOVERY_FLAGS}

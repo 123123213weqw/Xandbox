@@ -32,7 +32,7 @@ class DrainExtensionControls(unittest.TestCase):
     def test_only_fixed_pinned_cli_and_read_only_status(self):
         with tempfile.TemporaryDirectory() as temp:
             p=Path(temp);(p/'assets.json').write_text(json.dumps({'node':{'path':'/srv/assets/node','sha256':'f'*64}}))
-            with patch.object(drain,'guard'),patch.object(drain.base,'CONFIG',p),patch.object(drain.base,'sha',return_value='f'*64),patch.object(drain.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=json.dumps(reply()).encode())) as run:
+            with patch.object(drain,'guard'),patch.object(drain.base,'CONFIG',p),patch.object(drain.base,'sha',return_value='f'*64),patch.object(drain.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=json.dumps(reply()).encode(),stderr=b'')) as run:
                 drain.control('status');args=run.call_args.args[0]
                 self.assertEqual(args,['/srv/assets/node','-state-dir',str(drain.base.STATE),'status'])
                 self.assertNotIn('-epoch',args);self.assertNotIn('-request-id',args)
@@ -93,3 +93,47 @@ class DrainExtensionControls(unittest.TestCase):
         import systemd_ingress_guest,build_systemd_readiness
         source=inspect.getsource(systemd_ingress_guest.checkpoint);self.assertIn("'writer_execution_id':fresh_writer['id']",source)
         source=inspect.getsource(build_systemd_readiness.configure);self.assertIn('etc/xandbox-systemd-drain-fixture',source)
+
+
+class ManagedSessionRouteControls(unittest.TestCase):
+    def test_managed_verify_preserves_raw_refusal_and_uses_versioned_adapter(self):
+        session={'id':'c'*32,'revision':1};row={'id':'a'*32,'generation':'b'*32}
+        def verify(ref,tenant,guest_exec=None):
+            self.assertIsNotNone(guest_exec);self.assertEqual(guest_exec(ref,['id','-u'],tenant),'65534\n');return 'real-boot-observer'
+        with patch.object(drain.ingress,'tls_call',return_value={'error':{'code':'NOT_READY'}}) as raw,patch.object(drain.base,'verify_vm',side_effect=verify),patch.object(drain,'execute_session',return_value='65534\n') as execute:
+            self.assertEqual(drain.verify_session_vm(session,row),'real-boot-observer');self.assertEqual(raw.call_args.kwargs['expected'],409);execute.assert_called_once_with(session,row,['id','-u'],'alpha')
+        with patch.object(drain.ingress,'tls_call',return_value={'error':{'code':'STALE_GENERATION'}}):
+            with self.assertRaises(RuntimeError):drain.verify_session_vm(session,row)
+    def test_session_job_binds_revision_and_actual_target(self):
+        session={'id':'c'*32,'revision':1};row={'id':'a'*32,'generation':'b'*32};result={'revision':1,'sandbox':row,'job':{'id':'d'*32}}
+        with patch.object(drain.ingress,'tls_call',return_value=result) as tls:
+            drain.session_job(session,row,['id','-u'])
+            self.assertEqual(tls.call_args.args[1],'/v1/sessions/'+'c'*32+'/exec');self.assertEqual(tls.call_args.args[2]['revision'],1);self.assertNotIn('generation',tls.call_args.args[2])
+        for bad in ({**result,'revision':2},{**result,'sandbox':{'id':'e'*32,'generation':'b'*32}}):
+            with patch.object(drain.ingress,'tls_call',return_value=bad):
+                with self.assertRaises(RuntimeError):drain.session_job(session,row,['id','-u'])
+    def test_managed_busy_counter_never_uses_raw_execution(self):
+        row={'id':'a'*32,'generation':'b'*32};session={'id':'c'*32,'revision':1}
+        with patch.object(drain.base,'execute',side_effect=AssertionError('forbidden raw route')),patch.object(drain,'execute_session',side_effect=['1\n','2\n']) as execute,patch.object(drain.time,'sleep'),patch.object(drain.ingress,'tls_call',return_value={'status':'RUNNING'}):
+            drain.busy(row,'d'*32,session);self.assertEqual(execute.call_count,2)
+    def test_session_writer_keeps_exact_known_guest_loop_not_literal_backslash(self):
+        session={'id':'c'*32,'revision':1};row={'id':'a'*32,'generation':'b'*32}
+        original=next(v[2] for v in drain.base.progressing_writer.__code__.co_consts if type(v) is tuple and len(v)==3 and v[:2]==('sh','-c'))
+        with patch.object(drain,'session_job',return_value={'id':'d'*32}) as job,patch.object(drain,'wait'),patch.object(drain,'busy'):
+            drain.session_writer(session,row)
+            self.assertEqual(job.call_args.args[2],['sh','-c',original]);self.assertEqual(job.call_args.kwargs['timeout_ms'],45000)
+    def test_failure_frame_follows_complete_private_diagnostic_and_is_not_duplicated(self):
+        events=[]
+        stream=SimpleNamespace(write=lambda b:events.append(('frame',json.loads(b))))
+        with patch.object(ready,'FAILURE_REPORTED',False),patch.object(ready.ingress,'failure_console',side_effect=lambda:events.append(('diagnostic',None))) as diagnostic:
+            ready.report_failure(stream);ready.report_failure();diagnostic.assert_called_once()
+        self.assertEqual([x[0] for x in events],['diagnostic','frame']);self.assertEqual(events[1][1],{'ok':False,'error':'owned readiness fixture failed'})
+    def test_expected_stale_cli_exit_must_be_actual_conflict_not_transport_error(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p=Path(temp);(p/'assets.json').write_text(json.dumps({'node':{'path':'/srv/assets/node','sha256':'f'*64}}))
+            with patch.object(drain,'guard'),patch.object(drain.base,'CONFIG',p),patch.object(drain.base,'sha',return_value='f'*64):
+                for stderr in (b'private transport failure\n',b'operator HTTP409: CONFLICT\n'):
+                    with patch.object(drain.subprocess,'run',return_value=SimpleNamespace(returncode=1,stdout=b'',stderr=stderr)):
+                        if stderr.startswith(b'private'):
+                            with self.assertRaises(RuntimeError):drain.control('resume',reply('drained',2)['control']['committed'],'c'*32,want=1)
+                        else:self.assertIsNone(drain.control('resume',reply('drained',2)['control']['committed'],'c'*32,want=1))

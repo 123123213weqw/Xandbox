@@ -13,6 +13,7 @@ base=ingress.base
 READY=base.CONFIG/'readiness.json'
 CHECKPOINT=base.CONFIG/'readiness-checkpoint.json'
 NEGATIVE_PROVED=False
+FAILURE_REPORTED=False
 READY_MASK=1<<19
 
 def guard():
@@ -108,6 +109,12 @@ def recover():
     value.update(restored)
     return value
 
+def report_failure(stream=None):
+    global FAILURE_REPORTED
+    if not FAILURE_REPORTED:
+        FAILURE_REPORTED=True;ingress.failure_console()
+    if stream is not None:stream.write(b'{"ok":false,"error":"owned readiness fixture failed"}\n')
+
 def operator():
     guard()
     ingress.recover_services=recover_services
@@ -127,10 +134,10 @@ def operator():
             request=json.loads(line)
             if set(request)!={'version','operation'} or type(request['version']) is not int or request['version']!=1 or request['operation'] not in actions:raise RuntimeError('fixed readiness operation required')
             stream.write(json.dumps({'ok':True,'result':actions[request['operation']]()},sort_keys=True).encode()+b'\n')
-        except Exception:ingress.failure_console();raise
+        except Exception:report_failure(stream);raise
 
 def entry():
     guard()
     try:operator()
-    except Exception:ingress.failure_console();raise
+    except Exception:report_failure();raise
 if __name__=='__main__':entry()

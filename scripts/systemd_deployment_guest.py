@@ -157,13 +157,15 @@ def observe_vmm_capabilities(status,parent_bounding):
     if values['CapBnd']!=parent:raise RuntimeError('ordinary VMM bounding capability ceiling changed')
 
 
-def verify_vm(row,tenant):
+def verify_vm(row,tenant,guest_exec=None):
+    # Managed session targets must retain their version-bound execution route.
+    if guest_exec is None:guest_exec=execute
     assets=json.loads((CONFIG/'assets.json').read_bytes());owned=owner(row)
     main_pid,_=main_identity()
     parent_status=dict(line.split(':',1) for line in Path('/proc',str(main_pid),'status').read_text().splitlines() if ':' in line)
     parent_bounding=parent_status['CapBnd']
-    if execute(row,['id','-u'],tenant).strip()!='65534':raise RuntimeError('guest UID boundary failed')
-    boot=execute(row,['cat','/proc/sys/kernel/random/boot_id'],tenant).strip()
+    if guest_exec(row,['id','-u'],tenant).strip()!='65534':raise RuntimeError('guest UID boundary failed')
+    boot=guest_exec(row,['cat','/proc/sys/kernel/random/boot_id'],tenant).strip()
     if not re.fullmatch('[a-f0-9-]{36}',boot):raise RuntimeError('real guest boot ID required')
     group=UNIT_ROOT/'node/instances'/key(row);found=False
     for raw in read(group/'cgroup.procs').split():
