@@ -16,6 +16,17 @@ ExecReload/ExecStartPost/ExecStop/Post 等控制进程采用 `.control`，不是
 [cgroup delegation](https://systemd.io/CGROUP_DELEGATION/)。
 所以不能直接套上带 ExecStartPre/ExecReload 清理脚本的常见模板。
 
+## TLS入口的归属仍是部署职责
+
+当前 `gateway.Config` 没有NodeRoot/cgroup字段，`gateway.RunRoot`也不自行检查或迁移到
+node/control。已有TLS fixture独立核对的NodeControl出生归属，是**那个冻结部署形态的实测**，
+不是gateway库对任意启动方式的保证。Go launcher v1只同PID exec普通daemon，不启动gateway。
+
+因此不能把另一个普通systemd unit直接加入，就宣称仍落在同一NodePolicy预算内；也不能
+让长期运行的ExecStartPost/Reload绕过严格node库存。后续须明确选择受监督的同域组合，或
+有独立限制且计入总体预留/包络的ingress域，并实际验证生命周期、预算和失败关闭。
+选择或文档不是已实现的安装/恢复结果；当前没有通过这项完整组合部署门槛。
+
 ## 已选择的层级与实现边界
 
 后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已完成独立 operator、实际 `.control`

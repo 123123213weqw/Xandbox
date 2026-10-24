@@ -8,11 +8,11 @@
 
 当前普通 sandboxd 为新 `5bfb2394…`（SIGTERM注册先于Serve），新增[固定清单 Go 启动器](GO_LAUNCHER.md)
 `26f35a3d…`。真实systemd→普通认证UDS→四并行KVM、busy Stop/GC、main SIGKILL与原盘cold
-有限验证通过，5 scopes/7外层代际独立只读清理复核；新 daemon 尚未完成全量25组运行/10组边界/TLS
-复验，下文 d163 及更早报告仍为各自历史 ELF，不给新程序代签。完整TLS部署/安装升级/备份和独立
+有限验证通过，5 scopes/7外层代际独立只读清理复核；后续[25个全新命名运行scope](FIVEB_RUNTIME.md)
+已另行通过，[fixture320的live trace两组/10边界/TLS](FIVEB_BOUNDARIES.md)也已另行通过，下文 d163 及更早报告仍为各自历史 ELF，不给新程序代签。完整TLS部署/安装升级/备份和独立
 操作员仍未完成，不据此勾选M1–M4。
 
-[新5bfb复验](FIVEB_REQUALIFICATION.md)现有首个冷scope及离线探针校准的独立新证据；完整25组、10边界和live trace仍在执行，不提前勾选通过。
+[新5bfb复验](FIVEB_REQUALIFICATION.md)保留首冷scope及离线探针校准来源；[25组运行](FIVEB_RUNTIME.md)已独立完成，另一个fixture320的[12个live trace/边界scope](FIVEB_BOUNDARIES.md)也完成新证据与独立24代际清理复核；合计37scopes/67嵌套代际/4loop，不提前勾选完整M1–M4。
 
 当前新增生产代码[Version3节点总资源准入](NODE_BUDGET.md)：精确父/控制器cgroup、完整服务计数与恢复库存绑定、保守磁盘/inode余量及有界准备池已实现；新3ea ELF的4真实KVM/漂移拒绝但回收继续/健康同步原盘cold与相关回归通过。仅7 scope/17外层代际的有限基础门槛，不是全部节点压力或完整M2；[新程序DEFAULT/IO全量兼容复验](RUNTIME_REQUALIFICATION.md)已单独通过13个scope，[quota240/双活cold及故障矩阵](QUOTA_REQUALIFICATION.md)也已另通过12个scope/34外层代际；旧522报告不得冒充新ELF认证。
 

@@ -2,9 +2,9 @@
 
 > 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 
-新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新 daemon ELF 尚需全量实机复验，不能继承旧矩阵或宣称完整部署通过。
+新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新daemon的[25个全新命名运行scope](docs/FIVEB_RUNTIME.md)已另行通过；[fixture320的live trace两组与十边界](docs/FIVEB_BOUNDARIES.md)也已独立通过，完整部署门槛仍未完成，不能继承旧矩阵或宣称生产就绪。
 
-[新5bfb全量复验进行中](docs/FIVEB_REQUALIFICATION.md)：首个冷路径30项与两份各9条展开报告已实测/清理复核；新目标九指令只读校准和原生152项Python通过，live trace/25组完整矩阵仍未验收。
+[新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/TLS部署仍未验收；旧原语报告不代表普通服务部署通过。
 
