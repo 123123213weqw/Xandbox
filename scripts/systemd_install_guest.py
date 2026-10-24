@@ -118,12 +118,15 @@ def pregate_pending():
                 ids=read(group/'cgroup.procs').split()
                 if len(ids)!=1:return False
                 pid=int(ids[0]);start=identity(pid)
-                if base.sha(Path('/proc',str(pid),'exe'))!=base.sha(CLI):raise RuntimeError('pre-gate must be exact production installer ELF')
                 files=[]
                 for f in Path('/proc',str(pid),'fd').iterdir():
                     try:files.append(os.readlink(f))
                     except FileNotFoundError:pass
                 if str(ROOT/'.lock') not in files:return False
+                # systemd places its short-lived fork/exec frame in .control
+                # before exec. Only evaluate the gate identity after it has
+                # opened the original lock; no bootstrap frame counts as proof.
+                if base.sha(Path('/proc',str(pid),'exe'))!=base.sha(CLI):raise RuntimeError('pre-gate must be exact production installer ELF')
                 checked=0
                 for thread in Path('/proc',str(pid),'task').iterdir():
                     try:s=dict(l.split(':',1) for l in (thread/'status').read_text().splitlines() if ':' in l)

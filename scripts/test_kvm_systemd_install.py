@@ -141,5 +141,10 @@ class InstallControls(unittest.TestCase):
         self.assertIn("'--quiet','show'",s)
         self.assertIn("'stderr_bytes':len(r.stderr)",s)
         for op in ("'start'","'enable'","'restart'",'r.stderr.decode()'):self.assertNotIn(op,s)
+    def test_gate_fork_exec_frame_is_not_mistaken_for_installer(self):
+        s=inspect.getsource(guest.pregate_pending)
+        self.assertLess(s.index("str(ROOT/'.lock') not in files"),s.index("base.sha(Path('/proc',str(pid),'exe'))"))
+        self.assertIn("!=base.sha(CLI):raise RuntimeError",s)
+        self.assertLess(s.index("'CapBnd'"),s.index('return True'))
 
 if __name__=='__main__':unittest.main()
