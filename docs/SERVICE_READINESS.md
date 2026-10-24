@@ -92,3 +92,5 @@ catalog、升级回滚/备份、人类operator、可靠审计、持续负载及�
 unchanged、within_six、behind、more_than_six，不输出绝对sequence、时间戳、路径或凭证。
 仍要求10秒内退出0、45轮/135条、满管道不读取；非零仍失败。它不是生产程序修复，新CI成功
 也不能倒推旧失败原因。原9e4硬件证据与Go产物保持原绑定，未修改成别的源码通过声明。
+
+[相对轮次观测摘要](validation/diagnostic-cycle-observability-v1.json)保留ca500两次CI真实结果及失败原日志摘要。新harness冻结源c1f83a2已在Linux原生通过179项Python零skip、13项退出控制和一次新的45轮mock烟测；Go目录与9e4原生源逐字相同、13产物不重建。没有复现原Go1.25 CI环境或查明其原因，不把新观察通过写成旧故障已修复。
