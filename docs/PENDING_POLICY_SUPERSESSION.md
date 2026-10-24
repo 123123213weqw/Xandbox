@@ -121,3 +121,32 @@ rebuilds, fresh owned-L1 root CLI, real positive/negative kernel empty proof,
 coherent TLS revocation, continuing KVM writer, unchanged main/guest incarnation,
 persisted drain, source absence, actual cuts/ACK/cold and independent cleanup are
 still required. Older software or hardware records must not be re-signed.
+
+
+## Measured test-runner budget, not a runtime latency relaxation
+
+The first frozen run at `9db9603` passed the new 17 meaningful focused parents
+once, including actual test-process exits and process CAS groups. The full
+unchanged `-race -count=3` invocation then exhausted its **cumulative 15-minute
+package alarm** at 900.035 seconds. Its then-active root had run about 10 seconds
+and subcase about 2 seconds; no earlier assertion failure was reported. Subsequent
+qualification stages and all 23 designated release builds did not run. That
+failed original is retained, not retagged as green.
+
+The frozen package lists 77 normal-run roots: 63 existing roots and 14 new
+supersession roots (including one empty process-helper entry, not substantive
+coverage). A separate same-source baseline profile passed all 63 with race once,
+required static-PIE input enabled and zero skips, in 209.227 seconds. The new
+focused installtxn profile took 115.156 seconds. Their measured additive projection
+for three repetitions is roughly 970 seconds, already beyond 900; profiling is
+not itself full qualification. An earlier profile omitted that required input
+and skipped one test; it is retained as incomplete and was corrected, not treated
+as all-root success. The original full run had enabled the input.
+
+The finite package budget is therefore now **20 minutes**, and the matrix CI
+job budget **25 minutes**. All packages, roots and repetitions still execute in
+the original whole-package `-race -count=3` run. No partition replaces same-process
+cross-root/inter-iteration coverage, test is dropped, detector option changed or
+failure hidden. Runtime service/guest limits, CLI/maintenance deadlines, owned-L1
+resources and Stop/GC/switch limits are unchanged. The new entire run must still
+actually finish successfully; neither a projection nor a larger alarm is a pass.
