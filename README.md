@@ -12,6 +12,8 @@
 
 新增[普通发布CLI的有限实机组合](docs/RELEASE_PUBLISHER_KVM.md)：真实资产提交、并发CAS、缺源重试和原盘恢复不改变节点准入，既有服务/guest持续与完整readiness/drain回归通过。它只是安装事务地基，不是已完成的安装/升级工具。
 
+新增[固定初始安装事务](docs/INITIAL_INSTALL.md)：Go 安装器将已提交 release、25 个固定目标、持久 intent/commit 与服务管理器协调连接起来，启动前验证完整提交；**新安装器尚未通过 root/systemd/KVM 实机验收**，不继承旧发布器报告，也不是升级、轮换或生产就绪声明。
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。
