@@ -14,6 +14,7 @@ build:
 	go build -o "$(BIN_DIR)/sandboxctl" ./cmd/sandboxctl
 	go build -o "$(BIN_DIR)/xandbox-node" ./cmd/xandbox-node
 	go build -o "$(BIN_DIR)/xandbox-launch" ./cmd/xandbox-launch
+	go build -o "$(BIN_DIR)/xandbox-ingress-launch" ./cmd/xandbox-ingress-launch
 
 	go build -o "$(BIN_DIR)/xandbox-keygen" ./cmd/xandbox-keygen
 	go build -o "$(BIN_DIR)/xandbox-guestctl" ./cmd/xandbox-guestctl

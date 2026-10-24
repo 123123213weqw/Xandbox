@@ -27,6 +27,8 @@ node/control。已有TLS fixture独立核对的NodeControl出生归属，是**�
 有独立限制且计入总体预留/包络的ingress域，并实际验证生命周期、预算和失败关闭。
 选择或文档不是已实现的安装/恢复结果；当前没有通过这项完整组合部署门槛。
 
+后续已实现[独立 ingress 启动器与候选unit生成](INGRESS_LAUNCHER.md)：选择独立限制并显式核算整个daemon父预算、ingress与预留，不更改普通NodePolicy。该组合尚无真实systemdTLS验收，核算capacity不是共同硬父组或实际主机余量证明。
+
 ## 已选择的层级与实现边界
 
 后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已完成独立 operator、实际 `.control`

@@ -6,6 +6,8 @@
 
 **开发中，不能按生产隔离服务部署。** 已有 Mock 控制面验收及独立 jailed KVM 组件验收，并新增实验性 Firecracker 服务集成；整体门槛尚未完成。Public 仓库不等于生产就绪。
 
+新增[独立 ingress 启动器](INGRESS_LAUNCHER.md)实现固定清单、只读预算/能力校验及候选unit生成；尚无该组合的真实systemdTLS验收或安装器，不能由已有普通UDS或自定义PID1 TLS报告代签。
+
 当前普通 sandboxd 为新 `5bfb2394…`（SIGTERM注册先于Serve），新增[固定清单 Go 启动器](GO_LAUNCHER.md)
 `26f35a3d…`。真实systemd→普通认证UDS→四并行KVM、busy Stop/GC、main SIGKILL与原盘cold
 有限验证通过，5 scopes/7外层代际独立只读清理复核；后续[25个全新命名运行scope](FIVEB_RUNTIME.md)
