@@ -12,6 +12,9 @@ var blockPath = regexp.MustCompile(`^/dev/(vd[a-z]|sd[a-z]|nvme[0-9]+n[0-9]+)$`)
 
 // Unit renders a candidate, not an installer. Startup checks the kernel-resolved
 // device and every limit, so a device alias or dropped directive cannot waive it.
+// The system manager defaults to root; do not enter its explicit User= setuid
+// path, which can drop CAP_SETUID with implicit seccomp on systemd255. Runtime
+// root/capability checks stay mandatory and unchanged.
 // No shell expansion, caller environment, executable selection or reload helper
 // is accepted. Rotation uses an authenticated operator's main-PID SIGHUP.
 func (m Manifest) Unit(n launch.Manifest, manifestPath, devicePath string) (string, error) {
@@ -27,8 +30,6 @@ After=%s
 PartOf=%s
 [Service]
 Type=exec
-User=root
-Group=root
 ExecStart=/usr/libexec/xandbox-ingress-launch -manifest %s
 Delegate=no
 MemoryMax=%d

@@ -30,7 +30,7 @@ HELPER='/usr/libexec/xandbox-deploy-fixture'
 MASK=(1<<6)|(1<<7)|(1<<18)
 UDS_CALL=base.call
 NEGATIVES=False
-GUARD_DIAGNOSTIC_ONLY=True
+GUARD_DIAGNOSTIC_ONLY=False
 
 
 def guard():

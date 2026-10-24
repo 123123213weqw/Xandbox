@@ -107,7 +107,7 @@ class IngressDeploymentControls(unittest.TestCase):
         with patch.object(probe,'guard',side_effect=RuntimeError('unmarked')),patch.object(probe.os,'execve') as execute:
             with self.assertRaises(RuntimeError):probe.observe()
             execute.assert_not_called()
-        self.assertTrue(guest.GUARD_DIAGNOSTIC_ONLY)
+        self.assertFalse(guest.GUARD_DIAGNOSTIC_ONLY)
         source=inspect.getsource(probe.entry)
         self.assertIn("os.execve('/usr/libexec/xandbox-ingress-launch'",source)
         self.assertIn('len(sys.argv)!=1',source)

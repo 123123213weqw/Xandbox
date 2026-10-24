@@ -84,3 +84,23 @@ primitive与8GiB普通UDS各两启动通过。新16GiB TLS scope在READY前实�
 关系可观测性、root UID/GID/NNP布尔值、五个cap bitset与可继承FD计数，再exec固定Go guard。
 不输出PID/cgroup实际路径、凭证或任意用户字段。它改变了候选unit的入口，因此这个模式
 无条件拒绝资格通过；用于获得出生状态后还必须恢复真正candidate入口并另行实测。
+
+## v3出生观测与后续unit修正（新实机仍待执行）
+
+ac2e5d2诊断scope实测：位置分类expected、绝对unit组可见、UID/GID root、NNP1，
+CapBnd=262336(SETUID/GID/CHROOT)，但CapPrm/CapEff=262208，**实际缺SETUID**；
+inheritable/ambient0，可继承非stdio FD0。PID1 namespace关系因权限不可观测，不推断相同。
+该scope故意不接受资格通过，原件和独立一个代际清理复核保留。
+
+结合[systemd v255 exec-invoke.c](https://github.com/systemd/systemd/blob/v255/src/core/exec-invoke.c)
+的keep_seccomp_privileges/enforce_user路径：显式User=与含seccomp的沙箱组合会在没有相应
+ambient时drop CAP_SETUID。观测与该路径一致，不能通过放行缺失的active capability解决。
+后续候选unit去掉冗余User=root/Group=root，使用
+[系统service默认root](https://www.freedesktop.org/software/systemd/man/255/systemd.exec.html#User=)；
+guard仍逐线程强制root/NNP/精确三项active/permitted/bounding，inheritable/ambient0。
+PrivateDevices、只读cgroup/系统、预算和所有失败关闭条件保持；没有添加ambient能力。
+
+新增旧unit实际RED/新unitGREEN控制，以及bounding有SETUID但active缺失仍必须拒绝的
+控制。恢复真正Go candidate入口，关闭临时observer模式。此修正改变ingress guard/helper
+的重建字节，必须重新原生构建/校验并在新owned L1 scope中验证；旧失败不回写为通过，
+当前尚不宣布TLS→KVM/rotation/crash/cold通过。

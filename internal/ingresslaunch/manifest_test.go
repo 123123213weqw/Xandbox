@@ -113,3 +113,18 @@ func TestUnitHasSeparateBudgetAndNoShellOrControlHelper(t *testing.T) {
 		t.Fatal("CPU unit conversion drift")
 	}
 }
+
+func TestSystemManagerDefaultRootAvoidsExplicitSetuidSeccompPipeline(t *testing.T) {
+	unit, e := policy().Unit(nodePolicy(), "/etc/xandbox/ingress-launch.json", "/dev/vda")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if strings.Contains(unit, "\nUser=") || strings.Contains(unit, "\nGroup=") {
+		t.Fatal("explicit identity enters systemd255 setuid/seccomp capability drop path")
+	}
+	for _, keep := range []string{"CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_SYS_CHROOT", "AmbientCapabilities=\n", "NoNewPrivileges=yes", "PrivateDevices=yes", "ProtectControlGroups=yes"} {
+		if !strings.Contains(unit, keep) {
+			t.Fatal("hardening lost", keep)
+		}
+	}
+}

@@ -80,3 +80,11 @@ func TestExactServiceCapabilitiesIncludesAllObservedFields(t *testing.T) {
 		}
 	}
 }
+
+func TestSetuidOnlyInBoundingDoesNotSatisfyRequiredActiveCapabilities(t *testing.T) {
+	const mask = uint64(1<<6 | 1<<7 | 1<<18)
+	observed := fmt.Sprintf("Uid:\t0 0 0 0\nGid:\t0 0 0 0\nNoNewPrivs:\t1\nCapInh:\t0\nCapAmb:\t0\nCapEff:\t%x\nCapPrm:\t%x\nCapBnd:\t%x", mask&^(1<<7), mask&^(1<<7), mask)
+	if exactServiceCapabilities(observed, mask) == nil {
+		t.Fatal("missing active CAP_SETUID incorrectly accepted from bounding alone")
+	}
+}
