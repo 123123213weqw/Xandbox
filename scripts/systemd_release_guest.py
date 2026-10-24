@@ -209,7 +209,7 @@ def milestone(stage,row,execution,started):
     try:
         state=ingress.tls_call('GET',base.refpath(row)).get('state')
         status=ingress.tls_call('GET',base.refpath(row)+'/executions/'+execution).get('status')
-        allowed={'PREPARING','READY','RUNNING','STOPPING','STOPPED','RECLAIMING','DESTROYED','EXITED','CANCELED','FAILED','TIMED_OUT'}
+        allowed={'PREPARING','READY','RUNNING','STOPPING','STOPPED','RECLAIMING','DESTROYED','EXITED','CANCELLED','FAILED','TIMED_OUT'}
         view['sandbox_state']=state if state in allowed else 'OTHER';view['execution_status']=status if status in allowed else 'OTHER'
     except Exception:pass
     with open('/dev/console','w') as console:console.write('XANDBOX_RELEASE_PRIVATE_PHASE '+json.dumps(view,sort_keys=True)+'\n');console.flush()
