@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import stat
 import time
 from contextlib import contextmanager
 from install_fixture_trace import Registers,ptrace,string_at
@@ -51,10 +52,12 @@ def proposal_candidate(payload,intent,installed,revision,request,record=None,vis
 
 
 def trace_shape(args,mode,revision,request):
-    modes=('initial-commit','policy-activation','rotation-proposal','supersession-proposal','supersession-visible')
+    modes=('initial-commit','policy-activation','rotation-proposal','supersession-proposal','supersession-visible','supersession-draft-short','supersession-draft-discard')
     if mode not in modes or type(revision) is not int or type(args) is not list or not all(type(a) is str for a in args):raise RuntimeError('fixed managed cut required')
     if mode=='initial-commit':
         if len(args)!=8 or args[:7]!=['/usr/libexec/xandbox-install-bootstrap','apply','-plan','/etc/xandbox-managed-fixture/plan.json','-expected-revision','0','-request-id'] or not re.fullmatch('[0-9a-f]{32}',args[7]) or revision!=0 or request!='':raise RuntimeError('fixed initial commit child required')
+    elif mode=='supersession-draft-discard':
+        if len(args)!=8 or args[:5]!=['/usr/libexec/xandbox-install','discard-supersession-draft','-expected-revision','1','-pending-request-id'] or args[5]!=request or args[6]!='-draft-sha256' or not re.fullmatch('[0-9a-f]{64}',args[7]) or revision!=1:raise RuntimeError('fixed own draft discard child required')
     elif mode.startswith('supersession-'):
         if len(args)!=10 or args[:2]!=['/usr/libexec/xandbox-install','replace-pending-policy'] or type(revision) is not int or revision!=2 or args[2]!='-plan' or args[3] not in ('/etc/xandbox-managed-fixture/rotation-replacement-2a.json','/etc/xandbox-managed-fixture/rotation-replacement-2b.json') or args[4:7]!=['-expected-revision','1','-request-id'] or args[7]!=request or args[8]!='-replaces-request-id' or not re.fullmatch('[0-9a-f]{32}',args[9]) or args[9]==request:raise RuntimeError('fixed own supersession child required')
     elif len(args)!=8 or args[:2]!=['/usr/libexec/xandbox-install','reconfigure'] or revision not in (2,3) or args[2]!='-plan' or args[3]!='/etc/xandbox-managed-fixture/rotation-'+str(revision)+'.json' or args[4:7]!=['-expected-revision',str(revision-1),'-request-id'] or args[7]!=request:raise RuntimeError('fixed reconfiguration child required')
@@ -71,6 +74,43 @@ def published_cut(mode,revision,request):
     if record is not None and mode!='supersession-visible' and hashlib.sha256(installed_raw).hexdigest()!=record.get('old_payload_sha256'):raise RuntimeError('supersession changed installed predecessor early')
     if mode=='supersession-visible' and (ROOT/'.policy.next').exists():raise RuntimeError('visible proposal scratch remains')
     return True
+
+
+def bytes_at(pid,address,length):
+    if type(length) is not int or not 1<=length<=32768:raise RuntimeError('bounded own declaration buffer required')
+    raw=bytearray()
+    for offset in range(0,length,8):raw.extend((ptrace(2,pid,address+offset)&((1<<64)-1)).to_bytes(8,'little'))
+    return bytes(raw[:length])
+
+
+def short_draft_prefix(raw,request,replaces,payload,intent):
+    # Only a fully decoded, canonical declaration prepared by the real CLI is
+    # eligible. The closed prefix includes the complete NEW request identifier,
+    # so a different proposal cannot reuse a common empty/header-only prefix.
+    if type(raw) is not bytes or not 160<len(raw)<=32768:raise RuntimeError('bounded full declaration required')
+    value=json.loads(raw)
+    fields={'version','expected_revision','request_id','replaces_request_id','base_commit_sha256','config_sha256','initial_policy_sha256','old_payload_sha256','previous_snapshot_sha256','new_payload_sha256','source','previous_intent'}
+    if type(value) is not dict or set(value)!=fields or type(value['version']) is not int or value['version']!=1 or type(value['expected_revision']) is not int or value['expected_revision']!=1 or value['request_id']!=request or value['replaces_request_id']!=replaces or value['previous_intent']!=intent or value['old_payload_sha256']!=hashlib.sha256(payload).hexdigest() or json.loads(payload).get('revision')!=1 or type(intent.get('expected_revision')) is not int or intent['expected_revision']!=1 or intent.get('request_id')!=replaces:raise RuntimeError('exact own unconsumed draft required')
+    if raw!=(json.dumps(value,separators=(',',':'),ensure_ascii=False)+'\n').encode():raise RuntimeError('canonical own declaration required')
+    prefix=raw.split(b',"replaces_request_id":',1)[0]
+    if not 64<=len(prefix)<=160 or not prefix.endswith(('"'+request+'"').encode()) or len(prefix)>=len(raw):raise RuntimeError('closed request-bearing prefix required')
+    try:json.loads(prefix)
+    except json.JSONDecodeError:return prefix
+    raise RuntimeError('partial declaration must not be complete authority')
+
+
+def draft_file(tid,fd,size):
+    if type(size) is not int or not 0<=size<=32768:raise RuntimeError('closed declaration observation size required')
+    target=ROOT/'.policy-supersession.next';proc='/proc/'+str(tid)+'/fd/'+str(fd)
+    if os.readlink(proc)!=str(target):raise RuntimeError('fixed own declaration fd required')
+    opened=os.stat(proc);held=os.open(target,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        current=os.fstat(held)
+        if not stat.S_ISREG(current.st_mode) or current.st_uid!=os.geteuid() or stat.S_IMODE(current.st_mode)!=0o600 or current.st_nlink!=1 or current.st_size!=size or (current.st_dev,current.st_ino)!=(opened.st_dev,opened.st_ino):raise RuntimeError('exact private own declaration inode required')
+        raw=os.read(held,32769)
+        if len(raw)!=size or not 0<=size<=32768:raise RuntimeError('bounded own declaration size required')
+        return current,raw
+    finally:os.close(held)
 
 
 @contextmanager
@@ -104,7 +144,8 @@ def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
             os.execve(args[0],args,{'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
         finally:os._exit(91)
     threads={pid};hit=False;executed=False;options=1|8|16|(1<<20);end=time.monotonic()+60
-    blocking=mode in ('rotation-proposal','supersession-proposal','supersession-visible')
+    short=None;unlink_tid=None;unlinked=False;draft_proof=None
+    blocking=mode in ('rotation-proposal','supersession-proposal','supersession-visible','supersession-draft-short','supersession-draft-discard')
     try:
         with bounded_trace_wait(blocking):
             got,status=os.waitpid(pid,0)
@@ -127,7 +168,31 @@ def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
                     executed=True
                 if sig==(signal.SIGTRAP|0x80) and executed and not hit:
                     r=Registers();ptrace(12,tid,0,ctypes.addressof(r));entry=r.rax==((1<<64)-errno.ENOSYS)
-                    if mode=='initial-commit' and entry and r.orig_rax==257 and string_at(tid,r.rsi)==b'.commit.next':
+                    if mode=='supersession-draft-short' and r.orig_rax==1:
+                        fd=ctypes.c_int(r.rdi).value
+                        if entry and os.readlink('/proc/'+str(tid)+'/fd/'+str(fd))==str(ROOT/'.policy-supersession.next'):
+                            if short is not None or (ROOT/'policy-supersession.json').exists():raise RuntimeError('only first unpublished own draft write required')
+                            before,empty=draft_file(tid,fd,0)
+                            payload=(ROOT/'gateway-policy.json').read_bytes();intent=(ROOT/'rotation-intent.json').read_bytes()
+                            prefix=short_draft_prefix(bytes_at(tid,r.rsi,int(r.rdx)),request,args[9],payload,json.loads(intent))
+                            short=(tid,fd,before.st_dev,before.st_ino,prefix,hashlib.sha256(payload).hexdigest(),hashlib.sha256(intent).hexdigest())
+                            r.rdx=len(prefix);ptrace(13,tid,0,ctypes.addressof(r))
+                        elif not entry and short is not None and tid==short[0]:
+                            if fd!=short[1] or r.rax!=len(short[4]):raise RuntimeError('actual own short syscall result required')
+                            after,raw=draft_file(tid,fd,len(short[4]))
+                            if raw!=short[4] or (after.st_dev,after.st_ino)!=short[2:4] or hashlib.sha256((ROOT/'gateway-policy.json').read_bytes()).hexdigest()!=short[5] or hashlib.sha256((ROOT/'rotation-intent.json').read_bytes()).hexdigest()!=short[6] or (ROOT/'policy-supersession.json').exists():raise RuntimeError('actual partial write changed authority')
+                            draft_proof={'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)};hit=True
+                    elif mode=='supersession-draft-discard' and entry and r.orig_rax==263 and string_at(tid,r.rsi)==b'.policy-supersession.next':
+                        if unlink_tid is not None or os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!=str(ROOT) or sha(ROOT/'.policy-supersession.next')!=args[7]:raise RuntimeError('exact own hash-bound draft unlink required')
+                        unlink_tid=tid
+                    elif mode=='supersession-draft-discard' and not entry and r.orig_rax==263 and tid==unlink_tid:
+                        if r.rax!=0 or (ROOT/'.policy-supersession.next').exists():raise RuntimeError('actual own draft unlink result required')
+                        unlinked=True
+                    elif mode=='supersession-draft-discard' and unlinked and not entry and r.orig_rax==74 and r.rax==0:
+                        if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))==str(ROOT):
+                            if (ROOT/'.policy-supersession.next').exists():raise RuntimeError('draft reappeared before durable cut')
+                            hit=True
+                    elif mode=='initial-commit' and entry and r.orig_rax==257 and string_at(tid,r.rsi)==b'.commit.next':
                         if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!='/etc/xandbox-install':raise RuntimeError('fixed commit dirfd required')
                         hit=True
                     elif mode=='policy-activation' and entry and r.orig_rax==42 and sockaddr_at(tid,r.rsi,r.rdx)==OPERATOR:
@@ -170,3 +235,4 @@ def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
                     except OSError:pass
                 else:time.sleep(.01)
             if threads:raise RuntimeError('own managed child not fully reaped')
+    return draft_proof

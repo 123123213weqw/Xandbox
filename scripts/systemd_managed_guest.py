@@ -32,6 +32,7 @@ PROBE_FLAGS=('managed_v2_exact_root_cli_and_24_target_commit','automatic_tls_chi
 COMMITTED_CHECKPOINT_FLAGS=('own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3')
 COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','old_key_refused_on_existing_policy3_tls_transport_and_closed','fresh_policy3_tls_and_new_key_accepted_after_expected_401_close','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
 CASE_FLAGS={'supersession-repeat':('unconsumed_file_and_runtime1_old_proposal2_expired_and_source_absent','actual_supersession_a_killed_before_publication_source_and_proposal_data_lost','actual_supersession_b_settled_a_without_ack_and_consumed2_only_once','ordinary_2_to_3_hot_rotation_old_token_refused_on_original_tls2_transport'),'supersession-visible-recovery':('actual_supersession2_fsynced_before_ingress_start_no_ack','actual_replace_refused_reuse_of_published2','actual_recovery3_advanced_installed2_then_new_child_ack'),'hot-rotation':('normal_1_to_2_rotation_retained_original_tls1_transport','normal_2_to_3_rotation_retained_original_tls2_transport','both_normal_rotations_kept_ingress_and_main_incarnations'),'populated-gate':('real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack'),'active-stop':('actual_cli_stopped_active_ingress_old_incarnations_absent','actual_active_stop_to_fresh_epoch3_child_ack')}
+CASE_FLAGS.update({'draft-discard':('actual_nonempty_partial_draft_write_cut_and_source_lost','fresh_candidate_and_wrong_hash_pending_refused_before_draft_clear','actual_present_draft_receipt_removed_true_then_absent_different_hash_false','only_fresh_replacement_consumed2_after_discard_then_normal_hot3'),'draft-discard-cut':('actual_nonempty_partial_draft_cut_and_source_absence_before_unlink_cut','actual_root_directory_fsync_after_draft_unlink_killed_before_receipt','fresh_current_absence_retry_removed_false_not_historic_discard_receipt','unconsumed2_replaced_then_normal_hot3_after_durable_discard_cut')})
 CHECKPOINT_FLAGS=COMMON_CHECKPOINT_FLAGS+COMMITTED_CHECKPOINT_FLAGS+CASE_FLAGS['populated-gate']
 
 RECOVERY_FLAGS=('original_disk_new_boot_same_machine','installed_epoch3_and_source_absence_preserved','automatic_cold_tls_epoch3_no_operator_activation','old_guest_recovered_no_implicit_resume_and_old_key_refused','all_four_kernel_projects_and_private_generations_released','manager_clean_stop_removed_both_units_and_inputs')+drain.RECOVERY_FLAGS
@@ -281,13 +282,13 @@ def produce(operation):
 def trace_policy(operation,request,plan,expected,mode,replaces=None):
     guard()
     started=time.monotonic()
-    try:interrupt(arguments(operation,request,CONFIG/plan,expected,replaces),str(CONFIG/(mode+'-'+request+'-output')),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,mode,2,request)
+    try:return interrupt(arguments(operation,request,CONFIG/plan,expected,replaces),str(CONFIG/(mode+'-'+request+'-output')),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,mode,2,request)
     finally:private_timing(mode,time.monotonic()-started)
 
 
 def private_timing(event,seconds):
     guard()
-    if event not in ('status','verify','reconcile','reconfigure','recover-policy','replace-pending-policy','rotation-proposal','supersession-proposal','supersession-visible') or type(seconds) is not float or not 0<=seconds<=120:raise RuntimeError('closed private timing required')
+    if event not in ('status','verify','reconcile','reconfigure','recover-policy','replace-pending-policy','rotation-proposal','supersession-proposal','supersession-visible','discard-supersession-draft','supersession-draft-short','supersession-draft-discard') or type(seconds) is not float or not 0<=seconds<=120:raise RuntimeError('closed private timing required')
     with open('/dev/console','w') as c:c.write('XANDBOX_MANAGED_PRIVATE_TIMING '+json.dumps({'event':event,'seconds':round(seconds,6)},sort_keys=True)+'\n');c.flush()
 
 
@@ -386,8 +387,75 @@ def unconsumed_prelude(ingress_before):
     return old_request,drained
 
 
+def draft_arguments(pending,sha):
+    if type(pending) is not str or not re.fullmatch('[0-9a-f]{32}',pending) or type(sha) is not str or not re.fullmatch('[0-9a-f]{64}',sha):raise RuntimeError('fixed draft hash and pending ID required')
+    return [CLI,'discard-supersession-draft','-expected-revision','1','-pending-request-id',pending,'-draft-sha256',sha]
+
+
+def draft_receipt(result,pending,sha,removed):
+    if type(removed) is not bool or result.returncode or result.stderr or len(result.stdout)>8192:raise RuntimeError('actual distinct draft receipt required')
+    value=json.loads(result.stdout)
+    expected={'version':1,'revision':1,'pending_request_id':pending,'requested_draft_sha256':sha,'draft_removed':removed,'draft_absent':True,'ingress_stopped':True,'production_ready':False}
+    if type(value) is not dict or set(value)!=set(expected) or any(type(value[k]) is not type(v) or value[k]!=v for k,v in expected.items()):raise RuntimeError('exact current absence receipt required, never policy commit or historic hash receipt')
+    return value
+
+
+def draft_call(pending,sha,removed=False,want=0):
+    if type(want) is not int or want not in (0,1) or type(removed) is not bool:raise RuntimeError('closed draft outcome required')
+    guard();args=draft_arguments(pending,sha)
+    if base.sha(CLI)!=json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256']:raise RuntimeError('fresh qualified draft installer required')
+    started=time.monotonic()
+    try:result=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
+    finally:private_timing('discard-supersession-draft',time.monotonic()-started)
+    if want==1:return receipt(result,1,1)
+    if type(want) is not int or want!=0:raise RuntimeError('closed actual draft outcome required')
+    return draft_receipt(result,pending,sha,removed)
+
+
+def draft_case(case,rows,main_before,ingress_before):
+    guard()
+    if case not in ('draft-discard','draft-discard-cut'):raise RuntimeError('closed draft case required')
+    pending,drained=unconsumed_prelude(ingress_before)
+    first=secrets.token_hex(16)
+    proof=trace_policy('replace-pending-policy',first,'rotation-replacement-2a.json',1,'supersession-draft-short',pending)
+    path=ROOT/'.policy-supersession.next'
+    if type(proof) is not dict or set(proof)!={'sha256','bytes'} or type(proof['bytes']) is not int or not 64<=proof['bytes']<=160 or path.stat().st_size!=proof['bytes'] or base.sha(path)!=proof['sha256'] or (ROOT/'policy-supersession.json').exists():raise RuntimeError('actual nonempty partial own declaration required')
+    remove_source('replacement-2a')
+    invariant={p.name:base.sha(p) for p in ROOT.iterdir() if p.name not in ('.lock','.policy-supersession.next')}
+    second=secrets.token_hex(16)
+    call('replace-pending-policy',2,second,CONFIG/'rotation-replacement-2b.json',1,pending,want=1)
+    wrong=('0' if proof['sha256']!='0'*64 else '1')*64
+    draft_call(pending,wrong,want=1);draft_call(first,proof['sha256'],want=1)
+    if base.sha(path)!=proof['sha256'] or ingress.ingress_identity()!=ingress_before:raise RuntimeError('negative draft paths mutated metadata or stopped ingress')
+    policy_state(1);call('verify',1,want=1)
+    # Start the original-budget writer AFTER fault creation and negative controls,
+    # but BEFORE the actual ingress-only discard under test. No budget increase.
+    writer=new_busy_writer(rows[0][0]);drain.busy(rows[0][0],writer['id'])
+    if case=='draft-discard':
+        draft_call(pending,proof['sha256'],removed=True)
+        draft_call(pending,wrong,removed=False)
+    else:
+        output=CONFIG/'draft-discard-cut-output';started=time.monotonic()
+        try:interrupt(draft_arguments(pending,proof['sha256']),str(output),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,'supersession-draft-discard',1,pending)
+        finally:private_timing('supersession-draft-discard',time.monotonic()-started)
+        if output.read_bytes():raise RuntimeError('discard cut must be before any CLI receipt')
+        draft_call(pending,proof['sha256'],removed=False)
+    stopped_original_ingress();policy_state(1)
+    if path.exists() or base.main_identity()!=main_before or {p.name:base.sha(p) for p in ROOT.iterdir() if p.name not in ('.lock','.policy-supersession.next')}!=invariant:raise RuntimeError('discard modified policy/intent/proposal/base or main')
+    call('verify',1,want=1);drain.busy(rows[0][0],writer['id'])
+    call('replace-pending-policy',2,second,CONFIG/'rotation-replacement-2b.json',1,pending)
+    save(CONFIG/'active-client.json',{'epoch':2,'variant':'replacement-2b'});bind_observers();ingress.tls_ready();policy_state(2)
+    envelope=json.loads((ROOT/'gateway-policy.json').read_bytes())
+    if envelope.get('request_id')!=second or envelope.get('replaced_pending_request_id')!=pending or (ROOT/'policy-supersession.json').exists() or (ROOT/'rotation-intent.json').exists():raise RuntimeError('only new replacement may consume unconsumed epoch2')
+    remove_source('replacement-2b');before=ingress.ingress_identity();call('reconcile',2,second)
+    if ingress.ingress_identity()!=before:raise RuntimeError('source-free replacement receipt restarted ingress')
+    request=ordinary_hot_step(3)
+    return request,pending,drained,writer
+
+
 def new_case(case,rows,main_before,ingress_before):
     guard()
+    if case in ('draft-discard','draft-discard-cut'):return draft_case(case,rows,main_before,ingress_before)
     if case=='hot-rotation':
         drained=drain.change('drain',drain.state('open')['control']['committed'])
         writer=new_busy_writer(rows[0][0]);drain.busy(rows[0][0],writer['id'])

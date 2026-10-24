@@ -7,10 +7,10 @@ from build_systemd_install import ASSETS, ROLES, load_assets
 
 MARKER='Xandbox owned managed policy fixture v1\n'
 CONFIG='etc/xandbox-managed-fixture'
-MAINTENANCE_CASES=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation')
+MAINTENANCE_CASES=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut')
 # The launcher must independently compare every ELF to this source's native
 # qualification. This is a composition pin, not inheritance of an old report.
-PRODUCTION_SOURCE='9db960370be20ad7c2570698e265c3b092eb9562'
+PRODUCTION_SOURCE='df679bb868f8fbab68b9b7563b9aee5824ea771e'
 SCRIPTS=('systemd_managed_guest.py','managed_fixture_trace.py','install_fixture_trace.py','systemd_install_guest.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
 
 def configure(root,assets,maintenance_case='populated-gate'):
