@@ -3,11 +3,19 @@ import unittest
 from build_nested_host import init_scripts
 from kvm_nested_host import (nested_node_resources,nested_group_limits,node_snapshot_format_options,
  validate_node_snapshot_setup,validate_node_snapshot_checkpoint,validate_node_snapshot_recovery,
- NODE_SNAPSHOT_CHECKPOINT_FLAGS,NODE_SNAPSHOT_RECOVERY_FLAGS,validate_prepare_calibration,PREPARE_CALIBRATION_FLAGS)
+ NODE_SNAPSHOT_CHECKPOINT_FLAGS,NODE_SNAPSHOT_RECOVERY_FLAGS,validate_prepare_calibration,PREPARE_CALIBRATION_FLAGS,PREPARE_TRACE_ELF_SHA256)
 def calibration():
- return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':'d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26','instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False,'normalized_transitions':[{'point':p,'goroutine_index':g} for p,g in [('enter',1),('selected',1),('ok',1),('node_ok',1),('enter',2),('release',1),('selected',2),('released',1),('ok',2),('node_ok',2),('release',2),('released',2)]]}
+ return {**{k:True for k in PREPARE_CALIBRATION_FLAGS},'exact_ordinary_elf_sha256':PREPARE_TRACE_ELF_SHA256,'instruction_entry_probes':9,'event_count':12,'completed_preparations':2,'queued_request_cancellation_and_cleanup_isolation_claim':False,'exact_channel_linearization_or_latency_slo_claim':False,'normalized_transitions':[{'point':p,'goroutine_index':g} for p,g in [('enter',1),('selected',1),('ok',1),('node_ok',1),('enter',2),('release',1),('selected',2),('released',1),('ok',2),('node_ok',2),('release',2),('released',2)]]}
 
 class NodeSnapshotTests(unittest.TestCase):
+ def test_fixed_new_trace_pin_matches_go_and_rejects_old_elf(self):
+  import re
+  from pathlib import Path
+  go=(Path(__file__).resolve().parent.parent/'cmd/xandbox-host-fixture/node_prepare_trace_linux.go').read_text()
+  match=re.search(r'const prepareTraceELFSHA = "([0-9a-f]{64})"',go)
+  self.assertIsNotNone(match);self.assertEqual(match[1],PREPARE_TRACE_ELF_SHA256)
+  bad=calibration();bad['exact_ordinary_elf_sha256']='d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'
+  with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
  def test_explicit_profile_and_inode_format_leave_old_modes_unchanged(self):
   r=nested_node_resources(True);self.assertEqual(r,{'profile':'node-snapshot-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30})
   self.assertEqual(nested_group_limits(r)['cpu.max'],'800000 100000');self.assertEqual(nested_group_limits(r)['pids.max'],'256')

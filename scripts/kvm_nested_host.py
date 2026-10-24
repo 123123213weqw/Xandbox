@@ -393,11 +393,14 @@ def validate_node_snapshot_setup(v):
 
 NODE_SNAPSHOT_CHECKPOINT_FLAGS=('real_nested_kvm','checkpoint_receipt_fsynced','schema3_snapshot_exact_node_policy','publisher_and_daemon_inside_control','two_actual_snapshot_clones_private_quota_shared_inode_pins_checked','inode_pressure_refuses_prepare_publish_but_stop_cleanup_continues','inode_filler_removed_and_headroom_restored','byte_pressure_refuses_prepare_publish_existing_exec_continues','publisher_refusal_specific_and_catalog_unchanged','healthy_synced_low_free_checkpoint_not_inflight_fault')
 NODE_SNAPSHOT_RECOVERY_FLAGS=('l1_boot_changed','exact_policy_owner_namespace_quota_shared_backing_before_daemon','low_free_guard_survived_cold_and_ordinary_start_reclaims','old_keys410_all_four_projects_zero_before_reuse','only_exact_owned_filler_removed_headroom_restored','same_unassigned_declaration_publish_succeeds_after_restore','fresh_two_actual_guests_clean_workspace_new_boots','retire_pins_gc_survivor_exec_and_final_gc_checked','all_four_projects_zero_controller_reaped_entire_node_subtree_removed','no_assigned_guest_or_owner_restoration')
+# Fixed new ordinary target after native ELF/disassembly calibration. Historical
+# reports must retain their original frozen verifier, not inherit this pin.
+PREPARE_TRACE_ELF_SHA256='5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c'
 PREPARE_CALIBRATION_FLAGS=('first_selected_token_observed_before_second_dispatch','calibration_only','second_actual_gate_entry_inside_first_held_interval','all_eight_cpu_loss_counters_zero','live_daemon_incarnation_inode_control_and_event_tgid_checked','entry_probe_only_no_uretprobe_or_user_memory_read')
 def validate_prepare_calibration(v):
     assert type(v) is dict
     for k in PREPARE_CALIBRATION_FLAGS:assert v[k] is True
-    assert v['exact_ordinary_elf_sha256']=='d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'
+    assert v['exact_ordinary_elf_sha256']==PREPARE_TRACE_ELF_SHA256
     for k,want in {'instruction_entry_probes':9,'event_count':12,'completed_preparations':2}.items():assert type(v[k]) is int and v[k]==want
     for k in ('queued_request_cancellation_and_cleanup_isolation_claim','exact_channel_linearization_or_latency_slo_claim'):assert v[k] is False
     states={};held=0;entered_inside=False
@@ -435,7 +438,7 @@ def validate_node_prepare_cancel(v):
     for k in ('keeper_delete_to_execution_domain_empty_observed_ms','keeper_delete_to_full_reclaim_observed_ms','held_write_to_continue_reply_observed_ms','holder_request_to_ready_observed_ms','survivor_request_to_ready_observed_ms'):assert type(v[k]) in (int,float) and math.isfinite(v[k]) and 0<=v[k]<40000
     assert v['keeper_delete_to_execution_domain_empty_observed_ms']<=v['keeper_delete_to_full_reclaim_observed_ms']<v['held_write_to_continue_reply_observed_ms']<20000
     for k in ('filesystem_D_or_physical_media_fault_claim','exact_copy_stage_timing_scheduler_fairness_or_slo_claim'):assert v[k] is False
-    t=v['trace'];assert t['exact_ordinary_elf_sha256']=='d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'
+    t=v['trace'];assert t['exact_ordinary_elf_sha256']==PREPARE_TRACE_ELF_SHA256
     for k,w in {'instruction_entry_probes':9,'event_count':15,'completed_preparations':2,'cancelled_waiters_without_token':1}.items():assert type(t[k]) is int and t[k]==w
     for k in ('all_eight_cpu_loss_counters_zero','all_nine_probe_hits_equal_trace','live_incarnation_inode_control_event_tgid_checked'):assert t[k] is True
     assert t['exact_channel_linearization_or_slo_claim'] is False
