@@ -56,6 +56,9 @@ jobs:
       - name: Test opt-in owned systemd deployment helper only on Linux
         if: runner.os == 'Linux'
         run: go test -tags=xandbox_deploy_fixture -race -count=3 ./cmd/xandbox-deploy-fixture
+      - name: Test opt-in owned initial installer PKI helper only on Linux
+        if: runner.os == 'Linux'
+        run: go test -tags=xandbox_install_fixture -race -count=3 ./cmd/xandbox-install-fixture
       - name: Python harness syntax and guest image extraction safety
         run: |
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
@@ -67,6 +70,7 @@ jobs:
           python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
           python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/build_systemd_ingress.py scripts/systemd_ingress_guest.py scripts/build_systemd_readiness.py scripts/systemd_readiness_guest.py scripts/readiness_fixture_gate.py scripts/systemd_drain_probe.py scripts/build_systemd_release.py scripts/systemd_release_guest.py scripts/process_exit.py
+          python3 -m py_compile scripts/build_systemd_install.py scripts/systemd_install_guest.py scripts/install_fixture_trace.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
@@ -86,6 +90,8 @@ jobs:
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_host_fixture -trimpath -o /tmp/xandbox-host-fixture ./cmd/xandbox-host-fixture
       - name: Compile opt-in owned systemd deployment helper
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_deploy_fixture -trimpath -o /tmp/xandbox-deploy-fixture ./cmd/xandbox-deploy-fixture
+      - name: Compile opt-in owned initial installer fixture helper
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_install_fixture -trimpath -o /tmp/xandbox-install-fixture ./cmd/xandbox-install-fixture
       - name: Build Linux amd64 and arm64
         run: |
           for arch in amd64 arm64; do

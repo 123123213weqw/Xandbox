@@ -130,9 +130,9 @@ exec switch_root -c /dev/console /newroot /sbin/init
 '''
 
 
-def build(*, ubuntu, alpine, probe, output_disk, output_initrd, deployment_assets=None, ingress_assets=None, readiness_assets=None, release_assets=None):
-    if sum(a is not None for a in (deployment_assets,ingress_assets,readiness_assets,release_assets))>1:raise ValueError("exclusive systemd deployment profile required")
-    disk_bytes = 24<<30 if ingress_assets is not None or readiness_assets is not None or release_assets is not None else (12<<30 if deployment_assets is not None else ROOT_BYTES)
+def build(*, ubuntu, alpine, probe, output_disk, output_initrd, deployment_assets=None, ingress_assets=None, readiness_assets=None, release_assets=None, install_assets=None):
+    if sum(a is not None for a in (deployment_assets,ingress_assets,readiness_assets,release_assets,install_assets))>1:raise ValueError("exclusive systemd deployment profile required")
+    disk_bytes = 24<<30 if ingress_assets is not None or readiness_assets is not None or release_assets is not None or install_assets is not None else (12<<30 if deployment_assets is not None else ROOT_BYTES)
     lock = json.loads(Path(__file__).with_name('systemd_host_assets.json').read_text())
     policy = json.loads(Path(__file__).with_name('nested_host_assets.json').read_text())
     validate_manifest(policy)
@@ -162,6 +162,9 @@ def build(*, ubuntu, alpine, probe, output_disk, output_initrd, deployment_asset
         if release_assets is not None:
             from build_systemd_release import configure
             configure(root, release_assets)
+        if install_assets is not None:
+            from build_systemd_install import configure
+            configure(root, install_assets)
         with output_disk.open('xb') as out:
             os.posix_fallocate(out.fileno(), 0, disk_bytes); os.fsync(out.fileno())
         subprocess.run(['mke2fs', '-q', '-t', 'ext4', '-F', '-m', '0', '-O', 'project,quota', '-E',

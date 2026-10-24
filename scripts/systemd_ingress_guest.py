@@ -22,6 +22,7 @@ from systemd_delegate_probe import guard as base_guard, read, save, run, wait, i
 
 UNIT='xandbox-ingress.service'
 GROUP=Path('/sys/fs/cgroup/system.slice')/UNIT
+CHILD_ROOT='/srv/xb/gwroot/root'
 CONFIG=base.CONFIG
 MANIFEST=CONFIG/'ingress-launch.json'
 CLIENT=CONFIG/'ingress-client-fixture.json'
@@ -141,7 +142,7 @@ def ingress_identity():
     for name in ('CapInh','CapPrm','CapEff','CapAmb'):
         if int(s[name],16)!=0:raise RuntimeError('child active capabilities forbidden')
     if int(s['CapBnd'],16)!=MASK:raise RuntimeError('child bounding ceiling drift')
-    if not os.path.samefile(Path('/proc',str(child),'root'),'/srv/xb/gwroot/root') or not os.path.samefile(Path('/proc',str(child),'cwd'),'/srv/xb/gwroot/root'):
+    if not os.path.samefile(Path('/proc',str(child),'root'),CHILD_ROOT) or not os.path.samefile(Path('/proc',str(child),'cwd'),CHILD_ROOT):
         raise RuntimeError('child root/cwd outside executable-only root')
     for fd in Path('/proc',str(child),'fd').iterdir():
         try:value=os.readlink(fd)
