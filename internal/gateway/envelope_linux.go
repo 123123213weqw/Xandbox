@@ -35,16 +35,17 @@ type PolicySource struct {
 // It avoids a torn two-file policy/rotation-record publication. Epoch1 has no
 // rotation metadata and its whole bytes are pinned by the immutable base config.
 type PolicyEnvelope struct {
-	Version             int          `json:"version"`
-	Revision            uint64       `json:"revision"`
-	ExpectedRevision    uint64       `json:"expected_revision"`
-	RequestID           string       `json:"request_id"`
-	BaseCommitSHA256    string       `json:"base_commit_sha256"`
-	ConfigSHA256        string       `json:"config_sha256"`
-	InitialPolicySHA256 string       `json:"initial_policy_sha256"`
-	Source              PolicySource `json:"source"`
-	Snapshot            Snapshot     `json:"snapshot"`
-	SupersededRequestID string       `json:"superseded_request_id,omitempty"`
+	Version                  int          `json:"version"`
+	Revision                 uint64       `json:"revision"`
+	ExpectedRevision         uint64       `json:"expected_revision"`
+	RequestID                string       `json:"request_id"`
+	BaseCommitSHA256         string       `json:"base_commit_sha256"`
+	ConfigSHA256             string       `json:"config_sha256"`
+	InitialPolicySHA256      string       `json:"initial_policy_sha256"`
+	Source                   PolicySource `json:"source"`
+	Snapshot                 Snapshot     `json:"snapshot"`
+	SupersededRequestID      string       `json:"superseded_request_id,omitempty"`
+	ReplacedPendingRequestID string       `json:"replaced_pending_request_id,omitempty"`
 }
 type PolicyIntent struct {
 	Version             int          `json:"version"`
@@ -107,7 +108,7 @@ func DecodeManagedEnvelope(c Config, raw []byte, base string) (PolicyEnvelope, e
 		return p, bad
 	}
 	if p.Revision == 1 {
-		if p.ExpectedRevision != 0 || p.RequestID != "" || p.BaseCommitSHA256 != "" || p.ConfigSHA256 != "" || p.InitialPolicySHA256 != "" || p.Source != (PolicySource{}) || p.SupersededRequestID != "" || policyBytesDigest(raw) != c.InitialPolicySHA256 {
+		if p.ExpectedRevision != 0 || p.RequestID != "" || p.BaseCommitSHA256 != "" || p.ConfigSHA256 != "" || p.InitialPolicySHA256 != "" || p.Source != (PolicySource{}) || p.SupersededRequestID != "" || p.ReplacedPendingRequestID != "" || policyBytesDigest(raw) != c.InitialPolicySHA256 {
 			return p, bad
 		}
 	} else {
@@ -116,6 +117,9 @@ func DecodeManagedEnvelope(c Config, raw []byte, base string) (PolicyEnvelope, e
 			return p, bad
 		}
 		if p.SupersededRequestID != "" && (!policyRequest.MatchString(p.SupersededRequestID) || p.SupersededRequestID == p.RequestID || p.Revision < 3) {
+			return p, bad
+		}
+		if p.ReplacedPendingRequestID != "" && (!policyRequest.MatchString(p.ReplacedPendingRequestID) || p.ReplacedPendingRequestID == p.RequestID || p.SupersededRequestID != "") {
 			return p, bad
 		}
 	}

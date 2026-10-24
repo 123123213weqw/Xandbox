@@ -26,6 +26,7 @@ type recoveryWork struct {
 	payload, intent, candidate []byte
 	record                     gateway.PolicyRecovery
 	prior                      *gateway.PolicyRecovery
+	priorSup                   *gateway.PolicySupersession
 	visible, complete          bool
 }
 
@@ -33,6 +34,9 @@ func validRecoveryArguments(expected uint64, request, supersedes string) bool {
 	return expected >= 2 && expected != ^uint64(0) && requestPattern.MatchString(request) && requestPattern.MatchString(supersedes) && request != supersedes
 }
 func (f *filesystem) noPolicyRecovery() error {
+	if e := f.noSupersession(); e != nil {
+		return e
+	}
 	for _, name := range []string{"policy-recovery.json", ".policy-recovery.next"} {
 		yes, e := f.exists(Root + "/" + name)
 		if e != nil {
@@ -103,9 +107,31 @@ func (f *filesystem) prepareRecovery(ctx context.Context, t transaction, p Rotat
 		return nil, e
 	}
 	hasRecord := e == nil
+	supRaw, e := f.read(Root+"/policy-supersession.json", gateway.MaxPolicySupersession, 0600)
+	if e != nil && !errors.Is(e, unix.ENOENT) {
+		return nil, e
+	}
+	if yes, e := f.exists(Root + "/.policy-supersession.next"); e != nil {
+		return nil, e
+	} else if yes {
+		return nil, ErrInventory
+	}
 	w := &recoveryWork{config: c, base: base, payload: payload, intent: intent}
 	var previous gateway.PolicyIntent
-	if hasRecord {
+	if len(supRaw) != 0 {
+		if hasRecord {
+			return nil, ErrConflict
+		}
+		sup, e := gateway.ValidateVisiblePolicySupersession(c, base, payload, intent, supRaw)
+		if e != nil {
+			return nil, e
+		}
+		if sup.RequestID != supersedes || sup.ExpectedRevision+1 != expected || current.Revision != expected || current.RequestID != supersedes {
+			return nil, ErrConflict
+		}
+		w.priorSup = &sup
+		previous = sup.NextIntent()
+	} else if hasRecord {
 		record, e := gateway.DecodePolicyRecovery(c, base, recRaw)
 		if e != nil {
 			return nil, e
@@ -159,7 +185,7 @@ func (f *filesystem) prepareRecovery(ctx context.Context, t transaction, p Rotat
 	}
 	if w.visible {
 		w.candidate = payload
-	} else if w.prior == nil && hasRecord {
+	} else if w.prior == nil && w.priorSup == nil && hasRecord {
 		if digest(fallback) == w.record.NewPayloadSHA256 {
 			w.candidate = fallback
 		} else {
@@ -191,7 +217,7 @@ func (f *filesystem) prepareRecovery(ctx context.Context, t transaction, p Rotat
 	if e = f.validateCandidate(c, base, w.candidate); e != nil {
 		return nil, e
 	}
-	if !hasRecord || w.prior != nil {
+	if !hasRecord || w.prior != nil || w.priorSup != nil {
 		previousSHA, e := gateway.SnapshotDigest(current.Snapshot)
 		if e != nil {
 			return nil, e
@@ -227,7 +253,7 @@ func (f *filesystem) prepareRecovery(ctx context.Context, t transaction, p Rotat
 	if e != nil {
 		return nil, e
 	}
-	if w.visible || w.prior != nil || !hasRecord {
+	if w.visible || w.prior != nil || w.priorSup != nil || !hasRecord {
 		if policyScratch {
 			return nil, ErrInventory
 		}
@@ -263,6 +289,9 @@ func (f *filesystem) prepareRecovery(ctx context.Context, t transaction, p Rotat
 }
 
 func (f *filesystem) replaceRecoveryIntent(ctx context.Context, old, next []byte) error {
+	return f.replacePolicyIntent(ctx, old, next, "recovery-intent")
+}
+func (f *filesystem) replacePolicyIntent(ctx context.Context, old, next []byte, stage string) error {
 	if e := f.exact(Root+"/rotation-intent.json", next, 0600); e == nil {
 		if yes, e := f.exists(Root + "/.rotation-intent.next"); e != nil {
 			return e
@@ -277,7 +306,7 @@ func (f *filesystem) replaceRecoveryIntent(ctx context.Context, old, next []byte
 	if e := f.checkPrefix(Root+"/.rotation-intent.next", next); e != nil {
 		return e
 	}
-	if e := f.putPrefix(Root+"/.rotation-intent.next", next, 0600, "recovery-intent"); e != nil {
+	if e := f.putPrefix(Root+"/.rotation-intent.next", next, 0600, stage); e != nil {
 		return e
 	}
 	in, e := f.open(Root+"/rotation-intent.json", unix.O_RDONLY, 0600)
@@ -309,13 +338,13 @@ func (f *filesystem) replaceRecoveryIntent(ctx context.Context, old, next []byte
 	if e = unix.Renameat(int(dir.Fd()), ".rotation-intent.next", int(dir.Fd()), "rotation-intent.json"); e != nil {
 		return e
 	}
-	if e = f.point("recovery-intent-renamed"); e != nil {
+	if e = f.point(stage + "-renamed"); e != nil {
 		return e
 	}
 	if e = dir.Sync(); e != nil {
 		return e
 	}
-	return f.point("recovery-intent-durable")
+	return f.point(stage + "-durable")
 }
 func (f *filesystem) removeRecovery(record gateway.PolicyRecovery) error {
 	if e := f.exact(Root+"/policy-recovery.json", encode(record), 0600); e != nil {
@@ -348,6 +377,25 @@ func (f *filesystem) advanceRecovery(t transaction, w *recoveryWork, advance pol
 	return f.point("recovery-predecessor-durable")
 }
 func (f *filesystem) publishRecovery(ctx context.Context, t transaction, w *recoveryWork, advance policyAdvance) error {
+	if w.priorSup != nil {
+		// This replacement DID commit: consume its exact current epoch, never reuse
+		// it as an uncommitted proposal. Remove only its proven visible declaration.
+		if e := f.advanceRecovery(t, w, advance); e != nil {
+			return e
+		}
+		if e := f.removeSupersession(*w.priorSup); e != nil {
+			return e
+		}
+		if e := f.record("policy-recovery", encode(w.record)); e != nil {
+			return e
+		}
+		p := RotationPlan{Version: 1, Policy: firecracker.Asset{Path: w.record.Source.Path, SHA256: w.record.Source.SHA256}}
+		var e error
+		w, e = f.prepareRecovery(ctx, t, p, w.record.ExpectedRevision, w.record.RequestID, w.record.SupersedesRequestID, w.candidate)
+		if e != nil {
+			return e
+		}
+	}
 	if w.prior != nil {
 		// Current committed predecessor first, even when its prior recovery never
 		// ACKed and its new-intent update was interrupted. No old request receipt.
@@ -425,7 +473,7 @@ func recoveryOperation(ctx context.Context, f *filesystem, p RotationPlan, expec
 	if e == nil {
 		work, e = f.prepareRecovery(ctx, t, p, expected, request, supersedes, nil)
 	}
-	if e == nil && !work.complete && work.prior == nil {
+	if e == nil && !work.complete && work.prior == nil && work.priorSup == nil {
 		e = f.record("policy-recovery", encode(work.record))
 	}
 	unlock()

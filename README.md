@@ -18,6 +18,8 @@
 
 后续[过期策略恢复地基](docs/POLICY_RECOVERY_FOUNDATION.md)新增只打开既有策略状态的持久化原语，以及覆盖文件提交到 ACK 的整段操作锁；原生 race/vet 与进程死亡测试通过。后续已接入[显式 ingress-only 前向恢复候选](docs/MANAGED_POLICY_RECOVERY.md)，已完成独立 Linux 原生 race×3/vet/错误与进程死亡回归（保留两次失败前序），另有独立短时证书测试输入生成器；真实 root CLI/TLS/KVM 维护验收及未提交过期候选的恢复仍未完成。
 
+新增[未消费候选的显式替换实现](docs/PENDING_POLICY_SUPERSESSION.md)，正在进行新源码独立回归：区分“替换 N+1 提案”与“消费已提交 epoch”，不继承前述软件或硬件证据；尚未完成生产验收。
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。

@@ -15,3 +15,7 @@ func Verify(context.Context) error                      { return ErrPlatform }
 func RecoverPolicy(context.Context, string, uint64, string, string) (Result, error) {
 	return Result{}, ErrPlatform
 }
+
+func ReplacePendingPolicy(context.Context, string, uint64, string, string) (Result, error) {
+	return Result{}, ErrPlatform
+}

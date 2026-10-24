@@ -56,6 +56,29 @@ func advancePolicyState(state *policyState, s Snapshot, authority *access.Authen
 // The existing state EX lock independently excludes a surviving supervisor.
 // No fresh state, listener, child descriptor or ACK is created here.
 func AdvanceManagedPolicyState(c Config, authorityRaw, payload []byte, base string) error {
+	return managedMaintenanceState(c, authorityRaw, payload, base, false)
+}
+
+// ConfirmManagedPolicyState proves EXACT existing current authority without
+// Commit, collection or mutation. A future proposal is not an installed epoch.
+func ConfirmManagedPolicyState(c Config, authorityRaw, payload []byte, base string) error {
+	return managedMaintenanceState(c, authorityRaw, payload, base, true)
+}
+func confirmPolicyState(state *policyState, s Snapshot, authority *access.Authenticator) error {
+	if state == nil || state.record.Revision == 0 {
+		return errors.New("managed confirmation requires existing state")
+	}
+	if e := validatePolicyForDurableAdvance(s, authority); e != nil {
+		return e
+	}
+	d, e := SnapshotDigest(s)
+	if e != nil || state.record.Revision != s.Epoch || state.record.SnapshotSHA256 != d {
+		return errors.New("managed confirmation requires exact current authority")
+	}
+	_, e = state.inventory() // validate the complete inventory; never collect it
+	return e
+}
+func managedMaintenanceState(c Config, authorityRaw, payload []byte, base string, exact bool) error {
 	if os.Getuid() != 0 || os.Geteuid() != 0 || c.Version != 2 || c.StateDir != "/srv/xi/p" || c.EmptyRoot != "/srv/xi/g/root" || c.TenantSocket != "/srv/xi/s/api.sock" || c.BackendAuthFile != "/run/xandbox-inputs/auth.json" {
 		return errors.New("root fixed managed maintenance required")
 	}
@@ -79,5 +102,8 @@ func AdvanceManagedPolicyState(c Config, authorityRaw, payload []byte, base stri
 		return e
 	}
 	defer state.Close()
+	if exact {
+		return confirmPolicyState(state, p.Snapshot, authority)
+	}
 	return advancePolicyState(state, p.Snapshot, authority)
 }

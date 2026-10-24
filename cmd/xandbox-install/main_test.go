@@ -99,3 +99,36 @@ func TestFixedRecoveryCLIRequiresExplicitSupersessionAndKeepsErrorsClosed(t *tes
 		t.Fatal("recovery error leaked")
 	}
 }
+
+func TestFixedPendingReplacementCLIExplicitCASAndClosedErrors(t *testing.T) {
+	calls := 0
+	req, old := strings.Repeat("d", 32), strings.Repeat("c", 32)
+	op := operations{replacePending: func(_ context.Context, path string, epoch uint64, r, o string) (installtxn.Result, error) {
+		calls++
+		if path != "/private/plan" || epoch != 1 || r != req || o != old {
+			t.Fatal("fixed arguments changed")
+		}
+		return installtxn.Result{}, errors.New("SECRET_INPUT")
+	}}
+	args := []string{"replace-pending-policy", "-plan", "/private/plan", "-expected-revision", "1", "-request-id", req, "-replaces-request-id", old}
+	for _, v := range []string{"0", "01", "+1", "-1", " 1", "18446744073709551615", "18446744073709551616"} {
+		a := append([]string(nil), args...)
+		a[4] = v
+		var out, err bytes.Buffer
+		if run(a, &out, &err, op) != 1 || calls != 0 || out.Len() != 0 {
+			t.Fatal("invalid epoch reached operation")
+		}
+	}
+	for i, v := range map[int]string{6: old, 8: "not-hex", 7: "-supersedes-request-id"} {
+		a := append([]string(nil), args...)
+		a[i] = v
+		var out, err bytes.Buffer
+		if run(a, &out, &err, op) != 1 || calls != 0 || out.Len() != 0 {
+			t.Fatal("invalid request shape reached operation")
+		}
+	}
+	var out, err bytes.Buffer
+	if run(args, &out, &err, op) != 1 || calls != 1 || out.Len() != 0 || strings.Contains(err.String(), "SECRET") {
+		t.Fatal("raw failure escaped")
+	}
+}

@@ -1,3 +1,7 @@
+Follow-up: [unconsumed proposal supersession](PENDING_POLICY_SUPERSESSION.md) is
+a new implementation under separate regression. The old source-bound software
+record below does not qualify its command or changed artifacts.
+
 # Managed policy v2 — explicit forward recovery candidate
 
 **Experimental: native software regression passed; not production ready.**

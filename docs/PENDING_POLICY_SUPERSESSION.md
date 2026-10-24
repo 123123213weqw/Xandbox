@@ -1,0 +1,123 @@
+# Unconsumed policy proposal supersession — regression candidate
+
+**Experimental implementation under new native regression, not production ready.**
+The earlier [committed recovery software proof](MANAGED_POLICY_RECOVERY.md)
+remains bound to its old source/artifacts. It does not qualify this new command,
+changed gateway/installer, actual root operation, kernel observation or TLS/KVM.
+The full production goal and independent hardware acceptance remain open.
+
+```text
+xandbox-install replace-pending-policy -plan PRIVATE_PLAN -expected-revision N -request-id NEW -replaces-request-id PENDING
+xandbox-install reconcile -request-id NEW
+```
+
+This is explicit maintenance on a fresh managed v2 installation, not an upgrade
+of a v1/self-pinned node. `N` is the currently installed epoch, at least 1 and
+less than uint64 max. The new and administrative pending IDs must be distinct
+32-lowercase-hex values, not the initial installation request. The private plan
+is the unchanged closed rotation plan, with a pinned **fresh Snapshot at N+1**.
+All normal serving and new-admission checks retain actual time. Backend authority,
+self/release/node/artifact pins, UID/GID, socket, address and SNI remain immutable.
+No force, arbitrary path cleanup, service selection, host task argv or node resume.
+
+## Proposal versus consumed epoch
+
+- An ordinary pending rotation has file/runtime N and a future intent C for N+1.
+  Replacing C requires **exact existing runtime N and its Snapshot digest**, not
+  a commit/advance of C. Missing state, a different digest or runtime N+1 refuses.
+- An uncommitted recovery C has file N, existing runtime N-1 or N and an old
+  committed intent for N. Advance only the actual installed N, with the existing
+  exact/+1 persistence primitive, then independently confirm exact N. Never
+  advance the abandoned C, even if its full bytes are available.
+- If the replacement file D at N+1 DID commit, that epoch cannot be reused.
+  `replace-pending-policy` refuses. Explicit `recover-policy` must use expected
+  N+1 and a fresh N+2 source, and can settle the exact visible supersession
+  declaration without inventing an ACK for D.
+
+`ConfirmManagedPolicyState` opens only the original existing gateway store under
+its own EX lock. It validates complete inventory/binding and exact epoch/digest,
+without Commit, bootstrap, collection or mutation. Persistence-only static checks
+may inspect an expired predecessor at its leaf validity boundary; they produce
+no serving Policy, listener, child descriptor or ACK. Normal paths never call
+this primitive to waive time validation.
+
+## Bounded declaration and safe ordering
+
+One canonical `policy-supersession.json` (32 KiB maximum) binds base/config/initial
+anchors, current file and Snapshot hashes, old administrative pending ID, typed
+previous intent, optional old recovery-record hash, new request/source/payload.
+It contains no Snapshot/key, previous supersession or recursive history. Its only
+scratch is `.policy-supersession.next`. A successor envelope adds the optional
+`replaced_pending_request_id`; it cannot also carry the committed-recovery marker.
+Initial and ordinary envelopes without the new marker retain their encoding.
+
+1. Hold operation **EX** on the original installer lock through declaration,
+   ingress maintenance, files, real ACK and final receipt. File EX never spans
+   manager calls. Re-prove self/base/full immutable files, all records and
+   recognized scratch shapes before admitting a fresh candidate.
+2. Persist the declaration before ingress-only stop. Reuse the fixed main pidfd
+   pin, unit/dependency constraints and read-only real cgroup-v2 whole-subtree
+   `populated=0`/`frozen=0` proof from committed recovery. No main or guest action.
+3. Under stopped ingress and file EX, prove exact current runtime N (advancing
+   installed N first only for an uncommitted recovery). A surviving supervisor's
+   original gateway store lock independently refuses the operation.
+4. Discard only abandoned **proposal data** if necessary, then CAS/sync the
+   FUTURE new intent D **before** removing an exact old recovery declaration.
+   The old file N always remains fenced by a future intent across that removal.
+5. Sync/rename the fresh complete D envelope. Gateway startup and cap0 installation
+   verification allow only exact file D + intent D + matching visible declaration;
+   predecessor file N is never a serving-valid supersession view.
+6. Start only ingress and require exact actual supervisor/child ACK. Re-prove
+   files/current-time validity/ACK before removing the supersession declaration
+   **first**, sync, then matching intent and sync. Main incarnation remains pinned
+   through the callback/receipt. `production_ready` stays false.
+
+### Explicit abandonment of private proposal data
+
+An abandoned candidate's key/source may be gone and its `.policy.next` may be a
+partial, opaque prefix. Unlike ordinary reconfiguration's exact-prefix extension,
+this explicit abort-and-replace operation may unlink **only that fixed bounded
+private single-link 0600 proposal-data file**, after proving installed/runtime N
+under stopped ingress. It pins and checks the inode, length and content before
+unlink and sync. A current replacement prefix/full candidate is retained, so a
+complete candidate still supports source-independent exact retry. Oversize data,
+links, different modes or raced-in inodes refuse without deleting them.
+
+This is not adoption of opaque bytes as policy or authority, and is not an
+automatic garbage-repair privilege for other operations. No opaque intent,
+recovery record, supersession record or metadata scratch is discarded this way.
+Unknown authority/inventory remains a refusal. In particular, a partial
+**declaration scratch** with neither its full metadata/candidate nor original
+source can still require external recovery; arbitrary metadata reconstruction or
+blind deletion is not implemented. This candidate does not resolve every liveness
+or media-loss case.
+
+## Repeated uncommitted replacements
+
+When D itself never published, a later explicit E can settle D without D's source
+or key: prove current N, normalize the typed future intent D, remove any exact
+old recovery only after that future intent is durable, then remove declaration D
+**without ACKing it**. File N + future intent D still fences startup. Declare E
+and proceed at the same still-unconsumed N+1. At most one recovery and one
+supersession declaration coexist temporarily; there is no snapshot/history chain.
+
+A cut while settling D is not evidence that E was declared. Exact E retry still
+names D until the authoritative declaration actually changes. `reconcile` checks
+supersession before an older recovery, drops its operation SH, then acquires EX
+and re-proves the request; it never upgrades while holding a file lock. Ordinary
+Apply/Reconfigure/committed recovery cannot bypass an uncommitted supersession.
+A completed lost receipt uses the installed marker, exact request/source and
+ordinary ACK reconciliation without another maintenance stop.
+
+## Evidence still required
+
+Current tests use real anchored shadow files/sync/rename/OFD/flock and separate
+actual **test-process** exits. Their installer manager/ACK/store effects remain
+models; the real gateway store has separate confirmation/inventory tests. No CLI,
+environment or RPC accepts these alternate roots or model observations.
+
+Full current-source race/vet/concurrency qualification, all changed artifact
+rebuilds, fresh owned-L1 root CLI, real positive/negative kernel empty proof,
+coherent TLS revocation, continuing KVM writer, unchanged main/guest incarnation,
+persisted drain, source absence, actual cuts/ACK/cold and independent cleanup are
+still required. Older software or hardware records must not be re-signed.

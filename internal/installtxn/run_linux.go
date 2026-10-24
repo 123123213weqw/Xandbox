@@ -206,6 +206,9 @@ func reconcileOperation(ctx context.Context, f *filesystem, request string, mana
 // The public entry always supplies the fixed root state primitive. Tests may
 // model that effect without touching any fixed host path.
 func reconcileOperationAdvance(ctx context.Context, f *filesystem, request string, manager serviceManager, advance policyAdvance) (Result, error) {
+	return reconcileOperationMaintenance(ctx, f, request, manager, advance, gateway.ConfirmManagedPolicyState)
+}
+func reconcileOperationMaintenance(ctx context.Context, f *filesystem, request string, manager serviceManager, advance, confirm policyAdvance) (Result, error) {
 	operationDone, e := f.operationLock(ctx, false)
 	if e != nil {
 		return Result{}, e
@@ -219,8 +222,15 @@ func reconcileOperationAdvance(ctx context.Context, f *filesystem, request strin
 	var p RotationPlan
 	var expected uint64
 	var supersedes string
-	pending := false
+	pendingSup := false
 	if e == nil {
+		pendingSup, e = f.exists(Root + "/policy-supersession.json")
+		if e == nil && pendingSup {
+			p, expected, supersedes, e = f.declaredSupersession(t, request)
+		}
+	}
+	pending := false
+	if e == nil && !pendingSup {
 		pending, e = f.exists(Root + "/policy-recovery.json")
 		if e == nil && pending {
 			p, expected, supersedes, e = f.declaredRecovery(t, request)
@@ -230,6 +240,10 @@ func reconcileOperationAdvance(ctx context.Context, f *filesystem, request strin
 	if e != nil {
 		operationDone()
 		return Result{}, e
+	}
+	if pendingSup {
+		operationDone()
+		return supersessionOperation(ctx, f, p, expected, request, supersedes, manager, advance, confirm)
 	}
 	if pending {
 		operationDone() // never upgrade SH to EX or wait for EX with a file flock
