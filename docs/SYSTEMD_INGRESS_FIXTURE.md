@@ -104,3 +104,15 @@ PrivateDevices、只读cgroup/系统、预算和所有失败关闭条件保持�
 控制。恢复真正Go candidate入口，关闭临时observer模式。此修正改变ingress guard/helper
 的重建字节，必须重新原生构建/校验并在新owned L1 scope中验证；旧失败不回写为通过，
 当前尚不宣布TLS→KVM/rotation/crash/cold通过。
+
+v4（6a85035）已按原断言完成三个预检负例，故意错误pin到composition、预算漂移到
+ envelope、额外能力到placement，说明root精确能力检查已推进；正常入口仍在envelope
+拒绝，未接受TLS。完整journal明确提示`CPUQuota=200.000%`非法并被忽略。原有精确kernel
+读回阻止了缺失CPU上限的入口启动，没有为通过测试放行无限quota。
+
+[systemd v255 load-fragment](https://github.com/systemd/systemd/blob/v255/src/core/load-fragment.c)
+调用[percent-util](https://github.com/systemd/systemd/blob/v255/src/basic/percent-util.c)解析，
+百分数至多两位小数。后续render整数200%，可精确表示的小数最多两位；100ms周期对应
+10µs精度，不能表示的immutable quota直接拒绝生成，不静默取整。新增旧实现RED/
+新实现GREEN控制；预算/所有kernel读回和三项能力断言不变。新guard/helper字节仍须原生
+重新构建及新scope实测。v4失败原件与独立一个外层代际清理复核保留。

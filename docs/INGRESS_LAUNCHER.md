@@ -142,3 +142,7 @@ Linux原生154项Python零skip、8项退出控制及新45轮mock烟测通过，�
 或已修复。未再重复同样的100次实验；后续失败将保留原退出断言并输出闭集元数据。
 
 后续新增[显式16GiB独立systemd ingress fixture](SYSTEMD_INGRESS_FIXTURE.md)，复用候选unit/API并覆盖TLS→KVM与轮换/crash/cold的代码路径；当前只有代码，实机验收尚未通过，不把它当成安装器或旧profile扩容。
+
+候选unit后续修正见[实机前序](SYSTEMD_INGRESS_FIXTURE.md)：系统manager默认root避免
+255显式setuid/seccomp路径丢active SETUID，guard仍要求原精确集合；CPUQuota按v255最多
+两位小数生成，不能表示的10µs以下精度拒绝，不四舍五入。没有放宽真实kernel budget读回。

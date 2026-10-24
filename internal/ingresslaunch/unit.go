@@ -22,6 +22,16 @@ func (m Manifest) Unit(n launch.Manifest, manifestPath, devicePath string) (stri
 		return "", errPolicy
 	}
 	p := m.Ingress
+	// systemd255 parses percentages at most to hundredths: at a100ms period
+	// that is 10us. Never round an operator's immutable budget or emit a value
+	// the manager ignores. Runtime kernel readback remains exact.
+	if p.CPUQuota%10 != 0 {
+		return "", errPolicy
+	}
+	cpu := fmt.Sprintf("%d", p.CPUQuota/1000)
+	if remainder := (p.CPUQuota % 1000) / 10; remainder != 0 {
+		cpu += fmt.Sprintf(".%02d", remainder)
+	}
 	node := filepath.Base(n.UnitRoot)
 	return fmt.Sprintf(`[Unit]
 Description=Xandbox experimental separately bounded TLS ingress
@@ -36,7 +46,7 @@ MemoryMax=%d
 MemorySwapMax=0
 OOMPolicy=kill
 TasksMax=%d
-CPUQuota=%d.%03d%%
+CPUQuota=%s%%
 CPUQuotaPeriodSec=100ms
 IOReadBandwidthMax=%s %d
 IOWriteBandwidthMax=%s %d
@@ -60,5 +70,5 @@ TimeoutStopSec=10s
 Restart=no
 [Install]
 WantedBy=%s
-`, node, node, node, manifestPath, p.MemoryMax, p.PidsMax, p.CPUQuota/1000, p.CPUQuota%1000, devicePath, p.IOBytesPerSecond, devicePath, p.IOBytesPerSecond, devicePath, p.IOOperationsPerSecond, devicePath, p.IOOperationsPerSecond, m.PolicyStateDir, node), nil
+`, node, node, node, manifestPath, p.MemoryMax, p.PidsMax, cpu, devicePath, p.IOBytesPerSecond, devicePath, p.IOBytesPerSecond, devicePath, p.IOOperationsPerSecond, devicePath, p.IOOperationsPerSecond, m.PolicyStateDir, node), nil
 }

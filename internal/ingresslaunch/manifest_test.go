@@ -91,7 +91,7 @@ func TestUnitHasSeparateBudgetAndNoShellOrControlHelper(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	for _, text := range []string{"BindsTo=xandbox.service", "After=xandbox.service", "PartOf=xandbox.service", "WantedBy=xandbox.service", "Delegate=no", "MemoryMax=536870912", "OOMPolicy=kill", "TasksMax=64", "CPUQuota=200.000%", "IOReadBandwidthMax=/dev/vda 67108864", "IOWriteIOPSMax=/dev/vda 2048", "CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_SYS_CHROOT", "ProtectControlGroups=yes", "ReadWritePaths=/srv/xb/policy", "KillMode=control-group"} {
+	for _, text := range []string{"BindsTo=xandbox.service", "After=xandbox.service", "PartOf=xandbox.service", "WantedBy=xandbox.service", "Delegate=no", "MemoryMax=536870912", "OOMPolicy=kill", "TasksMax=64", "CPUQuota=200%", "IOReadBandwidthMax=/dev/vda 67108864", "IOWriteIOPSMax=/dev/vda 2048", "CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_SYS_CHROOT", "ProtectControlGroups=yes", "ReadWritePaths=/srv/xb/policy", "KillMode=control-group"} {
 		if !strings.Contains(unit, text) {
 			t.Fatal("missing unit contract", text)
 		}
@@ -106,10 +106,10 @@ func TestUnitHasSeparateBudgetAndNoShellOrControlHelper(t *testing.T) {
 			t.Fatal("unit injection accepted")
 		}
 	}
-	m.Ingress.CPUQuota = 200001
-	m.Capacity.CPUQuota++
+	m.Ingress.CPUQuota = 200010
+	m.Capacity.CPUQuota += 10
 	unit, e = m.Unit(nodePolicy(), "/etc/xandbox/ingress-launch.json", "/dev/vda")
-	if e != nil || !strings.Contains(unit, "CPUQuota=200.001%") {
+	if e != nil || !strings.Contains(unit, "CPUQuota=200.01%") {
 		t.Fatal("CPU unit conversion drift")
 	}
 }
@@ -126,5 +126,14 @@ func TestSystemManagerDefaultRootAvoidsExplicitSetuidSeccompPipeline(t *testing.
 		if !strings.Contains(unit, keep) {
 			t.Fatal("hardening lost", keep)
 		}
+	}
+}
+
+func TestUnitRejectsUnrepresentableSystemd255CPUPrecision(t *testing.T) {
+	m := policy()
+	m.Ingress.CPUQuota = 200001
+	m.Capacity.CPUQuota++
+	if _, e := m.Unit(nodePolicy(), "/etc/xandbox/ingress-launch.json", "/dev/vda"); e == nil {
+		t.Fatal("three-decimal percentage is rejected by systemd255; must not silently round or emit ignored quota")
 	}
 }
