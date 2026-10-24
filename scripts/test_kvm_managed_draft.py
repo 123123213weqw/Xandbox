@@ -148,4 +148,18 @@ class DraftControls(unittest.TestCase):
         checkpoint=inspect.getsource(guest.checkpoint)
         self.assertLess(checkpoint.index("drain.busy(rows[0][0],writer['id'])",checkpoint.index("late_observation('before-stop'")),checkpoint.index('install.stop_destroy(rows[0][0]'))
 
+    def test_stopped_window_uses_authenticated_guest_uds_not_unavailable_tls_or_host_fallback(self):
+        row={'generation':'a'*32};execution='b'*32
+        values=[{'id':'c'*32},{'status':'EXITED','output':{'exit_code':0,'stdout':'1\n'}},{'id':'d'*32},{'status':'EXITED','output':{'exit_code':0,'stdout':'2\n'}},{'status':'RUNNING'}]
+        with patch.object(guest,'guard'),patch.object(guest,'stopped_original_ingress') as stopped,patch.object(guest.base,'refpath',return_value='/v1/sandboxes/fixed'),patch.object(guest.ingress,'UDS_CALL',side_effect=values) as uds,patch.object(guest.ingress,'tls_call') as tls,patch.object(guest,'wait',side_effect=lambda check,seconds:self.assertTrue(check())),patch.object(guest.time,'sleep'):
+            guest.stopped_ingress_busy(row,execution)
+            self.assertEqual(stopped.call_count,2);tls.assert_not_called()
+            self.assertEqual(uds.call_count,5)
+            for call in uds.call_args_list:self.assertEqual(call.kwargs['tenant'],'alpha')
+            self.assertEqual(uds.call_args_list[0].args[2],{'generation':row['generation'],'argv':['cat','/workspace/heartbeat'],'timeout_ms':5000})
+            self.assertEqual(uds.call_args_list[-1].args,('GET','/v1/sandboxes/fixed/executions/'+execution))
+        source=inspect.getsource(guest.stopped_ingress_busy)
+        for forbidden in ('subprocess','base.call(','tls_call(','os.system'):self.assertNotIn(forbidden,source)
+        self.assertIn('stopped_ingress_busy',inspect.getsource(guest.draft_case))
+
 if __name__=='__main__':unittest.main()

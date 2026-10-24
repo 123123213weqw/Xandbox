@@ -412,6 +412,28 @@ def draft_call(pending,sha,removed=False,want=0):
     return draft_receipt(result,pending,sha,removed)
 
 
+def stopped_ingress_busy(row,execution):
+    # The ingress is intentionally stopped. Observe through the AUTHENTICATED
+    # fixed controller UDS, still via the real guest API/vsock, not TLS or a host
+    # command fallback. Subsequent recovered-ingress/Stop probes still use TLS.
+    guard();stopped_original_ingress()
+    if type(execution) is not str or not re.fullmatch('[0-9a-f]{32}',execution):raise RuntimeError('same original busy execution required')
+    def counter():
+        accepted=ingress.UDS_CALL('POST',base.refpath(row)+'/exec',{'generation':row['generation'],'argv':['cat','/workspace/heartbeat'],'timeout_ms':5000},tenant='alpha',expected=202)
+        if type(accepted.get('id')) is not str or not re.fullmatch('[0-9a-f]{32}',accepted['id']):raise RuntimeError('actual bounded guest probe required')
+        result={}
+        def done():
+            nonlocal result
+            result=ingress.UDS_CALL('GET',base.refpath(row)+'/executions/'+accepted['id'],tenant='alpha')
+            return result['status']!='RUNNING'
+        wait(done,15)
+        if result['status']!='EXITED' or result['output']['exit_code']!=0 or type(result['output']['stdout']) is not str or not result['output']['stdout'].strip().isdecimal():raise RuntimeError('actual guest counter required while ingress stopped')
+        return int(result['output']['stdout'].strip())
+    before=counter();time.sleep(.2)
+    if counter()<=before or ingress.UDS_CALL('GET',base.refpath(row)+'/executions/'+execution,tenant='alpha')['status']!='RUNNING':raise RuntimeError('same writer must progress during stopped ingress')
+    stopped_original_ingress()
+
+
 def draft_case(case,rows,main_before,ingress_before):
     guard()
     if case not in ('draft-discard','draft-discard-cut'):raise RuntimeError('closed draft case required')
@@ -442,7 +464,7 @@ def draft_case(case,rows,main_before,ingress_before):
         draft_call(pending,proof['sha256'],removed=False)
     stopped_original_ingress();policy_state(1)
     if path.exists() or base.main_identity()!=main_before or {p.name:base.sha(p) for p in ROOT.iterdir() if p.name not in ('.lock','.policy-supersession.next')}!=invariant:raise RuntimeError('discard modified policy/intent/proposal/base or main')
-    call('verify',1,want=1);drain.busy(rows[0][0],writer['id'])
+    call('verify',1,want=1);stopped_ingress_busy(rows[0][0],writer['id'])
     call('replace-pending-policy',2,second,CONFIG/'rotation-replacement-2b.json',1,pending)
     save(CONFIG/'active-client.json',{'epoch':2,'variant':'replacement-2b'});bind_observers();ingress.tls_ready();policy_state(2)
     envelope=json.loads((ROOT/'gateway-policy.json').read_bytes())

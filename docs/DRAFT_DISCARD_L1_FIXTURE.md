@@ -36,6 +36,10 @@ rechecks immediately before Stop. No substitute host execution is allowed.
 4. Start the original-budget busy writer after fault creation/negative controls
    but **before** the actual administrative discard. Keep the same four guests,
    main process and persisted drain across that operation.
+   During the intentionally stopped-ingress window, authenticated controller
+   UDS guest-API reads prove counter progress and the original job still running;
+   no unavailable TLS connection or host execution is substituted. After ingress
+   recovery, the original mandatory TLS continuity and busy Stop probes remain.
 5. `draft-discard` requires the actual distinct receipt with `draft_removed=true`,
    then an absent retry with a different requested hash and `draft_removed=false`.
    `draft-discard-cut` instead observes successful exact `unlinkat(2)`, then
