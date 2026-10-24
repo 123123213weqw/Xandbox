@@ -16,6 +16,8 @@
 
 [策略通道的历史独立组件验收](docs/POLICY_OPERATOR_COMPONENT.md)之后，新增[受管策略 v2 原生候选](docs/MANAGED_POLICY_NATIVE.md)：接入监督进程、24 目标新安装、原子完整策略授权、CAS 与缺源协调，分别确认文件提交和子进程 ACK。**当前不代表普通 root CLI / TLS-KVM / 冷轮换已经验收；旧 v1 节点不能据此原地升级，仍不可生产部署。**
 
+后续[过期策略恢复地基](docs/POLICY_RECOVERY_FOUNDATION.md)新增只打开既有策略状态的持久化原语，以及覆盖文件提交到 ACK 的整段操作锁；原生 race/vet 与进程死亡测试通过。**尚未开放过期策略恢复命令，也未完成该维护流程的实机验收。**
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。

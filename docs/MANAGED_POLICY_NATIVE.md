@@ -1,5 +1,9 @@
 # Managed policy v2 — native candidate, not hardware acceptance
 
+Follow-up: [forward-recovery foundation only](POLICY_RECOVERY_FOUNDATION.md) adds
+existing-state/operation-lock prerequisites, **not an expired-policy recovery
+command**. The native record below remains bound to its original source.
+
 **Experimental, not production ready.** This adds a real code path from the
 installer through the root gateway's durable store, sealed child transfer and
 child ACK. It is not a new root CLI/systemd/TLS/KVM/cold-rotation qualification.
