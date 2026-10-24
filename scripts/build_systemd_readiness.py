@@ -24,6 +24,7 @@ def configure(root,assets):
     if digest(p)!=assets['ready']['sha256']:raise ValueError('copied readiness asset changed')
     p=root/'etc/xandbox/readiness-assets.json';p.write_text(json.dumps({'ready':{'path':'/usr/libexec/xandbox-ready','sha256':assets['ready']['sha256']}},sort_keys=True)+'\n');p.chmod(0o600)
     (root/'etc/xandbox-systemd-readiness-fixture').write_text(MARKER)
-    for name in ('systemd_readiness_guest.py','readiness_fixture_gate.py'):
+    for name in ('systemd_readiness_guest.py','readiness_fixture_gate.py','systemd_drain_probe.py'):
         shutil.copyfile(Path(__file__).with_name(name),root/'opt/xandbox'/name);(root/'opt/xandbox'/name).chmod(0o444)
+    (root/'etc/xandbox-systemd-drain-fixture').write_text('Xandbox owned systemd drain extension v1\n')
     unit=root/'etc/systemd/system/xandbox-ingress-operator.service';raw=unit.read_text();assert raw.count('systemd_ingress_guest.py')==1;unit.write_text(raw.replace('systemd_ingress_guest.py','systemd_readiness_guest.py'))

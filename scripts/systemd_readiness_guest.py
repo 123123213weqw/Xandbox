@@ -7,6 +7,7 @@ import subprocess
 import termios
 import time
 import systemd_ingress_guest as ingress
+import systemd_drain_probe as drain
 from systemd_delegate_probe import read,save,run,wait,identity
 base=ingress.base
 READY=base.CONFIG/'readiness.json'
@@ -86,21 +87,25 @@ def enabled():
         if not link.is_symlink() or link.resolve()!=target:raise RuntimeError('exact boot and dependency links required')
 
 def probe():
-    ingress.probe();enabled()
-    return {'ordinary_tls_firecracker_health':True,'same_actual_ingress_identity_budgets_caps_and_no_root_tcp':True,'single_main_start_or_original_disk_boot_without_operator_ingress_start':True,'exact_enabled_daemon_boot_and_ingress_wants_links':True,'no_mock_or_host_task_fallback':True}
+    ingress.probe();enabled();drain.probe_mode()
+    return {'ordinary_tls_firecracker_health':True,'same_actual_ingress_identity_budgets_caps_and_no_root_tcp':True,'single_main_start_or_original_disk_boot_without_operator_ingress_start':True,'exact_enabled_daemon_boot_and_ingress_wants_links':True,'no_mock_or_host_task_fallback':True,'actual_admission_matches_checkpoint_before_operator_resume':True}
 
 def checkpoint():
     if not NEGATIVE_PROVED:raise RuntimeError('both real startup refusal controls required')
+    warm=drain.warm(recover_services)
     value=ingress.checkpoint();del value['explicit_start_after_backend_ready_not_automatic_install']
     save(CHECKPOINT,{'ready_sha256':base.sha(READY),'daemon_unit_sha256':base.sha('/etc/systemd/system/'+base.UNIT),'ready_assets_sha256':base.sha(base.CONFIG/'readiness-assets.json')})
     value.update({'bad_ready_pin_refused_before_ingress_and_manager_cleaned':True,'stopped_real_main_readiness_deadline_refused_and_manager_cleaned':True,'actual_one_cap_ready_helper_in_manager_control_not_node':True,'ingress_stayed_closed_while_post_gate_held':True,'single_main_restart_auto_started_ready_ordered_ingress':True,'enablement_and_ready_inputs_checkpoint_fsynced':True})
+    value.update(warm);value.update(drain.seal_cold())
     return value
 
 def recover():
     old=json.loads(CHECKPOINT.read_bytes());enabled()
     for key,p in (('ready_sha256',READY),('daemon_unit_sha256','/etc/systemd/system/'+base.UNIT),('ready_assets_sha256',base.CONFIG/'readiness-assets.json')):
         if base.sha(p)!=old[key]:raise RuntimeError('original unit/ready policy persistence required')
+    restored=drain.restore_and_resume()
     value=ingress.recover();value.update({'original_enablement_and_readiness_inputs_persisted':True,'cold_boot_both_services_without_operator_start':True})
+    value.update(restored)
     return value
 
 def operator():

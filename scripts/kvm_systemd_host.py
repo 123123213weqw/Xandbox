@@ -70,9 +70,12 @@ def validate_ingress_reply(operation,value):
     assert type(value) is dict and set(value)==set(flags) and all(value[k] is True for k in flags)
 
 
-READINESS_PROBE_FLAGS=('ordinary_tls_firecracker_health','same_actual_ingress_identity_budgets_caps_and_no_root_tcp','single_main_start_or_original_disk_boot_without_operator_ingress_start','exact_enabled_daemon_boot_and_ingress_wants_links','no_mock_or_host_task_fallback')
+READINESS_PROBE_FLAGS=('ordinary_tls_firecracker_health','same_actual_ingress_identity_budgets_caps_and_no_root_tcp','single_main_start_or_original_disk_boot_without_operator_ingress_start','exact_enabled_daemon_boot_and_ingress_wants_links','no_mock_or_host_task_fallback','actual_admission_matches_checkpoint_before_operator_resume')
 READINESS_CHECKPOINT_FLAGS=tuple(k for k in INGRESS_CHECKPOINT_FLAGS if k!='explicit_start_after_backend_ready_not_automatic_install')+('bad_ready_pin_refused_before_ingress_and_manager_cleaned','stopped_real_main_readiness_deadline_refused_and_manager_cleaned','actual_one_cap_ready_helper_in_manager_control_not_node','ingress_stayed_closed_while_post_gate_held','single_main_restart_auto_started_ready_ordered_ingress','enablement_and_ready_inputs_checkpoint_fsynced')
 READINESS_RECOVERY_FLAGS=INGRESS_RECOVERY_FLAGS+('original_enablement_and_readiness_inputs_persisted','cold_boot_both_services_without_operator_start')
+from systemd_drain_probe import CHECKPOINT_FLAGS as DRAIN_CHECKPOINT_FLAGS, RECOVERY_FLAGS as DRAIN_RECOVERY_FLAGS
+READINESS_CHECKPOINT_FLAGS+=DRAIN_CHECKPOINT_FLAGS
+READINESS_RECOVERY_FLAGS+=DRAIN_RECOVERY_FLAGS
 def validate_readiness_reply(operation,value):
     flags={'readiness-probe':READINESS_PROBE_FLAGS,'readiness-checkpoint':READINESS_CHECKPOINT_FLAGS,'readiness-recover':READINESS_RECOVERY_FLAGS}[operation]
     assert type(value) is dict and set(value)==set(flags) and all(type(v) is bool and v is True for v in value.values()),'closed true readiness result flags required'
@@ -82,7 +85,7 @@ def harness_files(deployed,ingress,readiness):
     names=('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')
     if deployed:names+=('build_systemd_deployment.py','systemd_deployment_guest.py')
     if ingress or readiness:names+=('build_systemd_ingress.py','systemd_ingress_guest.py','ingress_guard_probe.py')
-    if readiness:names+=('build_systemd_readiness.py','systemd_readiness_guest.py','readiness_fixture_gate.py')
+    if readiness:names+=('build_systemd_readiness.py','systemd_readiness_guest.py','readiness_fixture_gate.py','systemd_drain_probe.py')
     return names
 
 

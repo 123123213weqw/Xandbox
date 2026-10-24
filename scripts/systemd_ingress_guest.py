@@ -264,8 +264,8 @@ def checkpoint():
     if json.loads(Path('/srv/xb/policy/policy.json').read_bytes())['revision']!=2:raise RuntimeError('durable gateway revision lost after daemon restart')
     tls_call('GET',base.refpath(replacement),token=old_token,expected=401)
     fresh=base.create('alpha','ingress-before-cold');fresh_boot=base.verify_vm(fresh,'alpha')
-    base.execute(fresh,['sh','-c','printf cold-proof > /workspace/cold-marker; sync'],'alpha');base.progressing_writer(fresh,'alpha')
-    save(CHECKPOINT,{'boot_id':read('/proc/sys/kernel/random/boot_id'),'machine_id':read('/etc/machine-id'),'row':fresh,'owner':base.owner(fresh),'guest_boot':fresh_boot,'key':'ingress-before-cold','client':client(),'manifest_sha256':base.sha(MANIFEST)})
+    base.execute(fresh,['sh','-c','printf cold-proof > /workspace/cold-marker; sync'],'alpha');fresh_writer=base.progressing_writer(fresh,'alpha')
+    save(CHECKPOINT,{'boot_id':read('/proc/sys/kernel/random/boot_id'),'machine_id':read('/etc/machine-id'),'row':fresh,'owner':base.owner(fresh),'guest_boot':fresh_boot,'writer_execution_id':fresh_writer['id'],'key':'ingress-before-cold','client':client(),'manifest_sha256':base.sha(MANIFEST)})
     return {k:True for k in ('three_real_preflight_refusals_no_child_or_tcp','four_simultaneous_real_guests_via_tls','two_tenant_auth_quota_and_node_refusals','guest_uid_boot_vmm_caps_filters_and_quota_checked','busy_stop_distinct_from_durable_gc_capacity','reused_slot_fresh_guest_and_workspace','ingress_stop_restart_did_not_stop_busy_guest','live_key_leaf_rotation_two_no_daemon_or_guest_restart','old_token_rejected_on_existing_tls_connection','daemon_sigkill_binds_to_closed_ingress_and_manager_removed_groups','same_policy_daemon_and_gateway_recovered_old_guests_revision_two','old_create_keys_refused410','fresh_live_guest_checkpoint_fsynced','explicit_start_after_backend_ready_not_automatic_install')}
 
 
