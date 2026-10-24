@@ -125,6 +125,11 @@ class ReleaseControls(unittest.TestCase):
             self.assertIn(text,source)
         self.assertLess(source.index('stat.S_IXOTH'),source.index('r=subprocess.run'))
         self.assertNotIn('except PermissionError',source)
+    def test_private_phase_diagnostic_does_not_replace_busy_or_raise_limits(self):
+        source=inspect.getsource(guest.milestone)
+        for text in (".get('state')",".get('status')",'elapsed_ms','XANDBOX_RELEASE_PRIVATE_PHASE'):self.assertIn(text,source)
+        self.assertNotIn(".get('output')",source);self.assertNotIn('argv',source.split('def milestone',1)[1].split('view=',1)[-1])
+        warm=inspect.getsource(guest.warm);self.assertIn("milestone('before_final_busy_check'",warm);self.assertGreaterEqual(warm.count("drain.busy(row,writer['id'])"),2)
     def test_no_secret_or_control_identity_flags(self):
         for flags in (guest.PROBE_FLAGS,guest.CHECKPOINT_FLAGS,guest.RECOVERY_FLAGS):
             self.assertEqual(len(flags),len(set(flags)))

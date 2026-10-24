@@ -202,6 +202,19 @@ def publication_writer(row):
     wait(started,10);drain.busy(row,job['id']);return job
 
 
+def milestone(stage,row,execution,started):
+    # Private, closed lifecycle evidence only; no task output, argv or identity.
+    guard()
+    view={'stage':stage,'elapsed_ms':int((time.monotonic()-started)*1000),'sandbox_state':'UNAVAILABLE','execution_status':'UNAVAILABLE'}
+    try:
+        state=ingress.tls_call('GET',base.refpath(row)).get('state')
+        status=ingress.tls_call('GET',base.refpath(row)+'/executions/'+execution).get('status')
+        allowed={'PREPARING','READY','RUNNING','STOPPING','STOPPED','RECLAIMING','DESTROYED','EXITED','CANCELED','FAILED','TIMED_OUT'}
+        view['sandbox_state']=state if state in allowed else 'OTHER';view['execution_status']=status if status in allowed else 'OTHER'
+    except Exception:pass
+    with open('/dev/console','w') as console:console.write('XANDBOX_RELEASE_PRIVATE_PHASE '+json.dumps(view,sort_keys=True)+'\n');console.flush()
+
+
 def warm():
     guard();a=assets()
     if CHECKPOINT.exists() or ROOT.exists() or INCOMING.exists() or PARKED.exists():raise RuntimeError('new ordinary publication fixture required')
@@ -210,21 +223,21 @@ def warm():
         p=INCOMING/role;shutil.copyfile(a[role]['path'],p);p.chmod(0o500 if role not in ('initrd','kernel','workspace') else 0o400)
         if base.sha(p)!=a[role]['sha256']:raise RuntimeError('actual copied publication input mismatch')
     m1=manifest(NATIVE_SOURCES[0]);m2=manifest(NATIVE_SOURCES[1]);p1=CONFIG/'publish-first.json';p2=CONFIG/'publish-second.json';save(p1,m1);save(p2,m2)
-    row=base.create('alpha','release-publisher-busy');base.verify_vm(row,'alpha');writer=publication_writer(row)
+    row=base.create('alpha','release-publisher-busy');base.verify_vm(row,'alpha');started=time.monotonic();writer=publication_writer(row)
     main=base.main_identity();gateway=ingress.ingress_identity();committed=drain.state('open')['control']['committed']
-    drain.busy(row,writer['id']);source_negatives(m1)
-    r1=race(p1,0);before=store(1);call(p2,0,secrets.token_hex(16),want=1)
+    drain.busy(row,writer['id']);milestone('writer_started',row,writer['id'],started);source_negatives(m1);milestone('source_negatives_complete',row,writer['id'],started)
+    r1=race(p1,0);milestone('first_cas_complete',row,writer['id'],started);before=store(1);call(p2,0,secrets.token_hex(16),want=1)
     if store(1)!=before:raise RuntimeError('stale publication CAS changed reference')
     rename_sync(INCOMING,PARKED)
     try:call(p1,0,r1,revision=1,retained=1)
     finally:rename_sync(PARKED,INCOMING)
     altered={**m1,'source_revision':NATIVE_SOURCES[1]};rebound=CONFIG/'rebound.json';save(rebound,altered);call(rebound,0,r1,want=1)
     if store(1)!=before:raise RuntimeError('rebound exact request changed authority')
-    unknown_controls(p1,r1);r2=race(p2,1);snapshot=store(2)
+    unknown_controls(p1,r1);milestone('inventory_negatives_complete',row,writer['id'],started);r2=race(p2,1);milestone('second_cas_complete',row,writer['id'],started);snapshot=store(2)
     call(p1,2,secrets.token_hex(16),want=1)
     if store(2)!=snapshot:raise RuntimeError('third retained publication grew metadata')
     rename_sync(INCOMING,PARKED);call(p2,1,r2,revision=2,retained=2)
-    drain.state('open',committed);drain.busy(row,writer['id'])
+    drain.state('open',committed);milestone('before_final_busy_check',row,writer['id'],started);drain.busy(row,writer['id'])
     if base.main_identity()!=main or ingress.ingress_identity()!=gateway:raise RuntimeError('artifact publication restarted actual services')
     drain.destroy(row);drain.state('open',committed)
     save(CONFIG/'warm.json',{'snapshot':snapshot,'second_request':r2,'first_request':r1})
