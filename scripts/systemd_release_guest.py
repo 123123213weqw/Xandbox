@@ -63,7 +63,7 @@ def arguments(manifest=None,expected=None,request=None):
     if manifest is None:
         if expected is not None or request is not None:raise RuntimeError('status has no mutation input')
         return [CLI,'status']
-    if manifest.parent!=CONFIG or not re.fullmatch('[a-z0-9-]+\.json',manifest.name) or type(expected) is not int or not 0<=expected<2**64-1 or type(request) is not str or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed private publication request required')
+    if manifest.parent!=CONFIG or not re.fullmatch(r'[a-z0-9-]+\.json',manifest.name) or type(expected) is not int or not 0<=expected<2**64-1 or type(request) is not str or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed private publication request required')
     return [CLI,'publish','-manifest',str(manifest),'-expected-revision',str(expected),'-request-id',request]
 
 
@@ -72,6 +72,13 @@ def call(manifest=None,expected=None,request=None,want=0,revision=None,retained=
     def drop():
         os.setgroups([]);os.setgid(65534);os.setuid(65534)
         if ctypes.CDLL(None,use_errno=True).prctl(38,1,0,0,0)!=0:raise RuntimeError('no privilege gain required')
+    if nonroot:
+        paths=(Path('/'),Path('/usr'),Path('/usr/libexec'),Path(CLI))
+        context=[]
+        for p in paths:
+            s=p.lstat();context.append({'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid})
+            if s.st_uid!=0 or s.st_mode&0o0022 or not s.st_mode&stat.S_IXOTH or p!=Path(CLI) and not stat.S_ISDIR(s.st_mode) or p==Path(CLI) and not stat.S_ISREG(s.st_mode):raise RuntimeError('fixed publisher executable ancestry must actually allow nonroot entry')
+        save(CONFIG/'nonroot-exec-context.json',{'prefix':context,'selected_uid':65534,'selected_gid':65534,'not_cli_uid_guard_success':True})
     r=subprocess.run(arguments(manifest,expected,request),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90,env=ENV,preexec_fn=drop if nonroot else None)
     return parse_result(r,want,revision,retained)
 

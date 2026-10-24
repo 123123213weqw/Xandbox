@@ -33,3 +33,17 @@ console保持私有。仍须独立只读核验本次全部外层代际与声明�
 
 上述目前是代码和验收门槛，不是已经通过的实机结果。它不测试生产CLI的精确syscall中断/
 介质故障窗口，也不完成完整安装事务、激活、升级/回滚/备份、可靠审计、饱和负载或SLO。
+
+## 首轮失败与镜像权限修正（修正后实机仍待验）
+
+`ed255f2`的首个L1在非root检查时失败：execve返回EACCES，CLI没有进入程序，不能冒充
+程序UID门禁拒绝。原始报告及该外层代际/声明路径的独立只读无残留审计保留。
+
+随后只读核对原pinned Ubuntu目录header均为0755，并在相同Python层复现：data_filter对
+directory给出mode=None，private umask077下实际创建/usr为0700。旧builder的同条件纯控制
+实际RED（0700!=0755）；这是组装层重构证据，不伪称首轮L1已采到/usr的实时stat。
+
+只修新owned发布profile的非秘密/usr与/usr/libexec为真实root-owned、不可group/other写的
+0755，配置目录仍0700，不改旧profile或共享L0。新增非root调用前实际逐层权限核对及私有
+诊断；仍必须得到普通CLI的闭集拒绝，不能把exec失败算通过。生产Go、UID门禁、预算和
+所有原有KVM断言均未改变；额外修正Python正则的raw字符串警告。

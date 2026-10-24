@@ -22,11 +22,13 @@ class ReleaseControls(unittest.TestCase):
             with self.assertRaises(ValueError):harness_files(deployed,False,readiness,True)
     def test_builder_configures_one_operator_no_activation(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp)/'root';root.mkdir();(root/'opt/xandbox').mkdir(parents=True);(root/'etc/systemd/system/multi-user.target.wants').mkdir(parents=True)
+            root=Path(tmp)/'root';root.mkdir();(root/'opt/xandbox').mkdir(parents=True);(root/'etc/systemd/system/multi-user.target.wants').mkdir(parents=True);(root/'usr').mkdir(mode=0o700)
             source=Path(tmp)/'input';source.write_bytes(b'not executed');sha=hashlib.sha256(source.read_bytes()).hexdigest()
             builder.configure(root,{k:{'path':str(source),'sha256':sha} for k in builder.ASSETS})
             self.assertEqual((root/'usr/libexec/xandbox-release').read_bytes(),b'not executed')
             self.assertEqual((root/'usr/libexec/xandbox-release').stat().st_mode&0o777,0o555)
+            self.assertEqual((root/'usr').stat().st_mode&0o777,0o755)
+            self.assertEqual((root/'usr/libexec').stat().st_mode&0o777,0o755)
             value=json.loads((root/'etc/xandbox-release/assets.json').read_bytes())
             self.assertEqual(set(value),set(guest.ROLES)|{'release'});self.assertNotIn('helper',value)
             self.assertEqual(value['release']['path'],guest.CLI)
@@ -34,6 +36,8 @@ class ReleaseControls(unittest.TestCase):
             self.assertEqual([p.name for p in (root/'etc/systemd/system/multi-user.target.wants').iterdir()],['xandbox-ingress-operator.service'])
             unit=(root/'etc/systemd/system/xandbox-ingress-operator.service').read_text();self.assertIn('systemd_release_guest.py',unit);self.assertNotIn('systemd_readiness_guest.py',unit)
             self.assertFalse((root/'srv/xandbox-releases').exists())
+            self.assertEqual((root/'etc/xandbox-release').stat().st_mode&0o777,0o700)
+            self.assertEqual((root/'etc/xandbox').stat().st_mode&0o777,0o700)
     def test_profiles_exclusive_before_any_image_work(self):
         for other in ('readiness_assets','ingress_assets','deployment_assets'):
             with self.assertRaises(ValueError):build(ubuntu=None,alpine=None,probe=None,output_disk=None,output_initrd=None,release_assets={},**{other:{}})
@@ -115,6 +119,12 @@ class ReleaseControls(unittest.TestCase):
         original=old.body[0].body[0].value.args[1];actual=new.body[0].body[0].value
         self.assertEqual(ast.literal_eval(original),ast.literal_eval(actual))
         source=inspect.getsource(guest.publication_writer);self.assertIn("base.job(row,argv,'alpha',60000)",source);self.assertIn("drain.busy(row,job['id'])",source)
+    def test_nonroot_must_enter_actual_pinned_cli_not_count_exec_failure(self):
+        source=inspect.getsource(guest.call)
+        for text in ("Path('/usr')","Path('/usr/libexec')",'stat.S_IXOTH','s.st_uid!=0',"save(CONFIG/'nonroot-exec-context.json'",'os.setuid(65534)','os.setgid(65534)','prctl(38,1,0,0,0)'):
+            self.assertIn(text,source)
+        self.assertLess(source.index('stat.S_IXOTH'),source.index('r=subprocess.run'))
+        self.assertNotIn('except PermissionError',source)
     def test_no_secret_or_control_identity_flags(self):
         for flags in (guest.PROBE_FLAGS,guest.CHECKPOINT_FLAGS,guest.RECOVERY_FLAGS):
             self.assertEqual(len(flags),len(set(flags)))

@@ -27,6 +27,12 @@ def load_assets(path):
 def configure(root,assets):
     if set(assets)!=set(ASSETS):raise ValueError('exact publication configure roles required')
     base_configure(root,{k:assets[k] for k in BASE_ASSETS})
+    # data_filter ignores directory modes; private umask can leave /usr0700.
+    # Only this owned profile's non-secret executable ancestry is searchable.
+    for relative in ('usr','usr/libexec'):
+        p=root/relative
+        if p.is_symlink() or not p.is_dir():raise ValueError('actual guest executable directory required')
+        p.chmod(0o755)
     for role,relative in (('release','usr/libexec/xandbox-release'),('template','srv/assets/xandbox-template')):
         p=root/relative;shutil.copyfile(assets[role]['path'],p);p.chmod(0o555)
         if digest(p)!=assets[role]['sha256']:raise ValueError('copied publication program changed')
