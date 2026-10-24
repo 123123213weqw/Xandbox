@@ -17,6 +17,7 @@ import subprocess
 import termios
 import time
 import traceback
+from datetime import datetime
 import systemd_install_guest as install
 import systemd_ingress_guest as ingress
 import systemd_drain_probe as drain
@@ -102,7 +103,9 @@ def receipt(r,revision,want=0):
 def call(operation,revision,request=None,plan=None,expected=None,supersedes=None,want=0):
     guard();args=arguments(operation,request,plan,expected,supersedes)
     if base.sha(CLI)!=json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256']:raise RuntimeError('self-pinned actual managed CLI required')
-    r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
+    started=time.monotonic()
+    try:r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
+    finally:private_timing(operation,time.monotonic()-started)
     if operation=='verify' and want==0:
         if r.returncode or r.stdout or r.stderr:raise RuntimeError('silent real startup gate required')
         return None
@@ -277,7 +280,37 @@ def produce(operation):
 
 def trace_policy(operation,request,plan,expected,mode,replaces=None):
     guard()
-    interrupt(arguments(operation,request,CONFIG/plan,expected,replaces),str(CONFIG/(mode+'-'+request+'-output')),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,mode,2,request)
+    started=time.monotonic()
+    try:interrupt(arguments(operation,request,CONFIG/plan,expected,replaces),str(CONFIG/(mode+'-'+request+'-output')),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,mode,2,request)
+    finally:private_timing(mode,time.monotonic()-started)
+
+
+def private_timing(event,seconds):
+    guard()
+    if event not in ('status','verify','reconcile','reconfigure','recover-policy','replace-pending-policy','rotation-proposal','supersession-proposal','supersession-visible') or type(seconds) is not float or not 0<=seconds<=120:raise RuntimeError('closed private timing required')
+    with open('/dev/console','w') as c:c.write('XANDBOX_MANAGED_PRIVATE_TIMING '+json.dumps({'event':event,'seconds':round(seconds,6)},sort_keys=True)+'\n');c.flush()
+
+
+def new_busy_writer(row):
+    started=time.monotonic();writer=base.progressing_writer(row,'alpha');writer['fixture_started_monotonic']=started
+    return writer
+
+
+def late_observation(phase,row,writer):
+    # Bounded private metadata only, never IDs, tokens, argv, outputs or errors.
+    # Observations do not relax a predicate, change a timeout or repair state.
+    guard()
+    if phase not in ('after-continuity','after-sourcefree-cas','before-stop'):raise RuntimeError('fixed late observation required')
+    started=writer.get('fixture_started_monotonic');remaining=datetime.fromisoformat(row['expires_at'].replace('Z','+00:00')).timestamp()-time.time()
+    owner_present=(base.STATE/'firecracker'/(base.key(row)+'.json')).exists()
+    value={'phase':phase,'owner_present':owner_present,'sandbox_ttl_remaining_ms':round(remaining*1000,3),'writer_age_ms':round((time.monotonic()-started)*1000,3) if type(started) is float else None}
+    if not owner_present:
+        try:
+            current=base.call('GET',base.refpath(row),tenant='alpha')
+            state=current.get('state')
+            value['sandbox_state']=state if state in ('CREATING','READY','STOPPING','STOPPED','DESTROYING','DESTROYED','FAILED') else 'unknown'
+        except Exception:value['sandbox_state']='unavailable'
+    with open('/dev/console','w') as c:c.write('XANDBOX_MANAGED_PRIVATE_LATE '+json.dumps(value,sort_keys=True)+'\n');c.flush()
 
 
 def remove_known_file(path,pin):
@@ -357,12 +390,12 @@ def new_case(case,rows,main_before,ingress_before):
     guard()
     if case=='hot-rotation':
         drained=drain.change('drain',drain.state('open')['control']['committed'])
-        writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
+        writer=new_busy_writer(rows[0][0]);drain.busy(rows[0][0],writer['id'])
         old_request=ordinary_hot_step(2);request=ordinary_hot_step(3)
         return request,old_request,drained,writer
     if case not in ('supersession-repeat','supersession-visible-recovery'):raise RuntimeError('fixed new managed case required')
     old_request,drained=unconsumed_prelude(ingress_before)
-    writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
+    writer=new_busy_writer(rows[0][0]);drain.busy(rows[0][0],writer['id'])
     if case=='supersession-repeat':
         first=secrets.token_hex(16)
         trace_policy('replace-pending-policy',first,'rotation-replacement-2a.json',1,'supersession-proposal',old_request)
@@ -424,16 +457,19 @@ def checkpoint():
     if base.main_identity()!=main_before or [vmm_identity(r) for r,_ in rows]!=vm_before:raise RuntimeError('main/VMM restarted during ingress maintenance')
     if [base.verify_vm(r,t) for r,t in rows]!=boots:raise RuntimeError('guest boot changed during maintenance')
     drain.state('drained',drained);drain.busy(rows[0][0],writer['id'])
+    if case not in ('populated-gate','active-stop'):late_observation('after-continuity',rows[0][0],writer)
     if {n:base.sha(ROOT/n) for n in immutable}!=immutable:raise RuntimeError('base/backend/auth changed during recovery')
     old_key_rejection()
     PHASE='managed-source-free-reconcile';p=CONFIG/'sources/snapshot-3.json';pin=json.loads((CONFIG/'rotation-3.json').read_bytes())['policy']
     if str(p)!=pin['path'] or base.sha(p)!=pin['sha256']:raise RuntimeError('only exact private new source can be removed')
     p.unlink();before=ingress.ingress_identity();call('reconcile',3,request)
     call('recover-policy',3,secrets.token_hex(16),CONFIG/'rotation-3.json',2,old_request,want=1)
+    if case not in ('populated-gate','active-stop'):late_observation('after-sourcefree-cas',rows[0][0],writer)
     if ingress.ingress_identity()!=before or base.main_identity()!=main_before:raise RuntimeError('receipt retry/conflict restarted service')
     # Resume is an explicit root CAS AFTER the preserved-drain proof, never an
     # effect of maintenance. Capacity must not be confused with NODE_DRAINING.
     drain.change('resume',drain.state('drained',drained)['control']['committed']);drain.health('open')
+    if case not in ('populated-gate','active-stop'):late_observation('before-stop',rows[0][0],writer)
     PHASE='managed-stop-reclaim';ms=install.stop_destroy(rows[0][0],'alpha',True)
     for r,t in rows[1:]:install.stop_destroy(r,t)
     PHASE='managed-warm-drain';warm=drain.warm(lambda:restart_after_explicit_warm_stop(request))

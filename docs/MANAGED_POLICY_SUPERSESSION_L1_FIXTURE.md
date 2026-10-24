@@ -1,6 +1,8 @@
-# New managed policy L1 cases — implemented, not yet executed
+# New managed policy L1 cases — first repeat attempt failed
 
-These are **unexecuted fixture protocols**, not additional hardware acceptance.
+These are **not additional accepted hardware protocols**. The first repeat
+attempt failed; visible-publication recovery and ordinary hot rotation have not
+yet executed as independent named scopes.
 The two accepted [committed recovery cases](MANAGED_POLICY_L1_FIXTURE.md) remain
 bound to their own source, reports and inputs. They do not certify these cases.
 
@@ -81,7 +83,35 @@ stopped main; policy maintenance never implicitly starts main or resumes admissi
 
 The new cut points observe real child syscalls, not production test hooks or
 service PID attachment. Pure predicate/shape/file-loss controls do not execute
-those syscalls or the production maintenance protocol. No source-bound actual
+those syscalls or the production maintenance protocol. No complete accepted source-bound
 reports for these three cases exist yet; the full cut/media/runtime/SLO matrix,
 partial-declaration/lost-source liveness gap and the whole production goal remain
 open. Do not expand a future named-case pass to the full supersession matrix.
+
+## Preserved failed original and next diagnostic run
+
+The [first repeat original](validation/managed-policy-supersession-repeat-failed-v1.json)
+used frozen harness `8e2f926`, qualified producer `0ba79e1`, all 23 current
+artifacts and 257 Linux pure tests/zero skips. Its checkpoint failed in
+`managed-stop-reclaim`: the expected backend owner record was already absent
+when the helper tried to load it, **before issuing that helper's Stop request**.
+No complete case, Stop/reclaim timing or cold pass is claimed. Its one outer
+generation and all declared scope paths were independently absent without
+supplemental cleanup; originals are retained.
+
+The cause is not yet proved. Do not infer a TTL, execution-timeout, production
+regression or successful early reclaim merely from that missing file. The next
+frozen diagnostic run keeps the same protocol, 300-second sandbox TTL, 45-second
+busy job, CLI/trace/socket/operator deadlines and all pass predicates. It only
+adds bounded private phase observations of owner presence, remaining TTL, writer
+age and root-operation/trace durations. No IDs, tokens, argv, output or arbitrary
+error text enter those observations; they neither change nor repair state.
+
+The [separate new producer software evidence](validation/managed-policy-material-native-v2.json)
+records six tagged pure parents race x3 and CGO-free x3, tagged vet, all 23 actual
+rebuilds, 21 unchanged runtime artifact hashes and independent matching amd64
+producer cross-builds. Actual default module source/test inputs are equal under
+both CGO-free and race selection (41 packages/240 files); the earlier full
+same-process race x3 is identified as earlier evidence, not a new run. The first
+metadata-reader preflight failure before tests/builds remains recorded separately.
+None of this software evidence converts the failed hardware original into a pass.

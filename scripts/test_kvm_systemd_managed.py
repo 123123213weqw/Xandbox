@@ -295,4 +295,25 @@ class ManagedControls(unittest.TestCase):
             call.assert_called_once_with('reconfigure',2,request,guest.CONFIG/'rotation-2.json',1)
         self.assertEqual(len(calls),3);self.assertIsNone(conn.sock)
 
+    def test_private_late_observation_exports_no_ref_token_or_arbitrary_error(self):
+        from unittest.mock import mock_open
+        row={'id':'a'*32,'generation':'b'*32,'expires_at':'1970-01-01T00:05:00Z'}
+        writer={'id':'private-execution-ref','fixture_started_monotonic':5.0};opened=mock_open()
+        with tempfile.TemporaryDirectory() as tmp,patch.object(guest,'guard'),patch.object(guest.base,'STATE',Path(tmp)),patch.object(guest.base,'call',return_value={'state':'DESTROYED','last_error':'never-export-me','token':'never-export-me'}),patch.object(guest.time,'time',return_value=0.),patch.object(guest.time,'monotonic',return_value=10.),patch('builtins.open',opened):
+            guest.late_observation('before-stop',row,writer)
+        text=''.join(c.args[0] for c in opened().write.call_args_list)
+        self.assertIn('"owner_present": false',text);self.assertIn('"sandbox_state": "DESTROYED"',text);self.assertIn('"writer_age_ms": 5000.0',text);self.assertIn('"sandbox_ttl_remaining_ms": 300000.0',text)
+        for private in (row['id'],row['generation'],writer['id'],'never-export-me'):self.assertNotIn(private,text)
+        with patch.object(guest,'guard'),patch('builtins.open') as opened:
+            for event,seconds in (('arbitrary-private-event',1.),('status',float('nan')),('status',float('inf')),('status',-1.),('status',True)):
+                with self.assertRaises(RuntimeError):guest.private_timing(event,seconds)
+            opened.assert_not_called()
+
+    def test_new_busy_observer_records_age_without_extending_execution_budget(self):
+        with patch.object(guest.time,'monotonic',return_value=10.),patch.object(guest.base,'progressing_writer',return_value={'id':'synthetic-exec'}) as start:
+            writer=guest.new_busy_writer({'id':'synthetic-row'})
+        start.assert_called_once_with({'id':'synthetic-row'},'alpha')
+        self.assertEqual(writer,{'id':'synthetic-exec','fixture_started_monotonic':10.})
+        self.assertIn('45000',inspect.getsource(guest.base.progressing_writer))
+
 if __name__=='__main__':unittest.main()
