@@ -1,0 +1,114 @@
+"""TEST ONLY own-child x86_64 installer trace on a separately marked managed L1.
+
+Only the operator's fresh child is traced. No attach, service PID trace or
+production hook. Policy activation is cut BEFORE connect, after durable file+intent.
+"""
+import ctypes
+import errno
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import signal
+import time
+from install_fixture_trace import Registers,ptrace,string_at
+from systemd_delegate_probe import guard as base_guard
+
+MARKER='Xandbox owned managed policy fixture v1\n'
+ROOT=Path('/etc/xandbox-install')
+OPERATOR=b'/run/xandbox-ingress-control/operator.sock'
+
+def guard():
+    base_guard()
+    if Path('/etc/xandbox-systemd-managed-fixture').read_text()!=MARKER or os.uname().machine!='x86_64':raise RuntimeError('owned x86 managed L1 required')
+
+def activation_candidate(envelope,intent,revision,request):
+    # The actual production CLI validates cryptographic/source/base invariants.
+    # This observation only proves the specific post-publication cut, not ACK.
+    if type(envelope) is not dict or type(intent) is not dict or type(revision) is not int or revision<2 or not re.fullmatch('[0-9a-f]{32}',request):return False
+    if any(type(v) is not int for v in (envelope.get('version'),envelope.get('expected_revision'),intent.get('version'),intent.get('expected_revision'))):return False
+    return envelope['version']==1 and type(envelope.get('revision')) is int and envelope['revision']==revision and envelope['expected_revision']==revision-1 and envelope.get('request_id')==request and type(envelope.get('snapshot')) is dict and type(envelope['snapshot'].get('epoch')) is int and envelope['snapshot']['epoch']==revision and intent['version']==1 and intent['expected_revision']==revision-1 and intent.get('request_id')==request
+
+
+def sockaddr_at(pid,address,length):
+    if not 3<=length<=110:return None
+    data=bytearray()
+    for offset in range(0,length,8):data.extend((ptrace(2,pid,address+offset)&((1<<64)-1)).to_bytes(8,'little'))
+    raw=bytes(data[:length])
+    if raw[:2]!=b'\x01\x00':return None
+    return raw[2:].split(b'\0',1)[0]
+
+def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
+    guard()
+    if mode not in ('initial-commit','policy-activation'):raise RuntimeError('fixed managed cut required')
+    if type(args) is not list or len(args)!=8 or args[0] not in ('/usr/libexec/xandbox-install-bootstrap','/usr/libexec/xandbox-install'):raise RuntimeError('fixed own installer argv required')
+    if mode=='initial-commit':
+        if args[:2]!=['/usr/libexec/xandbox-install-bootstrap','apply'] or revision!=0 or request!='':raise RuntimeError('fixed initial commit child required')
+    elif args[:2]!=['/usr/libexec/xandbox-install','reconfigure'] or revision<2 or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed reconfiguration child required')
+    pid=os.fork()
+    if pid==0:
+        try:
+            fd=os.open(output,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.dup2(fd,1);os.dup2(fd,2);os.close(fd)
+            fd=os.open('/dev/null',os.O_RDONLY);os.dup2(fd,0);os.close(fd)
+            ptrace(0,0);os.kill(os.getpid(),signal.SIGSTOP)
+            os.execve(args[0],args,{'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
+        finally:os._exit(91)
+    threads={pid};hit=False;executed=False;options=1|8|16|(1<<20);end=time.monotonic()+60
+    try:
+        got,status=os.waitpid(pid,0)
+        if got!=pid or not os.WIFSTOPPED(status) or os.WSTOPSIG(status)!=signal.SIGSTOP:raise RuntimeError('owned managed trace handshake')
+        ptrace(0x4200,pid,0,options);ptrace(24,pid)
+        while threads:
+            if time.monotonic()>=end:raise RuntimeError('managed trace deadline')
+            tid,status=os.waitpid(-1,0x40000000|os.WNOHANG)
+            if not tid:time.sleep(.0005);continue
+            if os.WIFEXITED(status) or os.WIFSIGNALED(status):
+                threads.discard(tid)
+                if tid==pid and not hit:raise RuntimeError('actual installer main exited before managed cut')
+                continue
+            if not os.WIFSTOPPED(status):raise RuntimeError('unexpected owned trace state')
+            sig=os.WSTOPSIG(status);event=status>>16
+            if event==3:
+                child=ctypes.c_ulonglong();ptrace(0x4201,tid,0,ctypes.addressof(child));threads.add(child.value)
+            if event==4:
+                if tid!=pid or sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('owned managed exec pin')
+                executed=True
+            if sig==(signal.SIGTRAP|0x80) and executed and not hit:
+                r=Registers();ptrace(12,tid,0,ctypes.addressof(r));entry=r.rax==((1<<64)-errno.ENOSYS)
+                if mode=='initial-commit' and entry and r.orig_rax==257 and string_at(tid,r.rsi)==b'.commit.next':
+                    if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!='/etc/xandbox-install':raise RuntimeError('fixed commit dirfd required')
+                    hit=True
+                elif mode=='policy-activation' and entry and r.orig_rax==42 and sockaddr_at(tid,r.rsi,r.rdx)==OPERATOR:
+                    intent_path=ROOT/'rotation-intent.json'
+                    # The precommit status connection normally has no rotation
+                    # intent yet. Absence is NOT a cut and must not kill the child.
+                    if intent_path.is_file():
+                        raw=(ROOT/'gateway-policy.json').read_bytes();envelope=json.loads(raw);intent=json.loads(intent_path.read_bytes())
+                        if activation_candidate(envelope,intent,revision,request):
+                            if hashlib.sha256(raw).hexdigest()!=intent.get('new_payload_sha256'):raise RuntimeError('actual file/intent hash mismatch')
+                            if (ROOT/'.policy.next').exists() or (ROOT/'.rotation-intent.next').exists():raise RuntimeError('policy publication not complete')
+                            if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('installer incarnation drift')
+                            hit=True
+                if hit:
+                    if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('final own exec pin drift')
+                    os.kill(pid,signal.SIGKILL);continue
+            forward=0 if sig in (signal.SIGTRAP,signal.SIGSTOP,signal.SIGTRAP|0x80) else sig
+            try:ptrace(24,tid,0,forward)
+            except OSError as e:
+                if e.errno!=errno.ESRCH:raise
+        if not hit:raise RuntimeError('fixed managed cut not reached')
+    finally:
+        if threads:
+            try:os.kill(pid,signal.SIGKILL)
+            except ProcessLookupError:pass
+            deadline=time.monotonic()+5
+            while threads and time.monotonic()<deadline:
+                try:tid,status=os.waitpid(-1,0x40000000|os.WNOHANG)
+                except ChildProcessError:break
+                if tid and (os.WIFEXITED(status) or os.WIFSIGNALED(status)):threads.discard(tid)
+                elif tid:
+                    try:ptrace(24,tid,0,signal.SIGKILL)
+                    except OSError:pass
+                else:time.sleep(.01)
+            if threads:raise RuntimeError('own managed child not fully reaped')

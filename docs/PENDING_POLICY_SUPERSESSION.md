@@ -150,3 +150,8 @@ cross-root/inter-iteration coverage, test is dropped, detector option changed or
 failure hidden. Runtime service/guest limits, CLI/maintenance deadlines, owned-L1
 resources and Stop/GC/switch limits are unchanged. The new entire run must still
 actually finish successfully; neither a projection nor a larger alarm is a pass.
+
+A [fresh managed-v2 owned-L1 harness](MANAGED_POLICY_L1_FIXTURE.md) is now
+implemented with pure controls only. It has not executed or qualified root/TLS/KVM
+checks; its first planned populated/empty-gate scope also does not cover the
+production active-ingress stop branch or uncommitted supersession hardware.
