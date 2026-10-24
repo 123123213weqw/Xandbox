@@ -2,8 +2,9 @@
 
 Later candidate: [hash-bound uncommitted supersession draft discard](supersession-draft-discard.md)
 addresses partial declaration bytes plus lost source without deleting committed
-authority or the future-intent startup fence. It needs separate fresh software
-and actual owned-L1 qualification; no earlier hardware result qualifies it.
+authority or the future-intent startup fence. Its separate full software
+qualification is now source-bound at `df679bb`; actual owned-L1 qualification
+is still open, and no earlier hardware result qualifies it.
 
 **Experimental implementation under new native regression, not production ready.**
 The earlier [committed recovery software proof](MANAGED_POLICY_RECOVERY.md)

@@ -1,4 +1,4 @@
-# Hash-bound supersession draft discard (not hardware-qualified)
+# Hash-bound supersession draft discard (software-qualified, not hardware-qualified)
 
 This narrowly scoped administrative operation addresses an unfinished
 `.policy-supersession.next` when its original replacement source has been lost.
@@ -73,10 +73,29 @@ The result certifies **current state**, not a durable historic discard request:
 
 ## Evidence boundary
 
-New shadow-root tests cover source-free empty/partial/opaque/complete drafts,
+The [software-only frozen proof](validation/supersession-draft-native-v2.json)
+binds Go source `df679bb868f8fbab68b9b7563b9aee5824ea771e` and its exact
+archive/runner/artifact hashes. Linux Go 1.27.3 completed the **entire same-process
+whole-package `-race -count=3`** run (installtxn: 1076.307 seconds within the
+unchanged 1200-second package alarm), vet, four opt-in fixture race suites x3,
+CGO-free quota x3, and 261 root pure Python tests with zero skips. All 23 native
+artifacts were actually rebuilt; only `xandbox-install` and `installtxn.test`
+changed bytes versus the prior material-qualified artifacts. Seven independent
+amd64 cross-builds match native bytes; two arm64 cross-builds are compile-only.
+macOS separately completed the default full race x3 and vet.
+
+Ten meaningful new focused parents pass x3 within that full invocation. One
+empty process helper is excluded from the meaningful count. Shadow-root tests
+cover source-free empty/partial/opaque/complete drafts,
 refusals, exact CAS, stopped-ingress revalidation, original-lock exclusion,
 returned errors, and actual **test-process** exits at five boundaries. Manager,
 kernel emptiness and durable-state confirmation are modeled there. These are not
-root CLI/systemd/TLS/KVM or physical power-loss evidence. Fresh software and
-owned-L1 qualification of this new production operation are still required;
-older runtime binaries and named hardware-case reports do not qualify it.
+root CLI/systemd/TLS/KVM or physical power-loss evidence. The first native
+attempt's negative-control setup omitted a mandatory readiness callback and
+failed before reaching the discard operation. Its failed original is preserved;
+the fixture was corrected, not the production path or runtime limits. That
+failed attempt is not counted as acceptance.
+
+**Owned-L1 qualification of this new production operation is still required.**
+Older runtime binaries and named hardware-case reports do not qualify it. There
+is no new switch/Stop/reclaim runtime latency claim or production readiness.

@@ -22,7 +22,7 @@
 
 [新的未消费候选/普通热轮换命名验收](docs/MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)已取得三条独立有限实证：未发布候选缺源重复替换、已发布 epoch 不可复用而前向恢复、普通 1→2→3 热轮换保持原 TLS 连接上的旧凭证拒绝。3 scopes/6 boots 独立核验清理，261 项 Linux 纯测试零跳过；原 45 秒任务及全部资源/期限未放宽，Stop 前另行复核四 VMM 与原忙任务。更早的诊断通过和原因未证实的失败分开保留，不是完整故障矩阵或生产就绪声明。
 
-新增[精确哈希绑定的未提交声明草稿清除候选](docs/supersession-draft-discard.md)：仅针对固定 `.policy-supersession.next`，保留未来 intent 和启动拒绝；不推进 epoch、不清除已提交声明、不重启入口。新生产代码需要独立全量软件与实机验收，不能继承上述旧源码的硬件结果。
+新增[精确哈希绑定的未提交声明草稿清除候选](docs/supersession-draft-discard.md)：仅针对固定 `.policy-supersession.next`，保留未来 intent 和启动拒绝；不推进 epoch、不清除已提交声明、不重启入口。新源码已通过独立 Linux/macOS 全量 race×3/vet 和 23 个原生产物重建；普通 root CLI／真实内核实机验收仍待完成，不能继承上述旧源码的硬件结果。
 
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
