@@ -3,6 +3,7 @@ import copy
 import contextlib
 import io
 import subprocess
+import socket
 import hashlib
 import inspect
 import json
@@ -112,6 +113,18 @@ class IngressDeploymentControls(unittest.TestCase):
         self.assertIn("os.execve('/usr/libexec/xandbox-ingress-launch'",source)
         self.assertIn('len(sys.argv)!=1',source)
         self.assertIn('fixed guard birth diagnostic only, never qualification',inspect.getsource(guest.operator))
+
+    def test_old_token_gate_rejects_reconnected_transport_identity(self):
+        left,right=socket.socketpair()
+        try:
+            connection=SimpleNamespace(sock=left);original=guest.transport_identity(connection)
+            guest.require_same_transport(connection,original)
+            connection.sock=right
+            with self.assertRaisesRegex(RuntimeError,'transport replaced'):guest.require_same_transport(connection,original)
+        finally:left.close();right.close()
+        source=inspect.getsource(guest.checkpoint)
+        for text in ('require_same_transport(held,original_transport)','rotation_before=counter()','prove_busy_progress()',"+'/executions/'+busy['id']"):
+            self.assertIn(text,source)
 
 
 if __name__=='__main__':unittest.main()

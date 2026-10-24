@@ -67,6 +67,19 @@ def tls_call(method,path,body=None,tenant='alpha',key=None,expected=200,token=No
         if connection is None:conn.close()
 
 
+
+def transport_identity(connection):
+    sock=connection.sock
+    if sock is None or sock.fileno()<0:raise RuntimeError('original TLS transport unavailable')
+    info=os.fstat(sock.fileno())
+    return sock,(info.st_dev,info.st_ino),sock.getsockname(),sock.getpeername()
+
+
+def require_same_transport(connection,original):
+    current=transport_identity(connection)
+    if current[0] is not original[0] or current[1:]!=original[1:]:raise RuntimeError('TLS transport replaced during old-token test')
+
+
 def uds_ready():
     def available():
         try:
@@ -209,7 +222,7 @@ def checkpoint():
     replacement=base.create('alpha','ingress-reused');boot=base.verify_vm(replacement,'alpha')
     if boot in boots or base.execute(replacement,['test','!','-e','/workspace/heartbeat'],'alpha')!='':raise RuntimeError('fresh replacement required')
     rows[0]={'row':replacement,'tenant':'alpha','key':'ingress-reused','owner':base.owner(replacement)}
-    base.progressing_writer(replacement,'alpha');old_gateway=ingress_identity();old_daemon=base.main_identity()
+    busy=base.progressing_writer(replacement,'alpha');old_gateway=ingress_identity();old_daemon=base.main_identity()
     # The private UDS observer is operator-only and proves the task keeps running
     # while TLS is deliberately down; it is not a tenant/host execution fallback.
     def counter():
@@ -221,17 +234,23 @@ def checkpoint():
         wait(done,10)
         if result['status']!='EXITED' or result['output']['exit_code']!=0:raise RuntimeError('independent busy guest observer failed')
         return int(result['output']['stdout'].strip())
+    def prove_busy_progress():
+        before=counter();time.sleep(.2)
+        if counter()<=before or UDS_CALL('GET',base.refpath(replacement)+'/executions/'+busy['id'])['status']!='RUNNING':raise RuntimeError('same busy guest writer must still advance and run')
     before=counter();run('systemctl','stop',UNIT);wait_ingress_gone(old_gateway);time.sleep(.2)
     if counter()<=before or base.main_identity()!=old_daemon:raise RuntimeError('ingress stop interrupted ordinary busy guest')
-    start_ingress();old_gateway=ingress_identity()
+    prove_busy_progress();start_ingress();old_gateway=ingress_identity()
     held=TLSHTTP('xandbox.fixture',timeout=40);old_token=client()['tokens']['alpha']
     try:
         tls_call('GET',base.refpath(replacement),connection=held)
+        original_transport=transport_identity(held);rotation_before=counter()
         run(HELPER,'rotate');run('systemctl','daemon-reload');run('systemctl','kill','--kill-whom=main','--signal=SIGHUP',UNIT);tls_ready()
         tls_call('GET',base.refpath(replacement));tls_call('GET',base.refpath(replacement),token=old_token,expected=401,connection=held)
+        require_same_transport(held,original_transport)
     finally:held.close()
     if ingress_identity()!=old_gateway or base.main_identity()!=old_daemon or client()['revision']!=2:raise RuntimeError('live rotation must not restart services')
-    if counter()<=before or json.loads(Path('/srv/xb/policy/policy.json').read_bytes())['revision']!=2:raise RuntimeError('actual revision and continued execution required')
+    prove_busy_progress()
+    if counter()<=rotation_before or json.loads(Path('/srv/xb/policy/policy.json').read_bytes())['revision']!=2:raise RuntimeError('actual revision and continued execution required')
     run('systemctl','kill','--kill-whom=main','--signal=SIGKILL',base.UNIT)
     wait_ingress_gone(old_gateway)
     wait(lambda:identity(old_daemon[0])!=old_daemon[1] and not base.UNIT_ROOT.exists() and not Path('/run/xandbox-inputs').exists(),20)

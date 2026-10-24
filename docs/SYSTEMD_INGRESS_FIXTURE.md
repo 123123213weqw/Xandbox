@@ -116,3 +116,12 @@ v4（6a85035）已按原断言完成三个预检负例，故意错误pin到compo
 10µs精度，不能表示的immutable quota直接拒绝生成，不静默取整。新增旧实现RED/
 新实现GREEN控制；预算/所有kernel读回和三项能力断言不变。新guard/helper字节仍须原生
 重新构建及新scope实测。v4失败原件与独立一个外层代际清理复核保留。
+
+v5 native已通过完整race/vet、fixture/helper/filter与164项Python、12产物原生/交叉一致；
+但首个硬件编排脚本误指向已存在v4资产文件，exclusive-create在任何L1创建之前拒绝，
+原文件未覆盖、未启动新VM；记录为编排失败，不是内核/TLS通过或失败。
+
+后续同时加强两个实测oracle：旧令牌401必须来自同一个socket对象、dev/inode与端点，
+不能把HTTPConnection自动重连当成旧TLS连接撤权；忙writer须在ingress停机后与轮换后
+各自重新采样推进，并且原execution仍RUNNING。保持原401/角色PID/所有关闭与回收断言。
+新增重连身份负例控制；这是额外真实验证，不用对象复用或早期counter增量冒充结论。
