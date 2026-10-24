@@ -19,8 +19,10 @@ media faults, full runtime/SLO matrices or the complete production goal.
 This follows the source-bound [persistence/locking foundation](POLICY_RECOVERY_FOUNDATION.md).
 That historical checkpoint did not expose a recovery command. The code now adds
 one, but neither its earlier evidence nor any older ELF hardware report certifies
-this workflow. Fresh root CLI/real TLS child/systemd/KVM/drain/cold/fault/cleanup
-acceptance remains required. An uncommitted-candidate liveness gap also remains.
+this workflow. Only the separately frozen two-case results above supply that
+limited new hardware evidence; the remaining fault/runtime matrix is still
+required. Unconsumed supersession has separate software evidence, while its
+hardware matrix and partial-declaration/lost-source liveness gap remain open.
 
 ## Source-bound software evidence
 
