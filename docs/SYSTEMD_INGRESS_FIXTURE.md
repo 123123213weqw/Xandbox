@@ -62,3 +62,16 @@ root600单链接/NOFOLLOW receipt和冻结路径构造进行独立只读复核�
 
 这些流程、代码或纯控制不能替代实际内核/服务证据，也不等于catalog、生产安装、升级回滚、
 备份恢复、独立人类operator、饱和长测、审计保留和SLO通过。
+
+## 首轮实机前序（62d5c27）：TLS启动失败，原因尚未收全
+
+新12产物原生/交叉构建一致，十个既有产物字节不变；原生Go race/vet、host fixture与
+helper race/vet、quota filter以及161项Python零skip通过。相同新outer fixture下原2GiB
+primitive与8GiB普通UDS各两启动通过。新16GiB TLS scope在READY前实际失败，不记成通过。
+独立只读复核包含这三个scope/五个外层代际，全部声明路径消失，无补充清理。
+
+原始失败console只保存到Traceback第一行：fixture先写终止标记，L0 reader看到标记立即
+进入执行组清场，来不及保存完整原因。失败原件与source62d保留，未回写。
+后续只调整新fixture失败报告顺序：有界traceback/journal先完成，再写终止footer；journal
+超时也必须写footer。旧顺序已有实际RED控制，新顺序控制通过。不改生产程序、预算、能力
+或任何成功断言；**这只是诊断修正，不是已查明/修复的TLS启动根因**。后续须新scope实测。

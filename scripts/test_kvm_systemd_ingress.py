@@ -1,5 +1,8 @@
 """Pure controls only; no current systemd/TLS/KVM acceptance from these tests."""
 import copy
+import contextlib
+import io
+import subprocess
 import hashlib
 import inspect
 import json
@@ -80,6 +83,24 @@ class IngressDeploymentControls(unittest.TestCase):
         self.assertIn("if CHECKPOINT.exists() or not NEGATIVES",source)
         self.assertIn("run(HELPER,'setup')",inspect.getsource(guest.operator))
         self.assertNotIn('reset-failed',inspect.getsource(guest.start_ingress))
+
+    def test_failure_marker_is_last_after_complete_diagnostic(self):
+        output=io.StringIO()
+        with patch('builtins.open',return_value=contextlib.nullcontext(output)),patch.object(guest.subprocess,'run',return_value=SimpleNamespace(returncode=0)):
+            try:raise RuntimeError('controlled unit diagnostic')
+            except RuntimeError:guest.failure_console()
+        text=output.getvalue()
+        self.assertLess(text.index('Traceback'),text.index('XANDBOX_SYSTEMD_HOST_FAILED ingress'))
+        self.assertTrue(text.endswith('XANDBOX_SYSTEMD_HOST_FAILED ingress\n'))
+
+    def test_failure_footer_survives_bounded_journal_error(self):
+        output=io.StringIO()
+        with patch('builtins.open',return_value=contextlib.nullcontext(output)),patch.object(guest.subprocess,'run',side_effect=subprocess.TimeoutExpired('unexecuted',10)):
+            try:raise RuntimeError('controlled unit diagnostic')
+            except RuntimeError:guest.failure_console()
+        text=output.getvalue()
+        self.assertIn('owned journal diagnostic unavailable',text)
+        self.assertTrue(text.endswith('XANDBOX_SYSTEMD_HOST_FAILED ingress\n'))
 
 
 if __name__=='__main__':unittest.main()

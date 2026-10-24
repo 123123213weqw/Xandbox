@@ -265,8 +265,15 @@ def recover():
 
 def failure_console():
     with open('/dev/console','w') as console:
-        console.write('XANDBOX_SYSTEMD_HOST_FAILED ingress\n');traceback.print_exc(file=console);console.flush()
-        subprocess.run(['journalctl','--no-pager','-n','100','-u',UNIT,'-u',base.UNIT,'-u','xandbox-ingress-operator.service'],stdout=console,stderr=console,timeout=10)
+        # The L0 reader terminates the owned domain on the final marker. Never
+        # emit it before the bounded diagnostic, or the cause is cut mid-line.
+        traceback.print_exc(file=console);console.flush()
+        try:
+            subprocess.run(['journalctl','--no-pager','-n','100','-u',UNIT,'-u',base.UNIT,'-u','xandbox-ingress-operator.service'],stdout=console,stderr=console,timeout=10)
+        except (OSError,subprocess.TimeoutExpired):
+            console.write('owned journal diagnostic unavailable\n')
+        finally:
+            console.write('XANDBOX_SYSTEMD_HOST_FAILED ingress\n');console.flush()
 
 
 def operator():
