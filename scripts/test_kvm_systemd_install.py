@@ -133,5 +133,7 @@ class InstallControls(unittest.TestCase):
         self.assertIn('not hit and tid==pid',s)
         self.assertIn("'closed_cli_refusal':raw==refusal",s)
         self.assertNotIn('print(raw',s)
+        self.assertIn("with open('/dev/console','w') as console",s)
+        self.assertIn('json.dumps(diag,sort_keys=True)',s)
 
 if __name__=='__main__':unittest.main()

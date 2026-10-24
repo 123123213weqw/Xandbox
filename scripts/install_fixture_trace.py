@@ -63,7 +63,11 @@ def interrupt_before_commit(args,output,expected_sha,sha):
                     refusal=b'xandbox-install: installation unconfirmed; preserve the exact request and inspect before reconcile\n'
                     root=Path('/etc/xandbox-install')
                     diag={'main_exit':os.WEXITSTATUS(status) if os.WIFEXITED(status) else -os.WTERMSIG(status),'exec_pin_seen':executed,'other_thread_exits':other_exits,'last_known_leaf':last_leaf,'closed_cli_refusal':raw==refusal,'output_bytes':len(raw),'intent_present':(root/'intent.json').is_file(),'commit_present':(root/'commit.json').is_file(),'state_created':Path('/srv/xi/s').is_dir()}
-                    print('XANDBOX_INSTALL_PRIVATE_TRACE '+json.dumps(diag,sort_keys=True),flush=True)
+                    # The TEST operator's stdout is deliberately /dev/null.
+                    # Send this CLOSED private diagnostic to the captured tty,
+                    # not to stdout and never relay raw child output.
+                    with open('/dev/console','w') as console:
+                        console.write('XANDBOX_INSTALL_PRIVATE_TRACE '+json.dumps(diag,sort_keys=True)+'\n');console.flush()
                     raise RuntimeError('actual installer main exited before fixed commit boundary')
                 other_exits+=1
                 continue
@@ -78,7 +82,7 @@ def interrupt_before_commit(args,output,expected_sha,sha):
                 r=Registers();ptrace(12,tid,0,ctypes.addressof(r))
                 leaf=string_at(tid,r.rsi) if r.orig_rax==257 and r.rax==((1<<64)-errno.ENOSYS) else None
                 if leaf:
-                    known={b'backend.json',b'auth.json',b'gateway.json',b'tls.pem',b'tls.key',b'firecracker',b'jailer',b'kernel',b'initrd',b'workspace',b'daemon',b'gateway',b'ingress',b'launcher',b'node',b'ready',b'template',b'warden',b'.intent.next',b'intent.json',b'.commit.next',b'commit.json'}
+                    known={b'plan.json',b'.lock',b'ref.json',b'manifest.json',b'xandbox-install-bootstrap',b'backend.json',b'auth.json',b'gateway.json',b'tls.pem',b'tls.key',b'firecracker',b'jailer',b'kernel',b'initrd',b'workspace',b'daemon',b'gateway',b'ingress',b'launcher',b'node',b'ready',b'template',b'warden',b'.intent.next',b'intent.json',b'.commit.next',b'commit.json'}
                     if leaf in known:last_leaf=leaf.decode()
                 if leaf==b'.commit.next':
                     if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!='/etc/xandbox-install':raise RuntimeError('commit dirfd outside fixed install root')
