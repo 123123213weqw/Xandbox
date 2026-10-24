@@ -1,9 +1,9 @@
-# 独立 ingress 启动器（已实现，组合部署未验收）
+# 独立 ingress 启动器（有限实机组合通过，非生产安装器）
 
 新增 `cmd/xandbox-ingress-launch` / `internal/ingresslaunch`，明确选择**独立受限 ingress
 service**，不把 gateway 假装计入普通 NodePolicy，也不改变 Go launcher v1 的单进程 exec
-契约。当前只是部署组件，不是可直接使用的安装器；尚无真实 systemd 下该组合的 TLS→KVM、
-轮换、崩溃和原盘恢复验收，不能沿用自定义 PID1 TLS fixture 或普通 UDS 部署给它代签。
+契约。它不是可直接使用的生产安装器；后续独立取得[真实systemd的有限组合证据](SYSTEMD_INGRESS_FIXTURE.md)：
+TLS→KVM、轮换、崩溃和原盘恢复通过，不沿用自定义PID1 TLS fixture或普通UDS报告代签。
 
 ```text
 system.slice
@@ -97,9 +97,9 @@ root/manager/发布流程仍是信任根：配置摘要检查后，gateway 会�
 现有普通 daemon/gateway 的发布字节会单独比较；launch 包新增共享读取/校验入口会改变
 重新构建的普通 launcher ELF，历史26f3报告不能给新的 launcher 字节代签。
 
-下一步必须在 owned systemd L1：精确 envelope/能力/ELF/进程归属，真实双租户 TLS→KVM，
-启动前漂移拒绝且无 TCP child、正常 stop/main crash 与独立 ingress 关闭、key/leaf轮换和
-同盘 cold 恢复。然后补 catalog、可复现安装升级/备份及独立操作员。未做共享 L0 部署修改。
+后续owned systemd L1已取得精确envelope/能力/ELF/归属、双租户TLS→KVM、启动漂移拒绝、
+独立ingress关闭、key/leaf轮换、main crash及同盘cold的[新冻结源证据](SYSTEMD_INGRESS_FIXTURE.md)。
+仍须补自动启动/readiness编排、catalog、可复现安装升级/备份及独立操作员，未改共享L0部署。
 整体[生产门槛](PRODUCTION.md)仍未完成。
 
 ## source21bb 的实际原生检查与普通 launcher 回归
@@ -141,7 +141,7 @@ Linux原生154项Python零skip、8项退出控制及新45轮mock烟测通过，�
 4500次mock重启，84.206秒未复现；这不是原Go1.25 CI环境/退出码/原因的证明，不称flake
 或已修复。未再重复同样的100次实验；后续失败将保留原退出断言并输出闭集元数据。
 
-后续新增[显式16GiB独立systemd ingress fixture](SYSTEMD_INGRESS_FIXTURE.md)，复用候选unit/API并覆盖TLS→KVM与轮换/crash/cold的代码路径；当前只有代码，实机验收尚未通过，不把它当成安装器或旧profile扩容。
+后续[显式16GiB独立systemd ingress fixture](SYSTEMD_INGRESS_FIXTURE.md)复用候选unit/API，已另取TLS→KVM、轮换/crash/cold有限实机证据；不是安装器或旧profile扩容。
 
 候选unit后续修正见[实机前序](SYSTEMD_INGRESS_FIXTURE.md)：系统manager默认root避免
 255显式setuid/seccomp路径丢active SETUID，guard仍要求原精确集合；CPUQuota按v255最多

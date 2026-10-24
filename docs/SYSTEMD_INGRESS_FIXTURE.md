@@ -1,8 +1,12 @@
-# 独立 systemd ingress/TLS owned-L1 fixture（代码已实现，实机尚未验收）
+# 独立 systemd ingress/TLS owned-L1 fixture（有限实机验证通过）
 
 新增 opt-in TEST ONLY `systemd-ingress-v1`，专门运行普通 daemon +
 [独立 ingress 启动器](INGRESS_LAUNCHER.md)，而非让自定义PID1 TLS结果冒充systemd组合。
-当前文档只描述新增代码与待执行门槛；没有声明该组合已经通过。整体仍未生产就绪。
+冻结源`d5f3c2e63d7c045a6089d062da31314524d75313`已取得新原件，完整两启动闭集流程通过。
+这是限定环境、显式operator编排的组合实测，不是自动安装/升级或完整生产验收；整体仍未生产就绪。
+
+[脱敏证据](validation/systemd-ingress-tls-v1.json)绑定冻结源、归档、12产物、10个harness摘要、
+前序失败与独立清理复核。所有原始console/CA/令牌/进程和资源身份保持私有。
 
 ## 新规格，不扩张既有profile
 
@@ -35,7 +39,7 @@ WantedBy自动启用/顺序或完整readiness编排通过**。这是必须另补
 所有测试任务经真正TLS→gateway→普通guest API；短暂关闭TLS时，仅可信operator用已存在
 私有UDS观察原guest进度，不向租户提供旁路、更不在host执行任务。
 
-## 待执行的闭集流程
+## 本次实际通过的闭集流程
 
 1. 三个各自独立的预检负例：错误config pin、预算与实际kernel不符、额外capability。
    要求真实exit1/指定闭集阶段、manager清除本unit、没有child/TCP listener；只对已经
@@ -63,7 +67,9 @@ root600单链接/NOFOLLOW receipt和冻结路径构造进行独立只读复核�
 这些流程、代码或纯控制不能替代实际内核/服务证据，也不等于catalog、生产安装、升级回滚、
 备份恢复、独立人类operator、饱和长测、审计保留和SLO通过。
 
-## 首轮实机前序（62d5c27）：TLS启动失败，原因尚未收全
+## 历史失败前序（均保留原件，不回写成通过）
+
+### 首轮（62d5c27）：TLS启动失败，原因当时尚未收全
 
 新12产物原生/交叉构建一致，十个既有产物字节不变；原生Go race/vet、host fixture与
 helper race/vet、quota filter以及161项Python零skip通过。相同新outer fixture下原2GiB
@@ -85,7 +91,7 @@ primitive与8GiB普通UDS各两启动通过。新16GiB TLS scope在READY前实�
 不输出PID/cgroup实际路径、凭证或任意用户字段。它改变了候选unit的入口，因此这个模式
 无条件拒绝资格通过；用于获得出生状态后还必须恢复真正candidate入口并另行实测。
 
-## v3出生观测与后续unit修正（新实机仍待执行）
+### v3出生观测与后续unit修正（当时新实机待执行）
 
 ac2e5d2诊断scope实测：位置分类expected、绝对unit组可见、UID/GID root、NNP1，
 CapBnd=262336(SETUID/GID/CHROOT)，但CapPrm/CapEff=262208，**实际缺SETUID**；
@@ -133,3 +139,33 @@ v6（5a2e9ad）已真正通过入口READY/ingress-probe并进入checkpoint，随
 自动重连仍必须失败，401后关闭允许且正向控制覆盖该行为。不放宽身份、401、PID、writer
 推进、资源回收或cold门槛。v6仍保留失败，原件及其一个代际/声明路径只读复核不存在；
 必须由新scope完成其余流程，不把前序部分步骤补写成完整通过。
+
+
+## v7有限组合实测与来源边界
+
+`d5f3c2e`硬件runner退出0且原PID已不存在；真实Go guard入口（诊断observer关闭），
+两个原盘L1启动、ingress-probe/checkpoint/recover全部闭集字段typed true。实测包括：
+三个预检负例、双租户四个同时真实KVM、Stop与durable GC区分、slot干净复用、独立入口
+stop/restart时原writer继续、revision2 key/leaf热轮换、原TLS连接旧令牌401、daemon SIGKILL
+触发BindsTo关闭入口、manager清场、同策略重启与原盘冷恢复、旧创建key410、四project归零。
+401响应按设计关闭旧TLS；同socket/dev/inode/端点在实际发送后、读取响应前核对，仍拒绝
+自动重连。轮换前后gateway/daemon incarnation相同，并重新采样同execution RUNNING和进度。
+
+硬件冻结源Go目录与原生构建源`269799f`逐字相同；实际复用已校验12产物，不冒充重新构建。
+该原生源通过Go1.27.3 Linux完整race(count3)/vet、host fixture与helper race/vet、quota filter，
+164项Python零skip；12原生/交叉产物一致。后续仅Python/doc修订，v7另跑166项Python零skip。
+普通daemon `5bfb2394…`、gateway `41e97356…`、launcher `8f612a9d…`保持原字节；
+ingress guard为`3da0c06a…`、helper为`5b044e26…`、outer fixture为`bac82851…`。
+旧2GiB primitive/8GiB普通UDS回归各两启动，仍绑定原source62d，不给新source重贴报告。
+
+独立只读审计核对root600/单链接/NOFOLLOW原receipt和冻结路径构造：v7两个外层代际、
+所有声明路径消失，无补充清理。随后全局再核对本系列8 scopes/11个全局唯一外层代际/
+35个唯一声明路径全部不存在；包括前序失败和诊断scope，不把它们记成通过。
+v5编排在exclusive-create之前未创建L1，不计为第九scope。另一次私有派生元数据索引误写
+已明确记录：v5 payload原字节移回v5索引，v4派生索引从原件重建，v4所有原始测量摘要
+重新核对未变；不是原始元数据字节恢复声明，不改测量来源或失败结论。
+
+离线语义门禁额外拒绝缺cold、整数冒充bool、未知flag、缺asset、新旧source重贴、
+虚报production及partial-pass共7个负例。有限成功不抹去之前失败，也不解释旧CI退出根因。
+当前仍没有自动WantedBy/readiness安装编排、catalog、升级回滚/备份、人类operator、长时
+饱和/审计保留或SLO证明；配置与manifest为可信root分两次写入，未宣称原子发布。
