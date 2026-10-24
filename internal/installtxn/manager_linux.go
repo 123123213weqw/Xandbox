@@ -121,17 +121,24 @@ func (m systemManager) current(ctx context.Context) (bool, error) {
 			return false, nil
 		}
 	}
-	if e := m.fs.link(UnitDir+"/multi-user.target.wants/"+MainUnit, MainUnit); e != nil {
+	if e := m.enabledLinks(); e != nil {
 		return false, e
 	}
+	return true, nil
+}
+
+func (m systemManager) enabledLinks() error {
+	if e := m.fs.link(UnitDir+"/multi-user.target.wants/"+MainUnit, MainUnit); e != nil {
+		return e
+	}
 	if e := m.fs.link(UnitDir+"/"+MainUnit+".wants/"+IngressUnit, IngressUnit); e != nil {
-		return false, e
+		return e
 	}
 	names, e := m.fs.names(UnitDir + "/" + MainUnit + ".wants")
 	if e != nil || !sameNames(names, []string{IngressUnit}) {
-		return false, ErrInventory
+		return ErrInventory
 	}
-	return true, nil
+	return nil
 }
 func (m systemManager) reconcile(ctx context.Context) error {
 	return m.reconcileUnits(ctx, false)

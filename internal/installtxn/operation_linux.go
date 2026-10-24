@@ -12,7 +12,7 @@ import (
 )
 
 // operationLock spans file work AND manager/ACK reconciliation. Ordinary
-// mutations share it; a future explicit ingress-maintenance transaction must
+// mutations share it; an explicit ingress-maintenance transaction must
 // hold it exclusively. Acquire it BEFORE any install flock, and never upgrade
 // it while holding a flock. Read-only status and the cap0 startup gate do not
 // acquire it, so starting ingress cannot deadlock its own verifier.
@@ -104,7 +104,7 @@ func (f *filesystem) acquireOperationLock(ctx context.Context, exclusive bool) (
 // Initial installation may create only the original lock under its existing
 // fresh-root rules. Drop that bootstrap flock before taking the operation lock;
 // reacquire the ordinary EX file lock at the caller. This ordering lets every
-// later operation (including a future exclusive maintenance caller) agree.
+// later operation (including an exclusive maintenance caller) agree.
 func (f *filesystem) initialOperationLock(ctx context.Context) (func(), error) {
 	unlock, e := f.initialLock(ctx)
 	if e != nil {

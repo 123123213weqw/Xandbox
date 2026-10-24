@@ -71,7 +71,7 @@ func ValidateManagedSnapshot(c Config, raw []byte, baseCommit string, authority 
 }
 
 func managedFile(path string, limit int64) ([]byte, error) {
-	if os.Getuid() != 0 || os.Geteuid() != 0 || (path != ManagedPolicyPath && path != managedRoot+"/commit.json" && path != managedRoot+"/gateway.json" && path != managedRoot+"/rotation-intent.json") {
+	if os.Getuid() != 0 || os.Geteuid() != 0 || (path != ManagedPolicyPath && path != managedRoot+"/commit.json" && path != managedRoot+"/gateway.json" && path != managedRoot+"/rotation-intent.json" && path != managedRoot+"/policy-recovery.json") {
 		return nil, errors.New("private managed gateway input required")
 	}
 	if _, e := privatefile.ExistingDirectory(filepath.Dir(path)); e != nil {
@@ -164,7 +164,15 @@ func (c Config) snapshot(epoch uint64, authority *access.Authenticator) (Snapsho
 				return Snapshot{}, e
 			}
 		}
-		for _, name := range []string{".rotation-intent.next", ".policy.next"} {
+		recovery, e := managedFile(managedRoot+"/policy-recovery.json", MaxPolicyRecovery)
+		if e == nil {
+			if _, e = ValidateVisiblePolicyRecovery(c, base, raw, intent, recovery, false); e != nil {
+				return Snapshot{}, e
+			}
+		} else if !errors.Is(e, unix.ENOENT) {
+			return Snapshot{}, e
+		}
+		for _, name := range []string{".rotation-intent.next", ".policy.next", ".policy-recovery.next"} {
 			if _, e := os.Lstat(managedRoot + "/" + name); !errors.Is(e, os.ErrNotExist) {
 				return Snapshot{}, errors.New("managed gateway transaction pending")
 			}

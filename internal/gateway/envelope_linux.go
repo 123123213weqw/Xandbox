@@ -44,6 +44,7 @@ type PolicyEnvelope struct {
 	InitialPolicySHA256 string       `json:"initial_policy_sha256"`
 	Source              PolicySource `json:"source"`
 	Snapshot            Snapshot     `json:"snapshot"`
+	SupersededRequestID string       `json:"superseded_request_id,omitempty"`
 }
 type PolicyIntent struct {
 	Version             int          `json:"version"`
@@ -106,12 +107,15 @@ func DecodeManagedEnvelope(c Config, raw []byte, base string) (PolicyEnvelope, e
 		return p, bad
 	}
 	if p.Revision == 1 {
-		if p.ExpectedRevision != 0 || p.RequestID != "" || p.BaseCommitSHA256 != "" || p.ConfigSHA256 != "" || p.InitialPolicySHA256 != "" || p.Source != (PolicySource{}) || policyBytesDigest(raw) != c.InitialPolicySHA256 {
+		if p.ExpectedRevision != 0 || p.RequestID != "" || p.BaseCommitSHA256 != "" || p.ConfigSHA256 != "" || p.InitialPolicySHA256 != "" || p.Source != (PolicySource{}) || p.SupersededRequestID != "" || policyBytesDigest(raw) != c.InitialPolicySHA256 {
 			return p, bad
 		}
 	} else {
 		binding, e := ManagedConfigDigest(c)
 		if e != nil || !policySHA(base) || p.BaseCommitSHA256 != base || p.ExpectedRevision != p.Revision-1 || !policyRequest.MatchString(p.RequestID) || p.ConfigSHA256 != binding || p.InitialPolicySHA256 != c.InitialPolicySHA256 || !policySourceValid(p.Source) {
+			return p, bad
+		}
+		if p.SupersededRequestID != "" && (!policyRequest.MatchString(p.SupersededRequestID) || p.SupersededRequestID == p.RequestID || p.Revision < 3) {
 			return p, bad
 		}
 	}

@@ -58,7 +58,7 @@ func (f *filesystem) rootInventory(version int, committed bool) error {
 		allowed[name] = true
 	}
 	if version == 2 {
-		for _, name := range []string{"rotation-intent.json", ".rotation-intent.next", ".policy.next"} {
+		for _, name := range []string{"rotation-intent.json", ".rotation-intent.next", ".policy.next", "policy-recovery.json", ".policy-recovery.next"} {
 			allowed[name] = true
 		}
 	}
@@ -66,7 +66,7 @@ func (f *filesystem) rootInventory(version int, committed bool) error {
 		if !allowed[name] {
 			return ErrInventory
 		}
-		if committed && (name == ".intent.next" || name == ".commit.next" || name == ".rotation-intent.next" || name == ".policy.next") {
+		if committed && (name == ".intent.next" || name == ".commit.next" || name == ".rotation-intent.next" || name == ".policy.next" || name == ".policy-recovery.next") {
 			return ErrInventory
 		}
 	}
@@ -470,6 +470,17 @@ func (f *filesystem) effectivePolicy(t transaction, committed bool) (File, gatew
 			return zero, envelope, ErrInventory
 		}
 		if _, e = gateway.ValidateVisiblePolicyIntent(c, base, payload, intent); e != nil {
+			return zero, envelope, e
+		}
+	} else if !errors.Is(e, unix.ENOENT) {
+		return zero, envelope, e
+	}
+	recovery, e := f.read(Root+"/policy-recovery.json", gateway.MaxPolicyRecovery, 0600)
+	if e == nil {
+		if !committed {
+			return zero, envelope, ErrInventory
+		}
+		if _, e = gateway.ValidateVisiblePolicyRecovery(c, base, payload, intent, recovery, false); e != nil {
 			return zero, envelope, e
 		}
 	} else if !errors.Is(e, unix.ENOENT) {

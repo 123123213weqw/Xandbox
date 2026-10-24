@@ -13,6 +13,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/123123213weqw/Xandbox/internal/gateway"
 	"github.com/123123213weqw/Xandbox/internal/launch"
 	"golang.org/x/sys/unix"
 )
@@ -84,6 +85,10 @@ func installOperation(ctx context.Context, f *filesystem, plan Plan, request str
 	defer operationDone()
 	unlock, e := f.existingLock(ctx, true)
 	if e != nil {
+		return zero, e
+	}
+	if e = f.noPolicyRecovery(); e != nil {
+		unlock()
 		return zero, e
 	}
 	t, e := f.installLocked(ctx, plan, request, manager, load)
@@ -195,18 +200,43 @@ func Reconcile(ctx context.Context, request string) (Result, error) {
 }
 
 func reconcileOperation(ctx context.Context, f *filesystem, request string, manager serviceManager) (Result, error) {
+	return reconcileOperationAdvance(ctx, f, request, manager, gateway.AdvanceManagedPolicyState)
+}
+
+// The public entry always supplies the fixed root state primitive. Tests may
+// model that effect without touching any fixed host path.
+func reconcileOperationAdvance(ctx context.Context, f *filesystem, request string, manager serviceManager, advance policyAdvance) (Result, error) {
 	operationDone, e := f.operationLock(ctx, false)
 	if e != nil {
 		return Result{}, e
 	}
-	defer operationDone()
 	unlock, e := f.existingLock(ctx, false)
 	if e != nil {
+		operationDone()
 		return Result{}, e
 	}
 	t, e := f.readTransaction("commit")
+	var p RotationPlan
+	var expected uint64
+	var supersedes string
+	pending := false
+	if e == nil {
+		pending, e = f.exists(Root + "/policy-recovery.json")
+		if e == nil && pending {
+			p, expected, supersedes, e = f.declaredRecovery(t, request)
+		}
+	}
 	unlock()
 	if e != nil {
+		operationDone()
+		return Result{}, e
+	}
+	if pending {
+		operationDone() // never upgrade SH to EX or wait for EX with a file flock
+		return recoveryOperation(ctx, f, p, expected, request, supersedes, manager, advance)
+	}
+	defer operationDone()
+	if e = f.noPolicyRecovery(); e != nil {
 		return Result{}, e
 	}
 	if t.Plan.Version == 2 && request != t.RequestID {
@@ -214,6 +244,7 @@ func reconcileOperation(ctx context.Context, f *filesystem, request string, mana
 	}
 	return reconcile(ctx, f, request, manager)
 }
+
 func Status(ctx context.Context) (Result, error) {
 	var zero Result
 	f, e := systemFS()

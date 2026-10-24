@@ -141,6 +141,9 @@ func (f *filesystem) replacePolicy(ctx context.Context, old []byte, candidate []
 // full install verification, not merely file rename, signal or RPC submission.
 func (f *filesystem) rotationLocked(ctx context.Context, t transaction, p RotationPlan, expected uint64, request string, ready func() error) (gateway.PolicyEnvelope, error) {
 	var zero gateway.PolicyEnvelope
+	if e := f.noPolicyRecovery(); e != nil {
+		return zero, e
+	}
 	if expected == 0 || expected == ^uint64(0) || !requestPattern.MatchString(request) {
 		return zero, ErrPolicy
 	}

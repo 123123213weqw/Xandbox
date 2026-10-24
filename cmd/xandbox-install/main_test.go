@@ -59,3 +59,43 @@ func TestFixedReconfigurationCLIRevisionAndClosedOutput(t *testing.T) {
 		t.Fatal("failure payload escaped")
 	}
 }
+
+func TestFixedRecoveryCLIRequiresExplicitSupersessionAndKeepsErrorsClosed(t *testing.T) {
+	calls := 0
+	req, old := strings.Repeat("c", 32), strings.Repeat("b", 32)
+	op := operations{recoverPolicy: func(_ context.Context, path string, expected uint64, request, supersedes string) (installtxn.Result, error) {
+		calls++
+		if path != "/private/plan" || expected != 2 || request != req || supersedes != old {
+			t.Fatal("argument mapping changed")
+		}
+		return installtxn.Result{}, errors.New("PRIVATE_KEY_PATH_TOKEN")
+	}}
+	base := []string{"recover-policy", "-plan", "/private/plan", "-expected-revision", "2", "-request-id", req, "-supersedes-request-id", old}
+	for _, kind := range []string{"1", "02", "+2", "-2", "18446744073709551615", "18446744073709551616", "request", "supersedes", "equal", "extra", "missing", "flag"} {
+		args := append([]string(nil), base...)
+		switch kind {
+		case "request":
+			args[6] = "BAD"
+		case "supersedes":
+			args[8] = strings.Repeat("A", 32)
+		case "equal":
+			args[8] = req
+		case "extra":
+			args = append(args, "--force")
+		case "missing":
+			args = args[:7]
+		case "flag":
+			args[7] = "-unit"
+		default:
+			args[4] = kind
+		}
+		var out, errout bytes.Buffer
+		if run(args, &out, &errout, op) != 1 || calls != 0 || out.Len() != 0 {
+			t.Fatal("invalid recovery reached effect", kind)
+		}
+	}
+	var out, errout bytes.Buffer
+	if run(base, &out, &errout, op) != 1 || calls != 1 || out.Len() != 0 || strings.Contains(errout.String(), "PRIVATE") {
+		t.Fatal("recovery error leaked")
+	}
+}

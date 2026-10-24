@@ -19,8 +19,8 @@ import (
 )
 
 // Synthetic PKI only. No installed paths, root maintenance, serving child or
-// systemd/KVM acceptance. The real persistence primitive is intentionally not
-// exposed by a CLI/RunRoot caller until its complete maintenance proof exists.
+// systemd/KVM acceptance. This exercises the persistence primitive in isolation,
+// not a fixed-path root installer or a serving child.
 func snapshotWithValidity(t *testing.T, s Snapshot, before, after time.Time, change func(*x509.Certificate)) Snapshot {
 	t.Helper()
 	pair, e := tls.X509KeyPair([]byte(s.CertificatePEM), []byte(s.PrivateKeyPEM))
@@ -403,5 +403,22 @@ func TestAdvanceSameRevisionDigestConflictAndGapPreserveAdmissibleOrphan(t *test
 	s.Epoch = 3
 	if e = advancePolicyState(state, s, authority); e != nil {
 		t.Fatal("positive advance/collection", e)
+	}
+}
+
+func TestAdvanceFixedWrapperRejectsRetargetingBeforeAnyStateIO(t *testing.T) {
+	c, p, _ := managedTestConfig(t)
+	raw, e := EncodePolicyEnvelope(rotatedEnvelope(t, c, p))
+	if e != nil {
+		t.Fatal(e)
+	}
+	dir := t.TempDir()
+	before := policyTreeImage(t, dir)
+	c.StateDir = dir
+	if AdvanceManagedPolicyState(c, []byte("invalid"), raw, strings.Repeat("b", 64)) == nil {
+		t.Fatal("maintenance accepted alternate state path")
+	}
+	if !reflect.DeepEqual(before, policyTreeImage(t, dir)) {
+		t.Fatal("refused wrapper manufactured state")
 	}
 }
