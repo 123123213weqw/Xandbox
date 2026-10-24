@@ -26,7 +26,7 @@ CONFIG=Path('/etc/xandbox-managed-fixture');ROOT=Path('/etc/xandbox-install')
 CLI='/usr/libexec/xandbox-install';BOOTSTRAP='/usr/libexec/xandbox-install-bootstrap'
 CHECKPOINT=CONFIG/'checkpoint.json';PHASE='entry'
 PROBE_FLAGS=('managed_v2_exact_root_cli_and_24_target_commit','automatic_tls_child_caps_placement_budgets_and_epoch','initial_capless_pending_gate_observation_preserved','immutable_backend_auth_base_self_and_release','not_full_production_or_supersession_hardware_acceptance')
-COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','new_tls_leaf_and_external_keys_old_key_rejected_on_same_new_transport','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
+COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','old_key_refused_on_existing_policy3_tls_transport_and_closed','fresh_policy3_tls_and_new_key_accepted_after_expected_401_close','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
 CASE_FLAGS={'populated-gate':('real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack'),'active-stop':('actual_cli_stopped_active_ingress_old_incarnations_absent','actual_active_stop_to_fresh_epoch3_child_ack')}
 CHECKPOINT_FLAGS=COMMON_CHECKPOINT_FLAGS+CASE_FLAGS['populated-gate']
 
@@ -234,6 +234,20 @@ def active_stop_recover(request,old_request,old_ingress):
     if ingress.ingress_identity()==old_ingress or identity(old_ingress[0])==old_ingress[1] or identity(old_ingress[2])==old_ingress[3]:raise RuntimeError('production maintenance did not replace actual old ingress incarnations')
 
 
+def old_key_rejection():
+    # gatewayError deliberately sends Connection: close on 401. Prove refusal
+    # on the already-established policy3 transport, not post-401 keepalive.
+    old_client=json.loads((CONFIG/'client-1.json').read_bytes());conn=ingress.TLSHTTP('xandbox.fixture',timeout=40)
+    try:
+        ingress.tls_call('GET','/healthz',connection=conn);transport=ingress.transport_identity(conn)
+        ingress.tls_call('GET','/healthz',token=old_client['tokens']['alpha'],expected=401,connection=conn,expected_transport=transport)
+        if conn.sock is not None:raise RuntimeError('401 transport did not close as required')
+    finally:conn.close()
+    # New credentials and the current leaf must work on a separate new TLS
+    # connection. Never label its successful automatic reconnect as continuity.
+    ingress.tls_call('GET','/healthz')
+
+
 def checkpoint():
     global PHASE
     probe();rows=[];boots=[];PHASE='managed-four-kvm'
@@ -265,12 +279,7 @@ def checkpoint():
     if [base.verify_vm(r,t) for r,t in rows]!=boots:raise RuntimeError('guest boot changed during maintenance')
     drain.state('drained',drained);drain.busy(rows[0][0],writer['id'])
     if {n:base.sha(ROOT/n) for n in immutable}!=immutable:raise RuntimeError('base/backend/auth changed during recovery')
-    old_client=json.loads((CONFIG/'client-1.json').read_bytes());conn=ingress.TLSHTTP('xandbox.fixture',timeout=40)
-    try:
-        ingress.tls_call('GET','/healthz',connection=conn);transport=ingress.transport_identity(conn)
-        ingress.tls_call('GET','/healthz',token=old_client['tokens']['alpha'],expected=401,connection=conn,expected_transport=transport)
-        ingress.tls_call('GET','/healthz',connection=conn,expected_transport=transport)
-    finally:conn.close()
+    old_key_rejection()
     PHASE='managed-source-free-reconcile';p=CONFIG/'sources/snapshot-3.json';pin=json.loads((CONFIG/'rotation-3.json').read_bytes())['policy']
     if str(p)!=pin['path'] or base.sha(p)!=pin['sha256']:raise RuntimeError('only exact private new source can be removed')
     p.unlink();before=ingress.ingress_identity();call('reconcile',3,request)

@@ -1,7 +1,7 @@
-# Opt-in fresh managed-v2 owned-L1 fixture — not yet executed
+# Opt-in fresh managed-v2 owned-L1 fixture — first actual attempt failed
 
-**Test harness implementation/pure controls only. No new root CLI, ptrace,
-systemd, real kernel-positive, TLS/KVM or cold acceptance is claimed yet.**
+**No complete new root CLI, real kernel-positive, TLS/KVM or cold acceptance
+is claimed. The first actual populated-gate attempt failed and is retained.**
 The [new proposal supersession code](PENDING_POLICY_SUPERSESSION.md) and its
 changed binaries cannot inherit old installation/ingress reports. Runtime Go
 source remains pinned to `9db9603`; the launcher must require a successful fresh
@@ -63,8 +63,11 @@ shared host service/module/mount/quota/sysctl/network mutation or task fallback.
      process incarnations. The common checks still prove main/VMM continuity.
 6. Same main/VMM incarnations, guest boots and busy execution still progress;
    the entire acknowledged drain commit is unchanged. New TLS leaf/key material
-   is coherent, and the old token fails on a new policy3 TLS transport which then
-   accepts the new token without replacing that transport. The old policy1
+   is coherent. First accept a new token on a policy3 TLS transport, then require
+   old-token 401 on that **same already-established transport**, with no reconnect
+   before the refusal. The gateway deliberately closes error responses; require
+   that close and accept new credentials on a separate fresh TLS connection.
+   Do not require or claim post-401 keepalive. The old policy1
    transport is intentionally closed by maintenance; this is **not** an ordinary
    hot-rotation claim about retaining that old transport.
 7. Remove the exact new source, reconcile the same request without service restart,
@@ -83,8 +86,9 @@ executor. Raw credentials/refs/console/process identities remain private.
 The `populated-gate` CLI sees an already stopped ingress for its population
 differential; that case alone cannot qualify the active-unit production-stop
 branch. The separately implemented `active-stop` case does not exercise the
-population negative control. **Neither case has been executed yet.** Both
-source-bound actual scopes and independent absence audits remain required.
+population negative control. Neither case has a complete accepted actual scope.
+The first populated-gate attempt below is a failure, not a partial acceptance.
+Both source-bound successful scopes and independent absence audits remain required.
 Uncommitted supersession, its repeated-failure/cut matrix,
 all remaining filesystem/media faults and current-artifact runtime/SLO matrices
 also remain required. An eventual pass of this named profile must not be expanded
@@ -102,3 +106,21 @@ skips, and 249 on macOS with five platform skips; the native Go qualification
 used `6173527` and its earlier 247 pure tests. All runtime Go bytes remain the
 same `9db9603` composition. See the [separate software evidence](validation/pending-policy-supersession-native-v2.json).
 Neither these pure tests nor rebuilt binaries make either L1 case an actual pass.
+
+## Preserved first actual failure
+
+The [first populated-gate original](validation/managed-policy-l1-populated-failed-v1.json)
+used frozen harness `848b814`, all 23 qualified current native artifacts and 249
+Linux pure tests/zero skips. It reached one actual L1 boot but failed during the
+checkpoint's TLS continuity check. The script wrongly attempted a successful
+request on the same transport **after** its old-token 401. The production
+`gatewayError` explicitly sets `Connection: close`; Python correctly reconnected,
+and the strict transport identity check rejected that reconnect. This is not an
+accepted case or a claim that the production gateway needs keepalive on errors.
+
+The correction preserves old-key refusal on the established transport, requires
+its intended 401 close, and checks new-key success separately. It changes only
+fixture code/control tests, not Go artifacts, runtime limits or deadlines. The
+failed original's report/console remain private and hash-bound; independent
+read-only audit found its one declared outer generation and all owned paths
+absent without supplemental cleanup. A corrected fresh run is still required.

@@ -95,6 +95,25 @@ class ManagedControls(unittest.TestCase):
         checkpoint=inspect.getsource(guest.checkpoint)
         self.assertIn("if case=='populated-gate':",checkpoint)
         self.assertIn('else:active_stop_recover(',checkpoint)
+    def test_old_key_refusal_uses_original_transport_but_401_closes(self):
+        original=object();calls=[]
+        class Connection:
+            sock=original
+            def close(self):self.sock=None
+        conn=Connection()
+        def request(method,path,**kwargs):
+            calls.append(kwargs)
+            if kwargs.get('expected')==401:
+                self.assertIs(kwargs['connection'],conn);self.assertIs(kwargs['expected_transport'],original)
+                self.assertIs(conn.sock,original);conn.sock=None
+            elif len(calls)==3:self.assertNotIn('connection',kwargs)
+        with patch.object(guest.Path,'read_bytes',return_value=b'{"tokens":{"alpha":"synthetic-test-only"}}'),patch.object(guest.ingress,'TLSHTTP',return_value=conn),patch.object(guest.ingress,'transport_identity',return_value=original),patch.object(guest.ingress,'tls_call',side_effect=request):
+            guest.old_key_rejection()
+        self.assertEqual(len(calls),3);self.assertIsNone(conn.sock)
+        conn=Connection();conn.sock=original
+        with patch.object(guest.Path,'read_bytes',return_value=b'{"tokens":{"alpha":"synthetic-test-only"}}'),patch.object(guest.ingress,'TLSHTTP',return_value=conn),patch.object(guest.ingress,'transport_identity',return_value=original),patch.object(guest.ingress,'tls_call'):
+            with self.assertRaisesRegex(RuntimeError,'401 transport did not close'):guest.old_key_rejection()
+        self.assertIsNone(conn.sock)
     def test_real_receipt_and_exact_refusal_not_exec_failure(self):
         v={'version':1,'revision':3,'files_committed':True,'manager_reconciled':True,'production_ready':False}
         def reply(v):return subprocess.CompletedProcess([],0,json.dumps(v).encode(),b'')
