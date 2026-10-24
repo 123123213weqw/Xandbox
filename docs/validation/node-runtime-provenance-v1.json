@@ -1,0 +1,272 @@
+{
+  "status": "finite_new3ea_default_service_compatibility_matrix_passed_quota_acceptance_and_goal_incomplete",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_harness_and_new_native_build_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+  "source_archive_sha256": "40117f5bc29a76df2b9993cbb1f828c6f9fb0e03b87f7e9bdd63c5d9bb04eafc",
+  "production_go_source": "8b951bb880cfcbf9cfb5d6115d5d2c56029a9717",
+  "production_go_identical_between_8b_and_2e": true,
+  "production_changed_this_matrix_turn": false,
+  "scope": "Full previously named default nil-quota service compatibility matrix on the NEW3ea ordinary production runtime, plus IO-budget and limited quota negatives/unenforced cold recovery. Not the full quota-enabled switching/concurrency/failure matrix or production acceptance.",
+  "existing_harness_ownership_protocol": "Persist bounded private root/runtime/cgroup receipts before use; cold root plus runtime/noexec/alternate runtime and exact cgroup now independently audited after the actual run. Cleanup requires a successfully created matching directory inode, not a failed mkdir, pre-existing or replacement/symlink object. No receipt or raw controller log is public.",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "new_native_artifacts_sha256": {
+    "daemon": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "admin": "19bbd460b8cd526f55fe0fe892985c593b47f3f102f0e071f35e7c7cf071d613",
+    "queue_test": "46e1ce4e75723f17460e1e566bee9cb09e2993cbeda483688f87a4846ad275c2",
+    "session_test": "208f21b37ed1902d5cf6986a6a5f1587dae94adb46a732d180c5c2387ef714a2"
+  },
+  "reused_exact_frozen_native_artifacts": {
+    "build_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+    "go_source_identical_to_matrix_source": true,
+    "warden_sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "fixture_sha256": "8fbd839984d424c28459ce28af92f4a7cc48e2af9abb9f6524fe474dbe20727a",
+    "snapshot_builder_sha256": "243dedf173271f269391a84375c561409082bba3ddcde6f09143646ba10f3a62"
+  },
+  "mock_process_smoke": {
+    "scripts": 5,
+    "exact_smoke_daemon_equals_real3ea_runtime": true,
+    "native_make_flags": "CGO_ENABLED=0 GOFLAGS=-trimpath -buildvcs=false",
+    "microvm_isolation_claim": false,
+    "derived_report": "node-runtime-process-smoke-derived-v1.json",
+    "raw_private_log_sha256": "099a1763dd5ffbcf5d4ff7d7448b9b7daa5a8330f06e20e10787199c43b2a035",
+    "derivation": "Five original JSON result objects decoded unchanged. Raw make log has private absolute build paths and is not public. Null per-script source_revision fields are not rewritten; invoker source and exact binary SHA recorded separately. Smoke-built guest ELF is NOT deployed."
+  },
+  "actual_gate_groups": {
+    "default_cold_checks": 30,
+    "cold_closed_loop_fresh_vm_switches": 5,
+    "queue_fsync_detail_checks": 9,
+    "binding_fsync_detail_checks": 9,
+    "detail_counts_are_expansions_not_extra18_scenarios": true,
+    "default_snapshot_catalog_checks": 10,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_tenants": 2,
+    "initialization_fault_cases": 6,
+    "historical_guest_TEST_cases": 2,
+    "io_cold_checks": 7,
+    "io_snapshot_checks": 12,
+    "io_ledger_readonly_checks": 5,
+    "default_ledger_readonly_checks": 3,
+    "default_enospc_checks": 5,
+    "healthy_l1_power_cut_checkpoints": 3,
+    "healthy_l1_boots": 4,
+    "ordinary_quota_negative_fixed_types": 6,
+    "ordinary_quota_negative_followup_cold_cases": 3,
+    "quota_negative_l1_boots": 4,
+    "separate_unenforced_startup_rejection_cases": 1,
+    "unenforced_l1_boots": 1,
+    "unenforced_l2_vms": 0
+  },
+  "legacy_setup_only": {
+    "source": "97196a59aa508348d9293e9f44c5fa5f2f3e0891",
+    "daemon_sha256": "6405f59fbd7a8e65793ba2bc8bb3b543ffe135add527e10a336ed0246239a783",
+    "role": "Real pre-ledger KVM setup under historical0022, then current ordinary recovery under0077. Not current-runtime test results from an old daemon."
+  },
+  "guest_artifacts": {
+    "ordinary_initrd_unchanged": true,
+    "ordinary_initrd_sha256": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "historical_TEST_builder_source": "6c9a94c335146c65491fb07bcf22a64146147fab",
+    "machine_id_TEST_initrd_sha256": "1ce968d607dae8cf7e7b23efdca8d41a9b44f4c86f2c3d3e6eacc722751b32e3",
+    "before_marker_TEST_initrd_sha256": "e928c0e627cd52631f151a5ecf231f39decfee25b1a7ffa95756c32683448014",
+    "role": "Pinned historical TEST fixtures only; not production images or a new guest ELF crash attestation. Trusted never-assigned exports remain outside service GC."
+  },
+  "mixed_load": {
+    "duration_seconds": 247.812,
+    "resource_sample_rows": 404,
+    "cross_tenant_overlapping_switch_interval_pairs": 93,
+    "quantiles_independently_recomputed": true,
+    "scope": "Two closed-loop paced tenants, warm cache/background load uncontrolled. Work completes before switching; no open-loop saturation/fairness/busy-old-job storm/SLO proof. PSS/cgroup memory/file residency views overlap; do not sum them into full unique RAM."
+  },
+  "cold_report_scope": "Cold30 and queue/binding detail reports do not expose top-level passed/cleanup booleans. Evidence is exact checklists, successful Go child binaries, strict finally and parent exit0, plus independent early-receipt/runtime/cgroup absence audit; no boolean is fabricated.",
+  "io_and_storage_scope": "Fixed8MiB/s+4096ops budget has actual frontend/kernel readback, operator32MiB direct IO, guest64MiB direct write/read, active writer Stop/GC and three startup/binding rejections. ENOSPC and ledger-only EROFS use four bounded private64MiB loop files in isolated mount namespaces, never a filled/remounted shared host filesystem. Not whole-device media failure, project quota or secure erase.",
+  "native_full_race_count": 3,
+  "native_vet_passed": true,
+  "native_fixture_race_count": 10,
+  "native_fixture_vet_passed": true,
+  "root_python_tests": 72,
+  "actual_cgo0_kernel_filter_proof_count": 3,
+  "darwin_full_race_count": 3,
+  "darwin_vet_passed": true,
+  "runner_exit_status": 0,
+  "unexpected_failed_hardware_predecessors": 0,
+  "independent_cleanup": {
+    "scopes": 13,
+    "all_owned_roots_runtime_cgroups_absent": true,
+    "cold_independent_runtime_and_cgroup_checked_not_finally_only": true,
+    "private_loop_bindings_absent": 4,
+    "owned_l1_execution_generations_absent": 9,
+    "read_only_no_cleanup_actions": true,
+    "quota_proof": "Actual L1 kernel readback before disk deletion, not inferred from final path audit."
+  },
+  "not_completed": [
+    "New3ea quota-enabled240/busy-writer switching, dual-live cold and remaining failure submatrix; still running separately at publication, not certified by this default manifest.",
+    "Schema3 snapshot/full node pressure/free bytes+inodes/actual preparation concurrency hardware traces; uniqueRAM billing/open-loop/fairness/long-duration/operator acceptance.",
+    "Durable catalog-lock replacement/other metadata windows, physical media/dual-supervisor/secure erasure, prewarm/init framing, audit/alerts/log/export bounds/backups/rollback.",
+    "FullM1-M4/final PR19 acceptance/merge/mainarchive/production readiness."
+  ],
+  "files": {
+    "kvm-node-runtime-default-before-marker-v1.json": {
+      "sha256": "fc75138a057d680d303d80db96fcbbd44185698ab17f402122cd46498a1a2860",
+      "bytes": 3218
+    },
+    "kvm-node-runtime-default-cold-v1-queue.json": {
+      "sha256": "cf7ecd0f0465061f14fc3182a61130e32e19b1fa48109de1babc135411a9819a",
+      "bytes": 1081
+    },
+    "kvm-node-runtime-default-cold-v1-session.json": {
+      "sha256": "6c1e6802c7da89f19a771fe16eebcfea8e47ef95c7879f31712738151ff38c8e",
+      "bytes": 1111
+    },
+    "kvm-node-runtime-default-cold-v1.json": {
+      "sha256": "a48a0c9f25fd4ecd6db461a0e9d325cbcdf94e82cc2a29f9a5804bc8db8b954b",
+      "bytes": 13329
+    },
+    "kvm-node-runtime-default-initialization-v1.json": {
+      "sha256": "5eade28cbf0978e21ec72568ddab84a1edfbcbc3cf49100336738a45e03ed8d8",
+      "bytes": 6075
+    },
+    "kvm-node-runtime-default-machine-id-v1.json": {
+      "sha256": "d7393e06e2d188d909bf25266d942cb0a1619559130e3524aa665c595c780480",
+      "bytes": 3218
+    },
+    "kvm-node-runtime-default-power-v1.json": {
+      "sha256": "e2eab0b2abd811efa7f0a48413ba74fb30345dd8e78a0c5fe1cce59f537dc065",
+      "bytes": 5482
+    },
+    "kvm-node-runtime-default-readonly-v1.json": {
+      "sha256": "d9228562e2d2b0a68f9353e95245a15d26d38d346c4bfc7d66563dd330734356",
+      "bytes": 4825
+    },
+    "kvm-node-runtime-default-snapshot-v1.json": {
+      "sha256": "84747779fbbb15b222ebdb608648eaba417d572f9d3ebf3bf021a1107d3b10aa",
+      "bytes": 520452
+    },
+    "kvm-node-runtime-default-storage-v1.json": {
+      "sha256": "147f47d657b6bcef51ba9ced9a31a231f4ed967652114afcead8d6ee9c251cf6",
+      "bytes": 6594
+    },
+    "kvm-node-runtime-io-cold-v1.json": {
+      "sha256": "e7091bf6bf7b4ff2c36eff75e7a3252f749c079d26412a767a45f99d9a33c7e9",
+      "bytes": 8249
+    },
+    "kvm-node-runtime-io-readonly-v1.json": {
+      "sha256": "91ddc84544521a28a512e0aa82c6cd610b12c86306e041ad00706542e1996ae2",
+      "bytes": 6473
+    },
+    "kvm-node-runtime-io-snapshot-v1.json": {
+      "sha256": "686d433bf446afd731c95b3c9b950b10139580d3a9d5d4c73f1784b7c3e622ec",
+      "bytes": 7282
+    },
+    "kvm-node-runtime-quota-negative-v1.json": {
+      "sha256": "f0bce107f23c19143a728374aec1c491ec298b8bd4990eb43b9a3c94fdb02769",
+      "bytes": 9815
+    },
+    "kvm-node-runtime-quota-unenforced-v1.json": {
+      "sha256": "161d136aca246fc76788caccb9b21a62b92a29baacd2fed5702f41a852737cc5",
+      "bytes": 4277
+    },
+    "node-runtime-pipeline-v1.txt": {
+      "sha256": "c4393e78a3037c3b9d5ef02606c3a783fef2ba9114f208c89fb8ded95e1e0463",
+      "bytes": 3403
+    },
+    "node-runtime-native-artifacts-v1.txt": {
+      "sha256": "30236f288edffefbae8e1f856f4a9b8d07f8873639eb41fd63545de290c72064",
+      "bytes": 787
+    },
+    "node-runtime-independent-cleanup-v1.txt": {
+      "sha256": "d3cbd1e8249586888cebb2cbad82b082fac9d457143aa6e44a0677a56c48c9b6",
+      "bytes": 2174
+    },
+    "node-runtime-process-smoke-derived-v1.json": {
+      "sha256": "8ba35a091010fe264e02d98572fdfab6e9710f9f8bc55d861705c0cb5bd18aeb",
+      "bytes": 4515
+    }
+  },
+  "raw_reports_archive_sha256": "171581004fac3da24769e56db53957447bd0bfb7093d08589832a0d6c088f4bf",
+  "raw_archive_regular_members": 19,
+  "production_changed_since_legacy522": true,
+  "foundation_native_tests": {
+    "provenance": "node-budget-provenance-v2.json",
+    "provenance_sha256": "3631506494adc4ec7ffae2db915b2205d9b5940d962bef7f06453b2f5875de5d",
+    "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+    "note": "Full native race3/vet, fixture race10/vet, rootPython72 and actual CGO0kernel/execfilter3 ran in the separately bound foundation runner. NOT rerun or relabelled as this default runner. This default runner rebuilt main/admin/test2 and mock process5 natively and verified independent cross hashes."
+  },
+  "darwin_actual_execution_source": "8b951bb880cfcbf9cfb5d6115d5d2c56029a9717",
+  "darwin_final_Go_paths_exact": true,
+  "default_submatrix_independent_of_quota": {
+    "terminal_status": 0,
+    "exact_default_subrunner_absent": true,
+    "all_default_scopes_independently_absent": true,
+    "separate_quota_child_and_orchestration_parent_may_remain_live": true,
+    "quota_completion_claim": false
+  },
+  "scope_boundary": "Default snapshots/IO use legacy schema1/2 nilNode compatibility. Actual schema3 cold node gate is separately recorded in node-budget-provenance-v2.json. Neither implies schema3 snapshot/aggregate pressure qualification.",
+  "metric_views": {
+    "alpha": {
+      "request_to_binding_response_ms": {
+        "count": 120,
+        "p50": 707.0,
+        "p95": 759.264,
+        "p99": 831.317,
+        "p100": 1057.897
+      },
+      "request_to_first_new_command_success_ms": {
+        "count": 120,
+        "p50": 721.498,
+        "p95": 777.935,
+        "p99": 858.644,
+        "p100": 1083.662
+      },
+      "request_to_old_host_stopped_observed_ms": {
+        "count": 120,
+        "p50": 741.23,
+        "p95": 800.45,
+        "p99": 859.792,
+        "p100": 1043.188
+      },
+      "request_to_old_durable_destroyed_observed_ms": {
+        "count": 120,
+        "p50": 818.349,
+        "p95": 875.017,
+        "p99": 905.495,
+        "p100": 1168.126
+      }
+    },
+    "beta": {
+      "request_to_binding_response_ms": {
+        "count": 120,
+        "p50": 714.905,
+        "p95": 782.506,
+        "p99": 813.946,
+        "p100": 818.243
+      },
+      "request_to_first_new_command_success_ms": {
+        "count": 120,
+        "p50": 734.235,
+        "p95": 804.577,
+        "p99": 828.754,
+        "p100": 830.679
+      },
+      "request_to_old_host_stopped_observed_ms": {
+        "count": 120,
+        "p50": 748.681,
+        "p95": 810.962,
+        "p99": 837.095,
+        "p100": 842.516
+      },
+      "request_to_old_durable_destroyed_observed_ms": {
+        "count": 120,
+        "p50": 814.119,
+        "p95": 886.894,
+        "p99": 936.051,
+        "p100": 941.311
+      }
+    }
+  }
+}

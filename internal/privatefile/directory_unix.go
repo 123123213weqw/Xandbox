@@ -34,6 +34,22 @@ func EnsureDirectory(path string) (string, error) {
 	return abs, nil
 }
 
+// ExistingDirectory validates the same ownership/ancestry contract without
+// creating anything (for operator clients and already-bound control state).
+func ExistingDirectory(path string) (string, error) {
+	abs, e := filepath.Abs(path)
+	if e != nil {
+		return "", e
+	}
+	if abs == "/" {
+		return "", errors.New("private state cannot be filesystem root")
+	}
+	if e = walkDirectory(abs, false, true, 0); e != nil {
+		return "", e
+	}
+	return abs, nil
+}
+
 func walkDirectory(path string, create, privateLeaf bool, depth int) error {
 	if depth > 40 {
 		return errors.New("directory symlink depth exceeded")

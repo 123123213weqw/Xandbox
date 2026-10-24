@@ -1,0 +1,2 @@
+LOAD ONLY on frozen599a source: all240 complete, nearest-rank/overlap/guest progress/pre-timeout Stop/resource/final-zero checks recomputed.
+Wholeprofile remainsFALSE: cold inode metadata verification failed; not complete quota-switch acceptance or production.

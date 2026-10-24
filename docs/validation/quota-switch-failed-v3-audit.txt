@@ -1,0 +1,2 @@
+FAILED v3 preserved; exact runner terminal1/absent; one owned L1 generation, roots/control/cgroups independently absent; read-only audit.
+Raw false report retained; no failed samples are included in any subsequent successful run.

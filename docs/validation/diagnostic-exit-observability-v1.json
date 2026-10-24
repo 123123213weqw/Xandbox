@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "production_ready": false,
+  "goal_complete": false,
+  "harness_source_revision": "cf4e20a2cce61f82180b838aebd073214a684daf",
+  "harness_source_archive_sha256": "5fc335243f88c0e1b51287c86b4af97a4f23367027ea81610304e2b0c9b8c2b9",
+  "production_go_source_byte_equal_to": "21bb1b0f5e234fe28447f9e2e8b660df1bdf2775",
+  "original_ci_failure": {
+    "head": "a147d878eee9daf8d264933c217bd561bcf3344b",
+    "run": 40053194342,
+    "job": 120750201332,
+    "event": "push",
+    "attempt": 1,
+    "failed_step": "Build and process smoke test",
+    "log_sha256": "ad3bf629c6c1e40564c0bfb970200d30da0ea33f15cbd18d3ceb4279e1aa1114",
+    "raw_log_private": true,
+    "rerun_requested": false
+  },
+  "original_ci_exact_exit_status": "not recorded",
+  "original_ci_exact_cause": "unknown",
+  "assertions_relaxed": false,
+  "original_45_cycles_135_records_full_pipes_gates_retained": true,
+  "original_wait_seconds": 10,
+  "required_exit_status": 0,
+  "new_closed_process_exit_controls": 8,
+  "native_python_controls": {
+    "actual_tests": 154,
+    "skips": 0,
+    "actual_mock_45_cycle_smoke_passed": true,
+    "private_log_sha256": {
+      "diagnostic-exit-linux-controls-v1.log": "8f802c2a85a94a80f704b2aa972303d9420332d5c89bcc43335672326e73472a",
+      "diagnostic-exit-linux-smoke-v1.log": "e4b1b228c4521806557a72701a574733a94dd5887975ca688797f8a98cf6a9b3"
+    }
+  },
+  "bounded_reproduction": {
+    "passed_repetitions": 100,
+    "restart_cycles_per_repetition": 45,
+    "failure": null,
+    "elapsed_seconds": 84.20570332198986,
+    "max_attempts": 100,
+    "between_attempt_time_budget_seconds": 180,
+    "observability_only_script_sha256": "67483b8d966665d4681e921d350807a8bc84d64836bebe95ceced1bec2ee23b6",
+    "production_daemon_unchanged": true,
+    "binary_toolchain": "go1.27.3 linux/amd64",
+    "CI_failure_toolchain": "Go1.25.x",
+    "not_exact_CI_environment_or_cause_proof": true,
+    "no_raw_console_export": true,
+    "runner_absent": true,
+    "original_ci_cause_still_unknown": true,
+    "private_log_sha256": {
+      "diagnostic-exit-repro-result-v1.json": "23c900ec30d0f91116a2271260b05c2e87488aed21449a28b22dd59356b4db3b",
+      "diagnostic-exit-repro-v1.pipeline.log": "6b3093f0890feb2807131af9b6d7b1ecd92129c206ce7412db0c73a99c3c711e",
+      "diagnostics-exit-observed-v1.py": "67483b8d966665d4681e921d350807a8bc84d64836bebe95ceced1bec2ee23b6",
+      "run-diagnostic-exit-repro-v1.py": "5c369968208b458f854ec00368046dfd3e4b615ddd5838ed6e61037640ce14b5",
+      "run-diagnostic-exit-repro-v1.sh": "74566585266e4c1aca98850998dd0972ecb8f4b638742123952ca47383196972"
+    }
+  },
+  "limitations": [
+    "This changes only test failure observability, not daemon shutdown behavior and not the required zero exit status.",
+    "100 repetitions (4500 mock restarts) on Linux Go1.27.3/GOMAXPROCS1 did not reproduce; the failed CI used Go1.25.x and its exact process exit status was not recorded. This is not proof of that original cause, a fix, or harmless flakiness.",
+    "Full inherited stdout/stderr remained saturated and were not drained to make the service pass.",
+    "No new privileged ingress/systemd/TLS acceptance; earlier UDS report retains frozen source21bb."
+  ]
+}

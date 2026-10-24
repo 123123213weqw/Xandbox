@@ -1,0 +1,23 @@
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+--- FAIL: TestSessionTicketFixedPathsAndPrivateHashInputOnly (0.00s)
+    node_session_ticket_linux_test.go:78: foreign descriptor selected /srv/state/sessions/../sessions/.session-1
+FAIL
+FAIL	github.com/123123213weqw/Xandbox/cmd/xandbox-host-fixture	3.587s
+FAIL

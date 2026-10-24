@@ -1,0 +1,5 @@
+ab547783c9c9ba3651c4b6a0f8c6ca78803a31c0a1809eef97c8aa7284878cb6  bin/sandboxd-quota-negative-v3
+ace686422ffad4bc987d7a32f7b845a364022ff57900be7766fe7ac66a4824da  bin/xandbox-template-quota-negative-v3
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-negative-v3
+117f927031df85f8046f98ddc7f7d0ce595e88277612f7c95698f52c07945fb1  bin/fixture-quota-negative-v3
+882704f757dc756c8d577f39dde8785c29272712f2ab3eb366cb4d262943dc67  bin/builder-quota-negative-v3

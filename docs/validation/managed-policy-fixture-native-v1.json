@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "scope": "opt_in_owned_l1_managed_policy_input_producer_pure_native_tests_only",
+  "source_revision": "91c14c2bfc47967d17eb216418f64d693b1015d3",
+  "source_archive_sha256": "7689a92ac739cca5ca76acd30c66ee6eca614e810ad07910dc71f6a9bbc56c59",
+  "native_runner_sha256": "c3b0eea44824871cc55dd59f7604518a6b828bf0965cacb891bff233aa421258",
+  "toolchain": "go1.27.3",
+  "source_files": [
+    {
+      "path": "cmd/xandbox-managed-fixture/main_linux.go",
+      "sha256": "3e8565a2f745d0c8d1cd84092127264cf65684133d6d7f66841a814d5b066cc9"
+    },
+    {
+      "path": "cmd/xandbox-managed-fixture/main_linux_test.go",
+      "sha256": "3998ff59a69cf10f6a48493187075379cacd7a071788560d4eeb9355938fb8da"
+    }
+  ],
+  "validation": {
+    "native_linux_amd64_exit": 0,
+    "runner_observed_gone": true,
+    "parent_pass_counts": {
+      "TestManagedFixtureInitialAndExpiredCommittedPredecessor": 3,
+      "TestManagedFixtureRejectsForeignAndMalformedAuthority": 3,
+      "TestManagedFixtureUnknownOperationAndEscapeRefusedBeforeIO": 3
+    },
+    "foreign_malformed_authority_case_pass_counts": {
+      "config-v1": 3,
+      "unknown-auth": 3,
+      "trailing-ca": 3,
+      "bad-key": 3,
+      "config-binding": 3,
+      "snapshot-binding": 3,
+      "malformed-ca": 3,
+      "foreign-pair": 3,
+      "bad-predecessor": 3,
+      "expired-ca": 3,
+      "epoch1": 3,
+      "epoch4": 3,
+      "envelope-version": 3,
+      "snapshot-epoch": 3,
+      "backend": 3,
+      "mismatched-key": 3,
+      "skip": 3,
+      "overflow": 3
+    },
+    "vet_exit": 0,
+    "real_ephemeral_pki_trust_and_expiry_checked": true,
+    "external_credentials_and_leaf_pair_fresh_backend_authority_preserved": true,
+    "old_expired_policy_remains_invalid_for_serving": true,
+    "fixed_rotation_plan_source_hash_checked": true,
+    "actual_root_setup_or_rotation_operation_executed": false,
+    "native_and_darwin_cross_compiled_amd64_both_artifacts_byte_equal": true,
+    "artifacts": [
+      {
+        "name": "setup",
+        "sha256": "8ba9cc96c54136ec3ea87795ee1cdf905da2e68cbd1a1637929cf1ee4ec8a28e"
+      },
+      {
+        "name": "setup.test",
+        "sha256": "f50a42467eaab0912ae7777d21a36b98e1109fd77e2c499f8def8c5672d8afd8"
+      }
+    ],
+    "raw_evidence": [
+      {
+        "name": "managed-fixture-native-v1.sha256",
+        "bytes": 149,
+        "sha256": "2d982a89105b5dc0679d60dbcc239d0c04e5648215fc5ee8535ef4aafe093446"
+      },
+      {
+        "name": "managed-fixture-native-v1.status",
+        "bytes": 2,
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      {
+        "name": "managed-fixture-tests-v1.log",
+        "bytes": 10170,
+        "sha256": "a8b394450484c72aa3372b0c7d491840b1297a67438977bc25ac5eec6b6a809e"
+      },
+      {
+        "name": "managed-fixture-vet-v1.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "pipeline_sha256": "b387f4221cd1a803049986a3db134b65b27211f3a79375ba6c2fa424a4b978ec"
+  },
+  "runtime_go_source_unchanged_from": "66dd05146b37d65a82735cd9a80ba786b887d808",
+  "fixture_boundary": {
+    "build_tag": "xandbox_managed_fixture",
+    "production_service": false,
+    "fixed_operations": [
+      "setup",
+      "rotation2",
+      "rotation3"
+    ],
+    "alternate_roots_task_argv_signals_or_service_actions": false,
+    "only_synthetic_test_ca_private_key_persisted_in_private_disposable_image": true,
+    "epoch_2_deliberate_tls_lifetime_seconds": 60,
+    "production_certificate_lifetime_changed": false,
+    "current_installed_state_modified_by_producer": false
+  },
+  "claims": {
+    "production_ready": false,
+    "real_root_cli_tls_child_systemd_kernel_empty_or_kvm_acceptance": false,
+    "all_recovery_liveness_gaps_resolved": false
+  }
+}

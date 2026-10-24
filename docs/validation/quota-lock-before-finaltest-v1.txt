@@ -1,0 +1,5 @@
+--- FAIL: TestSlowQuotaClearDoesNotHoldCatalogPinLock (0.43s)
+    quota_catalog_stall_repro_test.go:48: unrelated catalog status waited for quota I/O context deadline exceeded
+FAIL
+FAIL	github.com/123123213weqw/Xandbox/internal/firecracker	1.058s
+FAIL

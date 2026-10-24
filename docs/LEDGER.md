@@ -61,9 +61,9 @@ PR #5 及以前的平铺 JSON 是 v0。正常启动遇到它会失败，不会�
 
 ## 验证入口
 
-`make smoke` 新增 `scripts/metadata_smoke.py`：节点/租户容量、同 key 重试、降低预算恢复、SIGKILL、拒绝未知格式、迁移锁、2048 条记录迁移中真实 SIGKILL 和继续迁移。默认旧格式来自显式测试副本，不冒充旧 binary 验收。可额外传 `--legacy-daemon /private/path/to/old/sandboxd` 验证实际旧进程创建/崩溃后的升级。
+`make smoke` 运行 `scripts/metadata_smoke.py --daemon bin/sandboxd --node bin/xandbox-node`：节点/租户容量、同 key 重试、降低预算恢复、SIGKILL、拒绝未知格式、迁移锁、2048 条记录迁移中真实 SIGKILL 和继续迁移。导入的旧根先保持 drained，随后由同 UID 操作员显式 CAS resume，再检查独立 metadata 容量；不放宽服务的默认拒绝。默认旧格式来自显式测试副本，不冒充旧 binary 验收。可额外传 `--legacy-daemon /private/path/to/old/sandboxd` 验证实际旧进程创建/崩溃后的升级。
 
-真实 KVM harness 另支持 `--legacy-daemon` 和 `--legacy-source-revision`，检查旧 VM 运行、控制器死亡后宿主停止、未迁移拒绝启动、离线升级不虚构回收，以及新控制器在累计容量满时回收旧 VM/保持 key 为 410。普通 CI 与 mock 仍不能替代它。新证据如下；历史 [guardian 证据](GUARDIAN.md) 保留不变，不冒充本次升级路径验收。
+真实 KVM harness 另支持 `--legacy-daemon`、`--legacy-source-revision` 和配套必需的 `--node bin/xandbox-node`，检查旧 VM 运行、控制器死亡后宿主停止、未迁移拒绝启动、离线升级不虚构回收，以及新控制器在累计容量满时回收旧 VM/保持 key 为 410。导入根先保持 drained；仅这个独立测试根经同 UID CLI 显式 CAS resume 后，再检查 metadata 容量，通用启动和 cold recovery 不自动 resume。node CLI 与其它可信输入一样校验摘要并复制为0555，epoch/命令ID只进私有诊断。普通 CI 与 mock 仍不能替代它。新证据如下；历史 [guardian 证据](GUARDIAN.md) 保留不变，不冒充本次升级路径验收。
 
 
 ## 2026-10-22 实测证据

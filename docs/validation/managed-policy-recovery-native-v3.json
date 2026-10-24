@@ -1,0 +1,538 @@
+{
+  "version": 1,
+  "scope": "explicit_committed_policy_forward_recovery_native_software_candidate_not_root_cli_hardware_acceptance",
+  "source_revision": "66dd05146b37d65a82735cd9a80ba786b887d808",
+  "source_archive_sha256": "241e6a861413dd16edc6d9b6cd9c5ca067e83407dc071fbeb0ee55941d24a1cd",
+  "native_runner_sha256": "afd1af398dec7abaf3f7e8800d315c77f1c456f67116d2002ee309a7076801c4",
+  "toolchain": "go1.27.3",
+  "source_files": [
+    {
+      "path": "cmd/xandbox-install/main.go",
+      "sha256": "c8f7f5de02a00b384a731aaa0c6fa8872fbedeb8e0096da33caac8aed2cf02e3"
+    },
+    {
+      "path": "cmd/xandbox-install/main_test.go",
+      "sha256": "21df1c8c488b40d8d366e8543eca28c25f5a26744fb0d41946d42a044dcd64f8"
+    },
+    {
+      "path": "internal/gateway/config_linux.go",
+      "sha256": "73b7ec8a32f173c2da248c0d7c937946ee15782a8b01e48a0861cca4870e2a5e"
+    },
+    {
+      "path": "internal/gateway/envelope_linux.go",
+      "sha256": "4bd4499f4838206c69906bee66148db32930a2865a43301285970f0d1852c11b"
+    },
+    {
+      "path": "internal/gateway/recovery_linux.go",
+      "sha256": "e32f5841d20d1a215341e70fd40dad9431188202fd1f7473fde7e0275c2e2a66"
+    },
+    {
+      "path": "internal/gateway/recovery_linux_test.go",
+      "sha256": "1535a60793c402766127068fa988f98cb7cd5956f2244a7d14747e3e80d03113"
+    },
+    {
+      "path": "internal/gateway/recovery_record_linux.go",
+      "sha256": "aaeb33b20f701e4ea1b2de907918e3f5a79b266d07192f6c1ee15f8e2dd09a05"
+    },
+    {
+      "path": "internal/gateway/recovery_record_linux_test.go",
+      "sha256": "e6c35417dcb9a8c34223392f6ce599dbd99a9a9d963ee0c56c2b8bbf1fc2cc22"
+    },
+    {
+      "path": "internal/installtxn/engine_linux.go",
+      "sha256": "f08b043493f5939e938c3d8d27e6fc48b39b238478ddb95c71c22941d071e4a9"
+    },
+    {
+      "path": "internal/installtxn/ingress_empty_linux.go",
+      "sha256": "c2fbee888190daa22756642232c7f42c5b3073cab4686397ed86f68bb49bd102"
+    },
+    {
+      "path": "internal/installtxn/ingress_empty_linux_test.go",
+      "sha256": "748d3db637944f949ff54174fbcc3c79f96bbff1b42e88a373fb69c8ad5254b1"
+    },
+    {
+      "path": "internal/installtxn/manager_linux.go",
+      "sha256": "de3ab336fb31afba8dc3f494872cf49c71d615dc6e662967ce0b3e3045b8b012"
+    },
+    {
+      "path": "internal/installtxn/manager_recovery_linux.go",
+      "sha256": "5bca8f8c4e7b699f8ebb0ada109dc1471c1fb2ad8744b387630756873ec19af9"
+    },
+    {
+      "path": "internal/installtxn/manager_recovery_linux_test.go",
+      "sha256": "69279e8bf489fb732f6c7695423b2c7711ed1811b6602cd5d4d63f180adcabd2"
+    },
+    {
+      "path": "internal/installtxn/operation_linux.go",
+      "sha256": "0f2e1a0987e3a80947a9ef836658b329045bf2b5ada390c011e7963334aab921"
+    },
+    {
+      "path": "internal/installtxn/recovery_crash_linux_test.go",
+      "sha256": "34a4e21ab9e64298d35e22aea4063626ea65fb737a9e23d046a66c79aa898eb4"
+    },
+    {
+      "path": "internal/installtxn/recovery_linux.go",
+      "sha256": "6902e15e7cdc9f18b6f2bf4ccb9a683ff53e4f0886ee9549a31fb016735428ac"
+    },
+    {
+      "path": "internal/installtxn/recovery_linux_test.go",
+      "sha256": "1288a71a9b4149d7a63d0fbb031bfdddd99af6c9ce1010d6f71a6b7ee34416c7"
+    },
+    {
+      "path": "internal/installtxn/rotation_linux.go",
+      "sha256": "60b3abcc13309dcf5f438dc4d4f3a7417ad95248a90ed721390f06096fed120d"
+    },
+    {
+      "path": "internal/installtxn/run_linux.go",
+      "sha256": "3f9412f5fa5b85b465031206a59291f9912390a52afd50b29d642e056eb5594a"
+    },
+    {
+      "path": "internal/installtxn/run_other.go",
+      "sha256": "fa914f59065c5c20c9757725b711968d8b656f8e964cae636e6d9a5e67333494"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "4a1762824f90499170a463ab13755bc150db5f6d56f5eb0e0c23473975ae2b1b"
+    }
+  ],
+  "composition": {
+    "fresh_opt_in_plan_version": 2,
+    "installed_targets": 24,
+    "old_initial_commit_rewritten": false,
+    "backend_node_uid_listen_sni_and_executables_immutable": true,
+    "new_policy_envelope_optional_superseded_request_id": true,
+    "initial_envelope_encoding_unchanged": true,
+    "max_snapshot_envelope_bytes": 524288,
+    "max_recovery_metadata_bytes": 32768,
+    "recovery_metadata_copies_snapshots_or_keys": false,
+    "metadata_history_chain": false,
+    "receipt_production_ready": false
+  },
+  "implemented": {
+    "fixed_root_recover_policy_cli_with_explicit_current_pending_request_cas": true,
+    "operation_ex_scope_through_stop_files_ack_receipt_and_main_pin": true,
+    "file_ex_never_held_across_manager_calls": true,
+    "existing_store_only_advance_current_committed_predecessor_before_overwrite": true,
+    "old_crypto_backend_validation_at_leaf_boundary_only_for_persistence": true,
+    "old_policy_child_transfer_or_listener_or_ack_from_advance": false,
+    "new_candidate_and_all_serving_paths_actual_time_validation": true,
+    "startup_fences_predecessor_and_old_intent_new_file_window": true,
+    "normal_installer_mutators_cannot_bypass_recovery_journal": true,
+    "anchored_old_intent_cas_and_prefix_recovery": true,
+    "exact_source_independent_retry_after_complete_candidate_or_commit": true,
+    "no_candidate_invention_from_metadata_only": true,
+    "bounded_prior_committed_recovery_settlement_without_ack": true,
+    "only_ingress_stop_start_no_main_or_guest_action_or_node_resume": true,
+    "fixed_read_only_cgroup2_parent_and_whole_subtree_empty_not_frozen_check": true,
+    "fake_filesystem_cannot_prove_cgroup_absence_or_emptiness": true,
+    "final_remove_recovery_before_intent_and_lost_receipt_marker": true
+  },
+  "validation": {
+    "linux_amd64": {
+      "terminal_exit": 0,
+      "runner_observed_gone": true,
+      "full_race_repetitions": 3,
+      "focused_meaningful_parent_tests": 18,
+      "focused_repetitions": 3,
+      "helpers_excluded": [
+        "TestRecoveryCrashProcessHelper"
+      ],
+      "focused_pass_counts": {
+        "TestAdvanceFixedWrapperRejectsRetargetingBeforeAnyStateIO": 3,
+        "TestRecoveryRecordFencesPredecessorAndOldIntentUntilExactNewAuthority": 3,
+        "TestRecoveryRecordClosedSchemaBindingCanonicalAndBounded": 3,
+        "TestRecoveryIngressEmptyEventsWholeSubtreeNotManagerPID": 3,
+        "TestRecoveryIngressEmptyRequiresRealCgroup2EvenWhenUnitAbsent": 3,
+        "TestRecoveryManagerStopsOnlyIngressAndPinsMainThroughFinalCallback": 3,
+        "TestRecoveryCrashProcessHelper": 3,
+        "TestRecoveryActualTestProcessDeathEveryBoundaryAndLostReceipt": 3,
+        "TestRecoveryFourProcessesExactOrCompetingWholeOperation": 3,
+        "TestRecoveryCommittedExpiredPredecessorAdvancesBeforePublicationAndExactReceiptRetry": 3,
+        "TestRecoveryEveryJournalPublicationIntentAndReceiptBoundaryResumesExactRequest": 3,
+        "TestRecoveryRejectsCompetingArgumentsForeignInventoryAndAdvanceFailure": 3,
+        "TestRecoveryRepeatedCommittedNeverACKedExpiryKeepsSingleBoundedRecord": 3,
+        "TestRecoveryPendingJournalRoutesReconcileWithSourceGoneAndBlocksOrdinaryMutators": 3,
+        "TestRecoveryJournalAloneDoesNotInventMissingCandidateBytes": 3,
+        "TestRecoverySupersedingCommittedOldIntentWindowSurvivesSettlementCuts": 3,
+        "TestRecoveryDoesNotSupersedeUncommittedEpochOrInventMissingAuthority": 3,
+        "TestRecoveryPinnedCandidateInMemorySurvivesSourceRemovalDuringStop": 3,
+        "TestFixedRecoveryCLIRequiresExplicitSupersessionAndKeepsErrorsClosed": 3
+      },
+      "returned_error_cuts": 17,
+      "returned_error_cut_repetitions": 3,
+      "actual_test_process_death_cuts": 17,
+      "test_process_death_cut_repetitions": 3,
+      "prior_committed_recovery_settlement_cuts": 8,
+      "settlement_cut_repetitions": 3,
+      "four_process_exact_and_competing_request_groups": true,
+      "kernel_population_parser_and_fake_fs_negative_controls": true,
+      "vet_exit": 0,
+      "host_deploy_install_fixture_race_repetitions_each": 3,
+      "cgo_free_quota_repetitions": 3,
+      "python_tests": 235,
+      "python_skips": 0,
+      "pinned_static_pie_data_parser_enabled": true
+    },
+    "darwin_arm64": {
+      "terminal_exit": 0,
+      "full_race_repetitions": 3,
+      "vet_exit": 0,
+      "source_header_and_completion_verified": true,
+      "log_sha256": "cab98010afa27ada6b675908b829bcb54f16c48afb62864e7223e947e7ae4187"
+    },
+    "cross_compile": {
+      "five_amd64_artifacts_byte_equal_to_native": [
+        "xandbox-install",
+        "xandbox-gateway",
+        "installtxn.test",
+        "gateway.test",
+        "policycontrol.test"
+      ],
+      "artifacts": [
+        {
+          "name": "gateway.test",
+          "sha256": "db3ba39cabfa6f20ee355c86f19a73a65d176de4f99bdb2e31e1b5edffd69c24",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "installtxn.test",
+          "sha256": "601b7acc1c3554a50a66a07bcec3400926a10d3774b643a7b23b3f101d416833",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "policycontrol.test",
+          "sha256": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-gateway",
+          "sha256": "45cbdcf7f6a70864c81ed9707e40aa16498ef0584b73df693dd15f718d68a81f",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-gateway-arm64",
+          "sha256": "1a4ae09755e096e0622d65035fb128723945e150f5023ff5769f07036ac79233",
+          "architecture": "arm64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-install",
+          "sha256": "51ce2f4221c3892dca9591268a1877676277755c4ca5bc69098d10bf42608a6f",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-install-arm64",
+          "sha256": "5a93cf9546d4d424a1aa4f0a5098dedb82c58cca625a6b006de175f9a4c044d5",
+          "architecture": "arm64",
+          "executed_on_arm64": false
+        }
+      ]
+    },
+    "all_twenty_one_native_artifacts_actually_built_and_rehashed": [
+      {
+        "name": "builder",
+        "sha256": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e"
+      },
+      {
+        "name": "deploy-helper",
+        "sha256": "08b2ad3f698e1f7f32bfdbb48564fad854a0801f57dfb5b1be47129310bc9c55"
+      },
+      {
+        "name": "firecracker.test",
+        "sha256": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16"
+      },
+      {
+        "name": "fixture",
+        "sha256": "a2ec9d67897c3970048fe2e63621c5c39d45209a31fbcc218414bb9357c2e3e1"
+      },
+      {
+        "name": "gateway.test",
+        "sha256": "db3ba39cabfa6f20ee355c86f19a73a65d176de4f99bdb2e31e1b5edffd69c24"
+      },
+      {
+        "name": "installtxn.test",
+        "sha256": "601b7acc1c3554a50a66a07bcec3400926a10d3774b643a7b23b3f101d416833"
+      },
+      {
+        "name": "policycontrol.test",
+        "sha256": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97"
+      },
+      {
+        "name": "releasestore.test",
+        "sha256": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3"
+      },
+      {
+        "name": "sandboxd",
+        "sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+      },
+      {
+        "name": "session.test",
+        "sha256": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+      },
+      {
+        "name": "setup",
+        "sha256": "f1f90c9061f21453b6e06da5ff083704b33a9e7d2f80391c8cad907fc6654b50"
+      },
+      {
+        "name": "setup.test",
+        "sha256": "c2e786ccd2de795b6772d03aaabf87ea5f7f60b92514330f8f36defcfa69d771"
+      },
+      {
+        "name": "xandbox-gateway",
+        "sha256": "45cbdcf7f6a70864c81ed9707e40aa16498ef0584b73df693dd15f718d68a81f"
+      },
+      {
+        "name": "xandbox-ingress-launch",
+        "sha256": "220ee3496d1b041a31fa161f5a24fc735dfe0b6f3ef4c33ef48778fa6e03ba3c"
+      },
+      {
+        "name": "xandbox-install",
+        "sha256": "51ce2f4221c3892dca9591268a1877676277755c4ca5bc69098d10bf42608a6f"
+      },
+      {
+        "name": "xandbox-launch",
+        "sha256": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c"
+      },
+      {
+        "name": "xandbox-node",
+        "sha256": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071"
+      },
+      {
+        "name": "xandbox-ready",
+        "sha256": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff"
+      },
+      {
+        "name": "xandbox-release",
+        "sha256": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb"
+      },
+      {
+        "name": "xandbox-template",
+        "sha256": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d"
+      },
+      {
+        "name": "xandbox-warden",
+        "sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0"
+      }
+    ],
+    "artifact_delta_from_foundation": {
+      "changed": [
+        "deploy-helper",
+        "fixture",
+        "gateway.test",
+        "installtxn.test",
+        "setup",
+        "setup.test",
+        "xandbox-gateway",
+        "xandbox-ingress-launch",
+        "xandbox-install"
+      ],
+      "unchanged": [
+        "builder",
+        "firecracker.test",
+        "policycontrol.test",
+        "releasestore.test",
+        "sandboxd",
+        "session.test",
+        "xandbox-launch",
+        "xandbox-node",
+        "xandbox-ready",
+        "xandbox-release",
+        "xandbox-template",
+        "xandbox-warden"
+      ]
+    },
+    "raw_software_evidence": [
+      {
+        "name": "forward-recovery-controls-first-v3.log",
+        "bytes": 21060,
+        "sha256": "046bb3bc5843b00201c2b2acd2002cc31ed9b95609c1361727fdff8974969673"
+      },
+      {
+        "name": "forward-recovery-controls-v3.log",
+        "bytes": 62762,
+        "sha256": "0efa8475f18142cc19a0aa6aeee2eda3852b196d5fe39ccd32786ce016aacca2"
+      },
+      {
+        "name": "forward-recovery-deploy-v2.log",
+        "bytes": 72,
+        "sha256": "3321121dd3b6a20ee003ba2caff3315cd65d59cb7b11a08a6522537b7c7a6f2b"
+      },
+      {
+        "name": "forward-recovery-full-race-v3.log",
+        "bytes": 2708,
+        "sha256": "49747aadad2bcaa8767a77d216e14f4f250a4d7ea04d20ad03d6cdf98ac942ce"
+      },
+      {
+        "name": "forward-recovery-host-v2.log",
+        "bytes": 70,
+        "sha256": "280b1b7e62d881133aac4451d214bebe93ae4f6a519ad6f0230ed829ef83954d"
+      },
+      {
+        "name": "forward-recovery-install-v2.log",
+        "bytes": 73,
+        "sha256": "39f5c4b765bffe6031942e70b5304b7893637869154110269e9f420b9f3e2621"
+      },
+      {
+        "name": "forward-recovery-native-v3.sha256",
+        "bytes": 1683,
+        "sha256": "991c4f43ac95ab6a73e04aacfe2ce527f9cf8ac85e884e9c30b4b7cda4f3cf51"
+      },
+      {
+        "name": "forward-recovery-native-v3.status",
+        "bytes": 2,
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      {
+        "name": "forward-recovery-python-v3.log",
+        "bytes": 335,
+        "sha256": "5365304b8a820552e04330c662a621bf4b2c21096ae0bc5b6166a1a661a1e05a"
+      },
+      {
+        "name": "forward-recovery-quota-v3.log",
+        "bytes": 61,
+        "sha256": "4fb331e00629dd0ae504159804b260675ca29a4434c23f6619bf143698123cf3"
+      },
+      {
+        "name": "forward-recovery-unix-preflight-v3.log",
+        "bytes": 2849,
+        "sha256": "3a64fee0aa0b773f832f908179b8547d298b6df7d24e986a80014661dc3ab42d"
+      },
+      {
+        "name": "forward-recovery-vet-v3.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "pipeline_sha256": "eff26318d2db3e89f3445c0808aec00dec10bf40bd02a0afe08b2bfa554e6613",
+    "three_tagged_log_basenames_retain_v2_suffix_but_bind_this_final_runner": true
+  },
+  "failed_original_not_retagged": {
+    "source_revision": "9520e639c54b4ee8a3cfe426c362f10a822c8290",
+    "archive_sha256": "ce312d3329603a50bcdc552ae554553a4d4cb13f3b26b384da41914cc9ccba87",
+    "runner_sha256": "0fc55ec188604752ebf2c06e4168675286f7475362f3ad10d614b9d17440e675",
+    "native_terminal_exit": 1,
+    "runner_observed_gone": true,
+    "focused_once_passed": true,
+    "installtxn_focused_seconds": 109.298,
+    "failure": "cumulative default Go package test-binary alarm at 600.038 seconds; then-active old rotation case had run about 2 seconds",
+    "designated_release_output_artifacts_built": 0,
+    "raw_evidence": [
+      {
+        "name": "forward-recovery-controls-first-v1.log",
+        "bytes": 19618,
+        "sha256": "8fba1be899d7044c3d6512c39b6642fe0a5984cc5a562aa9b37479592f45f52c"
+      },
+      {
+        "name": "forward-recovery-full-race-v1.log",
+        "bytes": 9700,
+        "sha256": "6f5cbf4d3a840d1aa374becc872a905764bf1572b533f1048ffc0b390571992f"
+      },
+      {
+        "name": "forward-recovery-native-v1.status",
+        "bytes": 2,
+        "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      {
+        "name": "run-forward-recovery-native-v1.sh",
+        "bytes": 3287,
+        "sha256": "0fc55ec188604752ebf2c06e4168675286f7475362f3ad10d614b9d17440e675"
+      }
+    ]
+  },
+  "second_failed_original_not_retagged": {
+    "source_revision": "66dd05146b37d65a82735cd9a80ba786b887d808",
+    "native_terminal_exit": 1,
+    "runner_observed_gone": true,
+    "failure": "long native-harness TMPDIR caused 118-127 byte AF_UNIX socket paths; designated release output directory empty",
+    "installtxn_full_race_three_seconds": 608.055,
+    "raw_evidence": [
+      {
+        "name": "forward-recovery-controls-first-v2.log",
+        "bytes": 21060,
+        "sha256": "784ed9821781729a62efb625aa797d5971693697841ac9434dddd0a7bb1531d0"
+      },
+      {
+        "name": "forward-recovery-full-race-v2.log",
+        "bytes": 7064,
+        "sha256": "77c6018f7fbb24ef92d7fdf3e9f17d0b3d757b8050f466210155f9f563a84ca6"
+      },
+      {
+        "name": "forward-recovery-native-v2.status",
+        "bytes": 2,
+        "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      {
+        "name": "run-forward-recovery-native-v2.sh",
+        "bytes": 3581,
+        "sha256": "bc9836a6e780ec9a8101f19f8897c45760ce773dd9d740ed4f9dee1f1e9e4b69"
+      }
+    ],
+    "same_source_long_short_socket_probe": {
+      "source": "66dd05146b37d65a82735cd9a80ba786b887d808",
+      "same_selected_tests_same_source_only_tmpdir_changed": true,
+      "results": [
+        {
+          "label": "long",
+          "tmp_prefix_length": 40,
+          "exit": 1,
+          "log_sha256": "2a037ffd3276eec867e68c55b3184ce60c383251fd9f71d817a0fb29d0a5f19d",
+          "invalid_socket_path_lengths": [
+            118,
+            124,
+            126,
+            127,
+            125
+          ]
+        },
+        {
+          "label": "short",
+          "tmp_prefix_length": 8,
+          "exit": 0,
+          "log_sha256": "b9b57d4573486abdb470a83bcd67bcf4f23b1def6aeb8a8ca7bb88ccc9965b70",
+          "invalid_socket_path_lengths": []
+        }
+      ]
+    }
+  },
+  "runner_limits_not_runtime_slos": {
+    "original_default_package_seconds": 600,
+    "new_finite_package_seconds": 900,
+    "ci_matrix_job_minutes": 20,
+    "race_detector_options_relaxed": false,
+    "test_cases_dropped_or_shards_omitted": false,
+    "full_race_repetitions_reduced": false,
+    "service_guest_resource_limits_or_owned_l1_deadlines_increased": false
+  },
+  "evidence_scope": {
+    "real_linux_shadow_root_files_sync_rename_ofd_flock_and_process_exits": true,
+    "synthetic_test_pki": true,
+    "installer_manager_and_ack_modeled": true,
+    "installer_predecessor_store_advancement_and_cross_process_test_marker_modeled": true,
+    "gateway_actual_durable_store_tested_separately": true,
+    "kernel_empty_positive_observation_in_manager_unit_tests_modeled": true,
+    "actual_new_root_cli_kernel_empty_positive_real_tls_child_systemd_kvm_acceptance": false,
+    "new_real_block_device_fault_or_powercut": false,
+    "changed_runtime_full_hardware_matrix_requalified": false,
+    "historical_hardware_re_signed": false
+  },
+  "historical_validation_files_byte_preserved": 625,
+  "claims": {
+    "complete_goal_or_production_milestone": false,
+    "production_ready": false,
+    "all_recovery_liveness_gaps_resolved": false,
+    "uncommitted_expired_candidate_supersession_available": false,
+    "native_software_time_is_sandbox_switch_stop_or_gc_latency": false
+  },
+  "remaining_gates": [
+    "A proven explicit abort/supersession protocol for a candidate expiring BEFORE file publication; declared proposal is not a consumed epoch",
+    "Fresh owned-L1 composition with the new self/release/artifact/source pins, ordinary root CLI and actual kernel ingress-empty proof",
+    "Real TLS leaf/key revocation, continuing busy KVM writer, unchanged main/guest incarnation, persisted drain, lost ACK/CAS/cuts/source absence and original-disk cold recovery",
+    "Independent resource cleanup and current-artifact full runtime matrices",
+    "Original broader production goals including backend authority migration, self upgrade/rollback, catalog/consistent backup, audit retention and saturation/SLO acceptance"
+  ]
+}

@@ -1,0 +1,236 @@
+{
+  "status": "partial_experimental_driver_negative_evidence_not_final_PR_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "ordinary_driver_quota_implementation_source": "93b6573f953f2f79e0aa7a71b55615a061b56389",
+  "production_catalog_quota_lock_fix_source": "181e6efce36ed7c2ff8c92153c7f89ee96c96766",
+  "negative_fixture_source": "100a155c92198ed630f4378c23efe2d4dc80cdd0",
+  "unenforced_fixture_and_final_build_source": "c7e0026ae82157b7c8b4715876aa8ccac981b5b7",
+  "source_archives_sha256": {
+    "v1": "6fcb222c3dca4624cadc98e103ec721ca672fc6ceaa652b5cd65f61a1fad7e6c",
+    "v2_and_v3_same_frozen_source": "331d3a65f57a1aa823b3e619d6ac613b2a2f9d83b31d358ecf24ed2538d2650f"
+  },
+  "production_go_unchanged_since_lock_fix": true,
+  "ordinary_pristine_guest_unchanged": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "117f927031df85f8046f98ddc7f7d0ce595e88277612f7c95698f52c07945fb1",
+    "daemon": "ab547783c9c9ba3651c4b6a0f8c6ca78803a31c0a1809eef97c8aa7284878cb6",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407"
+  },
+  "fixture_sha256_by_run": {
+    "v1": "82c47ef5f421db82fb479172b709d94e5104234c386e9dad296e958dd13ec75c",
+    "v3": "117f927031df85f8046f98ddc7f7d0ce595e88277612f7c95698f52c07945fb1"
+  },
+  "enforced_negative_runs": 2,
+  "per_enforced_negative_run": {
+    "startup_rejection_cases": [
+      "resource_capability",
+      "wrong_filesystem_uuid",
+      "unknown_nonempty_quota_record",
+      "changed_bound_policy"
+    ],
+    "edquot_cases": [
+      {
+        "private_hard_bytes": 16777216,
+        "private_hard_inodes": 128,
+        "ordinary_prepare_edquot_attempts": 2
+      },
+      {
+        "private_hard_bytes": 201326592,
+        "private_hard_inodes": 1,
+        "ordinary_prepare_edquot_attempts": 2
+      }
+    ],
+    "same_binding_daemon_restart_key410_checked": true,
+    "released_capacity_reused_new_key_edquot_not_capacity503": true,
+    "durable_destroyed_and_exact_jail_cgroup_owner_absent": true,
+    "all_fixed_negative_projects_cleared": true,
+    "positive_backend_not_bound_until_negative_cases_finished": true,
+    "scope": "Fixed ordinary sandboxd API requests and constructor failures. Actual EDQUOT is matched in bounded PRIVATE ordinary-driver logs; raw errno paths/Ref/logs are not public. Each case has its own fresh state/runtime/cgroup binding. Tests run before the later real-VM cold checkpoints, not concurrently with tenant load."
+  },
+  "unknown_record_ownership_boundary": "The ordinary driver rejects the unknown nonempty record without modifying it. Only after the rejected child is reaped does L1 PID1 clear the fixture-owned injected record from its separate fixed test range. This is not driver adoption or bulk clearing of external records.",
+  "binding_scope": "A healthy empty daemon exits normally before changing its test input policy copy by4096 bytes; the next constructor rejects it and the original durable binding hash remains identical. No online bound-policy mutation or migration is performed.",
+  "unenforced_ext4": {
+    "cases": 1,
+    "l1_boots": 1,
+    "l2_vms_started": 0,
+    "startup_rejection_only": true,
+    "fresh_ext4_without_project_quota_format_and_mount_options": true,
+    "same_actual_filesystem_uuid": true,
+    "ordinary_capless_daemon_specific_mount_enforcement_rejection": true,
+    "no_api_backend_ownership_generation_domain": true,
+    "no_quota_on_off_or_online_mount_policy_mutation": true,
+    "not_claimed": [
+      "L2 guest execution",
+      "cold recovery",
+      "quota-zero readback"
+    ]
+  },
+  "regression_runs": {
+    "v1": {
+      "quota_negative_plus_cold_cases": 3,
+      "snapshot_quota_cold_cases": 3,
+      "snapshot_shared_ordinary_clones": 2,
+      "default_power_cases": 3,
+      "default_state_io_cases": 4,
+      "l1_boots": 17
+    },
+    "v3": {
+      "unenforced_startup_cases": 1,
+      "quota_negative_plus_cold_cases": 3,
+      "snapshot_quota_cold_cases": 3,
+      "snapshot_shared_ordinary_clones": 2,
+      "default_power_cases": 3,
+      "default_state_io_cases": 4,
+      "l1_boots": 18
+    }
+  },
+  "native_validation_by_run": {
+    "v1": {
+      "full_race_count": 3,
+      "vet_passed": true,
+      "fixture_race_count": 10,
+      "fixture_vet_passed": true,
+      "root_python_tests": 42,
+      "actual_cgo0_kernel_filter_proof_count": 3,
+      "runner_exit_status": 0
+    },
+    "v3": {
+      "full_race_count": 3,
+      "vet_passed": true,
+      "fixture_race_count": 10,
+      "fixture_vet_passed": true,
+      "root_python_tests": 43,
+      "actual_cgo0_kernel_filter_proof_count": 3,
+      "runner_exit_status": 0
+    }
+  },
+  "darwin_frozen_final_source_race_count": 3,
+  "darwin_vet_passed": true,
+  "v2_preflight_failure": {
+    "runner_exit_status": 1,
+    "native_tests_started": false,
+    "source_extracted": false,
+    "l1_boots": 0,
+    "resource_scopes": 0,
+    "raw_kvm_report_created": false,
+    "reason": "A PRIVATE runner filename substitution changed original pinned initrd-v10 to nonexistent initrd-v20. Exact checksum preflight failed before source extraction/native tests/L1. Corrected original filename in a fresh v3 namespace with the SAME c7e0026 source bytes; no guest/image or production code change. Original failed transcript retained; no synthetic passed=false KVM report."
+  },
+  "independent_cleanup": {
+    "scopes": 9,
+    "execution_generations": 35,
+    "all_owned_roots_control_cgroups_absent": true,
+    "read_only_no_cleanup_actions": true,
+    "quota_records_zero_proof": "Separate enforced-profile actual L1 readbacks before disk deletion; not this path audit. No such readback is claimed for the unenforced startup-only disk."
+  },
+  "not_completed": [
+    "Actual quota-specific EIO/EROFS/held-quota syscall and persistence-window crash/concurrency matrix.",
+    "Full new-native default process/cold30/load/queue/binding/snapshot/mixed/initialization/storage/IO service matrix.",
+    "Owner unlink/directory-fsync catalog-lock stalls and every catalog/quota persistence window.",
+    "Shared/node-wide physical capacity/reserves/unique-memory/IO attribution and media handling.",
+    "Final exact-head PR19 CI, complete M1-M4, independent operator acceptance and production readiness."
+  ],
+  "files": {
+    "kvm-quota-negative-default-power-v1.json": {
+      "sha256": "912c0f047753f0c45a5189a946488fa6df65633c1d11c15d078962c11a9e67b8",
+      "bytes": 5038
+    },
+    "kvm-quota-negative-default-power-v3.json": {
+      "sha256": "765dde467e7f1b00257fa2e30994153f28ec9107c4e36613cefc09b98f1b04bf",
+      "bytes": 5073
+    },
+    "kvm-quota-negative-default-state-io-v1.json": {
+      "sha256": "95a162b7558560cb92d652edec2998b348072cfc134e7aa9f09d614c77f7aeff",
+      "bytes": 9734
+    },
+    "kvm-quota-negative-default-state-io-v3.json": {
+      "sha256": "0be2ed5288444ad8bbcf77e61fe2120b5f313b8801f5d3024055477f372da4c3",
+      "bytes": 9775
+    },
+    "kvm-quota-negative-snapshot-v1.json": {
+      "sha256": "075d9f755f16b98083135cf5b32515e309455718bb3a243971e9822b91431900",
+      "bytes": 8823
+    },
+    "kvm-quota-negative-snapshot-v3.json": {
+      "sha256": "3bed6ea6b26ee014b533b0210977fd7ec188cec1ed65cc9fc68bce341d0638a5",
+      "bytes": 8858
+    },
+    "kvm-quota-negative-unenforced-v3.json": {
+      "sha256": "c79c4112307cc3d64baef0e7ec2249e7e8141026d77f2d2e9ae512dfb5fd3762",
+      "bytes": 3869
+    },
+    "kvm-quota-negative-v1.json": {
+      "sha256": "0c21486588dba627edd6c8c9f445d1c5209866091abb0266e2084eb643894188",
+      "bytes": 9373
+    },
+    "kvm-quota-negative-v3.json": {
+      "sha256": "fc15764ec0e7c919295dd2db2130f8f07fc24748ec32d1298e47f1527f08eb1a",
+      "bytes": 9409
+    },
+    "quota-negative-native-race-v1.txt": {
+      "sha256": "8806cc884bdebbc5f17d46cb6e9e3e1ba98461fb581d04538a87579acfc70f62",
+      "bytes": 1639
+    },
+    "quota-negative-fixture-native-race-v1.txt": {
+      "sha256": "7a5ec87364e1c975c0e84e861978a3aae788a0f24d7a2aa293c2d64ce2d0e785",
+      "bytes": 70
+    },
+    "quota-negative-cgo0-kernel-filter-v1.txt": {
+      "sha256": "3be0a4f9304dab96be1582c7395c1c1f1e1b053762ffc099864afd523f5ab715",
+      "bytes": 846
+    },
+    "quota-negative-pipeline-v1.txt": {
+      "sha256": "02015cc7bb8a501bf31fdf60fad4c45fe2a7953433d222ae4688f3eb1e8bf314",
+      "bytes": 1677
+    },
+    "quota-negative-native-artifacts-v1.txt": {
+      "sha256": "f1d62e7dc2c2a497916eb79da0d93fc2d330588fe11c6bcaa566c91ace3c207c",
+      "bytes": 497
+    },
+    "quota-negative-native-race-v3.txt": {
+      "sha256": "c43175517132dd7405900e5532b8f2a5eceb02b651b0fab5dfaeb5939db5b2c7",
+      "bytes": 1639
+    },
+    "quota-negative-fixture-native-race-v3.txt": {
+      "sha256": "2238d74fec593662e67aa31c7baef5ba23f68c0e3c33820973c322405ba5b7ab",
+      "bytes": 70
+    },
+    "quota-negative-cgo0-kernel-filter-v3.txt": {
+      "sha256": "e756a8b5057772907f24e353a783372bf86c75553d0121600d479c3d65d6fa25",
+      "bytes": 846
+    },
+    "quota-negative-pipeline-v3.txt": {
+      "sha256": "2c4438a9ac9dcf89d53da7306ee13561af75cf299c25c1297cf80bc3e7be740e",
+      "bytes": 1809
+    },
+    "quota-negative-native-artifacts-v3.txt": {
+      "sha256": "0fa326fde80c6a1ef1250077fa9e10f6cc7bc1f31ed6221548b1066e6672e916",
+      "bytes": 497
+    },
+    "quota-negative-preflight-failed-v2.txt": {
+      "sha256": "fcdf8f500cc6e91459ee2d5f81bb499faea4653457d4306da002e62ad1a6d909",
+      "bytes": 215
+    },
+    "quota-negative-independent-cleanup-v3.txt": {
+      "sha256": "20b44f7d7716b68cf0cf7d6718279dff8b2a7467bdfb2b973beaa354d7c8ba16",
+      "bytes": 1485
+    },
+    "quota-negative-final-darwin-race-v3.txt": {
+      "sha256": "0835b0f216a1ecbe8801bac6a8fc72dba1f5477ab766fcae93258ac171d31e52",
+      "bytes": 1434
+    }
+  }
+}

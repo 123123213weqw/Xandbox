@@ -1,0 +1,32 @@
+{
+  "source_revision": "0482ce2bb87d164baf8edd111a4a4a1e6b03f2e6",
+  "production_ready": false,
+  "linux_full_race_repetitions": 3,
+  "linux_vet": true,
+  "fixture_race_repetitions": 10,
+  "fixture_vet": true,
+  "specific_closed_session_baseline_race_repetitions": 100,
+  "root_python_tests": 114,
+  "root_python_skips": 0,
+  "cgo0_kernel_quota_repetitions": 3,
+  "mock_process_suites": 7,
+  "actual_mock_full_undrained_pipe_restarts": 45,
+  "independent_cross_native_artifacts_equal": 9,
+  "native_artifacts_sha256": {
+    "sandboxd": "29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c",
+    "xandbox-template": "9eb842a477f84e039f57149f4e39291984dfa6f693eaf9fe10e319d696dd8416",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "4579a79565dd8336abfb5c486c4aa03654b529ebbde3f9afa74e3e00ebc63232",
+    "xandbox-gateway": "46d3f9a57cab373761f72e1d339dbf9f4dbb91dcb5281e5f4f499857f63c7aeb",
+    "fixture": "9ecc86e32dfbc48d8b388e2bdae71e0c2f024a6c5e9aae625e73ea5cac708922",
+    "builder": "4d5d4f6e115b90a5c66f158fbc6996a0b714ac84ddb5e9fe80ad36a685f1608d",
+    "firecracker.test": "8fe091449ea3e4f41964d8b1f26992dd5cb1594d473ef58129590a978d7a61c4",
+    "session.test": "96238f0d9519469db4381d0db01916b4ca5468b7751c6ddb615fe094586fa04b"
+  },
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "trimpath": true,
+  "buildvcs": false,
+  "hardware_scopes": 6,
+  "outer_boots": 12,
+  "full_changed_elf_default_io_quota240_tls_trace_or_goal_acceptance": false
+}

@@ -1,0 +1,4 @@
+DERIVED bounded excerpt, not raw console. Source fixture9aba2712e832d2ba20e7300ca7c5722d06a4b8c7.
+private_original_console_sha256=5d2d8d74bcd1cb4bfd03e7957a17de4a6b737421cc861ea10e469e28a9b0f5e0
+private node step failure: EIO lost or changed exact durable quota owner
+Retained v1 passed=false/cases0; no cold-recovery or durable-owner-loss inference.

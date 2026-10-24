@@ -1,0 +1,11 @@
+{
+  "test_only": true,
+  "architecture": "amd64",
+  "build": "20261017",
+  "rootfs_url": "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64-root.tar.xz",
+  "rootfs_sha256": "15def31708587e1a6ffc9864caa8203ed81dc0fd68d9aa060e86799bd7ef24bf",
+  "manifest_url": "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64-root.manifest",
+  "manifest_sha256": "2c84a4aac3081d931d37d480e38fd41c80752335188ebd370f6dfe1a85530371",
+  "systemd_package": "255.4-1ubuntu8.18",
+  "sha256sums_url": "https://cloud-images.ubuntu.com/minimal/releases/noble/release/SHA256SUMS"
+}

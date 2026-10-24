@@ -1,0 +1,12 @@
+kvm-quota-negative-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-negative-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-negative-default-power-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-negative-default-state-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-negative-private-v3 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-negative-snapshot-private-v3 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-negative-default-power-private-v3 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-negative-default-state-io-private-v3 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-negative-unenforced-private-v3 all_owned_roots_control_cgroups_absent True execution_generations 1
+ALL9 ordinary-quota-negative fixture scopes independently rechecked; 35 execution generations absent; read-only audit, no cleanup actions.
+Unenforced ext4 is startup rejection ONLY: one L1 boot, zero L2 VMs, no quota-zero readback. Enforced-profile quota-zero proofs came from actual L1 readback before disk deletion, not this path audit.
+v2 preflight-only failed before source extraction/native tests/L1: original guest asset filename typo; no resource scope or raw KVM report created. v1/v3 results unchanged.

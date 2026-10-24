@@ -1,0 +1,590 @@
+{
+  "status": "finite_actual_privilege_separated_tls_external_credential_and_certificate_rotation_kvm_cold_and_fd_hygiene_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_m4": false,
+  "complete_pr19_acceptance": false,
+  "final_frozen_source_revision": "93c5be6c70087eb273dab3266de0524ab46a0de3",
+  "previous_public_head": "273f2c59240efa6bbefddb25ccf264ae3ce9cd6e",
+  "source_inputs": {
+    ".github/workflows/ci.yml": {
+      "sha256": "2fc057fcff142bb51f4baf75ad655c953e29315f614146a9f6347b9dd6b72f22",
+      "bytes": 4831
+    },
+    "Makefile": {
+      "sha256": "8a3db39f68ab530f23073d7afd5976bfec66e9f3d9c29030a52ea73305ead71c",
+      "bytes": 1403
+    },
+    "cmd/xandbox-gateway/main_linux.go": {
+      "sha256": "74018d1f5e2a83becf040652562099f4e3bb527fbdb2368c4844936fa1e663a1",
+      "bytes": 728
+    },
+    "cmd/xandbox-gateway/main_other.go": {
+      "sha256": "efb52ad98e59064ce31bd52c45a906dccc53204994cc61e18a7e627133222abb",
+      "bytes": 171
+    },
+    "cmd/xandbox-host-fixture/node_linux.go": {
+      "sha256": "ed32d6de12f67f79058c226f774ff7703a4c4dbbb80323c204ed337ddcc81427",
+      "bytes": 26897
+    },
+    "cmd/xandbox-host-fixture/node_tls_gateway_linux.go": {
+      "sha256": "33259cbbdbd4618938cf5f17c3ae2c63a31635390a10ca09aea0ac0247a9f554",
+      "bytes": 40120
+    },
+    "cmd/xandbox-host-fixture/node_tls_gateway_linux_test.go": {
+      "sha256": "be6000b890144a914f0152b59dbb7093f2f580260de65306519e84542f790835",
+      "bytes": 3585
+    },
+    "internal/gateway/broker_linux.go": {
+      "sha256": "e591176370b85a15bf0373f62be8b32ab12f853990b99ddfef263c7800a47002",
+      "bytes": 14664
+    },
+    "internal/gateway/child_linux.go": {
+      "sha256": "2fe50e22393beaff14b5725d40c0ca20b2e0f524d550a3c99519df21655a9cad",
+      "bytes": 6138
+    },
+    "internal/gateway/config_linux.go": {
+      "sha256": "2a86bd4b8fd1f5c092265f0a84fa045a07ba5629ccfdbc18b336d196069f73a1",
+      "bytes": 5463
+    },
+    "internal/gateway/diagnostic.go": {
+      "sha256": "5541ef3e1e547c35e3f9a2a0e65f115995668aa0ea7a673241ed895264775c8a",
+      "bytes": 2146
+    },
+    "internal/gateway/policy.go": {
+      "sha256": "ada13b1c2502074bfc2e98841bee6aaad6652d61bfb6fb29779192039e7e8df7",
+      "bytes": 8640
+    },
+    "internal/gateway/policy_test.go": {
+      "sha256": "588300f9441b679b9d2951d0ad2ed196f22742ce69044874b41727ee8a768fdf",
+      "bytes": 7864
+    },
+    "internal/gateway/request.go": {
+      "sha256": "b9a541631540cd84e4f49e4f35f2ddda24763561ac7b64d9d69f8bf1ea0db64c",
+      "bytes": 7801
+    },
+    "internal/gateway/request_test.go": {
+      "sha256": "782bfe1d3450e4c366c2e50182859f6e8f7461f21552e3dc77abd240128a0bf3",
+      "bytes": 9878
+    },
+    "internal/gateway/state_linux.go": {
+      "sha256": "374963f74a92a7753f30247efeb546587130d4f23c35e0ad23c148806a38ab79",
+      "bytes": 5557
+    },
+    "internal/gateway/state_linux_test.go": {
+      "sha256": "71361547a7b32989be1d29812a704595bbb252ac2f474d3d02b81571980d59a7",
+      "bytes": 3143
+    },
+    "internal/gateway/wire_linux.go": {
+      "sha256": "3effe0c36568ffc4908bc012ff09b1fbbd50496703779cad93eb057004f754e4",
+      "bytes": 4754
+    },
+    "internal/gateway/wire_linux_test.go": {
+      "sha256": "b210f822c787a89c83f5f0936017b32cff71d828da514dc1d9e872dca7ea973f",
+      "bytes": 8887
+    },
+    "scripts/kvm_nested_host.py": {
+      "sha256": "789c9fb6bcf38f0e16261f9b7444e05a3adbc4123e953a06d1ff5e1a7cfdb50d",
+      "bytes": 104314
+    },
+    "scripts/test_kvm_tls_gateway.py": {
+      "sha256": "73480551940571d077e31e0848a12b8d1edd313422647b311b9cf7f9bf33fc29",
+      "bytes": 2813
+    },
+    "go.mod": {
+      "sha256": "f71439d7c2332632fc2c35b694ff6b98a1a0af35307517fd1936f804c87a2810",
+      "bytes": 261
+    },
+    "go.sum": {
+      "sha256": "eae41579a1200dd75cc394a61944d2255153c015e23227fde325e8c5b700d2dd",
+      "bytes": 968
+    }
+  },
+  "ordinary_five_artifacts_byte_exact_to_prior4ee": true,
+  "ordinary_daemon_and_existing_runtime_auth_lifecycle_sources_unchanged": true,
+  "new_gateway_production_boundary": true,
+  "go_mod_sum_unchanged": true,
+  "workflow_adds_gateway_linux_amd64_arm64_compile": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_cgo": false,
+  "four_distinct_frozen_stages": [
+    {
+      "stage": "component-v1",
+      "source_revision": "19092f4ab6f8082fe2c0bcf360aa4aa4b0eb470f",
+      "source_archive": {
+        "name": "tls-gateway-component-source-v1.tar.gz",
+        "sha256": "d76d0da75182c36927b6b965ae5cd3f8c4474f1f07c000b6497468f432313316",
+        "bytes": 1859864
+      },
+      "private_raw_archive": {
+        "name": "tls-gateway-component-reports-v1.tar.gz",
+        "sha256": "13a546a37af5f989828f7b5678e8d9cd73e8e4a8710baac5fdfc0fe7554f2904",
+        "bytes": 4618,
+        "regular_members": 11
+      },
+      "private_raw_members": {
+        "tls-gateway-component-race-v1.log": {
+          "sha256": "b52fe9a30e992d1b4d2967dbc9a1dc93c2d8fcd7c745aa5861883410368f2207",
+          "bytes": 1903
+        },
+        "tls-gateway-component-vet-v1.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-component-fixture-v1.log": {
+          "sha256": "e2002e99a13bdc99040817636624f8adbd4290778c1026e055359af52887302b",
+          "bytes": 70
+        },
+        "tls-gateway-component-fixture-vet-v1.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-component-filter-v1.log": {
+          "sha256": "10b78f8bfef9e4b8103577193ae398d5d50fd48a77140c624fc86e24d9a51ce6",
+          "bytes": 846
+        },
+        "tls-gateway-component-python-v1.log": {
+          "sha256": "40c4add8aecd22cf1e936dccf01fd83b6134b87212f2c058b8ce43265c700ce0",
+          "bytes": 203
+        },
+        "tls-gateway-component-smoke-v1.log": {
+          "sha256": "5067e70b05b769ad7f4b22321581766cdf76a1c69b67c094620fb4510e2550a3",
+          "bytes": 6860
+        },
+        "tls-gateway-component-v1.status": {
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "bytes": 2
+        },
+        "tls-gateway-component-v1.pipeline.log": {
+          "sha256": "82cf41f6c845d06433472eb3d9a15dae986282ebc2292383cf6b703197120741",
+          "bytes": 318
+        },
+        "tls-gateway-component-artifacts-v1.sha256": {
+          "sha256": "5152897234becd9cdc79574e13cbed5b37472c8ec3c943a5501fd16de422151f",
+          "bytes": 751
+        },
+        "run-tls-gateway-component-v1.sh": {
+          "sha256": "0f4d7f39a52b35e101c779dc4faf1fa750472d5beceedbbd7887545d6939d9a5",
+          "bytes": 3232
+        }
+      },
+      "runner_exit": 0,
+      "actual_linux_full_race_count": 3,
+      "actual_fixture_race_count": 10,
+      "actual_linux_vet_and_fixture_vet": true,
+      "actual_root_python_tests": 103,
+      "actual_root_python_skips": 0,
+      "actual_cgo0_kernel_quota_count": 3,
+      "independent_cross_native7_exact": true,
+      "native_artifacts_sha256": {
+        "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+        "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+        "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+        "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+        "xandbox-gateway": "e7a94404b08c68a484b2dca0b18d5cb02b4813459ef86bfcde90f7fe19eb698d",
+        "fixture": "48401ba52493763d4e2688926c406c6c54c57152c31d9d895677c877dc5e0a86",
+        "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+      }
+    },
+    {
+      "stage": "v1",
+      "source_revision": "9d9bfb8a0715d4bdd8220033ea1271b021a6e246",
+      "source_archive": {
+        "name": "tls-gateway-source-v1.tar.gz",
+        "sha256": "99931fb8c86bb2d8ef839c769c050e284c41876875048b5b9b501939a53fc5af",
+        "bytes": 1872459
+      },
+      "private_raw_archive": {
+        "name": "tls-gateway-failed-reports-v1.tar.gz",
+        "sha256": "86474c44d56fa9e8090c21ed842dc1d35acc988ced6eb92d763c7892077b9c01",
+        "bytes": 8046,
+        "regular_members": 12
+      },
+      "private_raw_members": {
+        "tls-gateway-race-v1.log": {
+          "sha256": "c18b0f78868033b197f1d0a8d20a5ec59952e9f960d765fffd634029c5918717",
+          "bytes": 1903
+        },
+        "tls-gateway-vet-v1.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-fixture-v1.log": {
+          "sha256": "20467ecc6ed046996d7c0ffb65399d20bdbf7de391768ae8e2835079c7f2c19b",
+          "bytes": 70
+        },
+        "tls-gateway-fixture-vet-v1.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-filter-v1.log": {
+          "sha256": "166eed33fd65735fbfaa62cca016bbd2eb2fc6d1154b3ad5580fe69beeb4827c",
+          "bytes": 846
+        },
+        "tls-gateway-python-v1.log": {
+          "sha256": "27f33a4f1386b882ecc00f30462b72cc45207ea7a2b86c22a7ebf957f71cd4b7",
+          "bytes": 207
+        },
+        "tls-gateway-smoke-v1.log": {
+          "sha256": "dbc4e5bb788b74243d86123647fedb963a85cf70050213b22d8fcaf5f31cff14",
+          "bytes": 6681
+        },
+        "tls-gateway-v1.status": {
+          "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "bytes": 2
+        },
+        "tls-gateway-v1.pipeline.log": {
+          "sha256": "6c92a6efc1e33d574d65aeb7685f11a49dd48d4fa2f6f87865366a64daeabb79",
+          "bytes": 2418
+        },
+        "tls-gateway-artifacts-v1.sha256": {
+          "sha256": "932a67f6e8016fce8cdac9b9dad36fa14039628598545e192938526133d4e64b",
+          "bytes": 681
+        },
+        "run-tls-gateway-v1.sh": {
+          "sha256": "1ecfd615f39c95aa1a2392a49a59b9795f0e251afa2d88148718e797b8c7a7ca",
+          "bytes": 5072
+        },
+        "kvm-tls-gateway-live-v1.json": {
+          "sha256": "4485faf107d732c647528345fe9dab2f4817698e0e31c5cc219723cc58b09001",
+          "bytes": 5573
+        }
+      },
+      "runner_exit": 1,
+      "actual_linux_full_race_count": 3,
+      "actual_fixture_race_count": 10,
+      "actual_linux_vet_and_fixture_vet": true,
+      "actual_root_python_tests": 107,
+      "actual_root_python_skips": 0,
+      "actual_cgo0_kernel_quota_count": 3,
+      "independent_cross_native7_exact": true,
+      "native_artifacts_sha256": {
+        "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+        "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+        "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+        "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+        "xandbox-gateway": "cdd14320068a5bb52b9d385ff8b7c9c765afce572d671e76be2458724ad3bf1a",
+        "fixture": "3915b422faf01d1ea52b88443b2c5ce3f2a7aa48649050c1287ddd7c1cfd6834",
+        "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+      },
+      "actual_frozen_darwin_race3_vet": {
+        "sha256": "c9e756be7d2edbbaa506b9d8e06da7a4652b65cda9dc8aeaf0d19c326dde6765",
+        "bytes": 1903
+      }
+    },
+    {
+      "stage": "v2",
+      "source_revision": "f698ed714fb33a837d75a351608013b03aa7aac6",
+      "source_archive": {
+        "name": "tls-gateway-source-v2.tar.gz",
+        "sha256": "f6b2f51b69d9b17fc529e1ffacb4e3f762d3ee11eb02b97a41c1f5085cc32965",
+        "bytes": 1873291
+      },
+      "private_raw_archive": {
+        "name": "tls-gateway-baseline-reports-v2.tar.gz",
+        "sha256": "2c5095f5c0da3775fa60d4897669763434e234e08d64c430307a7d694a593597",
+        "bytes": 9775,
+        "regular_members": 13
+      },
+      "private_raw_members": {
+        "kvm-tls-gateway-live-v2.json": {
+          "sha256": "249aceaf18a4534d9b350358500900caeeb9451f6bf27e7153717cdb0b7ccc99",
+          "bytes": 9477
+        },
+        "kvm-tls-gateway-budget-v2.json": {
+          "sha256": "2f254836ca5913d8d0badf9103a58f86346ec952756d8a7800d29dc23f80ceaa",
+          "bytes": 7823
+        },
+        "tls-gateway-race-v2.log": {
+          "sha256": "a8b874bd5b77fcc30223d2dcc7eff833ea5f8677d98ec484689b8d9ebad5ba8c",
+          "bytes": 1903
+        },
+        "tls-gateway-vet-v2.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-fixture-v2.log": {
+          "sha256": "9b84c13062c127bf84454e48a45c279388a0e5db0ac3efa1ce59f7a1e0559ecd",
+          "bytes": 70
+        },
+        "tls-gateway-fixture-vet-v2.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-filter-v2.log": {
+          "sha256": "7595ba952f0f249a0f82d27c44c78d23106d075786919c7cb642b4cfdaf5584c",
+          "bytes": 846
+        },
+        "tls-gateway-python-v2.log": {
+          "sha256": "1417b773e781da0e23d8ad83de6611473882ccc08a60963e534537ac3728755f",
+          "bytes": 207
+        },
+        "tls-gateway-smoke-v2.log": {
+          "sha256": "cebf53c8bdc942bd8eb5da86a3e2feb150a43a906bd538e08b1ca5a5652736f0",
+          "bytes": 6678
+        },
+        "tls-gateway-v2.status": {
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "bytes": 2
+        },
+        "tls-gateway-v2.pipeline.log": {
+          "sha256": "6a5c588690a9eec4d3758cb770e727dbccdab4fbfeefc0d62428f0b6b10138a8",
+          "bytes": 1036
+        },
+        "tls-gateway-artifacts-v2.sha256": {
+          "sha256": "ae896ee7fdccd4ac548786106c4744f957b6661ffeb4d5ea237204b7d1914abb",
+          "bytes": 681
+        },
+        "run-tls-gateway-v2.sh": {
+          "sha256": "8383af8a7019cb8cda1b5f449a9e96c73bfe2913efacfeb08cc7ac3307e26090",
+          "bytes": 5139
+        }
+      },
+      "runner_exit": 0,
+      "actual_linux_full_race_count": 3,
+      "actual_fixture_race_count": 10,
+      "actual_linux_vet_and_fixture_vet": true,
+      "actual_root_python_tests": 107,
+      "actual_root_python_skips": 0,
+      "actual_cgo0_kernel_quota_count": 3,
+      "independent_cross_native7_exact": true,
+      "native_artifacts_sha256": {
+        "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+        "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+        "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+        "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+        "xandbox-gateway": "f88f36acda712e36f1aa5c7df4649bc28e805335b6064ff152cff9a32f159b4d",
+        "fixture": "faa3fbc9d356ab9b1751839e70ba94fc1b599fe3d438ec01353286fc1564b548",
+        "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+      },
+      "actual_frozen_darwin_race3_vet": {
+        "sha256": "cb46d502e69d8d1012fb5e564840fa60175fb033d64611dabf38d37c26e31b13",
+        "bytes": 1902
+      }
+    },
+    {
+      "stage": "v3",
+      "source_revision": "93c5be6c70087eb273dab3266de0524ab46a0de3",
+      "source_archive": {
+        "name": "tls-gateway-source-v3.tar.gz",
+        "sha256": "3755ea96b0de84e852af082eceec4dc2c11a88f69511bd3c9200179c8e693df2",
+        "bytes": 1874161
+      },
+      "private_raw_archive": {
+        "name": "tls-gateway-final-reports-v3.tar.gz",
+        "sha256": "4998e89b42b3e96cb53580a21475e34e79bcda1c2018d2c02291219e8cffee4d",
+        "bytes": 9783,
+        "regular_members": 13
+      },
+      "private_raw_members": {
+        "kvm-tls-gateway-live-v3.json": {
+          "sha256": "8df240b0fa86a6660163272191d2cc1af39fdf3e69474fb491a7a6ad1a92014e",
+          "bytes": 9499
+        },
+        "kvm-tls-gateway-budget-v3.json": {
+          "sha256": "28b207deb4a43d222cc3d6bbab5869de6d1a25eaaae16bbc1de3943fc156ac0a",
+          "bytes": 7823
+        },
+        "tls-gateway-race-v3.log": {
+          "sha256": "a7e0b477b5e880f66256add91bc08755cd844ccd5b3ea76fabf7b5bf000659ce",
+          "bytes": 1903
+        },
+        "tls-gateway-vet-v3.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-fixture-v3.log": {
+          "sha256": "767a47805fc44fcd4384307a582006624a38d9c59d41f95ec857e732adc4bcf0",
+          "bytes": 70
+        },
+        "tls-gateway-fixture-vet-v3.log": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "tls-gateway-filter-v3.log": {
+          "sha256": "3b25e04cfe62e602ef517da3519a5d7d1d451781aeda43afccc4cfa389e7c641",
+          "bytes": 846
+        },
+        "tls-gateway-python-v3.log": {
+          "sha256": "92bfb25fb5e429536c25aae8fd5dce5e6e9878a8398faf1c3bad20a5e459ab5f",
+          "bytes": 207
+        },
+        "tls-gateway-smoke-v3.log": {
+          "sha256": "eca64da20050f8468e4a9941c8995a5d2fdf5e50d2e96992bba1ee587520b2be",
+          "bytes": 6679
+        },
+        "tls-gateway-v3.status": {
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "bytes": 2
+        },
+        "tls-gateway-v3.pipeline.log": {
+          "sha256": "9c8e85d865b7d9163ff1816b5071c4d5a7168f30749318c546a422973cd18058",
+          "bytes": 1036
+        },
+        "tls-gateway-artifacts-v3.sha256": {
+          "sha256": "dd84cb2f69eccbd0317e2591f4b5eb3d940deaa4b8a29678a37e5fd7b4ae5328",
+          "bytes": 681
+        },
+        "run-tls-gateway-v3.sh": {
+          "sha256": "ff651bb65f48a33b3841826d3f66e01a666b2d26e56383f9ecb78da997b8519c",
+          "bytes": 5206
+        }
+      },
+      "runner_exit": 0,
+      "actual_linux_full_race_count": 3,
+      "actual_fixture_race_count": 10,
+      "actual_linux_vet_and_fixture_vet": true,
+      "actual_root_python_tests": 107,
+      "actual_root_python_skips": 0,
+      "actual_cgo0_kernel_quota_count": 3,
+      "independent_cross_native7_exact": true,
+      "native_artifacts_sha256": {
+        "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+        "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+        "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+        "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+        "xandbox-gateway": "87d934111d2d59519165959114102e1d3ade619ac8ef9d5bdc84649b92c94165",
+        "fixture": "28fcd54e745f8e211cd7c919c18d7cf396a582fd25d2e3a08798f1f133fc2289",
+        "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+      },
+      "actual_frozen_darwin_race3_vet": {
+        "sha256": "954cdc025301c23253f150dd4cd922750c2f338425eb295a97915c43e5dec461",
+        "bytes": 1908
+      }
+    }
+  ],
+  "final_hardware": {
+    "accepted_scopes": 2,
+    "accepted_outer_generations": 4,
+    "tls_boots": 2,
+    "normal_node_budget_regression_boots": 2,
+    "tls_real_guest_generations": 4,
+    "old_guest_generations_fully_gc_before_cold": 3,
+    "fixture_request_pacing_ms": 50,
+    "tls_busy_switch_samples": 1,
+    "observed_ms": {
+      "switch_to_binding_observed_ms": 3615.82,
+      "switch_to_first_validated_new_guest_observed_ms": 3680.394,
+      "switch_to_old_execution_empty_observed_ms": 3657.223,
+      "switch_to_old_private_destroy_quota_zero_observed_ms": 3986.491
+    }
+  },
+  "prior_hardware": {
+    "original9d_false_boots": 1,
+    "original9d_accepted_checkpoint": false,
+    "original9d_cold_boots": 0,
+    "f698_functional_scopes": 2,
+    "f698_functional_outer_generations": 4,
+    "f698_predates_external_descriptor_hygiene": true,
+    "component190_hardware_boots": 0,
+    "reports_relabelled_or_thresholds_relaxed": false
+  },
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "final_scopes": 2,
+    "final_outer_generations_absent": 4,
+    "prior_functional_scopes": 2,
+    "prior_functional_outer_generations_absent": 4,
+    "original_false_scope_generation_absent": 1,
+    "exact_roots_control_parents_all_groups_absent": true,
+    "all_four_runners_terminal_and_absent": true,
+    "no_supplemental_cleanup": true,
+    "live_quota_readback_not_inferred_from_outer_deletion": true
+  },
+  "offline_verifier": {
+    "executed": true,
+    "script_sha256": "d07d4a17f516f82609e774d6dc024839a2a8582597decb503f9ed46a53659fb4",
+    "negative_mutations_rejected": 44,
+    "archive_member_types_counts_hashes_verified": true,
+    "native7_cross_actual_bytes_equal_all_four_stages": true,
+    "final_source_input_files_equal_frozen_archive_git_and_working_tree": true,
+    "original_false_unchanged": true,
+    "private_raw_regular_members_total": 49
+  },
+  "unchanged_historical_manifests": {
+    "runtime4ee-provenance-v1.json": {
+      "sha256": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+      "bytes": 19942
+    },
+    "node-budget-provenance-v2.json": {
+      "sha256": "3631506494adc4ec7ffae2db915b2205d9b5940d962bef7f06453b2f5875de5d",
+      "bytes": 12566
+    },
+    "operator-store-provenance-v1.json": {
+      "sha256": "0d6edce5036415afd72402afc6247c821b9938cf5ce097f9b8e68f6426eb200e",
+      "bytes": 8736
+    },
+    "node-operator-provenance-v4b.json": {
+      "sha256": "239715994379cc7940a869374b7057ffd8353123212c20a21191355bb156a5e8",
+      "bytes": 13841
+    },
+    "session-ticket-provenance-v2.json": {
+      "sha256": "ac87bf851705024898455d63ede87784016ad09f49d2039519c8c0266522c01d",
+      "bytes": 14221
+    },
+    "operator-shutdown-provenance-v3.json": {
+      "sha256": "028d911010f71752c22bc75cf37476c90a02d0a3cedcc4fc5ee9974ff2276170",
+      "bytes": 17626
+    }
+  },
+  "boundaries": [
+    "Root fixed connector has no TCP listener/network HTTP/TLS parsing; child UID60001/noGroups/caps0/NNP/static-only chroot/cwd inode/no outside inherited directoryFD and resource limits actually checked. This is not an independent security audit or protection from a compromised frontend/root/kernel.",
+    "External digest/expiry maps to distinct private stable backend token; actual key+leaf revision2 persists before publish. Existing TLS request sees new auth; a truly new verified handshake sees new leaf. Revoke is not cancellation of accepted requests or Stop. Backend credential authority still startup-only.",
+    "Invalid reload shuts down ingress while controller/guests continue; old revision1 startup rejects; current revision2 exact replay survives healthy same-disk cold with journal hash unchanged. No fixture policyjournal/ledger/control/owner repair. No complete policy fsync/media crash matrix, PKI issuer/distribution/renewal or certificate/heap secure erase claim.",
+    "All work uses existing explicit8GiB/12GiB/CPU8/no-business-NIC node profile; loopback enabled only in own L1. Native tests and cross builds are distinct from actual KVM proof. No shared L0 network/service/kernel deployment.",
+    "Final switch observations include deliberate20req/s client pacing and independent readback, closed-loop N1. Binding/first validated new command/old execution empty/durable private GC are separate, not internal timings, speedup, fairness, open-loop saturation or percentile/SLO.",
+    "Normal schema3 report retains its original static broader-runtime-requalification limitation text. Ordinary five artifact bytes are unchanged; this TLS change does not relabel or rerun completed historical4ee evidence. Old six manifests remain unchanged.",
+    "Production cgroup/log/audit budgets, operator/systemd acceptance, durable audit/alerts, upgrades/backups/rollback and remaining M1-M4 gates are unfinished. PR remains draft; Goal remains active."
+  ],
+  "publication": {
+    "raw_reports_copied_byte_exact": true,
+    "mock_results_decoded_unchanged": true,
+    "private_raw_archives_retained_not_public": true,
+    "no_console_receipt_keys_certificates_identity_images_exported": true
+  },
+  "public_inputs": {
+    "kvm-tls-gateway-live-v1.json": {
+      "sha256": "4485faf107d732c647528345fe9dab2f4817698e0e31c5cc219723cc58b09001",
+      "bytes": 5573
+    },
+    "kvm-tls-gateway-live-v2.json": {
+      "sha256": "249aceaf18a4534d9b350358500900caeeb9451f6bf27e7153717cdb0b7ccc99",
+      "bytes": 9477
+    },
+    "kvm-tls-gateway-budget-v2.json": {
+      "sha256": "2f254836ca5913d8d0badf9103a58f86346ec952756d8a7800d29dc23f80ceaa",
+      "bytes": 7823
+    },
+    "kvm-tls-gateway-live-v3.json": {
+      "sha256": "8df240b0fa86a6660163272191d2cc1af39fdf3e69474fb491a7a6ad1a92014e",
+      "bytes": 9499
+    },
+    "kvm-tls-gateway-budget-v3.json": {
+      "sha256": "28b207deb4a43d222cc3d6bbab5869de6d1a25eaaae16bbc1de3943fc156ac0a",
+      "bytes": 7823
+    },
+    "tls-gateway-failure-diagnostic-v1.json": {
+      "sha256": "dcfbc316a5761abc7ad23761248fbddc213fcf66ebf26bea227a6234b012e543",
+      "bytes": 1185
+    },
+    "tls-gateway-independent-cleanup-v3.json": {
+      "sha256": "02a8d41a6a701ef9ba4d70c912ae8963cb8efc740bd38271045a77e24ac22bde",
+      "bytes": 1041
+    },
+    "tls-gateway-mock-derived-v3.json": {
+      "sha256": "73b4588e0d540d203b6812d839456d481ab0817e2a4464b9475c8356b2e01bbc",
+      "bytes": 5322
+    },
+    "tls-gateway-native-artifacts-v3.txt": {
+      "sha256": "37092b1ff96eb01c77b6166ddd3cfd96cfb50380c7abec27d47f1bbfe27557c7",
+      "bytes": 548
+    },
+    "tls-gateway-pipeline-v3.txt": {
+      "sha256": "07e0651ea9685fcb8592effe9f1759d552a5a50e6e9c0e2daae9b788589cf821",
+      "bytes": 1538
+    }
+  }
+}

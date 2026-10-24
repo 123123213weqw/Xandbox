@@ -1,0 +1,239 @@
+{
+  "status": "finite_post_owner_unlink_unreturned_directory_fsync_cut_with_keeper_and_ordinary_cold_recovery_passed_not_complete_metadata_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_fixture_source": "2cbf074ab690faa3c7a67d705dfc51d97f073729",
+  "source_archive_sha256": "495ccfcecb70550bb8e3a03e09d19919f2c49ad710acf8afa0d7c5e165b4af64",
+  "raw_reports_archive_sha256": "c228038f43f1f97105fc6aea5bcd7b3e77cf28fe78a700e7f59f70850efe06d5",
+  "raw_archive_regular_members": 14,
+  "independent_audit_transport": "Exact authenticated same-node SSH stdout captured separately, not falsely raw-tar members. Both private cut receipts/inner consoles/images excluded from fetch/publication allowlists.",
+  "production_changed": false,
+  "production_sources_equal_verified_revision": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "3b279bc7e4c183737fdd3324421533d7ee2da3deeda0ef15e96520a545e5a98e",
+    "daemon": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501",
+    "snapshot_builder": "ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd"
+  },
+  "explicit_fixture_policy": {
+    "launch_profile": "quota-copy-v1",
+    "l1_ram_mib": 3072,
+    "l1_disk_bytes": 4294967296,
+    "outer_cgroup_memory_max": 4294967296,
+    "vcpus": 4,
+    "pids_max": 128,
+    "swap_max": 0,
+    "business_nics": 0,
+    "outer_hard_seconds": 900,
+    "l0_minimum_available_ram_bytes": 8589934592,
+    "l0_minimum_free_space_bytes": 12884901888,
+    "node_instances": 2,
+    "tenant_instances": 2,
+    "uid_project_slots": 4,
+    "private_hard_bytes": 201326592,
+    "private_hard_inodes": 128,
+    "retained_catalog_entries": 4,
+    "catalog_max_bytes": 2147483648,
+    "legacy_and_quota_switch_v1_resources_unchanged": true
+  },
+  "new_case": {
+    "count": 1,
+    "l1_boots": 2,
+    "phase": "owner-unlink-directory-fsync-pending",
+    "checkpoint": {
+      "catalog_interprocess_lock_still_held_during_directory_commit": true,
+      "delete202_was_intent_only_not_a_pending_http_request": true,
+      "exact_daemon_directory_fd_inode_and_post_unlink_fsync_checked": true,
+      "genuine_l1_snapshot_setup": {
+        "builder_runtime_reclaimed": true,
+        "builder_two_independent_clones_checked": true,
+        "genuine_l1_unassigned_template_built": true,
+        "l1_host_abi_checked": true,
+        "ordinary_catalog_published_and_activated": true,
+        "quota_snapshot_sharing": {
+          "all_private_project_records_cleared": true,
+          "last_pin_gc_removed_one_template": true,
+          "new_declaration_reuses_only_never_assigned_export": true,
+          "per_clone_charge_excludes_shared_inodes": true,
+          "pins_two_then_one_checked": true,
+          "private_projects_distinct": true,
+          "retired_backing_survived_first_clone_gc": true,
+          "shared_readonly_project_zero_inodes": true,
+          "simultaneous_ordinary_clones": 2,
+          "surviving_real_vm_data_exec_checked": true
+        },
+        "snapshot_memory_bytes": 536870912
+      },
+      "keeper_actual_kvm_domain_retained_and_post_cleanup_links_accounted": true,
+      "keeper_post_target_guest_command_not_issued": true,
+      "ledger_and_api_reclaiming_stopped_not_destroyed_exec409_capacity503": true,
+      "no_observer_sync_admin_or_l1_receipt_after_selected_unlink": true,
+      "other_fsync_continue_reply_submissions": 50,
+      "private_receipt_only_control_to_outer_l0": true,
+      "two_real_initialized_guest_uids_boots_data_and_filters_checked": true,
+      "victim_jail_cgroup_absent_and_quota_policy_usage_times_zero_before_owner_commit": true,
+      "victim_owner_unlink_visible_but_directory_fsync_has_not_returned": true,
+      "zero_target_error_or_continue_reply_notification_wait_not_filesystem_D": true
+    },
+    "recovery": {
+      "cold_durable_owner_pins": 2,
+      "cold_known_owners_only_no_fixture_owner_restore_or_unknown_quota_adoption": true,
+      "cold_victim_owner_present": true,
+      "exact_policy_export_abi_index_and_reclaiming_ledger_checked_before_daemon": true,
+      "keeper_post_cleanup_full_metadata_shared_inodes_and_quota_accounted": true,
+      "l1_boot_changed": true,
+      "last_pin_exact_gc_all_four_projects_zero_controller_reaped_parent_removed": true,
+      "old_execution_domains_absent_before_daemon": true,
+      "ordinary_unobserved_recovery_both_destroyed_resources_absent_keys410_exec409": true,
+      "retired_backing_two_then_one_pin_gc_and_surviving_exec_checked": true,
+      "two_fresh_real_guest_uids_boots_and_workspaces_checked": true,
+      "victim_namespace_absent_and_completed_quota_clear_remained_zero": true
+    },
+    "power_cut_to_l0_cgroup_empty_ms": 68.003,
+    "checkpoint_reply_to_outer_stop_observed_ms": 75.681,
+    "target": "SYS_FSYNC, exact original daemon incarnation/TGID:TID/exe and boundedFD/private directory inode, only after known initialized victim owner unlink and ordinary jail/cgroup removal/completed quota clear. No target error/CONTINUE reply; other FSYNCs continue real kernel, not completed-call/latency counts. Notification wait NOT filesystemD.",
+    "order": "DELETE202 accepted intent before checkpoint; it is NOT a pending synchronous DELETE response. Atomic ledger/API RECLAIMING withStoppedAt/noDestroyed, exec409/frontendcapacity503, actual keeper KVM domain and catalog interprocess lock remain. Frontend503 is not a direct backend allocator probe.",
+    "keeper_and_no_forcing": "Two actual initialized guest marker/UID/boot commands and baseline sync BEFORE DELETE. Keeper full namespace/quota sampled READ ONLY after victim links removed, not before. No observer L1 sync/q-sync/syncfs/admin/receipt after selected unlink and no new keeper guest command with job-ledger fsync. Private max7000 receipt over control/exclusive0600 outerL0 only, original8192scanner unchanged. Natural persistence allowed.",
+    "cold_result_scope": "Actual cold owner presence and pin count are in recovery fields; only that observed outcome is accepted, not proof that both possible persistence outcomes were exercised. Known present owner must match exact bytes; absent owner is never recreated by fixture. Exact unchanged RECLAIMING ledger/policy/export/HostABIUNASSIGNED/index; keeper full metadata/shared backing/quota, victim absent resources/completedquota0 before ordinary daemon.",
+    "ordinary_recovery": "Ordinary unobserved daemon reclaims both old refs/key410/exec409/resourcesabsent/all4q0/pins0. Two fresh actualKVM UID65534/new boots distinct from BOTH old boots/clean marker; retire pins2->1 GC0/survivor exec, last pin exactGC1/all4zero/reaped/parentremoved.",
+    "quota_zero_scope": "Quota policy/usage/timestamps are zero per ordinary driver helper; UAPI Valid selection bits are not claimed to be literalzero. Cleared quota alone is not durable DESTROYED or frontend capacity return."
+  },
+  "failed_predecessor": {
+    "source": "e8fbe5e11bde0757a0b233ea6e58973917fab46d",
+    "source_archive_sha256": "866148d95930f3cc4d08981c6238deefaf92df0ce29d3475a10fa364b7c330ec",
+    "fixture_sha256": "10aab7f87b0a299f2fbce5420213f6e0e92ff3049118b6e20f13dfa3e3be571a",
+    "raw_report": "kvm-owner-cut-owner-failed-v1.json",
+    "passed": false,
+    "l1_boots": 1,
+    "checkpoint_returned": false,
+    "owner_cut_or_ordinary_cold_recovery_proved": false,
+    "diagnosis": "Private console generic resource-temporarily-unavailable, not a full syscall trace. New fixture reused openClearLock which ACQUIRES a catalog lock; expected busy was mistakenly treated as failure. V2 separately verifies private lock inode and accepts only actual EWOULDBLOCK; pure tests distinguish busy/unheld/other errors. No cold policy/owner/keeper/quota rule loosened.",
+    "runner_footer_note": "FailedV1 private runner footer retained previous partial-copy wording; it did not reach footer. V2 explicit stages and footer are owner-specific.",
+    "cleanup": "Independent read-only exact root/control/cgroup-parent/one child/runner absence; outer deletion is not ordinaryGC/q0 proof."
+  },
+  "related_regressions": {
+    "unsynced_partial_copy_cut_cases": 1,
+    "partial_copy_cut_l1_boots": 2,
+    "stable_partial_write_EIO_keeper_cases": 1,
+    "stable_partial_l1_boots": 1,
+    "genuine_l1_snapshot_cold_cases": 3,
+    "snapshot_l1_boots": 4,
+    "quota_clear_owner_pin_cases": 1,
+    "quota_clear_l1_boots": 2,
+    "quota_syscall_errno_cases": 6,
+    "clear_error_replies_minimum_each": 3,
+    "syscall_cold_cases": 3,
+    "syscall_l1_boots": 4,
+    "shared_test_refactor": "Fixed private cut owner-validator/stable-or-readonly keeper sampler/ordinary fresh-recovery tail shared; original partial-copy predicates preserved. New owner receipt rejects uninitialized partial victim; original copy receipt rejects initialized owner victim.",
+    "runner_exit_status": 0,
+    "native_full_race_count": 3,
+    "native_fixture_race_count": 10,
+    "native_and_fixture_vet": true,
+    "root_python_tests": 69,
+    "new_go_pure_tests": 4,
+    "new_python_tests": 4,
+    "actual_cgo0_kernel_exec_filter_count": 3,
+    "darwin_full_race_count": 3,
+    "darwin_vet": true
+  },
+  "independent_cleanup": {
+    "passing_scopes": 6,
+    "passing_outer_generations_absent": 15,
+    "failed_scopes": 1,
+    "failed_outer_generations_absent": 1,
+    "total_scopes": 7,
+    "total_outer_execution_generations": 16,
+    "read_only_no_cleanup_actions": true,
+    "not_quota_inference_from_deleted_disk": true
+  },
+  "prior_accepted_evidence_not_relabelled": {
+    "quota240_and_dual_cold_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
+    "quota_provenance": "quota-switch-provenance-v5.json",
+    "original_partial_copy_cut_source": "25423a68dc96a1330ea6c73a47990d86857f0436",
+    "original_partial_cut_provenance": "copy-cut-provenance-v2.json",
+    "production_ELFs_and_measured_worker_functions_unchanged": true
+  },
+  "not_completed": [
+    "Other owner unlink/dirfsync error/commit/keeper-pin combinations and persistence outcomes not actually observed here.",
+    "Removing slow owner-directory fsync from catalog lock with a durable replacement protocol; no global catalog nonblocking claim.",
+    "Actual filesystemD/physicalL0/media faults; notification hold is notD.",
+    "Global physical/uniqueRAM/IO/catalog/ledger/journal/preparation admission, open-loop/fairness/long-duration boundedness/operator/SLO.",
+    "FullM1-M4, final acceptance/PR19merge/mainarchive/production readiness."
+  ],
+  "files": {
+    "kvm-owner-cut-owner-v2.json": {
+      "sha256": "8e51fe84c20566f12e82b6fa832875a7f48a534ec8fb715423977769d04c547a",
+      "bytes": 9712
+    },
+    "kvm-owner-cut-inflight-v2.json": {
+      "sha256": "60a0e7fdff1248926af9e1c000c83ec31bb9ad6108891d293105965ec7b0e74d",
+      "bytes": 8803
+    },
+    "kvm-owner-cut-partial-v2.json": {
+      "sha256": "5e7f06070e162433e3d3a117ebf81616e9949ddd42a6618051d83a5188b9bf42",
+      "bytes": 8606
+    },
+    "kvm-owner-cut-snapshot-v2.json": {
+      "sha256": "438514aff1558d23338d01b720f1ff0e193667ece82e93376cfa439012ed9525",
+      "bytes": 9234
+    },
+    "kvm-owner-cut-clear-v2.json": {
+      "sha256": "a374d0e13372253f1e1834a985b0e028119683d7d608f0da5f1688a36fafcddb",
+      "bytes": 7035
+    },
+    "kvm-owner-cut-syscalls-v2.json": {
+      "sha256": "f1b7a84bb7da7b021344a26efa0a9c8045004eb30d642e2a64d7bb8837676b78",
+      "bytes": 13670
+    },
+    "kvm-owner-cut-owner-failed-v1.json": {
+      "sha256": "b71662a85a9d59b09c2251a0221fc7d946dbb9388e72fcb0d9f539052c9026f2",
+      "bytes": 5279
+    },
+    "owner-cut-native-race-v2.txt": {
+      "sha256": "5466a8839b61d3ac596f3b56b1c7c1a2cf68ee05a2dd1637e924077e79e937f5",
+      "bytes": 1639
+    },
+    "owner-cut-fixture-native-race-v2.txt": {
+      "sha256": "ebcd42cb138bb68f9df98ab1f4354db77dae3d5675e13ff8b8421031b679e2a1",
+      "bytes": 70
+    },
+    "owner-cut-cgo0-kernel-filter-v2.txt": {
+      "sha256": "0106d1a96cd9a52a76c969826050d70025c7ff5866315293ff2b05c254113014",
+      "bytes": 846
+    },
+    "owner-cut-native-artifacts-v2.txt": {
+      "sha256": "e62a578cf5c8484869e00fb71dd469afe5b937556fcd16a4f7acf3df6ed1f4ab",
+      "bytes": 472
+    },
+    "owner-cut-pipeline-v2.txt": {
+      "sha256": "e0efe9d4f00fad02bd238af3779856e844a7a93693dc07769f27f4e32a4cb388",
+      "bytes": 1692
+    },
+    "owner-cut-independent-cleanup-v2.txt": {
+      "sha256": "dac737043c2c06a31830232fe3be8ec9df8eaf8a62a84b1a78f4c2bf68ca7778",
+      "bytes": 997
+    },
+    "owner-cut-final-darwin-race-v2.txt": {
+      "sha256": "eaeef3424931548595690e0429dc527e080928df8254dcbc11d7ccd3b37cd342",
+      "bytes": 1531
+    },
+    "owner-cut-failed-independent-cleanup-v1.txt": {
+      "sha256": "943a5ac9c37fd2cb36b174e24af6e7ead2cd779ea7572be10492342dc7a02635",
+      "bytes": 574
+    }
+  }
+}

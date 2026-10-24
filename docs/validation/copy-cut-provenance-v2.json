@@ -1,0 +1,228 @@
+{
+  "status": "finite_unsynced_partial_workspace_copy_cut_with_live_keeper_and_ordinary_cold_recovery_passed_not_complete_partial_prepare_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_fixture_source": "25423a68dc96a1330ea6c73a47990d86857f0436",
+  "source_archive_sha256": "159103fbe3f98ec060662003e2c0f919cb9d09ab87cea4eeedd8f953612285a6",
+  "raw_reports_archive_sha256": "07a3ea151128bd63ef61f683b3c552d32dcf0ebac3701a04cf387c080f894d8a",
+  "raw_archive_regular_members": 13,
+  "independent_audit_transport": "Exact authenticated same-node SSH stdout captured separately, not falsely called raw-tar member. Private cut receipt/inner consoles excluded from fetch and publication allowlists.",
+  "production_changed": false,
+  "production_sources_equal_verified_revision": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "4665498215c360c380a6e1d9bb43c0c96f9eaefe7afb0c454d966192d258e1aa",
+    "daemon": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501",
+    "snapshot_builder": "ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd"
+  },
+  "explicit_fixture_policy": {
+    "launch_profile": "quota-copy-v1",
+    "l1_ram_mib": 3072,
+    "l1_disk_bytes": 4294967296,
+    "outer_cgroup_memory_max": 4294967296,
+    "vcpus": 4,
+    "pids_max": 128,
+    "swap_max": 0,
+    "business_nics": 0,
+    "outer_hard_seconds": 900,
+    "l0_minimum_available_ram_bytes": 8589934592,
+    "l0_minimum_free_space_bytes": 12884901888,
+    "node_instances": 2,
+    "tenant_instances": 2,
+    "uid_project_slots": 4,
+    "private_hard_bytes": 201326592,
+    "private_hard_inodes": 128,
+    "retained_catalog_entries": 4,
+    "catalog_max_bytes": 2147483648,
+    "legacy_and_quota_switch_v1_profiles_unchanged": true
+  },
+  "new_case": {
+    "count": 1,
+    "l1_boots": 2,
+    "phase": "partial-copy-inflight-cut",
+    "checkpoint": {
+      "actual_live_workspace_prefix_bytes": 16777216,
+      "attempted_uninitialized_victim_no_vmm_or_shared_links": true,
+      "durable_creating_and_request_still_pending": true,
+      "genuine_l1_snapshot_setup": {
+        "builder_runtime_reclaimed": true,
+        "builder_two_independent_clones_checked": true,
+        "genuine_l1_unassigned_template_built": true,
+        "l1_host_abi_checked": true,
+        "ordinary_catalog_published_and_activated": true,
+        "quota_snapshot_sharing": {
+          "all_private_project_records_cleared": true,
+          "last_pin_gc_removed_one_template": true,
+          "new_declaration_reuses_only_never_assigned_export": true,
+          "per_clone_charge_excludes_shared_inodes": true,
+          "pins_two_then_one_checked": true,
+          "private_projects_distinct": true,
+          "retired_backing_survived_first_clone_gc": true,
+          "shared_readonly_project_zero_inodes": true,
+          "simultaneous_ordinary_clones": 2,
+          "surviving_real_vm_data_exec_checked": true
+        },
+        "snapshot_memory_bytes": 536870912
+      },
+      "held_notification_not_actual_filesystem_D": true,
+      "keeper_baseline_synced_only_before_victim_creation": true,
+      "live_kernel_quota_space_bytes": 16785408,
+      "live_named_allocated_bytes": 16785408,
+      "live_named_inodes": 3,
+      "live_quota_inodes": 3,
+      "no_observer_l1_sync_or_receipt_write_after_prefix": true,
+      "private_receipt_only_over_control_not_l1_disk": true,
+      "real_keeper_kvm_uid_data_and_filters_checked": true,
+      "two_durable_owner_pins_read_without_catalog_sync": true,
+      "zero_selected_write_error_or_continue_reply": true
+    },
+    "recovery": {
+      "cold_partial_entries": 2,
+      "cold_partial_project_inodes": 2,
+      "cold_partial_project_space_bytes": 8192,
+      "cold_partial_workspace_size_bytes": 0,
+      "exact_attempted_owners_policy_and_pristine_abi_checked_before_daemon": true,
+      "keeper_full_namespace_and_shared_inodes_accounted": true,
+      "l1_boot_changed": true,
+      "last_pin_exact_gc_all_four_projects_zero_controller_reaped_parent_removed": true,
+      "old_execution_domains_absent_before_daemon": true,
+      "ordinary_unobserved_recovery_both_destroyed_resources_absent_keys410_exec409": true,
+      "partial_namespace_subset_policy_and_actual_kernel_quota_accounted": true,
+      "private_control_receipt_revalidated_not_l1_disk_receipt": true,
+      "retired_backing_two_then_one_pin_gc_and_surviving_exec_checked": true,
+      "two_durable_template_pins_retained_before_recovery": true,
+      "two_fresh_real_guest_uids_boots_and_workspaces_checked": true
+    },
+    "power_cut_to_l0_cgroup_empty_ms": 93.694,
+    "checkpoint_reply_to_outer_stop_observed_ms": 99.039,
+    "target": "Exact original daemon incarnation/TGID:TID/FD/inode,128KiB WRITE at actual16MiB private workspace offset; attempted-uninitialized owner, no shared links/VMM, pendingCreate. Target receives no EIO/CONTINUE before owned outer cut. Notification wait is NOT actual filesystemD.",
+    "no_forced_prefix_sync": "Keeper full baseline synced BEFORE victim creation. After target, no observer quota sync/syncfs/fsync/catalog-admin/receipt write in L1. Independent bounded90s asyncCreate remains live after RPC context cancel. Private receipt only via control onto outer-L0 exclusive0600 file; max7000/unchanged8192 scanner. Natural background persistence allowed.",
+    "cold_result_scope": "Actual cold namespace has only two private directories and8192 allocated bytes/two charged inodes; workspace name absent, not a claim of an empty retained file or every possible crash result. Strict actual namespace/quota attribution before ordinary daemon. Keeper exact full metadata/shared backing and pre-victim indexSHA/owner bytes remain checked.",
+    "recovery_scope": "Ordinary uninstrumented daemon destroys both old refs/key410/exec409/resources absent/all4quota0/pins0. Two fresh actualKVM guests UID65534/new boots/clean marker; retire pins2->1 GC0 and survivor exec, last pin exactGC1/all4zero/reaped/parentremoved. Not arbitrary media error or productionSLO."
+  },
+  "failed_predecessor": {
+    "source": "d06d21e1e0d3c9509ff547f05365666cf1b0d551",
+    "source_archive_sha256": "b7e4aa0d5543d1949f3581bfb3cc2277577fbd53e5407e59bd212b1ccd45f50b",
+    "fixture_sha256": "17d720dc5d7de1edd65bd431caa47b135d16170cb2b24d81d25299ab11930d7e",
+    "raw_report": "kvm-copy-cut-inflight-failed-v1.json",
+    "passed": false,
+    "l1_boots": 1,
+    "checkpoint_returned": false,
+    "partial_copy_host_cut_or_ordinary_cold_recovery_proved": false,
+    "diagnosis": "Private console catalog-index predicate failed. New fixture incorrectly assumed exactly1 index entry, while unchanged sharing setup retains RETIRED tombstone then republishes new AVAILABLE declaration. V2 pins exact pre-victim indexSHA and validates known retained entries; actual quota/owner/keeper metadata thresholds unchanged. New pure test rejects byte drift/wrongactive/extraAVAILABLE.",
+    "cleanup": "Independent read-only failed-scope root/control/cgroup-parent/one child/runner absence; outer deletion is not ordinary GC/quota-zero proof."
+  },
+  "related_regressions": {
+    "stable_partial_write_EIO_keeper_cases": 1,
+    "stable_partial_l1_boots": 1,
+    "genuine_l1_snapshot_cold_cases": 3,
+    "snapshot_l1_boots": 4,
+    "quota_clear_owner_pin_cases": 1,
+    "quota_clear_l1_boots": 2,
+    "quota_syscall_errno_cases": 6,
+    "clear_error_replies_minimum_each": 3,
+    "syscall_cold_cases": 3,
+    "syscall_l1_boots": 4,
+    "runner_exit_status": 0,
+    "native_full_race_count": 3,
+    "native_fixture_race_count": 10,
+    "native_and_fixture_vet": true,
+    "root_python_tests": 65,
+    "actual_cgo0_kernel_exec_filter_count": 3,
+    "darwin_full_race_count": 3,
+    "darwin_vet": true
+  },
+  "independent_cleanup": {
+    "passing_scopes": 5,
+    "passing_outer_generations_absent": 13,
+    "failed_predecessor_scopes": 1,
+    "failed_outer_generations_absent": 1,
+    "total_scopes": 6,
+    "total_outer_execution_generations": 14,
+    "read_only_no_cleanup_actions": true,
+    "not_quota_inference_from_deleted_disk": true
+  },
+  "prior_accepted_evidence_not_relabelled": {
+    "quota240_and_dual_cold_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
+    "provenance": "quota-switch-provenance-v5.json",
+    "production_ELFs_and_measured_worker_functions_unchanged": true
+  },
+  "not_completed": [
+    "Owner unlink/dirsync/catalog-lock and other keeper/shared-pin persistence combinations.",
+    "Actual filesystemWRITE D-state, physicalL0/media errors; notification hold is notD.",
+    "Global physical/uniqueRAM/IO/catalog/ledger/journal/preparation admission; open-loop/fairness/long-duration boundedness/operator/SLO.",
+    "FullM1-M4, final exact-headCI/PR19merge/main archive/production acceptance."
+  ],
+  "files": {
+    "kvm-copy-cut-inflight-v2.json": {
+      "sha256": "839d12b1fe19c91f1bdf1d5cf1fd42081a33bf01afe9c380d8dcb0139dbc840d",
+      "bytes": 8769
+    },
+    "kvm-copy-cut-partial-v2.json": {
+      "sha256": "86e25f34fcc3a50ac998fb34c70a659f35042bcae9c9f0c7800aebd06e5b8b01",
+      "bytes": 8572
+    },
+    "kvm-copy-cut-snapshot-v2.json": {
+      "sha256": "ad31a26c4b82ef9f9b86f7435e06356337ffbeb45e6fcb86ae5920cf50961b3d",
+      "bytes": 9198
+    },
+    "kvm-copy-cut-clear-v2.json": {
+      "sha256": "5c0f002bf2055c557adcbfdfc562235ec7f76131970fad43e1089a5b75640568",
+      "bytes": 7001
+    },
+    "kvm-copy-cut-syscalls-v2.json": {
+      "sha256": "0a3e28b73687103fedcf9fae2b7c37f6980caa307c6010a107ebf5ab97897dd6",
+      "bytes": 13636
+    },
+    "kvm-copy-cut-inflight-failed-v1.json": {
+      "sha256": "99c015b3b4efdf1d32a7831d6c9aef63d3773b08fb11a74783703b3831aac6aa",
+      "bytes": 4667
+    },
+    "copy-cut-native-race-v2.txt": {
+      "sha256": "1a2c0e66f040b698d67a93e62e1ffcc8789ee2e10633d6c4baa896440fc624f6",
+      "bytes": 1639
+    },
+    "copy-cut-fixture-native-race-v2.txt": {
+      "sha256": "d8d1d3ad2e8d492197d3e07eabd747ca743d713b845ebfb1ac4d423279265ad6",
+      "bytes": 70
+    },
+    "copy-cut-cgo0-kernel-filter-v2.txt": {
+      "sha256": "0981f9047d22b2f2ba98ef3081e4330f13a57d587837027d24eb10ad7dea725d",
+      "bytes": 846
+    },
+    "copy-cut-native-artifacts-v2.txt": {
+      "sha256": "925e6d9bb74aed41c0cd13886453c68a5382568ec0ed9ee454f00d602b52babb",
+      "bytes": 467
+    },
+    "copy-cut-pipeline-v2.txt": {
+      "sha256": "86dce131bad647e40879ea7d94ea35074620d8d75812c3c5206b3956d866e94a",
+      "bytes": 1559
+    },
+    "copy-cut-independent-cleanup-v2.txt": {
+      "sha256": "09d7053c439f3449246153e4b5d6a1860611ac7d3b5d5ad324c1d56da7d9bdfd",
+      "bytes": 871
+    },
+    "copy-cut-final-darwin-race-v2.txt": {
+      "sha256": "a33fd8217d4c319a772f4f4887916a80d652f3d921eecefa06a0322be41de788",
+      "bytes": 1531
+    },
+    "copy-cut-failed-independent-cleanup-v1.txt": {
+      "sha256": "488da931a18c6268c6083bf4ef13215b8918106d3d4618c8cec9b3cf055c7d33",
+      "bytes": 408
+    }
+  }
+}

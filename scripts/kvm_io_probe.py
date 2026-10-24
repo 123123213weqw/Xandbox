@@ -63,7 +63,7 @@ def startup_rejections(*, root, config, daemon, auth, logs, private_json):
                 '-auth-file', str(auth), '-firecracker-config', str(cfg)], env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'},
                 capture_output=True, timeout=20)
             (logs / (mode + '.log')).write_bytes(p.stdout + p.stderr)
-            assert p.returncode != 0 and error in p.stderr
+            assert p.returncode == 1 and p.stdout == b'' and p.stderr == b'sandboxd: ' + error + b'\n'
             assert not any(p.is_dir() for p in cgroup.iterdir())
             cases.append({'case': mode, 'startup_refused': True, 'no_vm_child_cgroup': True})
         finally:
@@ -79,7 +79,7 @@ def bound_policy_rejection(*, root, config, base, logs, private_json):
     command = list(base); command[command.index('-firecracker-config') + 1] = str(cfg)
     p = subprocess.run(command, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'}, capture_output=True, timeout=20)
     (logs / 'removed-io-policy.log').write_bytes(p.stdout + p.stderr)
-    assert p.returncode != 0 and b'backend binding changed' in p.stderr
+    assert p.returncode == 1 and p.stdout == b'' and p.stderr == b'sandboxd: backend binding changed; explicit offline migration is required\n'
     assert not any(p.is_dir() for p in cgroup.iterdir())
     return {'case': 'remove-bound-io-policy', 'startup_refused': True, 'no_vm_child_cgroup': True}
 

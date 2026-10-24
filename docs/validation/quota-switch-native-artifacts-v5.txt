@@ -1,0 +1,5 @@
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-quota-switch-v5
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-quota-switch-v5
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-switch-v5
+faec35b1b1852dd0799b9c013ab72c7ea675a1e6120244f0204277ae4e40137b  bin/fixture-quota-switch-v5
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-quota-switch-v5

@@ -1,0 +1,21 @@
+{
+  "first_hardware_source": "d3e222354d4744d87af32ddbfb0b8e535bb11fd4",
+  "first_hardware_archive_sha256": "a8b1658777180a14a7d3686bce07a61fc5ecdeb17e8508de66668b31cca649ae",
+  "first_hardware_accepted": false,
+  "first_hardware_exit": 1,
+  "first_hardware_exact_one_generation_absent_no_supplemental_cleanup": true,
+  "first_failure": "Test compared a pre-SIGTERM authority digest to the later contender, incorrectly attributing normal closed-session shutdown UpdatedAt rewrite to that separate refused process.",
+  "correction_commit": "06b33b0fb77d5865dd65b4e80f20b036d4e88b44",
+  "subsequent_unit_source": "86a36d1f9e202132445e59e5f63d0a89e49b7b8f",
+  "subsequent_unit_archive_sha256": "ded7217c8d82a2365679fc944eabe7c7c591227b7a4993c7d19e0733f3e52a5a",
+  "subsequent_unit_failed_before_any_kvm": true,
+  "unit_failure": "The new regression used startup Load concurrently with a live session writer; startup orphan collection raced the unit temporary file.",
+  "unit_correction_commit": "0482ce2bb87d164baf8edd111a4a4a1e6b03f2e6",
+  "unit_correction": "Read only the exact named session file, without startup Load, then compare the completed normal final write.",
+  "current_native_regression_repetitions": 100,
+  "hold_budget_ms_unchanged": 20000,
+  "queue_capacity_unchanged": 64,
+  "producer_count_current": 80,
+  "producer_count_not_reduced_after_first_hardware_observation": true,
+  "no_failed_run_retagged_as_passing": true
+}

@@ -1,0 +1,33 @@
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.01s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.02s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.02s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.03s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.02s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.03s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.02s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.01s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.03s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+--- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents (0.03s)
+    --- FAIL: TestPrepareTraceParserRejectsLossMalformedAndUnknownEvents/missing-register (0.00s)
+        node_prepare_trace_linux_test.go:98: unsafe trace accepted
+FAIL
+FAIL	github.com/123123213weqw/Xandbox/cmd/xandbox-host-fixture	2.449s
+FAIL

@@ -1,0 +1,7 @@
+kvm-quota-clear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-clear-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-clear-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-clear-cold-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-clear-default-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL5 post-quota-clear crash fixture scopes independently rechecked;20 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner/pin boundary and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.

@@ -25,6 +25,11 @@ import (
 // immutable BOOTTIME hard deadline kill the entire group, including this root
 // supervisor. Jailer credential changes do not clear this supervision.
 func Run(cgroup string, hardDeadlineNS int64, argv []string) error {
+	return RunWithQuota(cgroup, hardDeadlineNS, argv, false)
+}
+
+// RunWithQuota adds an inherited mutation boundary only for quota mode.
+func RunWithQuota(cgroup string, hardDeadlineNS int64, argv []string, denyQuotaMutation bool) error {
 	if os.Geteuid() != 0 || len(argv) == 0 || !filepath.IsAbs(argv[0]) || cgroup == "" || filepath.Clean(cgroup) != cgroup || filepath.IsAbs(cgroup) || strings.HasPrefix(cgroup, "..") {
 		return errors.New("invalid warden invocation")
 	}
@@ -87,6 +92,11 @@ func Run(cgroup string, hardDeadlineNS int64, argv []string) error {
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	go func() { <-signals; stop() }()
 	<-ready
+	if denyQuotaMutation {
+		if err := installQuotaMutationFilter(); err != nil {
+			return err
+		}
+	}
 	child := exec.Command(argv[0], argv[1:]...)
 	child.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	child.Stdout, child.Stderr = os.Stdout, os.Stderr

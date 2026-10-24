@@ -1,0 +1,14 @@
+=== RUN   TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation
+--- PASS: TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation (0.00s)
+=== RUN   TestQuotaMutationFilterIsInheritedAcrossExec
+--- PASS: TestQuotaMutationFilterIsInheritedAcrossExec (0.01s)
+=== RUN   TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation
+--- PASS: TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation (0.00s)
+=== RUN   TestQuotaMutationFilterIsInheritedAcrossExec
+--- PASS: TestQuotaMutationFilterIsInheritedAcrossExec (0.01s)
+=== RUN   TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation
+--- PASS: TestQuotaFilterAllowsNormalIOButNoQuotaOrProjectMutation (0.00s)
+=== RUN   TestQuotaMutationFilterIsInheritedAcrossExec
+--- PASS: TestQuotaMutationFilterIsInheritedAcrossExec (0.01s)
+PASS
+ok  	github.com/123123213weqw/Xandbox/internal/warden	0.021s

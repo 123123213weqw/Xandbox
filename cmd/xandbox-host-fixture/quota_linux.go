@@ -91,7 +91,9 @@ func quotaNoResourceCapability() error {
 	return nil
 }
 
-func openQuotaFS(child bool) (*quotaFS, error) {
+func openQuotaFS(child bool) (*quotaFS, error) { return openQuotaFSWithMapper(child, nil) }
+
+func openQuotaFSWithMapper(child bool, mapper *stateMapper) (*quotaFS, error) {
 	var e error
 	if child {
 		e = requireQuotaChild()
@@ -101,13 +103,30 @@ func openQuotaFS(child bool) (*quotaFS, error) {
 	if e != nil {
 		return nil, e
 	}
+	devicePath := "/dev/vda"
+	if mapper != nil {
+		if child {
+			return nil, errors.New("mapped quota observer is L1 PID1 only")
+		}
+		if e = mapper.verify("linear", false); e != nil {
+			return nil, e
+		}
+		var backing, mapped unix.Stat_t
+		if e = unix.Lstat("/dev/vda", &backing); e != nil || backing.Mode&unix.S_IFMT != unix.S_IFBLK || mapper.backing != fmt.Sprintf("%d:%d", unix.Major(backing.Rdev), unix.Minor(backing.Rdev)) {
+			return nil, errors.New("mapped quota backing changed")
+		}
+		if e = unix.Lstat(stateDevice, &mapped); e != nil || mapped.Mode&unix.S_IFMT != unix.S_IFBLK || mapped.Rdev != mapper.device {
+			return nil, errors.New("mapped quota node identity changed")
+		}
+		devicePath = stateDevice
+	}
 	// Require enforcement on the fixed L1 disk, not just loaded accounting.
 	b, e := os.ReadFile("/proc/self/mountinfo")
 	if e != nil {
 		return nil, e
 	}
 	var disk unix.Stat_t
-	if e = unix.Stat("/dev/vda", &disk); e != nil {
+	if e = unix.Lstat(devicePath, &disk); e != nil {
 		return nil, e
 	}
 	device := fmt.Sprintf("%d:%d", unix.Major(disk.Rdev), unix.Minor(disk.Rdev))

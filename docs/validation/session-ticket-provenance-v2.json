@@ -1,0 +1,291 @@
+{
+  "status": "finite_actual_initial_session_journal_precore_ticket_across_ack_drain_and_shared_fsync_regressions_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source_revision": "98e957661f18344a8482692828b6305a0d28bea3",
+  "source_archive_sha256": "884317cbced15c09aa584c69a6a4ceb5459f080753d3f25d886b660a2f898b2e",
+  "source_archive_bytes": 1794258,
+  "changed_test_inputs": {
+    "cmd/xandbox-host-fixture/node_linux.go": {
+      "sha256": "a51fee520397721a0ede67ce67fefa92850c0c502dff4f8ef10e9f091f2a67d7"
+    },
+    "cmd/xandbox-host-fixture/node_operator_store_notify_linux.go": {
+      "sha256": "182c17e26ccb882d0983774a92899390f70b27981b7abdd50f7905666a1232bd"
+    },
+    "cmd/xandbox-host-fixture/node_session_ticket_linux.go": {
+      "sha256": "38336531e439e99b98063aeef80a3845e4ef156478e1feded43f17998cd4428e"
+    },
+    "cmd/xandbox-host-fixture/node_session_ticket_notify_linux.go": {
+      "sha256": "39be4340865a88df2cd862e30e9e321e90e58b954f3e18e8dea09972b270fcde"
+    },
+    "cmd/xandbox-host-fixture/node_session_ticket_linux_test.go": {
+      "sha256": "684d447e1df8878c8a5a050689d7ad8205755e6fcb85dd041bed1236fcddc9f6"
+    },
+    "scripts/kvm_nested_host.py": {
+      "sha256": "b4f6f7f3566a301a99f23ddbd22cd86343544811c773478d39991469e23fe984"
+    },
+    "scripts/test_kvm_session_ticket.py": {
+      "sha256": "aa4cd9f5d34df53bd541cddb7085bb6acf27be4d5ff1e704b6c8b0de37a65e9d"
+    }
+  },
+  "production_go_mod_sum_workflow_unchanged": true,
+  "ordinary_five_artifacts_byte_exact_to_prior4ee": true,
+  "native_artifacts_sha256": {
+    "sandboxd-session-ticket-v2": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-template-session-ticket-v2": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden-session-ticket-v2": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node-session-ticket-v2": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "fixture-session-ticket-v2": "c54a212f488ef517324ffb566950c3e5b6ec8c82929203e79fbf516036620fb5",
+    "builder-session-ticket-v2": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+  },
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_cgo": false,
+  "independent_frozen_cross_native6_exact": true,
+  "actual_frozen_gates": {
+    "linux_full_race": 3,
+    "linux_full_vet": true,
+    "fixture_race": 10,
+    "fixture_vet": true,
+    "root_python": 99,
+    "root_python_skips": 0,
+    "actual_cgo0_kernel_filter": 3,
+    "mock_result_objects": 6,
+    "darwin_full_race": 3,
+    "darwin_full_vet": true,
+    "darwin_log_sha256": "6aede59b8e828acafe16a7d864ed10939176cbf29bb212c973186ff49a7648ae"
+  },
+  "initial_session_ticket_case": {
+    "accepted_ticket_creates_real_session_after_gate_closed": true,
+    "acknowledged_drain_revision": 2,
+    "acknowledged_state_saved_without_fixture_metadata_rewrite": true,
+    "all_four_projects_zero_pools_idle_daemon_reaped_before_cold": true,
+    "complete_initial_creating_zero_target_payload_before_core": true,
+    "core_records_after_continue": 3,
+    "core_records_before_continue": 2,
+    "durable_drain_ack_while_initial_session_sync_held": true,
+    "exact_ordinary_elf_incarnation_tgid_control_and_session_fsync_inode_checked": true,
+    "execution_domain_stop_observed_ms": 46.773,
+    "existing_active_before_continue": 2,
+    "filesystem_d_or_physical_media_claim": false,
+    "hold_deadline_ms": 20000,
+    "initial_file_sync_entries": 1,
+    "new_raw_session_switch503_no_new_record_or_history": true,
+    "old_raw_progress_and_existing_session_exec_continue": true,
+    "old_raw_stop_private_destroy_quota0_while_ticket_held": true,
+    "one_pending_ticket_existing_two_no_new_core_backend_or_quota": true,
+    "one_shot_ticket_pending0_replay_no_new_core": true,
+    "original_accepted_request_kept_alive_not_cancelled": true,
+    "original_http_budget_ms": 40000,
+    "original_session_request_to_ready_observed_ms": 3565.184,
+    "other_fsync_continue_replies_while_held": 15,
+    "pending_after_continue": 0,
+    "pending_before_continue": 1,
+    "prepare_timeout_ms_unchanged": 30000,
+    "private_destroy_quota_zero_observed_ms": 539.708,
+    "production_slo_claim": false,
+    "real_nested_kvm": true,
+    "single_continue_not_synthetic_success_or_sync_completion": true,
+    "target_continue_replies": 1,
+    "target_errno_replies": 0,
+    "three_distinct_real_guest_boots_clean_workspaces": true
+  },
+  "counter_scopes": {
+    "existing_active_before_continue_field": {
+      "value": 2,
+      "scope": "Existing raw plus existing session at INITIAL held entry and after drain ACK; not the instantaneous count at final CONTINUE."
+    },
+    "after_old_raw_destroy_before_target_continue": {
+      "active": 1,
+      "pending_ticket": 1,
+      "core_records": 2,
+      "evidence": "Frozen checkpoint explicitly requires sessionTicketStatus(ctx,c,next,1,1,2), exact known-only backend/quota inventory and target ID still valid before sending one CONTINUE."
+    },
+    "after_accepted_original_ready": {
+      "active": 2,
+      "pending_ticket": 0,
+      "core_records": 3,
+      "replay_added_core_reservations": 0
+    },
+    "raw_reports_renamed_or_backfilled": false
+  },
+  "new_actual_hardware": {
+    "scopes": 3,
+    "outer_execution_generations": 6,
+    "ticket_case_boots": 2,
+    "regression_pre_file_boots": 2,
+    "regression_post_root_boots": 2,
+    "shared_observer_changed_requires_these_two_regressions": true,
+    "new_hardware_false_predecessors": []
+  },
+  "test_fault_boundary": "Exact ordinary ELF/FD/inode/private directory/canonical complete initial CREATING envelope and zero target. One kernel notification at actual FileStore.Sync is held before Core. Other FSYNC CONTINUE submissions do not prove completed I/O; target gets one CONTINUE, no emulated successful Sync or errno. Readiness and later checked returns/rename/fsync prove progress. Not filesystem D/media fault, unresolved shutdown writer or full Goal.",
+  "private_cold_boundary": "All prior3 guest generations actually reclaimed/quota0 and ordinary daemon reaped before receipt. Original same disk new L1 checks exact ACK drained2 before uninstrumented ordinary startup, pending0/old3keys410/no routes, exact drain retry and explicit resume3, fresh4thguest/fullcleanup. No control metadata restored or rewritten by fixture.",
+  "first_frozen_failure": {
+    "source_revision": "9ecc3c6fbf64fae9d4c01898af7b499723ee948a",
+    "archive_sha256": "d0ad6fb4991d80ce1486b883d6ec5d17a8156502510beb873b23a632c04433e8",
+    "cross_fixture_sha256": "edace1aff3a2734ca34ef9df0947047840da1e7c8c40e9780aab7aa8b8aca455",
+    "stage": "native fixture unit gate; full ordinary native race3/vet had passed",
+    "pipeline_exit": 1,
+    "failing_test": "TestSessionTicketFixedPathsAndPrivateHashInputOnly",
+    "repetitions": 10,
+    "failure_reason": "filepath.Dir cleans .. so alias /srv/state/sessions/../sessions/.session-1 incorrectly passed a selector expecting canonical paths.",
+    "fix": "Require filepath.Clean(path)==path before the fixed directory and numeric-temp-name checks; retain failing negative and add repeated-slash/dot-segment negatives.",
+    "production_change": false,
+    "node_budget_threshold_or_rpc_guard_relaxed": false,
+    "six_native_artifacts_built": false,
+    "outer_l1_boots": 0,
+    "hardware_report_or_scope_created": false,
+    "original_unit_stdout_sha256": "06abb383fe598d9990c5383cb48981b354fbd5965f480df778d1a885c1134be6",
+    "original_status_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "not_ten_hardware_failures_or_hidden_zero_exit": true
+  },
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "scopes": 3,
+    "outer_execution_generations_absent": 6,
+    "exact_root_control_parent_all_groups_absent": true,
+    "runner_terminal_exit": 0,
+    "exact_runner_absent": true,
+    "failed_v1_runner_terminal_exit": 1,
+    "failed_v1_runner_absent": true,
+    "no_supplemental_cleanup_actions": true,
+    "quota_checked_inside_live_l1_not_inferred_from_disk_deletion": true
+  },
+  "raw_private_archive": {
+    "sha256": "d7fa602d3915bf0dc1d3a2dc73f994281bad7b7d202ed2d39b3faae74e1243c5",
+    "regular_allowlisted_members": 20,
+    "manifest": {
+      "kvm-session-ticket-admission-v2.json": {
+        "sha256": "dc2033c19bb882590beb7213c09ed855f4532b11671b03dd35e8e583d2745231",
+        "bytes": 9175
+      },
+      "kvm-session-ticket-store-pre-v2.json": {
+        "sha256": "d120f42794c79724b36596c70558a9945a29879f86297a2529557f87b11467be",
+        "bytes": 8705
+      },
+      "kvm-session-ticket-store-post-v2.json": {
+        "sha256": "ab43c9cb7b479478be17ab249f191d001dbaf8cdccb8772aad355ab66741943a",
+        "bytes": 8718
+      },
+      "session-ticket-race-v2.log": {
+        "sha256": "901adabc3fd14ccbf39489515c3a327a074b9309f82444b62c393bb6417a9d4f",
+        "bytes": 1767
+      },
+      "session-ticket-vet-v2.log": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "session-ticket-fixture-v2.log": {
+        "sha256": "b98d6fb8f331b0a5e5a1b7f6413f345a484acea0dd4a5b5404f73d45c73515b1",
+        "bytes": 70
+      },
+      "session-ticket-fixture-vet-v2.log": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "session-ticket-filter-v2.log": {
+        "sha256": "3b25e04cfe62e602ef517da3519a5d7d1d451781aeda43afccc4cfa389e7c641",
+        "bytes": 846
+      },
+      "session-ticket-python-v2.log": {
+        "sha256": "7f835d81163e4e79c9da2a54c2606e805067d3716a2e7fd8a19c3648b8b995cb",
+        "bytes": 198
+      },
+      "session-ticket-smoke-v2.log": {
+        "sha256": "28dbc43344b3d162e321522d2b16dd1365a49995ab156a849fcb3855afa01129",
+        "bytes": 6735
+      },
+      "session-ticket-v2.status": {
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      "session-ticket-v2.pipeline.log": {
+        "sha256": "0bf71ce2c90b5d63614e93d4cee34f6263d82db8b963096e2ddf4af7e8866f66",
+        "bytes": 1318
+      },
+      "session-ticket-artifacts-v2.sha256": {
+        "sha256": "6488ee51e849b91bc6009a535a220063f4e5cf053199be99586ad49d190d5ae9",
+        "bytes": 598
+      },
+      "run-session-ticket-v2.sh": {
+        "sha256": "3f5851b74993b20341d851c75f8e8e11d78e8a561e2b16b80da8c1bcd7861cd4",
+        "bytes": 5613
+      },
+      "session-ticket-race-v1.log": {
+        "sha256": "cee8a62e2278185f329d202fc45571d8ecdbb62fd79b111f3ea6d219b0eba53f",
+        "bytes": 1767
+      },
+      "session-ticket-vet-v1.log": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "session-ticket-fixture-v1.log": {
+        "sha256": "06abb383fe598d9990c5383cb48981b354fbd5965f480df778d1a885c1134be6",
+        "bytes": 1900
+      },
+      "session-ticket-v1.status": {
+        "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "bytes": 2
+      },
+      "session-ticket-v1.pipeline.log": {
+        "sha256": "a4d894a1b574df3fd6a1b57903d230c2eddf9cb609844487ba62374af2f92585",
+        "bytes": 225
+      },
+      "run-session-ticket-v1.sh": {
+        "sha256": "eb9a84811630c68c0ad916212c0fcfa08e5d1fa3ed7da3af818fdf38bd73aba8",
+        "bytes": 5566
+      }
+    },
+    "audit_stdout_separately_captured_not_tar_member": true
+  },
+  "historical_manifests_unchanged_sha256": {
+    "runtime4ee-provenance-v1.json": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+    "node4ee-provenance-v1.json": "d9ac12e733acda02995e3dc035b5807e24b57f5c9de49491618aae3118316840",
+    "operator-store-provenance-v1.json": "0d6edce5036415afd72402afc6247c821b9938cf5ce097f9b8e68f6426eb200e",
+    "node-operator-provenance-v4b.json": "239715994379cc7940a869374b7057ffd8353123212c20a21191355bb156a5e8"
+  },
+  "privacy": "Only bounded counters/booleans/measurements/hashes; raw controller/inner console, cut/session/owner receipts, guest/host IDs, request IDs/epochs, token/keys and images excluded. Mock six JSON objects explicitly derived, no fields edited.",
+  "not_completed": [
+    "Actual unresolved Store writer shutdown/state-lock until exit; current request completes before clean Stop.",
+    "Remaining metadata/catalog commit windows, worst-case RAM/ancestor/affinity/uniqueRAM/full resource pressure, open-loop/fairness/long-duration/SLO.",
+    "Production TLS/credential lifecycle/networking, tested operator/systemd, persistent audit/alerts/log-export bounds/archive/rotation/backup/upgrade/rollback.",
+    "Physical media/secure erase/dual supervisor/prewarm/full initialization and original full M1-M4/final PR/main/archive/Goal."
+  ],
+  "files": {
+    "kvm-session-ticket-admission-v2.json": {
+      "sha256": "dc2033c19bb882590beb7213c09ed855f4532b11671b03dd35e8e583d2745231",
+      "bytes": 9175
+    },
+    "kvm-session-ticket-store-pre-v2.json": {
+      "sha256": "d120f42794c79724b36596c70558a9945a29879f86297a2529557f87b11467be",
+      "bytes": 8705
+    },
+    "kvm-session-ticket-store-post-v2.json": {
+      "sha256": "ab43c9cb7b479478be17ab249f191d001dbaf8cdccb8772aad355ab66741943a",
+      "bytes": 8718
+    },
+    "session-ticket-native-artifacts-v2.txt": {
+      "sha256": "6488ee51e849b91bc6009a535a220063f4e5cf053199be99586ad49d190d5ae9",
+      "bytes": 598
+    },
+    "session-ticket-pipeline-v2.txt": {
+      "sha256": "0bf71ce2c90b5d63614e93d4cee34f6263d82db8b963096e2ddf4af7e8866f66",
+      "bytes": 1318
+    },
+    "session-ticket-unit-failed-v1.txt": {
+      "sha256": "06abb383fe598d9990c5383cb48981b354fbd5965f480df778d1a885c1134be6",
+      "bytes": 1900
+    },
+    "session-ticket-independent-cleanup-v2.txt": {
+      "sha256": "17c998fedf7ea1687b21c2437329cf11511ce182663c637c49d4edff2a85f1ee",
+      "bytes": 583
+    },
+    "session-ticket-mock-derived-v2.json": {
+      "sha256": "bde37aa375c08d9eee08d951151a61ccb73c29e6072bd6fe2d1e87e0b1b195e6",
+      "bytes": 5574
+    }
+  }
+}

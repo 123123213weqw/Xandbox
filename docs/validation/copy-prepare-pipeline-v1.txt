@@ -1,0 +1,31 @@
+work/copy-prepare-source-v1.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/fixture race10/vet/rootPython61/kernel filter3
+.............................................................
+----------------------------------------------------------------------
+Ran 61 tests in 0.142s
+
+OK
+bin/sandboxd-copy-prepare-v1: 成功
+bin/xandbox-template-copy-prepare-v1: 成功
+bin/xandbox-warden-copy-prepare-v1: 成功
+bin/fixture-copy-prepare-v1: 成功
+bin/builder-copy-prepare-v1: 成功
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-copy-prepare-v1
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-copy-prepare-v1
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-copy-prepare-v1
+a9d85c1b6aa4fcc90255c240f77b9317ce52e2164ca7e4f653d682be0b9d5e47  bin/fixture-copy-prepare-v1
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-copy-prepare-v1
+stage: fixed nested partial
+47677 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested snapshot
+47677 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: fixed nested clear
+47677 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested syscalls
+47677 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+fixed partial workspace copy errno/keeper pin gate passed; cold-cut/metadata/node budgets/fullproduction unfinished

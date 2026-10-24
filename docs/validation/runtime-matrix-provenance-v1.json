@@ -1,0 +1,207 @@
+{
+  "status": "finite_new522_default_service_compatibility_matrix_passed_quota_acceptance_and_goal_incomplete",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_harness_and_new_native_build_source": "e021c70cab0c1e3047fbb95a57647529c9ae0c87",
+  "source_archive_sha256": "0947b2b60ccf1ac80da836916319c105c7cec06f596911e42772bf1e78775daa",
+  "production_go_source": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+  "production_go_identical_between_a57_and_e021": true,
+  "production_changed_this_matrix_turn": false,
+  "scope": "Full previously named default nil-quota service compatibility matrix on the NEW522 ordinary production runtime, plus IO-budget and limited quota negatives/unenforced cold recovery. Not the full quota-enabled switching/concurrency/failure matrix or production acceptance.",
+  "harness_change": "Persist bounded private root/runtime/cgroup receipts before use; cold root plus runtime/noexec/alternate runtime and exact cgroup now independently audited after the actual run. Cleanup requires a successfully created matching directory inode, not a failed mkdir, pre-existing or replacement/symlink object. No receipt or raw controller log is public.",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "new_native_artifacts_sha256": {
+    "daemon": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+    "admin": "7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501",
+    "queue_test": "2f4ae0fe9877c018f8b6467e0f5ec9f62aa006826a5af9e18bef3e34694c3d1b",
+    "session_test": "313acb64e03b2bdb716f88b9edc648aef1bc39ec8ead84814ec31d3ef6ab0ba2"
+  },
+  "reused_exact_frozen_native_artifacts": {
+    "build_source": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+    "go_source_identical_to_matrix_source": true,
+    "warden_sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "fixture_sha256": "23e4badee4ad6c335b825ba573cde6a5edadfd4c3ccc8189802c14cd3e899548",
+    "snapshot_builder_sha256": "ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd"
+  },
+  "mock_process_smoke": {
+    "scripts": 5,
+    "exact_smoke_daemon_equals_real522_runtime": true,
+    "native_make_flags": "CGO_ENABLED=0 GOFLAGS=-trimpath -buildvcs=false",
+    "microvm_isolation_claim": false,
+    "derived_report": "runtime-matrix-process-smoke-derived-v1.json",
+    "raw_private_log_sha256": "4f6186e9749027a34a768840ff00640442210efe1c7d3c51b5992c9b25cfdaf2",
+    "derivation": "Five original JSON result objects decoded unchanged. Raw make log has private absolute build paths and is not public. Null per-script source_revision fields are not rewritten; invoker source and exact binary SHA recorded separately. Smoke-built guest ELF is NOT deployed."
+  },
+  "actual_gate_groups": {
+    "default_cold_checks": 30,
+    "cold_closed_loop_fresh_vm_switches": 5,
+    "queue_fsync_detail_checks": 9,
+    "binding_fsync_detail_checks": 9,
+    "detail_counts_are_expansions_not_extra18_scenarios": true,
+    "default_snapshot_catalog_checks": 10,
+    "mixed_cycles_per_tenant": 120,
+    "mixed_tenants": 2,
+    "initialization_fault_cases": 6,
+    "historical_guest_TEST_cases": 2,
+    "io_cold_checks": 7,
+    "io_snapshot_checks": 12,
+    "io_ledger_readonly_checks": 5,
+    "default_ledger_readonly_checks": 3,
+    "default_enospc_checks": 5,
+    "healthy_l1_power_cut_checkpoints": 3,
+    "healthy_l1_boots": 4,
+    "ordinary_quota_negative_fixed_types": 6,
+    "ordinary_quota_negative_followup_cold_cases": 3,
+    "quota_negative_l1_boots": 4,
+    "separate_unenforced_startup_rejection_cases": 1,
+    "unenforced_l1_boots": 1,
+    "unenforced_l2_vms": 0
+  },
+  "legacy_setup_only": {
+    "source": "97196a59aa508348d9293e9f44c5fa5f2f3e0891",
+    "daemon_sha256": "6405f59fbd7a8e65793ba2bc8bb3b543ffe135add527e10a336ed0246239a783",
+    "role": "Real pre-ledger KVM setup under historical0022, then current ordinary recovery under0077. Not current-runtime test results from an old daemon."
+  },
+  "guest_artifacts": {
+    "ordinary_initrd_unchanged": true,
+    "ordinary_initrd_sha256": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "historical_TEST_builder_source": "6c9a94c335146c65491fb07bcf22a64146147fab",
+    "machine_id_TEST_initrd_sha256": "1ce968d607dae8cf7e7b23efdca8d41a9b44f4c86f2c3d3e6eacc722751b32e3",
+    "before_marker_TEST_initrd_sha256": "e928c0e627cd52631f151a5ecf231f39decfee25b1a7ffa95756c32683448014",
+    "role": "Pinned historical TEST fixtures only; not production images or a new guest ELF crash attestation. Trusted never-assigned exports remain outside service GC."
+  },
+  "mixed_load": {
+    "duration_seconds": 248.765,
+    "resource_sample_rows": 407,
+    "cross_tenant_overlapping_switch_interval_pairs": 94,
+    "quantiles_independently_recomputed": true,
+    "scope": "Two closed-loop paced tenants, warm cache/background load uncontrolled. Work completes before switching; no open-loop saturation/fairness/busy-old-job storm/SLO proof. PSS/cgroup memory/file residency views overlap; do not sum them into full unique RAM."
+  },
+  "cold_report_scope": "Cold30 and queue/binding detail reports do not expose top-level passed/cleanup booleans. Evidence is exact checklists, successful Go child binaries, strict finally and parent exit0, plus independent early-receipt/runtime/cgroup absence audit; no boolean is fabricated.",
+  "io_and_storage_scope": "Fixed8MiB/s+4096ops budget has actual frontend/kernel readback, operator32MiB direct IO, guest64MiB direct write/read, active writer Stop/GC and three startup/binding rejections. ENOSPC and ledger-only EROFS use four bounded private64MiB loop files in isolated mount namespaces, never a filled/remounted shared host filesystem. Not whole-device media failure, project quota or secure erase.",
+  "native_full_race_count": 3,
+  "native_vet_passed": true,
+  "native_fixture_race_count": 10,
+  "native_fixture_vet_passed": true,
+  "root_python_tests": 50,
+  "actual_cgo0_kernel_filter_proof_count": 3,
+  "darwin_full_race_count": 3,
+  "darwin_vet_passed": true,
+  "runner_exit_status": 0,
+  "unexpected_failed_hardware_predecessors": 0,
+  "independent_cleanup": {
+    "scopes": 13,
+    "all_owned_roots_runtime_cgroups_absent": true,
+    "cold_independent_runtime_and_cgroup_checked_not_finally_only": true,
+    "private_loop_bindings_absent": 4,
+    "owned_l1_execution_generations_absent": 9,
+    "read_only_no_cleanup_actions": true,
+    "quota_proof": "Actual L1 kernel readback before disk deletion, not inferred from final path audit."
+  },
+  "not_completed": [
+    "Actual quota syncfs EIO/EROFS and release commit hold/crash, repeated clear errors/listener loss/partial-copy Prepare, owner unlink/dirfsync and snapshot pin/concurrency persistence combinations.",
+    "Full quota-enabled session switching/concurrency/failure and node-wide physical/unique-memory/IO budget acceptance; this default compatibility matrix does not substitute for it.",
+    "Remaining M1-M4, physical media/dual-supervisor/secure erasure, prewarm/init framing, sustained open-loop fairness/audit/backups/independent operator/SLO.",
+    "Final exact-head PR19 CI and complete PR19 or production readiness."
+  ],
+  "files": {
+    "kvm-runtime-default-before-marker-v1.json": {
+      "sha256": "c8cbe5badcc518eea9d5de23ffff17938b2f177c6d1bb0875089ca4e33d132fb",
+      "bytes": 3218
+    },
+    "kvm-runtime-default-cold-v1-queue.json": {
+      "sha256": "4c3ac4e7f022c0e292427d84c62037eafd048e016d743f9e10c302e8e8225887",
+      "bytes": 1081
+    },
+    "kvm-runtime-default-cold-v1-session.json": {
+      "sha256": "ed4d4b94fa076541da3028272d5e33da9d996a97482639a667a531c8bd4dffa2",
+      "bytes": 1112
+    },
+    "kvm-runtime-default-cold-v1.json": {
+      "sha256": "00238dcc781d5db4632cff9de4479948b466aa6fccbd2988208e910d153421f7",
+      "bytes": 13323
+    },
+    "kvm-runtime-default-initialization-v1.json": {
+      "sha256": "d8d820d1e9e177af5809ed59403de8bd3b0320303f0778bbc4b762f83c3c93cf",
+      "bytes": 6076
+    },
+    "kvm-runtime-default-machine-id-v1.json": {
+      "sha256": "f6a2c66900a4894efed07f8b79090757936d40e29bf48cc6690fb2fe9023727b",
+      "bytes": 3218
+    },
+    "kvm-runtime-default-power-v1.json": {
+      "sha256": "c1da07600930b5f4e150381972146444640528ca6d025b317f5841ce4e491f74",
+      "bytes": 5219
+    },
+    "kvm-runtime-default-readonly-v1.json": {
+      "sha256": "4ae54a0bc74782a3cbd46efd6c2e3a82758370d8527d7c3a2d7201553051a77d",
+      "bytes": 4825
+    },
+    "kvm-runtime-default-snapshot-v1.json": {
+      "sha256": "157d5f35b30d27b97b3a3ab4748a422a3aafa57f857af5f327e34f195fd4554c",
+      "bytes": 523126
+    },
+    "kvm-runtime-default-storage-v1.json": {
+      "sha256": "6104bc859ae1e30b8429518684e083fcb5c6f010e6ed8a1daba2858c6afd5120",
+      "bytes": 6593
+    },
+    "kvm-runtime-io-cold-v1.json": {
+      "sha256": "0684f7cc3a8521e3e777da39c52704898402245c6963aacf91b77a0f7e783fc0",
+      "bytes": 8247
+    },
+    "kvm-runtime-io-readonly-v1.json": {
+      "sha256": "43d25d9b464e97ac43556b1ac91b8c8de0bb96d28b3d2ae044da6d0c8af46d79",
+      "bytes": 6481
+    },
+    "kvm-runtime-io-snapshot-v1.json": {
+      "sha256": "e7595a8ecec222955123b350633725fe96e2d3e254c95be6a0638470b1ad96a0",
+      "bytes": 7286
+    },
+    "kvm-runtime-quota-negative-v1.json": {
+      "sha256": "8acca078ae3a644296cbbadfb23425c683f34585d677354b9c1592a2c80cd34f",
+      "bytes": 9554
+    },
+    "kvm-runtime-quota-unenforced-v1.json": {
+      "sha256": "fdf2e8d2c914208e53fcfccb7608b0aa341288ef930407e19c782810b0525c88",
+      "bytes": 4013
+    },
+    "runtime-matrix-native-race-v1.txt": {
+      "sha256": "817b79e51778510d2202b365bf6924b9c776bac055df8f3a5046145f377f8055",
+      "bytes": 1639
+    },
+    "runtime-matrix-fixture-native-race-v1.txt": {
+      "sha256": "505516509dd6481a67c18ed500062afd6f9a4be52b424b9fdf9728cf745affe7",
+      "bytes": 70
+    },
+    "runtime-matrix-cgo0-kernel-filter-v1.txt": {
+      "sha256": "e38b3e50cc57a853da01a1898d9958ffc996158a93092e90cf24d815bbfb5b39",
+      "bytes": 846
+    },
+    "runtime-matrix-pipeline-v1.txt": {
+      "sha256": "9daee7b73b91a521159e50f9ef990360fdfe6d6c231518e6ce12c7a1163f1f94",
+      "bytes": 3534
+    },
+    "runtime-matrix-native-artifacts-v1.txt": {
+      "sha256": "b0b02aa11d44dfe4da589da5361a3c4dc4a7518ff6b3a17afed5f20cd849bc8a",
+      "bytes": 803
+    },
+    "runtime-matrix-independent-cleanup-v1.txt": {
+      "sha256": "f3e903c571f5c39ed9ea91ca8a560c29de774139f48d6240adc7bb76a8e1aac5",
+      "bytes": 1974
+    },
+    "runtime-matrix-final-darwin-race-v1.txt": {
+      "sha256": "f7398d9fb822841dafa6fe4ff9e861d4016a1a23bf019633bbb1d21a384fe66e",
+      "bytes": 1467
+    },
+    "runtime-matrix-process-smoke-derived-v1.json": {
+      "sha256": "9cc7f02b983ae6c72d109a6284ef6224ac45111f6f150ba3ed774c46241d3573",
+      "bytes": 4517
+    }
+  }
+}

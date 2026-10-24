@@ -1,0 +1,43 @@
+work/node-prepare-source-v3.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/fixture race10/vet/rootPython78/kernel filter3
+..............................................................................
+----------------------------------------------------------------------
+Ran 78 tests in 0.149s
+
+OK
+bin/sandboxd-node-prepare-v3: 成功
+bin/xandbox-template-node-prepare-v3: 成功
+bin/xandbox-warden-node-prepare-v3: 成功
+bin/fixture-node-prepare-v3: 成功
+bin/builder-node-prepare-v3: 成功
+3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2  bin/sandboxd-node-prepare-v3
+19bbd460b8cd526f55fe0fe892985c593b47f3f102f0e071f35e7c7cf071d613  bin/xandbox-template-node-prepare-v3
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-node-prepare-v3
+9297f982bbf8b39b0c66bb311087040dacdedb8f1d2aa33134a7a0119249c1a7  bin/fixture-node-prepare-v3
+243dedf173271f269391a84375c561409082bba3ddcde6f09143646ba10f3a62  bin/builder-node-prepare-v3
+stage: fixed nested admission
+48955 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested node
+48955 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested owner
+48955 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested inflight
+48955 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested partial
+48955 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested snapshot
+48955 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: fixed nested clear
+48955 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested syscalls
+48955 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+entry-only exact ELF two-create prepare calibration plus schema3 space and related fixtures passed; NOT queued cancellation or cleanup isolation proof; production3ea unchanged and prior DEFAULT/quota240 evidence not retagged; full node pressure/operator/Goal remains incomplete

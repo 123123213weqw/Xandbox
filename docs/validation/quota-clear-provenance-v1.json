@@ -1,0 +1,142 @@
+{
+  "status": "partial_experimental_post_quota_clear_pre_owner_delete_crash_evidence_not_final_PR_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_fixture_and_all_build_source": "ab8b21edd892f40f0b7df4c41ae35fa369ac8a4d",
+  "source_archive_sha256": "f6891f67d7236a00bab5fdb63ed4b76ba7352a95f4a1fcb2f8d63ffe291015fc",
+  "production_go_unchanged_since_catalog_quota_lock_fix": true,
+  "ordinary_guest_initrd_unchanged": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "aab4c7f960d1fdb4a46fbc6ef8099dd27658e693e5deb8e2a0db342937f98517",
+    "daemon": "ab547783c9c9ba3651c4b6a0f8c6ca78803a31c0a1809eef97c8aa7284878cb6",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "ace686422ffad4bc987d7a32f7b845a364022ff57900be7766fe7ac66a4824da",
+    "snapshot_builder": "882704f757dc756c8d577f39dde8785c29272712f2ab3eb366cb4d262943dc67"
+  },
+  "scope": "One unmodified ordinary-daemon snapshot/quota crash window on a healthy owned L1 filesystem: ordinary quota clear has returned but durable owner/pin/capacity release is blocked by the exact catalog lock. Not arbitrary quota syscall error injection or a latency/SLO test under that lock.",
+  "barrier_evidence": "Before action the direct daemon child has zero FDs to the stable private catalog lock inode. L1 PID1 holds that exact lock and observes the daemon opening a distinct FD to the same kernel inode, guarded by immutable process start identity. In the pinned ordinary source registry.releaseContext invokes quota.release, including Q_SYNC/readback, before catalog.withLock opens this FD. Zero quota alone is not used to locate the return boundary. This is FD observation plus source call ordering, not direct quota-syscall tracing.",
+  "checkpoint": [
+    "Two simultaneous real KVM snapshot guests, unprivileged UID, distinct fixed private projects and same pristine template.",
+    "Victim is durable RECLAIMING with stop confirmed, destruction not confirmed; exact jail/cgroup gone; quota usage/limits/times empty while original initialized v4 owner bytes remain.",
+    "New key returns503 while victim quota is empty, preserving instance capacity/reservation rather than equating zero quota to a free owner.",
+    "Keeper real VM/data/execution survives victim clear; exactly the two known shared inode hardlink counts decrease by one. Other names/identity/metadata and independent quota charge remain checked.",
+    "After the clear boundary the observer performs quota reads only, no quota sync/set/clear. PID1 retains the exact lock descriptor across the successful control reply until the outer owned-L1 power cut."
+  ],
+  "cold_before_daemon_recovery": [
+    "Victim quota is still empty and victim jail/cgroup still absent. Both original durable initialized owner byte strings remain exact.",
+    "Keeper immutable hard policy, project/inheritance/namespace accounting and read-only shared snapshot content hashes checked before ordinary recovery.",
+    "Catalog active template unchanged, two pins still retained despite victim zero quota and absent private namespace."
+  ],
+  "recovery": [
+    "Ordinary daemon recovers both old references to durable DESTROYED; exact old resources/owners gone, both old keys410. Assigned guests are never restored.",
+    "Fresh actual KVM/unprivileged guest/new boot/exec/destroy succeeds; all four private project records empty.",
+    "Both old pins released; same active pristine catalog template remains with zero pins."
+  ],
+  "not_claimed": [
+    "Direct tracing of a Q_SYNC syscall-return event; the return boundary is inferred from the exact observed FD and verified source order.",
+    "A new backend allocator reservation while the catalog lock is held; capacity503 and retained durable owner/pins are the observed evidence.",
+    "Prepare/switch latency under a deliberately held global catalog lock, percentiles or SLO.",
+    "All quota syscall failure/hold/crash windows or physical shared-L0 power/media failure."
+  ],
+  "actual_crash_cases": 1,
+  "target_l1_boots": 2,
+  "target_window_ordinary_snapshot_guests": 2,
+  "genuine_l1_builder_and_shared_clone_setup_also_checked": true,
+  "regressions": {
+    "normal_snapshot_shared_clones": 2,
+    "normal_snapshot_cold_cases": 3,
+    "normal_snapshot_l1_boots": 4,
+    "quota_enabled_whole_state_io_cases": 4,
+    "quota_enabled_whole_state_io_l1_boots": 5,
+    "normal_quota_cold_cases": 3,
+    "normal_quota_cold_l1_boots": 4,
+    "default_nil_quota_io_cases": 4,
+    "default_nil_quota_io_l1_boots": 5
+  },
+  "native_full_race_count": 3,
+  "native_vet_passed": true,
+  "native_fixture_race_count": 10,
+  "native_fixture_vet_passed": true,
+  "root_python_tests": 45,
+  "actual_cgo0_kernel_filter_proof_count": 3,
+  "darwin_full_race_count": 3,
+  "darwin_vet_passed": true,
+  "runner_exit_status": 0,
+  "failed_hardware_predecessors_in_this_run": 0,
+  "independent_cleanup": {
+    "scopes": 5,
+    "execution_generations": 20,
+    "all_owned_roots_control_cgroups_absent": true,
+    "read_only_no_cleanup_actions": true,
+    "boundary_and_quota_proof": "Separate actual L1 owner/quota/catalog observations before disk deletion, not this final path audit."
+  },
+  "not_completed": [
+    "Exact Q_SET/Q_SYNC/readback/clear EIO/EROFS/held-syscall, partial prepare and other daemon/warden crash/concurrency persistence windows.",
+    "Owner unlink/directory-fsync stalls and every remaining catalog/shared-reference persistence window.",
+    "Full new-native default process/cold30/load/queue/binding/snapshot/mixed/initialization/storage/IO service matrix.",
+    "Shared/node-wide physical/unique-memory/IO budgets, media handling, complete M1-M4, independent operator acceptance, final exact-head PR19 CI and production readiness."
+  ],
+  "files": {
+    "kvm-quota-clear-cold-v1.json": {
+      "sha256": "87628b8ae2fe8567438db3bd8cefcfdb4c58a6d5afc4d6ab0aa001c630084a45",
+      "bytes": 7580
+    },
+    "kvm-quota-clear-default-io-v1.json": {
+      "sha256": "37b7e85c391a498620e130d02c77dd4c7e85994383a0a055f9ea62dfa92257e4",
+      "bytes": 9837
+    },
+    "kvm-quota-clear-io-v1.json": {
+      "sha256": "dd1978058165b1a1b533abdcec6dcb36c8a67cc4a4792ab7b63cf5c1c118116b",
+      "bytes": 14588
+    },
+    "kvm-quota-clear-snapshot-v1.json": {
+      "sha256": "4d25ca7d015a33514858603284dc876e8278667c733d3386d1edf3020e79bbed",
+      "bytes": 8918
+    },
+    "kvm-quota-clear-v1.json": {
+      "sha256": "34677b03cd15dd11cca98beccf086af475ae890a8a8582b017d1f92d125affd1",
+      "bytes": 6728
+    },
+    "quota-clear-native-race-v1.txt": {
+      "sha256": "1db1aca44a172084a74bf08e25b0925fd951776be4a02f746ee0725891567993",
+      "bytes": 1639
+    },
+    "quota-clear-fixture-native-race-v1.txt": {
+      "sha256": "4b7aeb8f5105baa2efb383494f9e3c072a4245d1748ac88fcf27054b3f3c7690",
+      "bytes": 70
+    },
+    "quota-clear-cgo0-kernel-filter-v1.txt": {
+      "sha256": "e38b3e50cc57a853da01a1898d9958ffc996158a93092e90cf24d815bbfb5b39",
+      "bytes": 846
+    },
+    "quota-clear-pipeline-v1.txt": {
+      "sha256": "a19d4f0c5b7271515e46b16c2966b6ce2a7f4b44b2cc750f35dc92ce7fb0afa5",
+      "bytes": 1690
+    },
+    "quota-clear-native-artifacts-v1.txt": {
+      "sha256": "43b0cc171d928f429c176af9b0fd2b21873da83a44d5a00a1e8735524740da45",
+      "bytes": 482
+    },
+    "quota-clear-independent-cleanup-v1.txt": {
+      "sha256": "643d88de10f5667948ab6226523d534892c4126d4b82922c663063ec774e2dc8",
+      "bytes": 772
+    },
+    "quota-clear-final-darwin-race-v1.txt": {
+      "sha256": "0e913ed5bb79cc37ec5361d5c4781eb6d9ff8e053401564d3109375c411beefb",
+      "bytes": 1434
+    }
+  }
+}

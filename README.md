@@ -1,10 +1,56 @@
 # Xandbox
 
+> 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
+
+新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新daemon的[25个全新命名运行scope](docs/FIVEB_RUNTIME.md)已另行通过；[fixture320的live trace两组与十边界](docs/FIVEB_BOUNDARIES.md)也已独立通过，完整部署门槛仍未完成，不能继承旧矩阵或宣称生产就绪。
+
+[独立 ingress 启动器](docs/INGRESS_LAUNCHER.md)：固定清单/单独资源域已在[真实systemd TLS→KVM、轮换、崩溃及原盘cold有限验证](docs/SYSTEMD_INGRESS_FIXTURE.md)通过；安装升级与完整生产验收仍未完成。
+
+新增 [systemd readiness/enablement 组合](docs/SERVICE_READINESS.md)：固定 Go 后置闸门、启用依赖及原盘自动启动已取得新两启动有限实证，不继承手动启动报告，也不等于生产安装器。
+
+另有[持久drain下自动启动的独立扩展](docs/READINESS_DRAIN.md)：真实warm重启与原盘cold保留完整控制提交；健康恢复不隐式resume，旧任务/Stop/GC继续，新建与切换拒绝，显式root CAS恢复后被拒key可重用。197项Linux Python零skip、新双启动和独立只读清理复核通过，13个Go产物未改变；首轮managed执行路径失败保留，不等于生产安装器或SLO。
+
+新增[普通发布CLI的有限实机组合](docs/RELEASE_PUBLISHER_KVM.md)：真实资产提交、并发CAS、缺源重试和原盘恢复不改变节点准入，既有服务/guest持续与完整readiness/drain回归通过。它只是安装事务地基，不是已完成的安装/升级工具。
+
+新增[固定初始安装事务](docs/INITIAL_INSTALL.md)：Go 安装器将已提交 release、25 个固定目标、持久 intent/commit 与服务管理器协调连接起来；[新的真实双启动有限验收](docs/INITIAL_INSTALL_KVM.md)覆盖 cap0 提交前闸门、精确恢复、TLS→四并行 KVM、drain 与缺源冷恢复，并修正 VMM 静态 PIE 校验。7 scopes/8 代际独立核验清理；不继承旧报告，也不是升级、轮换或生产就绪声明。
+
+[策略通道的历史独立组件验收](docs/POLICY_OPERATOR_COMPONENT.md)之后，新增[受管策略 v2 原生候选](docs/MANAGED_POLICY_NATIVE.md)：接入监督进程、24 目标新安装、原子完整策略授权、CAS 与缺源协调，分别确认文件提交和子进程 ACK。**这一早期软件检查点本身不证明后来的普通 root CLI / TLS-KVM / 冷轮换；下述命名实机结果另行取证。旧 v1 节点仍不能据此原地升级，仍不可生产部署。**
+
+后续[过期策略恢复地基](docs/POLICY_RECOVERY_FOUNDATION.md)新增只打开既有策略状态的持久化原语，以及覆盖文件提交到 ACK 的整段操作锁；原生 race/vet 与进程死亡测试通过。后续已接入[显式 ingress-only 前向恢复候选](docs/MANAGED_POLICY_RECOVERY.md)，已完成独立 Linux 原生 race×3/vet/错误与进程死亡回归（保留两次失败前序），另有独立短时证书测试输入生成器；这些早期软件记录不代替下述新命名实机结果；未提交候选的完整故障/恢复矩阵仍未完成。
+
+新增[未消费候选的显式替换实现](docs/PENDING_POLICY_SUPERSESSION.md)，已完成新源码原生 race×3/vet、进程死亡/CAS 回归与 23 个产物重建。另有[已提交过期策略恢复的两条独立实机路径](docs/MANAGED_POLICY_L1_FIXTURE.md)：普通 root CLI、真实 TLS→四并行 KVM、残留进程拒绝与运行中 ingress 停止、drain、原盘冷恢复均取得有限验证；2 scopes/4 boots 独立核验清理，251 项 Linux 纯测试零跳过，两个失败前序保留。未消费候选替换本身的硬件矩阵及完整生产验收仍未完成。
+
+[新的未消费候选/普通热轮换命名验收](docs/MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)已取得三条独立有限实证：未发布候选缺源重复替换、已发布 epoch 不可复用而前向恢复、普通 1→2→3 热轮换保持原 TLS 连接上的旧凭证拒绝。3 scopes/6 boots 独立核验清理，261 项 Linux 纯测试零跳过；原 45 秒任务及全部资源/期限未放宽，Stop 前另行复核四 VMM 与原忙任务。更早的诊断通过和原因未证实的失败分开保留，不是完整故障矩阵或生产就绪声明。
+
+新增[精确哈希绑定的未提交声明草稿清除候选](docs/supersession-draft-discard.md)：仅针对固定 `.policy-supersession.next`，保留未来 intent 和启动拒绝；不推进 epoch、不清除已提交声明、不重启入口。独立全量软件回归与 23 个产物重建之后，[两条新源码真实命名流程](docs/DRAFT_DISCARD_L1_FIXTURE.md)已覆盖短写缺源、正常回执、unlink/fsync 后回执前中断与缺源冷恢复；2 scopes/4 boots 独立核验清理、269 项 Linux 纯测试零跳过。两个失败前序分开保留，完整负面故障矩阵和生产级 SLO 仍未验收，不继承旧报告。
+
+[新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
+
+仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。
+
 [![CI](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/123123213weqw/Xandbox/actions/workflows/ci.yml)
 
 Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 **状态：生产化开发中，尚未生产就绪。**
+
+新增 [独立TLS接入与外部凭证边界](docs/TLS_GATEWAY.md)：root固定连接broker无TCP listener，专用UID/caps0/NNP/chroot的网络child；真实TLS→KVM双租户、key/证书轮换不重启controller/guest、无效reload关闭入口、旧revision拒绝及同盘冷恢复有限验收通过。0b基线的cwd/继承FD与持久lock标记修正有独立2 scope/4次外层启动证据；首轮失败、原生bootstrap失败对照及各冻结阶段保留，普通4ee五个ELF不变。这不是完整PKI、DoS、operator部署或生产SLO验收。
+
+历史555b生产gateway `555b9974…` 新增[策略库存硬逻辑预算与已识别孤立文件回收](docs/POLICY_METADATA.md)：11项/8KiB准入、完整库存验证后且CAS通过才回收；真实中断产物在cold前保留、正常启动后被生产代码回收，foreign/symlink/跳号拒绝不删改authority。新源码另通过pre/post/TLS/node-budget共4scope/8次启动，旧241ca报告不代签。逻辑预算不是物理配额，日志/审计及完整生产门槛仍未完成。
+
+新增 [策略提交挂起与入口心跳专项](docs/TLS_POLICY_COMMIT.md)：同一生产程序在真实pre-file FSYNC与已完成Commit、尚未分配snapshot的MEMFD_CREATE入口受控暂停，child退出时root通知仍有效、已有忙guest/session继续；冷恢复分别验证未提交1→生产提交2和已提交2拒绝旧配置。两个窗口与健康TLS/普通node-budget回归共4scope/8次启动，独立清理核验通过；不是文件系统D、物理介质故障、全部策略窗口或生产就绪声明。
+
+开发分支新增 [节点持久准入控制](docs/NODE_CONTROL.md)：私有同宿主 UID 管理 socket 与 `xandbox-node status/drain/resume`，停止新预留但允许已接受操作、已有执行及独立 Stop/Cleanup 继续；包含 epoch/revision CAS、精确重试和重启保持。**这次修改了生产程序；新 ELF 的 DEFAULT/IO 与 quota 命名兼容子矩阵现已另行复验，但最坏节点资源压力及剩余 operator 窗口尚未完成**。下面各报告只证明其自身冻结的源码/ELF，不能相互替代。mock 进程及模拟持久化错误测试不代替真实故障窗口。
+
+新增 [operator 有限 KVM 与同盘冷恢复验收](docs/NODE_OPERATOR_KVM.md)：新生产 ELF `4ee09d0a…` 的实际异 UID 连接在 HTTP 前被拒绝、drain 下真实 raw/session 执行与私有回收、ACK drain 的 cold 保持均通过；同一新程序的 node-budget 有限兼容用例亦通过。4 个 scope/6 个外层代际（4通过＋2失败）独立核验清理，失败及零 boot 前序保留。N=1 约16ms执行域停止、370ms私有回收，不是物理擦除或SLO；这一批健康测试未覆盖提交故障窗口，后续有限补充及新运行时兼容子矩阵见下方，不作为其余窗口或完整生产验收。
+
+新增 [实际 FileStore 的 pre/post fsync TEST EIO 窗口](docs/NODE_OPERATOR_STORE.md)：相同普通 ELF 下，真实控制写入挂起/客户端取消后，status/BUSY、旧 guest 执行与私有回收继续；一次 EIO 令原进程 fenced。冷恢复分别读回旧 open 与已提交 drained，明确未 ACK 的失败意图不一定持久。2 scope/4代际独立审计通过；这是 syscall TEST errno，不是 filesystem D、介质 EIO、完整新运行时矩阵或生产验收。
+
+新增 [新4ee DEFAULT/IO、quota240/双活cold及命名故障完整复验](docs/RUNTIME4EE_REQUALIFICATION.md)：普通新 ELF 实际重新执行25个scope，两种规格各完成两租户×120次切换，43个外层执行代际及4个专属loop绑定独立只读审计无残留。实际 whole-state filesystem D/EIO、只读、ENOSPC和恢复按各自范围记录；不复用旧3ea结果，不混合负载算加速比，也不代表schema3全节点压力、全部operator窗口或生产就绪。
+
+新增 [新4ee schema3 空间、真实排队取消与 owner/部分复制窗口](docs/NODE4EE_REQUALIFICATION.md)：4个scope/7个外层代际实际通过并独立只读核验无残留；9个固定ENTRY probe的12事件校准与15事件取消轨迹均在新普通ELF上实际执行。另条WRITE仍挂起时，keeper执行域停止/本代持久私有回收分别观测36.348/161.646ms（N=1，非SLO）；通知等待不是filesystem D，也不证明session pre-Core ticket跨drain或完整节点饱和。
+
+新增 [实际session pre-Core ticket跨ACK drain](docs/SESSION_TICKET_DRAIN.md)：真实初始session journal Sync仍挂起时，持久drain ACK与旧guest命令/独立回收继续；放行后原请求以旧一次性ticket完成真实KVM创建，新请求仍拒绝。原盘cold保持drained、旧key410/精确重试/显式resume与新guest通过；新增用例及共享pre/post观察器回归共3scope/6代际独立审计无残留。首版unit路径选择器失败保留；未完成writer的shutdown锁窗口仍未验收。
 
 新增 [持久化错误后的独立物理Stop](docs/EMERGENCY_STOP.md)：新Go1.27.3原生daemon通过5项ENOSPC故障及完整新运行时回归；idle故障停止两次观测为43.814/48.630ms，旧c577负对照约5016ms并按预期未过实验guard。仍返回存储错误、不假称持久STOPPED或提前清理/还容量；这不是线上SLO，也不覆盖尚未返回的卡死I/O。
 
@@ -16,7 +62,29 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
 新增 [整状态盘EIO与fsync卡住时的独立撤权](docs/STATE_IO.md)：新原生daemon四场景通过，并完成健康宿主/IO预算/只读/快照双租户240次/初始化及冷路径回归。held-fsync idle的执行域停止观测从旧4381.622ms变为新43.555ms，新Exec拒绝1.843ms；均为各N=1，不是持久销毁或生产SLO。旧失败基线保留，仍需等待存储恢复后完成持久确认、清理与还容量。
 
-新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。普通驱动尚未接入，不能将该测试工具当成每代磁盘预算已经实现。
+新增 [ext4 project quota 内核前置证据](docs/PROJECT_QUOTA.md)：真实root能力绕过、受限root的EDQUOT、共享硬链接及原盘冷启动检查通过。本分支另有普通驱动quota的实验性接入，cold与真正L1-built snapshot的有限恢复、双实例共享pin/配额检查已通过；quota清零已移出catalog pin锁，普通daemon实际EDQUOT和启动拒绝亦已有有限检查；quota启用时的整state I/O及quota清零后owner/pin仍保留的精确掉电窗口也已有限通过；另有6个固定quota syscall errno注入例通过（额外TEST ONLY启动层，非物理介质故障）；其余完整逐syscall崩溃窗口及quota并发验收尚未完成，不能按生产能力启用。
+
+历史quota显式filesystem提交屏障：当时普通daemon更新为 `522da68e…`，真实syncfs内核挂起/pre-fork掉电恢复及有限回归通过；Q_SYNC返回不再被当作独立提交屏障。默认服务兼容矩阵已另完成新原生复验（cold30、双租户各120次snapshot切换、初始化/存储/I/O）；quota模式完整故障/并发验收仍未完成，见[配额证据边界](docs/PROJECT_QUOTA.md)。
+
+新增 [真实quota提交故障证据](docs/QUOTA_COMMIT_FIXTURE.md)：同一普通daemon下，实际syncfs EIO及release前/后clear的真实内核挂起与冷恢复各N=1通过；postclear入口quota虽为零，未完成提交的掉电后仍回到已知限额，因此owner不能提前释放。生产ELF不变；29个执行代际（含失败前序）独立审计已清理。仍是TEST ONLY有限实验，不是完整quota并发、介质或生产验收。
+
+新增 [重复clear与TEST通知器失效检查](docs/QUOTA_LISTENER_FIXTURE.md)：三个clear errno子例各3次后才解除注入；两个最后listener关闭场景实际捕获内核ENOSYS并完成冷恢复。生产ELF不变，生产并不依赖该TEST listener；本轮32个执行代际已独立核验清理，仍不是完整quota并发或生产验收。
+
+新增 [quota双租户忙任务切换与双活cold有限验收](docs/QUOTA_SWITCH_FIXTURE.md)：明确3GiB/4GiB实验规格，各120次真实writer进度、pre-timeout独立Stop/持久回收与随后同盘双session冷恢复已通过。生产ELF未改；新12 scope/34代际及4个false前序5代际独立核验清理。仍非节点总预算、持续公平性或生产通过。
+
+新增 [Version3节点总资源准入](docs/NODE_BUDGET.md)：新生产ELF `3ea1e247…` 的4真实KVM/第5拒绝、父限制漂移下继续Stop/Cleanup/Exec、原盘cold回收有限门槛通过；7个相关scope/17个外层代际已独立核验清理，CPU/pids错误的零boot前序保留。[新程序默认/IO兼容复验](docs/RUNTIME_REQUALIFICATION.md)已另通过13个scope（含两租户各120次）；[新程序quota240/双活cold与故障矩阵](docs/QUOTA_REQUALIFICATION.md)也已另通过12个scope/34外层代际，保留离线核验器物理分配golden修正的完整说明。不是节点满载、uniqueRAM计费或生产就绪，历史522报告不替代新ELF证明。
+
+新增 [schema3快照与独立inode/字节压力](docs/NODE_SNAPSHOT_PRESSURE.md)：普通生产ELF不变，126592个空文件和8330301440字节预留分别触发准入拒绝，Stop/Cleanup与低free原盘cold普通回收通过；8相关scope/19外层代际独立核验清理。不是full RAM/OOM、硬件prepare并发轨迹或生产认证。
+
+新增 [真实准备许可入口校准](docs/NODE_PREPARE_TRACE.md)：保持生产 ELF 不变，9 个固定 entry-only uprobes 校验两个真实并发创建的 12 条去身份转换链；8 相关 scope/19 个 passing 代际和前序 1 个失败代际均独立审计回收，原生前序零 boot 单测失败也保留。仅校准，不冒充排队取消、持有 copy 时独立清理、精确线性化或 SLO 证明。
+
+新增 [原始排队取消与 held-copy 下独立停止、回收](docs/NODE_PREPARE_CANCELLATION.md)：相同生产 ELF 的15条实际转换确认取消者不取token，另一代16MiB workspace WRITE仍暂停时keeper完成执行停止及持久私有回收；后续两个原始请求都真实KVM Ready，最终全部quota/pins/池清零。8相关scope/19代际审计通过。本次单次观测约36ms停止、159ms回收，不是filesystem D、物理擦除或p99/SLO。
+
+新增 [owner删除后目录提交未返回的冷恢复](docs/OWNER_COMMIT_FIXTURE.md)：断电前owner名已消失，冷后原owner字节重新出现而quota清零保留；RECLAIMING/capacity503及普通回收/新真实guest/pins/GC通过。失败前序保留；不是全局catalog不阻塞或完整生产验收。
+
+新增 [未主动同步的部分复制宿主掉电](docs/PARTIAL_COPY_CUT_FIXTURE.md)：固定16MiB在途窗口原盘冷恢复通过；冷后workspace名消失、两目录8192字节/两inodes独立核账，普通回收/旧键拒绝/新真实guest与keeper pins通过。失败前序保留；不是介质错误或完整生产验收。
+
+新增 [部分workspace复制失败与存活keeper](docs/PARTIAL_COPY_FIXTURE.md)：真实16MiB前缀后一次TEST write EIO，普通GC/quota清零/旧key410、keeper pin/数据存活及同slot新代际复用通过，生产ELF未改；不是物理EIO或部分复制掉电验收。
 
 目前提供 `mock` 生命周期模拟，以及实验性 Linux/KVM `firecracker` 后端，均需显式选择。mock 没有 CPU、内存或网络隔离，不能执行不可信原生代码；真实后端的生产验收尚未完成。
 
@@ -39,6 +107,8 @@ Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 开发分支新增 [schema2快照catalog/服务接入](docs/CATALOG.md)，[私有umask修正后真实服务报告](docs/validation/kvm-umask-service-v1.json) 已通过10条有限检查，含5次实际恢复切换、锁下Stop/阻塞GC、活引用退役、SIGKILL恢复与丢失ownership拒删。新首命令成功626–742ms、旧执行停止648–761ms、旧代持久销毁725–812ms，仅为这5次同机观测，不是百分位、加速比或SLO；独立Create的3个样本为662–2579ms，不应只挑暖路径。默认schema1仍冷启动，[修正后新源码冷路径](docs/validation/kvm-umask-cold-v1.json) 另通过30项回归；另有[修正后初始化故障实机报告](docs/validation/kvm-umask-initialization-v1.json)：两个精确宿主崩溃屏障及三类ACK/epoch故障通过，均验证普通daemon恢复、旧创建键拒绝和完整私有回收。另有[guest内部故障测试镜像证据](docs/CATALOG.md)：未修改agent的部分初始化失败，以及明确标记为compiler-overlay的认领后标记前崩溃，均拒绝候选并回收。它们不代表完整故障矩阵；共享内存记账、持续负载与生产验收仍未完成。
 
 新增 [双租户快照负载与资源曲线](docs/MIXED_LOAD.md)：两租户各120次、246.267秒的有限混合闭环通过，分别观测首次新命令、旧host停止和持久回收；保留404个PSS/cgroup/mincore/私有盘样本及前次失败记录。共享驻留、映射和cgroup charge不能相加；这不是开放到达压测、公平调度、完整RAM计费或生产SLO，完整M4仍未完成。
+
+本轮新增[未完成control写入跨shutdown与实际退出的状态锁实机验收](docs/OPERATOR_SHUTDOWN.md)：两个旧guest分别观察host停止与private/quota0，真实5s控制关闭超时、run返回后第二个同普通daemon仍被kernel锁拒绝；仅放行退出后旧写入失效，原盘cold/fresh guest及三项共享回归通过。4个通过scope/8代，另保留1个失败L1与0硬件的runner输入错误；生产普通五个产物仍为4ee集合，Goal未完成、PR仍Draft。
 
 ## 已实现
 
@@ -173,6 +243,7 @@ python3 scripts/smoke.py \
 cmd/sandboxd          宿主机管理服务（mock / 实验性 Firecracker）
 cmd/sandboxctl        Unix-socket 客户端
 cmd/xandbox-keygen    私有令牌与摘要配置生成器
+cmd/xandbox-gateway   Linux 独立权限分离 TLS 接入（有限实机验收）
 cmd/xandbox-agent     Linux guest 专用执行组件
 cmd/xandbox-guestctl  Firecracker vsock 诊断客户端
 cmd/xandbox-warden    Linux 可信租约/硬截止监督进程

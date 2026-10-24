@@ -1,0 +1,34 @@
+work/quota-negative-source-v3.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/tagrace10/tagvet/rootPython43/CGO0 kernel filter proof
+...........................................
+----------------------------------------------------------------------
+Ran 43 tests in 0.029s
+
+OK
+bin/sandboxd-quota-negative-v3: 成功
+bin/xandbox-template-quota-negative-v3: 成功
+bin/xandbox-warden-quota-negative-v3: 成功
+bin/fixture-quota-negative-v3: 成功
+bin/builder-quota-negative-v3: 成功
+ab547783c9c9ba3651c4b6a0f8c6ca78803a31c0a1809eef97c8aa7284878cb6  bin/sandboxd-quota-negative-v3
+ace686422ffad4bc987d7a32f7b845a364022ff57900be7766fe7ac66a4824da  bin/xandbox-template-quota-negative-v3
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-negative-v3
+117f927031df85f8046f98ddc7f7d0ce595e88277612f7c95698f52c07945fb1  bin/fixture-quota-negative-v3
+882704f757dc756c8d577f39dde8785c29272712f2ab3eb366cb4d262943dc67  bin/builder-quota-negative-v3
+stage: separate fresh unenforced ext4 rejects ordinary daemon; NO L2 VM expected
+46213 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: ordinary daemon startup4 + prepare EDQUOT block/inode with restart/capacity + cold recovery3
+46213 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new fixture genuine snapshot quota/shared2 + snapshot coldboot3 regression
+46213 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new lock-fix default power3 regression
+46083 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new lock-fix default EIO/held-fsync4 regression
+46083 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+ordinary quota negative partial gate passed; quota I/O faults/full default runtime matrix still required

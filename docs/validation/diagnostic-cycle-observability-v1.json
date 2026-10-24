@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "scope": "test_harness_relative_cycle_observation_not_production_fix",
+  "original_ci_head": "ca500d31b2f75c70a2346c217da387f5d31b1772",
+  "original_ci": [
+    {
+      "run_id": 40059980655,
+      "event": "push",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120771264768,
+          "name": "ubuntu-24.04 / Go 1.25.x",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771264868,
+          "name": "macos-14 / Go 1.27.x",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771264885,
+          "name": "vulnerability-scan",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771264936,
+          "name": "linux-build",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771265019,
+          "name": "ubuntu-24.04 / Go 1.27.x",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771265077,
+          "name": "secret-scan",
+          "conclusion": "success",
+          "failed_steps": []
+        }
+      ],
+      "secret_all_four_steps_success": true
+    },
+    {
+      "run_id": 40059984042,
+      "event": "pull_request",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "id": 120771298210,
+          "name": "linux-build",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771298395,
+          "name": "secret-scan",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771298426,
+          "name": "ubuntu-24.04 / Go 1.25.x",
+          "conclusion": "failure",
+          "failed_steps": [
+            "Build and process smoke test"
+          ]
+        },
+        {
+          "id": 120771298498,
+          "name": "vulnerability-scan",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771298537,
+          "name": "macos-14 / Go 1.27.x",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "id": 120771298546,
+          "name": "ubuntu-24.04 / Go 1.27.x",
+          "conclusion": "success",
+          "failed_steps": []
+        }
+      ],
+      "secret_all_four_steps_success": true
+    }
+  ],
+  "original_private_failed_log_sha256": "827d02fe7f43233f2d99e79c20802ba30a6e21d6d4f93374e82835b14dbebcc2",
+  "actual_original_failure": {
+    "diagnostic_restart_cycle": 26,
+    "exit_status": 1,
+    "diagnostic_view": "closed",
+    "view_exit_status": 0,
+    "tail": [
+      {
+        "kind": "service_mock",
+        "reason": "other"
+      },
+      {
+        "kind": "process_stopped",
+        "reason": "other"
+      },
+      {
+        "kind": "collector_closed",
+        "reason": "other"
+      },
+      {
+        "kind": "service_mock",
+        "reason": "other"
+      },
+      {
+        "kind": "process_stopped",
+        "reason": "other"
+      },
+      {
+        "kind": "collector_closed",
+        "reason": "other"
+      }
+    ]
+  },
+  "old_tail_current_cycle_identity_unknown": true,
+  "exact_old_exit_cause": "unknown",
+  "native_harness_only_verification": {
+    "source_revision": "c1f83a28094f023632d62a02b858e87e89ce92ef",
+    "source_archive_sha256": "a4d27b0f41e09895ee6093e101ac1630a7707aaf762c8346618c2f140fbfa85b",
+    "go_sources_byte_equal_native_source": "9e4da26d1ec4bda9b678966e88c7adb0b3133965",
+    "actual_linux_python_count": 179,
+    "actual_linux_python_skips": 0,
+    "new_45_cycle_smoke_passed": true,
+    "runner_absent": true,
+    "raw_sha256": {
+      "readiness-cycle-native-v1.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "run-readiness-cycle-native-v1.sh": "7296efd537078d25b61a5e4704dd876244df091b208e6170f398a8ab93db482a",
+      "readiness-cycle-native-v1.pipeline.log": "4b314342fdffc687ede92b54dd38ba9d07bca65398c67ddd4a1c5c945e356cf1",
+      "readiness-cycle-native-python-v1.log": "cfdb3e044dd4ee5826852d0785807ccc7d31cd3ed815108fb5b09446ba50ad64",
+      "readiness-cycle-native-smoke-v1.log": "e4b1b228c4521806557a72701a574733a94dd5887975ca688797f8a98cf6a9b3"
+    },
+    "old_ca500_failure_cause_proved": false,
+    "production_program_fix_claimed": false
+  },
+  "preserved_gates": {
+    "exit_zero_within_seconds": 10,
+    "cycles": 45,
+    "final_records": 135,
+    "saturated_stdout_stderr_not_drained": true,
+    "nonzero_still_fails": true,
+    "no_absolute_record_identity_export": true
+  },
+  "pure_exit_controls": 13,
+  "offline_native_verifier_correction": {
+    "initial_wrong_expected_passed_key": true,
+    "source_exact_mock_output_schema_used_after_correction": true,
+    "original_raws_not_changed_or_rerun": true
+  },
+  "old_failure_fixed_claimed": false,
+  "earlier_a147_or_a161_causes_proved": false,
+  "production_ready": false,
+  "goal_complete": false
+}

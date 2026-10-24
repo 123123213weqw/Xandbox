@@ -1,0 +1,9 @@
+kvm-quota-barrier-old-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 1
+kvm-quota-barrier-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-barrier-syscalls-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-barrier-clear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-barrier-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-barrier-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-barrier-default-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL7 quota filesystem barrier fixture scopes independently rechecked;23 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.

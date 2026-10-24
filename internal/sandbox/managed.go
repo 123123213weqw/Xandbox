@@ -25,7 +25,15 @@ func (m *Manager) CreateManagedScoped(ctx context.Context, owner Owner, key stri
 	if admission == nil || key == "" || reserved == nil {
 		return Record{}, ErrInvalid
 	}
-	return m.createScoped(ctx, owner, key, req, admission, reserved)
+	return m.createScoped(ctx, owner, key, req, admission, reserved, nil)
+}
+
+// CreateReservedManagedScoped consumes an already accepted session ticket.
+func (m *Manager) CreateReservedManagedScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref), ticket *CreationTicket) (Record, error) {
+	if admission == nil || key == "" || reserved == nil || ticket == nil {
+		return Record{}, ErrInvalid
+	}
+	return m.createScoped(ctx, owner, key, req, admission, reserved, ticket)
 }
 
 func (m *Manager) ExecManagedScoped(tenant, id string, req ExecRequest, admission *Admission) (Job, error) {

@@ -1,0 +1,34 @@
+work/copy-cut-source-v2.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/fixture race10/vet/rootPython65/kernel filter3
+.................................................................
+----------------------------------------------------------------------
+Ran 65 tests in 0.140s
+
+OK
+bin/sandboxd-copy-cut-v2: 成功
+bin/xandbox-template-copy-cut-v2: 成功
+bin/xandbox-warden-copy-cut-v2: 成功
+bin/fixture-copy-cut-v2: 成功
+bin/builder-copy-cut-v2: 成功
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-copy-cut-v2
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-copy-cut-v2
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-copy-cut-v2
+4665498215c360c380a6e1d9bb43c0c96f9eaefe7afb0c454d966192d258e1aa  bin/fixture-copy-cut-v2
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-copy-cut-v2
+stage: fixed nested inflight
+47811 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested partial
+47811 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested snapshot
+47811 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: fixed nested clear
+47811 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: fixed nested syscalls
+47811 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+fixed unsynced partial-copy cut and related regressions passed; arbitrary metadata windows/node budgets/fullproduction unfinished

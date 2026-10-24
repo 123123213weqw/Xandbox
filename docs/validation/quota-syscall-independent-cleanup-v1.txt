@@ -1,0 +1,7 @@
+kvm-quota-syscall-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-syscall-clear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-syscall-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-syscall-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-syscall-default-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL5 fixed quota syscall errno fixture scopes independently rechecked;20 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.

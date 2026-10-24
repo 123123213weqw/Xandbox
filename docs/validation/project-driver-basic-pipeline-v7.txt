@@ -1,0 +1,24 @@
+work/project-driver-source-v7.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: NEW native full race3/vet/tagrace10/tagvet/rootPython40/nonrace kernel filter proof
+........................................
+----------------------------------------------------------------------
+Ran 40 tests in 0.027s
+
+OK
+bin/sandboxd-project-driver-v7: 成功
+bin/xandbox-warden-project-driver-v7: 成功
+bin/fixture-project-driver-v7: 成功
+1d66fc406491531e6372dd110e2d9ba8cee8b55ba6b3d27654999c69ec645ed6  bin/sandboxd-project-driver-v7
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-project-driver-v7
+1f4e345c1b6144f8f5a57bc3779f45aa4a629fcf7cf0282819d20ca96f83a18a  bin/fixture-project-driver-v7
+stage: NEW ordinary driver quota lifecycle3 + original-disk coldboot real KVM
+45842 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new runtime healthy default power3 regression
+45712 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new runtime default EIO/held-fsync4 regression
+45712 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+all project driver basic stages passed; full snapshot/negative/fault/default runtime matrix still required

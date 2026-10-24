@@ -6,6 +6,8 @@ filled. Runtime/guest images and private diagnostics stay OUTSIDE that volume.
 """
 import argparse
 import datetime
+import errno
+import socket
 import hashlib
 import http.client
 import itertools
@@ -30,6 +32,32 @@ def validate_host_stop_guard(value):
     if value != 0 and not 100 <= value <= 4000:
         raise ValueError('guard must be0(disabled) or100..4000ms')
     return value
+
+
+def validate_failed_fault_restart(code, stdout, stderr, expected_errno, before_probe, after_probe):
+    # A durable diagnostic record is not required on the very filesystem whose
+    # writes are failing. Never turn an unrelated bootstrap error or signal into
+    # a passing storage fault. errno is independently probed before AND after.
+    assert type(code) is int and code == 1 and stdout == b''
+    closed = {errno.EROFS: b'sandboxd: read-only file system\n',
+              errno.ENOSPC: b'sandboxd: no space left on device\n'}
+    assert expected_errno in closed and stderr in (b'', closed[expected_errno])
+    for probe in (before_probe, after_probe):
+        assert type(probe) is dict and set(probe) == {'errno', 'phase'}
+        assert type(probe['errno']) is int and probe['errno'] == expected_errno
+        assert probe['phase'] in ('open', 'write', 'fsync')
+    return 'closed_errno_stderr' if stderr else 'no_inherited_output'
+
+def no_unix_listener(path):
+    c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); c.settimeout(.5)
+    try:
+        c.connect(str(path))
+    except OSError as error:
+        assert error.errno in (errno.ENOENT, errno.ECONNREFUSED), 'unrelated failure is not listener absence'
+        return True
+    finally:
+        c.close()
+    raise AssertionError('failed restart exposed a tenant listener')
 
 
 def main():
@@ -300,12 +328,32 @@ def main():
             case['allocated_while_recovery_incomplete'] = 1
             case['no_false_durable_ack_or_capacity_release'] = True
             process.kill(); process.wait(timeout=10); process = None
+            # Observe the unchanged authoritative files and an actual errno
+            # on the exact owned fault volume, not a lossy log string. Socket
+            # names may be stale after SIGKILL; check listener absence, not just
+            # filesystem-name absence. No fixture authority cleanup/repair.
+            expected_errno = errno.EROFS if readonly else errno.ENOSPC
+            fault_before_restart = volume.probe(expected_errno)
+            authority_paths = [ledger, owner(ref), state / 'firecracker' / 'config.json',
+                               state / 'admission' / 'state.json', state / 'admission.identity',
+                               state / 'controller.lock', cfg, auth]
+            authority_snapshot = [(p, p.stat().st_ino, p.stat().st_mode, p.read_bytes()) for p in authority_paths]
             failed = subprocess.run(base, env=env, capture_output=True, timeout=15)
             (logs / (mode + '-' + workload + '-full-restart.log')).write_bytes(failed.stdout + failed.stderr)
-            expected_error = b'read-only file system' if readonly else b'no space left on device'
-            assert failed.returncode != 0 and expected_error in failed.stderr.lower()
-            case['restart_while_readonly_refused_with_erofs' if readonly else 'restart_while_full_refused_with_enospc'] = True
-            assert owner(ref).exists() and jail(ref).exists() and cgroup_empty(group(ref))
+            fault_after_restart = volume.probe(expected_errno)
+            visibility = validate_failed_fault_restart(failed.returncode, failed.stdout, failed.stderr,
+                                                       expected_errno, fault_before_restart, fault_after_restart)
+            for p, inode, file_mode, data in authority_snapshot:
+                assert (p.stat().st_ino, p.stat().st_mode, p.read_bytes()) == (inode, file_mode, data)
+            assert no_unix_listener(state / 'api.sock') and cgroup_empty(group(ref))
+            case['restart_while_controlled_fault_refused_without_false_recovery'] = True
+            case['failed_restart_original_authority_inode_mode_bytes_unchanged'] = True
+            case['failed_restart_no_live_tenant_listener'] = True
+            case['restart_fault_probe_before'] = fault_before_restart
+            case['restart_fault_probe_after'] = fault_after_restart
+            case['restart_closed_diagnostic_visibility'] = visibility
+            case['restart_cause_inferred_from_controlled_fault_and_same_input_recovery_not_durable_audit'] = True
+            assert owner(ref).exists() and jail(ref).exists()
             volume.release()
             process = start(); destroyed(ref)
             call('POST', '/v1/sandboxes', request, expected=410, key=key)

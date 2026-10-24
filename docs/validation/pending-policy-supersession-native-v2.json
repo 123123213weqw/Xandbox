@@ -1,0 +1,220 @@
+{
+  "version": 1,
+  "scope": "unconsumed_policy_supersession_native_software_and_managed_fixture_pure_controls_not_hardware_acceptance",
+  "runtime_go_source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+  "native_harness_source_revision": "617352753f4c32d2b57769c472db657977f64a89",
+  "source_archive_sha256": "db54abc21c7520793e759e382a9e7ce2eb0860fb7d8b7a5826f74e0f9c959b21",
+  "native_runner_sha256": "2f7251056d510b2d0a1793ca12cfd8b3fe205ce66e79f28f4ae84ec5319b4a66",
+  "toolchain": "go1.27.3",
+  "all_cmd_internal_mod_sum_unchanged_between_go_native_and_current_fixture_sources": true,
+  "source_files": {
+    "cmd/xandbox-install/main.go": "c20304c3a19fe2a645e305826074da956fae31e763b23205e7fdbd27d664a0e5",
+    "cmd/xandbox-install/main_test.go": "957ac1bcf000bf1a01aab22d1cd6886eb9da6d47aa376282b85dc65546487687",
+    "internal/gateway/config_linux.go": "6463ea4228d15bfe9a5db48e4285d43b11d4aaeca4446c0de8f64cd4022bf67d",
+    "internal/gateway/envelope_linux.go": "3482a2a19d21b4a08e4310a063d730f6abd5d1048b76f9ba3b53a2967b9b87ed",
+    "internal/gateway/recovery_linux.go": "cbfe479e5dc9a6d59c63acc0192aed5c0ef25180109d4b0072690a9e7403265c",
+    "internal/gateway/supersession_linux.go": "740175881232e07e4d3884097cf9a2c03535e2e5c5fc5a4ed940a60ae39d5ff8",
+    "internal/gateway/supersession_linux_test.go": "98dba49694f90604e0af0ddd61fa52e7e0870d3767073d7446ca037fc463ea42",
+    "internal/installtxn/engine_linux.go": "f3a18a208a01fe3e0c7e0c735882fae0dbe160af58a8c1399102216a80dbd9c1",
+    "internal/installtxn/recovery_linux.go": "aff7ab550b867582e8e6b32c8aa5718e317c1a1a77bfc43313a8ca12d6d2ae06",
+    "internal/installtxn/run_linux.go": "b54a0ff4a862c9972479ee92e782bbce92c3a50d2a07fd3598970a0fcff1a73f",
+    "internal/installtxn/run_other.go": "7bca7c18ce7469adac75c1d996c79cea303b75219668f5a8e5a0d4a7d7ce8223",
+    "internal/installtxn/supersession_crash_linux_test.go": "cb22eed467e94be07d991aee500b77d38a7468f6c4ddb25863856ebe7191ba84",
+    "internal/installtxn/supersession_linux.go": "eeae90468ea1947759e2ce040b0dc97f7075916df81ee67a7220e6e8cc25e99c",
+    "internal/installtxn/supersession_linux_test.go": "4c81180720b3e75582bc547ac58b59a44b2690551a706dbb009a8a2d3cb9b743"
+  },
+  "native_execution_harness_files": {
+    ".github/workflows/ci.yml": "36cf88f3aa158a277395631a6415d4356fd22f7971b7978d367fb249a58da8a1",
+    "scripts/build_systemd_host.py": "782ea24483cd1e67f0d15dfae504dce71a696eae0897f786eea1887cac960112",
+    "scripts/build_systemd_managed.py": "4f982ebd38f8a64af53a1fad50ca3d2d1596a527a1b1328b9225df69439d8a01",
+    "scripts/kvm_systemd_host.py": "eefd897cba5afe52c61d30a61bbd90a25503b4f45b54fc96d3fcc8c3dbd5a83e",
+    "scripts/managed_fixture_trace.py": "ac5ddab9272a6ce716afa4223437682569f24717ebf4fbbac454bccdd99c46ff",
+    "scripts/systemd_managed_guest.py": "3468dc8b3e39a84d3e9a83b21a9f33c146fb32a9504f2ba229299c9af7c69d2e",
+    "scripts/test_kvm_systemd_managed.py": "4926918c02b2deb4fa995aacd83fb2d60be4d703b3beaacbaca0b717eadeae2c"
+  },
+  "native_software": {
+    "original_terminal": 0,
+    "runner_absent": true,
+    "full_whole_package_command": "CGO_ENABLED=1 go test -p=4 -race -timeout=20m -count=3 ./...",
+    "whole_package_same_process_repetitions_preserved": true,
+    "installtxn_full_package_seconds": 953.137,
+    "focused_meaningful_parent_count": 17,
+    "focused_each_parent_repetitions": 3,
+    "empty_process_helper_excluded": [
+      "TestSupersessionCrashProcessHelper"
+    ],
+    "focused_parent_counts": {
+      "TestSupersessionClosedMetadataAndNoPredecessorStartup": 3,
+      "TestSupersessionRecoveryModeRequiresCommittedPreviousIntent": 3,
+      "TestConfirmExistingExactStateNeverCommitsCollectsOrServesExpiredPolicy": 3,
+      "TestSupersessionCrashProcessHelper": 3,
+      "TestSupersessionActualTestProcessDeathEveryBoundaryAndSourceFreeRetry": 3,
+      "TestSupersessionActualRecoverySettlementProcessCuts": 3,
+      "TestSupersessionFourProcessesExactAndCompetingRequests": 3,
+      "TestSupersessionMissingAbandonedSourcesKeepsUnconsumedEpochAndExactReceipt": 3,
+      "TestSupersessionEveryBoundaryRetriesExactAndFencesPredecessor": 3,
+      "TestSupersessionRepeatedUncommittedRequestsNeedNoAbandonedKeysOrHistory": 3,
+      "TestSupersessionRecoveryFutureIntentFencesBeforeOldJournalRemoval": 3,
+      "TestSupersessionCommittedReplacementCannotReuseEpochAndRecoveryConsumesIt": 3,
+      "TestSupersessionRejectsBadCASForeignInventoryAndFailedExistingStateProof": 3,
+      "TestSupersessionPriorSettlementCutDoesNotPretendNextRequestWasDeclared": 3,
+      "TestSupersessionReconcileDispatchPrecedesOldRecoveryAndOrdinaryMutatorsRefuse": 3,
+      "TestSupersessionOpaqueProposalDiscardRejectsInodeReplacement": 3,
+      "TestSupersessionOrdinaryLaterEpochConfirmsWithoutAdvancingAbandonedProposal": 3,
+      "TestFixedPendingReplacementCLIExplicitCASAndClosedErrors": 3
+    },
+    "returned_error_cuts": 19,
+    "actual_test_process_death_cuts": 19,
+    "actual_recovery_settlement_process_cuts": 3,
+    "recovery_settlement_callback_cuts": 5,
+    "each_cut_repetitions": 3,
+    "four_process_cas_groups": 2,
+    "vet_passed": true,
+    "tagged_host_deploy_install_managed_race_repetitions": 3,
+    "cgo_free_quota_repetitions": 3,
+    "static_pie_inputs_supplied": true,
+    "python_pure_tests": 247,
+    "python_skips": 0
+  },
+  "native_artifacts": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "6fbda0367f167d08337c495bd18d4bc7bdf4728f9a788440e0dc629b16120f92",
+    "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+    "xandbox-ingress-launch": "c5c9af860cd974536a999e3f4026cc1f89d606fd9826fc3a31c230918b2cb3da",
+    "xandbox-ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+    "deploy-helper": "1455c7989fa1f515febfe88cd338ef93bae0ff121f867f89c7436183c0ce9785",
+    "fixture": "521d36780f6a14913e2d2817e80144fce5c4d6c0af75b7c39edb6a9ce6611756",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568",
+    "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "releasestore.test": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3",
+    "xandbox-install": "8cb295e8d762597116862cd18dbd1723daa67538be31a35c6cf0122b9b8d284b",
+    "installtxn.test": "9658f1c515bf7b597b85297323bc36794edb93ca3b0feee23dfc04eb8fafc641",
+    "setup": "b6dc5fa2ccd12818ed0e8491a15c0b92a86e70242d8bb6b5c44c661390d8e0db",
+    "setup.test": "83c1709648888f95f00ef7d938825f024ab93033becfc1950ccb87e1d368f1b2",
+    "gateway.test": "6e36d7987cbc2acae7447c8807fc37bd68739ceceaafe3454c1e680171450492",
+    "policycontrol.test": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+    "managed-setup": "ea64e7bca2cf524a5f8f105d389a42b83d382bddb2aa11f16bdfe197db24c4f0",
+    "managed-setup.test": "d82cf93018f059684aa9bd4a4ab619d0202e9db62a6d603d6b9e68c1f859a1ca"
+  },
+  "native_raw_evidence": {
+    "pending-supersession-controls-first-v2.log": {
+      "bytes": 19631,
+      "sha256": "1ddb2f3d5e8d69959fe954553e5ffb48526ffd4837ef075517413510b30ffef2"
+    },
+    "pending-supersession-full-race-v2.log": {
+      "bytes": 2708,
+      "sha256": "b8f474c9dd723420c348f9c201ec29aa9bd128c2748fcd86c81ca9ac14240107"
+    },
+    "pending-supersession-controls-v2.log": {
+      "bytes": 58474,
+      "sha256": "6af984e7452948c33165135ecca044f310fdd879b73a28f3b54e9338be1dfeaa"
+    },
+    "pending-supersession-vet-v2.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pending-supersession-host-v2.log": {
+      "bytes": 70,
+      "sha256": "1cc880ca7c3e88a57f5e506677fe37304e78489041d08cc9ce433462ee9db647"
+    },
+    "pending-supersession-deploy-v2.log": {
+      "bytes": 72,
+      "sha256": "f253f89afe2d8d09a57b5a84bbd55c46ba7ba8ceec8914a498a77d490be531ae"
+    },
+    "pending-supersession-install-v2.log": {
+      "bytes": 73,
+      "sha256": "ed04f3411c16ceb390a72e321e191799c2a2280a61a53d16367b92017149f458"
+    },
+    "pending-supersession-managed-v2.log": {
+      "bytes": 73,
+      "sha256": "95895b03988bad6610e88a832cd66a1c239096a69df0b66d3602fc513cb656b8"
+    },
+    "pending-supersession-quota-v2.log": {
+      "bytes": 61,
+      "sha256": "54694bd2c30ad0f4776e0c036b2478e2b42a6ad244c784c53b5868e218af9a8c"
+    },
+    "pending-supersession-python-v2.log": {
+      "bytes": 347,
+      "sha256": "910c34ea4083d375859277a7ef187a4cf075c0805a3ea61cf91f9524b614d05a"
+    },
+    "pending-supersession-native-v2.sha256": {
+      "bytes": 1848,
+      "sha256": "16b35ec285ba2214b42d38509a49282693613937a678bc8baec9153df3059af1"
+    },
+    "pending-supersession-native-v2.status": {
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  },
+  "mac_software": {
+    "source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+    "full_race_repetitions": 3,
+    "vet_passed": true,
+    "log_sha256": "86deb3b2ec50aa5cc2f426ef439b54a8087886cd1b55987798b80a906ba6028e",
+    "cross_artifacts": {
+      "gateway.test": "6e36d7987cbc2acae7447c8807fc37bd68739ceceaafe3454c1e680171450492",
+      "installtxn.test": "9658f1c515bf7b597b85297323bc36794edb93ca3b0feee23dfc04eb8fafc641",
+      "managed-setup": "ea64e7bca2cf524a5f8f105d389a42b83d382bddb2aa11f16bdfe197db24c4f0",
+      "managed-setup.test": "d82cf93018f059684aa9bd4a4ab619d0202e9db62a6d603d6b9e68c1f859a1ca",
+      "policycontrol.test": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+      "xandbox-gateway": "6fbda0367f167d08337c495bd18d4bc7bdf4728f9a788440e0dc629b16120f92",
+      "xandbox-gateway-arm64": "4551335fb0e1a20b4070a64d1c475d46010aaf6757f51fa5522e844a49c60b53",
+      "xandbox-install": "8cb295e8d762597116862cd18dbd1723daa67538be31a35c6cf0122b9b8d284b",
+      "xandbox-install-arm64": "e282183b0d79c8f3eb2c2f4a9b590bf3fd8e565fb2e2fc5fb3e9021b8a00ae92"
+    },
+    "seven_amd64_cross_native_bytes_equal": true,
+    "arm64_compile_only_artifacts": 2
+  },
+  "previous_original_failure": {
+    "source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+    "source_archive_sha256": "c413f3f8cb29c86786941a9d5c59f28d629ed2742ba7d2b65ff5e40cf74b4fe6",
+    "terminal": 1,
+    "full_cumulative_package_alarm_seconds": 900.035,
+    "earlier_assertion_failure_reported": false,
+    "later_qualification_and_all23_builds_not_run": true,
+    "not_retagged_as_success": true
+  },
+  "measured_budget_basis": {
+    "baseline_race_once_roots": 63,
+    "baseline_zero_skips": true,
+    "baseline_package_seconds": 209.227,
+    "new_focused_once_package_seconds": 115.156,
+    "additive_three_repeat_estimate_seconds": 970,
+    "projection_is_not_qualification": true,
+    "package_alarm_seconds": 1200,
+    "ci_matrix_job_minutes": 25,
+    "no_test_drop_partition_detector_option_or_runtime_limit_relaxation": true,
+    "previous_incomplete_profile_skipped_one_required_input_and_is_not_qualified": true
+  },
+  "managed_two_case_fixture_pure_controls": {
+    "source_revision": "848b814aab2911f6d4c9bdf7347a657062a65c23",
+    "source_archive_sha256": "92d1297fb83241c65d5e387f6908f7017fed6a228d4351efb24f931733652047",
+    "cases": [
+      "populated-gate",
+      "active-stop"
+    ],
+    "linux_pure_tests": 249,
+    "linux_skips": 0,
+    "linux_log_sha256": "430310f5c13a976071d365b61e8961caa740df286e5201a63d3e716ed67cb3c7",
+    "mac_pure_tests": 249,
+    "mac_platform_skips": 5,
+    "mac_log_sha256": "06d0d34531e767edfed053d6f5b50f60103b9a0c9910da4d5642bbdb8f4ac5d5",
+    "actual_root_cli_ptrace_systemd_tls_kvm_cold_execution": false
+  },
+  "historical_validation_files_byte_unchanged": 627,
+  "limitations": {
+    "installer_manager_ack_effects_modeled": true,
+    "separate_real_gateway_state_confirmation_tests": true,
+    "actual_test_process_death_is_not_hardware_media_fault": true,
+    "root_cli_positive_kernel_empty_tls_kvm_supersession_accepted": false,
+    "remaining_liveness_gaps_resolved": false,
+    "partial_declaration_scratch_with_lost_source_still_fails_closed": true,
+    "production_ready": false,
+    "goal_complete": false
+  }
+}

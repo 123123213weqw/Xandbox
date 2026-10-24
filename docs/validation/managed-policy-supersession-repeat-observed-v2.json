@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "scope": "one_complete_named_unconsumed_repeat_supersession_root_cli_tls_kvm_original_disk_cold_case_not_full_cut_matrix",
+  "harness_source_revision": "91b294950a7dac9f117c03e9cd3496821b7fe393",
+  "runtime_go_source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+  "producer_native_source_revision": "0ba79e12f1ca369f9372c3f87791715341ccf3b2",
+  "source_archive_sha256": "94dbdee09ed1c6338084954b417984a36f25054d39a5e785c5e771c4ec853292",
+  "runner_sha256": "59f039535c682af180bab9de5a72247ec393c87a09a2375643f1f06adcfc39f7",
+  "original_terminal": 0,
+  "actual_complete_typed_case_qualified": true,
+  "l1_boots": 2,
+  "all23_current_artifacts_reverified": true,
+  "linux_python_pure_tests": 259,
+  "linux_python_skips": 0,
+  "mac_python_pure_tests": 259,
+  "mac_platform_skips": 5,
+  "mac_log_sha256": "67e12ac99fea811f7d4c225d9ca968c96d6ded4487b88e4c8c0094b2be8a34c9",
+  "native_software_evidence": "managed-policy-material-native-v2.json",
+  "deployment_assets_sha256": {
+    "daemon": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "gateway": "6fbda0367f167d08337c495bd18d4bc7bdf4728f9a788440e0dc629b16120f92",
+    "ingress": "c5c9af860cd974536a999e3f4026cc1f89d606fd9826fc3a31c230918b2cb3da",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "install": "8cb295e8d762597116862cd18dbd1723daa67538be31a35c6cf0122b9b8d284b",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "launcher": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+    "node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+    "release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "setup": "98d7d6093c18dadf5da13bf009beec5925ba23b0f42b795693f09ffc5ef66b3b",
+    "template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954"
+  },
+  "harness_files_sha256": {
+    "build_systemd_host.py": "8b686977d4a3ba7ab944c02e05be7b06bc3ec973573037a1618f499f891ec056",
+    "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+    "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+    "kvm_systemd_host.py": "03132f981835dc797014d845a3305e68842690193d2d8f28907b81bde9d4c746",
+    "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925",
+    "build_systemd_install.py": "6ba907f468195226b64295aea9637c5e674515a9ae53009a0696332d14a57b1d",
+    "build_systemd_deployment.py": "b318954ccb17e93a7666730d4704d34fa0e736cf9626a8331f8b08d7cc3af51d",
+    "build_systemd_managed.py": "914cd3ca13164dfaa0ceaf4ab81f63935d46322372e06375170a875587f5392b",
+    "systemd_managed_guest.py": "b049da9673a09576651b4e414ba6f34f71b40ba54192b9aa61b8d73b42f48274",
+    "managed_fixture_trace.py": "14ede8fe22d3c0713c73961e48ac405e87af01f780cdab25d39f5d312c6c4239",
+    "systemd_install_guest.py": "b89d3223fe0db0be444ac397b6364633bb99dfa4f299af8dbeff5f7047abef58",
+    "install_fixture_trace.py": "885463d8fd8a7ca7fa727649aafa680166728e78214324f997b55a895d8942a9",
+    "systemd_deployment_guest.py": "58c625a27ec0bf4bd8e78d86ce5876943f1e1beb9c74921ce770b21991a7b327",
+    "systemd_ingress_guest.py": "8049a2fc03f26a355d1c1d4097418d368f8bc240f4b1b74ba6e4bcb1a6de0b87",
+    "systemd_drain_probe.py": "6b15f7f084d6e28200cbf54128e241b6a7a85ae168f914af93493709cb3c1ee1"
+  },
+  "closed_operations": [
+    {
+      "boot": 1,
+      "managed-probe": {
+        "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+        "immutable_backend_auth_base_self_and_release": true,
+        "initial_capless_pending_gate_observation_preserved": true,
+        "maintenance_case": "supersession-repeat",
+        "managed_v2_exact_root_cli_and_24_target_commit": true,
+        "not_full_production_or_full_supersession_matrix_acceptance": true
+      },
+      "managed-checkpoint": {
+        "actual_supersession_a_killed_before_publication_source_and_proposal_data_lost": true,
+        "actual_supersession_b_settled_a_without_ack_and_consumed2_only_once": true,
+        "cold_checkpoint_same_busy_execution_continues_drained": true,
+        "drain_exact_retry_and_bad_cas_and_tenant_admin_refused": true,
+        "drained_stop_gc_and_quota_release": true,
+        "durable_drain_checkpoint_fsynced": true,
+        "durable_reclaim_observed_ms": 387.197413,
+        "entire_drain_commit_unchanged_across_maintenance": true,
+        "explicit_warm_root_resume_and_denied_keys_reusable": true,
+        "four_simultaneous_real_tls_kvm_guests_and_owner_refusals": true,
+        "fresh_policy3_tls_and_new_key_accepted_after_expected_401_close": true,
+        "maintenance_case": "supersession-repeat",
+        "managed_raw_exec_refused_and_versioned_session_exec_used": true,
+        "old_key_refused_on_existing_policy3_tls_transport_and_closed": true,
+        "ordinary_2_to_3_hot_rotation_old_token_refused_on_original_tls2_transport": true,
+        "ordinary_original_disk_checkpoint_fsynced": true,
+        "physical_stop_distinct_from_durable_reclaim_and_capacity": true,
+        "raw_session_switch_denied_without_metadata_growth": true,
+        "real_existing_session_and_writer_continue_while_drained": true,
+        "same_main_four_vmm_incarnations_boots_and_busy_writer_continue": true,
+        "source_absent_reconcile_and_bad_cas_no_service_restart": true,
+        "stop_observed_ms": 115.054491,
+        "unconsumed_file_and_runtime1_old_proposal2_expired_and_source_absent": true,
+        "warm_auto_restart_preserved_entire_drain_commit": true
+      }
+    },
+    {
+      "boot": 2,
+      "managed-probe": {
+        "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+        "immutable_backend_auth_base_self_and_release": true,
+        "initial_capless_pending_gate_observation_preserved": true,
+        "maintenance_case": "supersession-repeat",
+        "managed_v2_exact_root_cli_and_24_target_commit": true,
+        "not_full_production_or_full_supersession_matrix_acceptance": true
+      },
+      "managed-recover": {
+        "all_four_kernel_projects_and_private_generations_released": true,
+        "automatic_cold_tls_epoch3_no_operator_activation": true,
+        "cold_automatic_health_up_admission_remains_drained": true,
+        "cold_denied_raw_session_keys_reused_real_pristine_guests": true,
+        "cold_original_epoch_revision_request_preserved": true,
+        "cold_stale_cas_and_tenant_admin_refused": true,
+        "explicit_cold_root_resume_one_revision_exact_retry": true,
+        "installed_epoch3_and_source_absence_preserved": true,
+        "maintenance_case": "supersession-repeat",
+        "manager_clean_stop_removed_both_units_and_inputs": true,
+        "old_guest_recovered_and_quota_zero_while_drained": true,
+        "old_guest_recovered_no_implicit_resume_and_old_key_refused": true,
+        "original_disk_new_boot_same_machine": true
+      }
+    }
+  ],
+  "raw_evidence_sha256": {
+    "work/managed-new-case-supersession-repeat-v2.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "work/managed-new-case-supersession-repeat-v2-private/resource-receipt.json": "5b21b43a54a73bdc73249790cc665d480e2ebe118ef5ecae7708dc5ae84bb668",
+    "work/managed-new-case-supersession-repeat-v2-report.json": "c6b707935badd2f05c5303594dd7e72c42ec6d3f40363a5606a8c9fa703f8cdd",
+    "work/managed-new-case-supersession-repeat-v2-private/console-1.log": "e07131920f6117f9115549a9d656960ca246fe84070484f6b153ac7c0845bf06",
+    "work/managed-new-case-supersession-repeat-v2-private/private-cgroup-1.json": "c5a71dbc4e1d48a960a98e2e9978654962df055b847874f8d88c2c5a18affdb5",
+    "work/managed-new-case-supersession-repeat-v2-private/final-private-console.log": "8148d8987e50d6f53641fd0f9fd98b10212375a629a3ec4094d67ba0a0c4a868",
+    "work/managed-new-case-supersession-repeat-v2-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+    "work/managed-new-case-supersession-repeat-v2-private/launcher-2.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+    "work/run-managed-new-case-supersession-repeat-v2.sh": "59f039535c682af180bab9de5a72247ec393c87a09a2375643f1f06adcfc39f7",
+    "work/managed-new-case-supersession-repeat-v2-assets.json": "6baec9ae7c3021cd0fe9d76ef1a06a3ac9f50994add6a982b4ae698d3ff40127",
+    "work/managed-new-case-supersession-repeat-v2-root-pure.log": "927e92b90f6fbd32c028020ba76028ec23cacf8f298edbe4abe9323fa908bb28",
+    "work/managed-new-case-supersession-repeat-v2-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+  },
+  "independent_audit": {
+    "read_only": true,
+    "runner_absent": true,
+    "owned_outer_generations_absent": 2,
+    "all_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "receipt_sha256": "5b21b43a54a73bdc73249790cc665d480e2ebe118ef5ecae7708dc5ae84bb668"
+  },
+  "stop_observed_ms_n1": 115.054491,
+  "durable_reclaim_observed_ms_n1": 387.197413,
+  "bounded_private_observations": [
+    {
+      "event": "status",
+      "seconds": 1.404646
+    },
+    {
+      "event": "reconcile",
+      "seconds": 3.301105
+    },
+    {
+      "event": "status",
+      "seconds": 1.397652
+    },
+    {
+      "event": "status",
+      "seconds": 1.419058
+    },
+    {
+      "event": "status",
+      "seconds": 1.354143
+    },
+    {
+      "event": "rotation-proposal",
+      "seconds": 10.977361
+    },
+    {
+      "event": "supersession-proposal",
+      "seconds": 20.943953
+    },
+    {
+      "event": "verify",
+      "seconds": 0.017671
+    },
+    {
+      "event": "reconfigure",
+      "seconds": 0.089171
+    },
+    {
+      "event": "replace-pending-policy",
+      "seconds": 6.171227
+    },
+    {
+      "event": "reconcile",
+      "seconds": 2.737695
+    },
+    {
+      "event": "reconfigure",
+      "seconds": 5.654171
+    },
+    {
+      "owner_present": true,
+      "phase": "after-continuity",
+      "sandbox_ttl_remaining_ms": 184869.689,
+      "writer_age_ms": 40452.763
+    },
+    {
+      "event": "reconcile",
+      "seconds": 2.806121
+    },
+    {
+      "event": "recover-policy",
+      "seconds": 0.093843
+    },
+    {
+      "owner_present": true,
+      "phase": "after-sourcefree-cas",
+      "sandbox_ttl_remaining_ms": 181558.116,
+      "writer_age_ms": 43764.348
+    },
+    {
+      "owner_present": true,
+      "phase": "before-stop",
+      "sandbox_ttl_remaining_ms": 181069.826,
+      "writer_age_ms": 44252.594
+    },
+    {
+      "event": "reconcile",
+      "seconds": 2.763905
+    },
+    {
+      "event": "status",
+      "seconds": 1.445278
+    }
+  ],
+  "remaining_original45second_writer_budget_ms_at_before_stop_observation": 747.406,
+  "preserved_first_failure": "managed-policy-supersession-repeat-failed-v1.json",
+  "first_failure_cause_still_unproved": true,
+  "positive_diagnostic_run_not_retroactive_cause_proof": true,
+  "limitations": {
+    "known_fixture_data_loss_not_media_fault_or_memory_erasure": true,
+    "not_independent_visible_supersession_or_hot1_to2_case_acceptance": true,
+    "not_full_supersession_cut_or_runtime_or_slo_matrix": true,
+    "trace_durations_not_production_maintenance_latency_slo": true,
+    "new_blocking_observer_and_stronger_immediate_pre_stop_predicates_not_qualified_by_this_older_source": true,
+    "production_ready": false,
+    "goal_complete": false
+  }
+}

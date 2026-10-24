@@ -1,0 +1,12 @@
+kvm-quota-commit-eio-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-commit-preclear-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-commit-postclear-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-commit-reserve-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-commit-syscalls-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-commit-clear-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-quota-commit-snapshot-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-quota-commit-io-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-commit-default-io-private-v2 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-quota-commit-eio-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 1
+ALL10 quota filesystem commit fault fixture scopes independently rechecked;29 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.

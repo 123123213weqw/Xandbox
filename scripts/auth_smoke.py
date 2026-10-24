@@ -10,6 +10,7 @@ import tempfile
 import time
 
 from smoke import UnixHTTP
+from process_exit import require_clean_exit
 
 
 def main():
@@ -17,6 +18,7 @@ def main():
     parser.add_argument("--daemon", required=True)
     parser.add_argument("--cli", required=True)
     parser.add_argument("--keygen", required=True)
+    parser.add_argument("--node", required=True)
     args = parser.parse_args()
     daemon, cli, keygen = [str(Path(p).resolve()) for p in (args.daemon, args.cli, args.keygen)]
     checks = []
@@ -153,7 +155,7 @@ def main():
                 assert list((state / "instances").iterdir()) == []
                 checks.append("SIGKILL + restart retains tenant ownership and idempotency tombstones without resurrection")
                 process.terminate()
-                assert process.wait(timeout=10) == 0
+                require_clean_exit(process, args.node, state)
                 process = None
                 logs = (root / "daemon.log").read_text()
                 assert not any(token in logs for token in tokens.values())

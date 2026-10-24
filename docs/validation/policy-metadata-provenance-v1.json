@@ -1,0 +1,424 @@
+{
+  "status": "finite_actual_bounded_policy_inventory_and_real_interrupted_orphan_gc_with_refusal_probes_and_new_gateway_regression_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_m4": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source_revision": "c402ecc2be82fda0de15053714a5f37a54030dc8",
+  "source_archive": {
+    "name": "policy-metadata-source-v1.tar.gz",
+    "sha256": "df2a134e7a1368954329ccd12ee9c2bc84f3982d06171350987ccbfda1790038",
+    "bytes": 1937536
+  },
+  "changed_inputs": {
+    "cmd/xandbox-host-fixture/node_tls_policy_inventory_linux.go": {
+      "sha256": "44680cb7aee686de484b3e0be962aca3da766e177d3aa785d73fe23a03a9702d",
+      "bytes": 6800
+    },
+    "cmd/xandbox-host-fixture/node_tls_policy_linux.go": {
+      "sha256": "e9b45255ad06f1b8051c55b04d4e0f9ea0b87b7a6c6871d1f4706440fc579320",
+      "bytes": 23208
+    },
+    "cmd/xandbox-host-fixture/node_tls_policy_linux_test.go": {
+      "sha256": "c394e4334284a9ab2301de26835e0dfa20e57d77d6eb892282c42a3218df171d",
+      "bytes": 7039
+    },
+    "cmd/xandbox-host-fixture/node_tls_policy_notify_linux.go": {
+      "sha256": "c8077171d627d28521e65ad576df41c85f682b91b046e1a8d621f92f9afa6809",
+      "bytes": 17953
+    },
+    "internal/gateway/state_inventory_linux.go": {
+      "sha256": "bc75b9e221e2ea07990abeb00b5e5d41f6130962d7dd8b51c6229b947586ff66",
+      "bytes": 6875
+    },
+    "internal/gateway/state_inventory_linux_test.go": {
+      "sha256": "e294e5292b98073552ae37b931aa786e8c9c211599b24781ab263e2ef7af801b",
+      "bytes": 8661
+    },
+    "internal/gateway/state_linux.go": {
+      "sha256": "94ee2792f18044b6e507e0733bb7241417ca54af76c5d0e0e70f47f50b0a87da",
+      "bytes": 7508
+    },
+    "internal/gateway/state_orphan_linux_test.go": {
+      "sha256": "428017a53f7303ea27d894d2b5f644e905416fcea2a50da91501933ce79d2c44",
+      "bytes": 1731
+    },
+    "scripts/kvm_nested_host.py": {
+      "sha256": "8433f54216ae966e47cb6b4d4f05c9f277d25b93e0162904592c84ba4621993a",
+      "bytes": 110346
+    },
+    "scripts/test_kvm_tls_policy.py": {
+      "sha256": "9ea55fc8a8b49f8f526cb6766a65977955c8d1ad7fc72b3a5b4a39a79285e5a9",
+      "bytes": 3871
+    },
+    "go.mod": {
+      "sha256": "f71439d7c2332632fc2c35b694ff6b98a1a0af35307517fd1936f804c87a2810",
+      "bytes": 261
+    },
+    "go.sum": {
+      "sha256": "eae41579a1200dd75cc394a61944d2255153c015e23227fde325e8c5b700d2dd",
+      "bytes": 968
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "2fc057fcff142bb51f4baf75ad655c953e29315f614146a9f6347b9dd6b72f22",
+      "bytes": 4831
+    }
+  },
+  "changed_production_inputs": {
+    "internal/gateway/state_linux.go": {
+      "sha256": "94ee2792f18044b6e507e0733bb7241417ca54af76c5d0e0e70f47f50b0a87da",
+      "bytes": 7508
+    },
+    "internal/gateway/state_inventory_linux.go": {
+      "sha256": "bc75b9e221e2ea07990abeb00b5e5d41f6130962d7dd8b51c6229b947586ff66",
+      "bytes": 6875
+    }
+  },
+  "ordinary_daemon_auth_lifecycle_and_go_mod_sum_workflow_unchanged": true,
+  "ordinary_five_artifacts_byte_exact_to_prior4ee": true,
+  "new_production_gateway_not_certified_by_old241ca": true,
+  "native_artifacts_sha256": {
+    "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "xandbox-gateway": "555b9974239d74ea2cde60d024e402b10d4b8e1bb13a89c9b680e83fa69893bd",
+    "fixture": "9920ad3b2b6dce684b1ac995ff0a76afe7cd38ba829c418128e8845e0a1d7aaf",
+    "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+  },
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_cgo": false,
+  "fixed_logical_policy_inventory_budgets": {
+    "max_orphans": 8,
+    "max_total_entries": 11,
+    "max_logical_bytes": 8192,
+    "max_bytes_per_orphan": 1024,
+    "max_names_returned_before_reject": 12,
+    "policy_record_bytes": 4096,
+    "identity_bytes": 1024,
+    "lock_bytes": 0,
+    "physical_allocated_block_quota_or_io_time_bound": false
+  },
+  "collection_contract": "Original exclusive lock and pinned directory FD. Snapshot CAS before GC; complete bounded inventory validation before any unlink. Only private single-link recognized complete schema temps, no authority inferred from a temp. Revalidate bytes/inode, directory-relative Unlinkat, checked dir.Sync on removals. Same exact replay can collect without rewriting authority. Unknown/malformed/overbudget refuse unchanged. Entire directory erase/malicious root not defended.",
+  "before_native_regression": {
+    "old_frozen_source_revision": "83d949ec423531ff08f65cd2904031f24732ab58",
+    "old_source_archive_sha256": "6702001326d4fcfe779b2f552718af354cdafa43519b74e117a77c3da2bf5f48",
+    "identical_test_sha256": "428017a53f7303ea27d894d2b5f644e905416fcea2a50da91501933ce79d2c44",
+    "actual_native_go_test_race_exit": 1,
+    "expected_failures": 2,
+    "failure": "authorized commit retained orphan metadata",
+    "source_override_is_only_new_test": true,
+    "unit_owned_temporary_filesystem_not_hardware_failure_or_real_authority_patch": true
+  },
+  "actual_frozen_gates": {
+    "linux_full_race": 3,
+    "linux_vet": true,
+    "fixture_race": 10,
+    "fixture_vet": true,
+    "root_python": 111,
+    "root_python_skips": 0,
+    "cgo0_kernel_quota": 3,
+    "mock_objects": 6,
+    "darwin_full_race": 3,
+    "darwin_vet": true,
+    "darwin_log": {
+      "sha256": "dee4857af0fb7701323aedf2f84e7143732b60c0824b1e5dda4ec73c53f46f41",
+      "bytes": 1743
+    },
+    "independent_frozen_cross_native7_exact": true
+  },
+  "new_actual_hardware": {
+    "passing_scopes": 4,
+    "outer_generations": 8,
+    "pre_file_real_orphan_and_negative_inventory_boots": 2,
+    "post_commit_boots": 2,
+    "healthy_tls_regression_boots": 2,
+    "normal_node_budget_regression_boots": 2,
+    "failed_runs_for_this_source": 0,
+    "real_guest_generations_per_fault_scope": 3,
+    "before_cold_actual_orphans_pre": 1,
+    "before_cold_actual_orphans_post": 0,
+    "after_ordinary_start_orphans": 0
+  },
+  "fault_checkpoints": {
+    "pre": {
+      "actual_held_temp_or_rename_inventory_checked_after_root_kill_and_before_cold": true,
+      "child_heartbeat_watchdog_closes_tls_while_root_notification_valid": true,
+      "cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut": true,
+      "delete_to_durable_private_quota0_observed_ms": 393.126,
+      "delete_to_execution_empty_observed_ms": 64.623,
+      "directory_fsync_entries": 0,
+      "exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked": true,
+      "file_fsync_entries": 1,
+      "filesystem_d_or_physical_media_fault_claim": false,
+      "fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog": true,
+      "held_to_child_gone_observed_ms": 2286.217,
+      "hold_bound_ms": 20000,
+      "independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold": true,
+      "operator_config2_input_synced_no_policy_authority_fixture_patch": true,
+      "ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue": true,
+      "other_continue_submissions": 7,
+      "other_continue_while_held": 0,
+      "policy_memfd_entries": 0,
+      "policy_orphans_before_cold": 1,
+      "policy_revision_before_cold": 1,
+      "production_slo_or_all_policy_windows_claim": false,
+      "real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404": true,
+      "root_actually_sigkill_reaped_target_enoent_on_still_open_listener": true,
+      "target_continue_or_errno_replies": 0
+    },
+    "post": {
+      "actual_held_temp_or_rename_inventory_checked_after_root_kill_and_before_cold": true,
+      "child_heartbeat_watchdog_closes_tls_while_root_notification_valid": true,
+      "cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut": true,
+      "delete_to_durable_private_quota0_observed_ms": 501.05,
+      "delete_to_execution_empty_observed_ms": 63.005,
+      "directory_fsync_entries": 1,
+      "exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked": true,
+      "file_fsync_entries": 1,
+      "filesystem_d_or_physical_media_fault_claim": false,
+      "fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog": true,
+      "held_to_child_gone_observed_ms": 2631.377,
+      "hold_bound_ms": 20000,
+      "independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold": true,
+      "operator_config2_input_synced_no_policy_authority_fixture_patch": true,
+      "ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue": true,
+      "other_continue_submissions": 9,
+      "other_continue_while_held": 0,
+      "policy_memfd_entries": 1,
+      "policy_orphans_before_cold": 0,
+      "policy_revision_before_cold": 2,
+      "production_slo_or_all_policy_windows_claim": false,
+      "real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404": true,
+      "root_actually_sigkill_reaped_target_enoent_on_still_open_listener": true,
+      "target_continue_or_errno_replies": 0
+    }
+  },
+  "fault_recovery": {
+    "pre": {
+      "all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed": true,
+      "current_revision2_verified_tls_leaf2_new_key200_old_key401": true,
+      "foreign_symlink_and_skipped_revision_refused_without_orphan_or_authority_mutation": true,
+      "no_policy_ledger_owner_control_authority_repair_by_fixture": true,
+      "old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc": true,
+      "ordinary_gateway_policy_inventory_named_only_before_new_tls_guest": true,
+      "ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival": true,
+      "original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked": true,
+      "policy_orphans_after_ordinary_start": 0,
+      "policy_revision_before_start": 1,
+      "post_commit_revision2_old_config1_refused_and_exact_replay": false,
+      "pre_file_old_revision1_then_production_commit2": true
+    },
+    "post": {
+      "all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed": true,
+      "current_revision2_verified_tls_leaf2_new_key200_old_key401": true,
+      "foreign_symlink_and_skipped_revision_refused_without_orphan_or_authority_mutation": false,
+      "no_policy_ledger_owner_control_authority_repair_by_fixture": true,
+      "old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc": true,
+      "ordinary_gateway_policy_inventory_named_only_before_new_tls_guest": true,
+      "ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival": true,
+      "original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked": true,
+      "policy_orphans_after_ordinary_start": 0,
+      "policy_revision_before_start": 2,
+      "post_commit_revision2_old_config1_refused_and_exact_replay": true,
+      "pre_file_old_revision1_then_production_commit2": false
+    }
+  },
+  "inventory_probe_boundary": "After exact root SIGKILL/reap, pre temp inode/payload directly compared to kernel-held target, original disk cold revalidates its private name/hash/size. Only own foreign entry/symlink are staged then removed as negative debris; skipped revision3 is operator INPUT, not authority. Each actual root exit1 POLICY_STATE/no listener preserves full private inventory incl real temp/authority. Production normal start then removes real orphan and establishes2. Post has zero orphan, actual oldconfig1 refusal and exact replay2 unchanged.",
+  "cold_and_lifecycle_boundary": "No fixture policy journal/identity/lock/ledger/control/owner repair, nor synthetic runtime policy temp. Explicit private operator clients observe/clean accepted work, not a tenant fallback. Real Delete-to-execution-empty and private absence/actual ledger DESTROYED/quota0 separate. Both old guests GC/controller reaped before receipt/cut; cleanup may sync filesystem. Not unsynced physical-media loss. Cold ordinary processes without extra notification layer, current leaf2/new200/old401/keys410/fresh third KVM/fullGC.",
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "current_runner_terminal_exit": 0,
+    "current_and_previous_runner_absent": true,
+    "no_supplemental_cleanup": true,
+    "scopes": [
+      {
+        "mode": "pre",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "post",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "tls",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "budget",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      }
+    ]
+  },
+  "private_raw_archive": {
+    "name": "policy-metadata-reports-v1.tar.gz",
+    "sha256": "baa81dc63c38093e28dfe6470515b4f1876df60440d38312f94cb918028c9911",
+    "bytes": 11654,
+    "regular_members": 15
+  },
+  "private_raw_members": {
+    "kvm-policy-metadata-pre-v1.json": {
+      "sha256": "a1c078f879c982794c23205dbb99ba181b5a01c86f9a93882137c33950fe487b",
+      "bytes": 9511
+    },
+    "kvm-policy-metadata-post-v1.json": {
+      "sha256": "95ed1034e32471d90a7954e10283b9a6f0e36f20f470903ad3893ecfcf4de191",
+      "bytes": 9517
+    },
+    "kvm-policy-metadata-tls-v1.json": {
+      "sha256": "199dc58a70231c4a6d2f85ba6ac8915ee7c12503ddcbc9e9947b8687a80e9b47",
+      "bytes": 9527
+    },
+    "kvm-policy-metadata-budget-v1.json": {
+      "sha256": "cfc4f19f025232257938ee2cc8265bd1e7f93a88b1f7b69d60f66fb3bf6f715d",
+      "bytes": 7847
+    },
+    "policy-metadata-race-v1.log": {
+      "sha256": "d889568f17a32a9cad6159807873f627b6c1f35da59ea7bcb3b60b717ec231bf",
+      "bytes": 1903
+    },
+    "policy-metadata-vet-v1.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "policy-metadata-fixture-v1.log": {
+      "sha256": "2ccfb4e0927b32dca6070abd55a24a9f645feb5878610d6c14cfe2faeca0c8ee",
+      "bytes": 70
+    },
+    "policy-metadata-fixture-vet-v1.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "policy-metadata-filter-v1.log": {
+      "sha256": "0106d1a96cd9a52a76c969826050d70025c7ff5866315293ff2b05c254113014",
+      "bytes": 846
+    },
+    "policy-metadata-python-v1.log": {
+      "sha256": "3930823b9173627f12a6ea2eecea1f7d82bb824b0d093df4b1bd6f7b73ab7649",
+      "bytes": 211
+    },
+    "policy-metadata-smoke-v1.log": {
+      "sha256": "cb5c4abeb9921954bec29a404655e34b04431b0d2811e446bdcb7af90201ebee",
+      "bytes": 6752
+    },
+    "policy-metadata-v1.status": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "policy-metadata-v1.pipeline.log": {
+      "sha256": "8776eae43bf87140f08db19ce732ec5fe36e435a7f66a4527c7d223b54fbbb66",
+      "bytes": 1340
+    },
+    "policy-metadata-artifacts-v1.sha256": {
+      "sha256": "efc6082dabd1b5c84b6aead415eeea232866a2328bd33bc8fef83801593ece11",
+      "bytes": 709
+    },
+    "run-policy-metadata-v1.sh": {
+      "sha256": "874fbb4d5d3dfdf37219d4d71ae23ce7b592188f7470dc658b377bda68772002",
+      "bytes": 5890
+    }
+  },
+  "offline_verifier": {
+    "actually_executed": true,
+    "negative_mutations_rejected": 88,
+    "script_sha256": "176d9d2b0906f0962ea1ebb2f2368629b23669244b733a6cb4e117f6a83dfe17",
+    "source_artifact_native_cross_archives_gates_report_types_budgets_and_privacy_bound": true
+  },
+  "unchanged_historical_manifests": {
+    "runtime4ee-provenance-v1.json": {
+      "sha256": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+      "bytes": 19942
+    },
+    "node-budget-provenance-v2.json": {
+      "sha256": "3631506494adc4ec7ffae2db915b2205d9b5940d962bef7f06453b2f5875de5d",
+      "bytes": 12566
+    },
+    "operator-store-provenance-v1.json": {
+      "sha256": "0d6edce5036415afd72402afc6247c821b9938cf5ce097f9b8e68f6426eb200e",
+      "bytes": 8736
+    },
+    "node-operator-provenance-v4b.json": {
+      "sha256": "239715994379cc7940a869374b7057ffd8353123212c20a21191355bb156a5e8",
+      "bytes": 13841
+    },
+    "session-ticket-provenance-v2.json": {
+      "sha256": "ac87bf851705024898455d63ede87784016ad09f49d2039519c8c0266522c01d",
+      "bytes": 14221
+    },
+    "operator-shutdown-provenance-v3.json": {
+      "sha256": "028d911010f71752c22bc75cf37476c90a02d0a3cedcc4fc5ee9974ff2276170",
+      "bytes": 17626
+    },
+    "tls-gateway-provenance-v3.json": {
+      "sha256": "d9eb8a913cef6c282d31c3b7b5a26b11fdea29ee68595ace8d2adf4ba205237a",
+      "bytes": 25781
+    },
+    "tls-gateway-bootstrap-provenance-v4.json": {
+      "sha256": "508b104439081029e67a2a0478c190b643d0085ba533036aac98b7e942d5609e",
+      "bytes": 13509
+    },
+    "tls-policy-provenance-v1.json": {
+      "sha256": "667c3ffd13310144847883cf8a306fe0e6b156252d3ed6e5fe98ab0bd5b5eb62",
+      "bytes": 16892
+    }
+  },
+  "limitations": [
+    "11 entries/8KiB are logical admission/read budgets and native unit boundary evidence, not filesystem allocated-block/inode/journal quota, hostile-root protection, full storage pressure or an I/O deadline. Hardware observes one genuine orphan and three selected refusal probes, not every count/byte combination.",
+    "Only complete recognizable temporary records can be collected. Partial/corrupt/unknown or overbudget directories fail closed; no automatic authority repair or reset. Remaining bootstrap/GC-unlink/GC-dirSync/identity/media commit fault windows unqualified.",
+    "Held-to-child disappearance, explicit Delete-to-execution empty and private GC/quota0 use different origins, finite N1 with sampling/readback. No watchdog speedup, percentile, fairness or production SLO.",
+    "Global physical disk/cgroup/log/archive bounds, structured durable audit/alerts, PKI/backend authority lifecycle, operator/systemd, long load and backup/upgrade/rollback/fullM1-M4 remain incomplete. PR stays draft and Goal active.",
+    "Old83d/241ca four-scope reports and original TLS/bootstrap failures remain unchanged under their own source. New555b has its own actual four-scope qualification; no legacy report retagging."
+  ],
+  "publication": {
+    "raw_hardware_reports_copied_byte_exact": true,
+    "mock_results_decoded_unchanged": true,
+    "native_before_control_copied_byte_exact": true,
+    "private_raw_archive_retained_not_public": true,
+    "no_keys_certs_receipts_console_actual_temp_names_or_process_identities_exported": true
+  },
+  "public_inputs": {
+    "kvm-policy-metadata-pre-v1.json": {
+      "sha256": "a1c078f879c982794c23205dbb99ba181b5a01c86f9a93882137c33950fe487b",
+      "bytes": 9511
+    },
+    "kvm-policy-metadata-post-v1.json": {
+      "sha256": "95ed1034e32471d90a7954e10283b9a6f0e36f20f470903ad3893ecfcf4de191",
+      "bytes": 9517
+    },
+    "kvm-policy-metadata-tls-v1.json": {
+      "sha256": "199dc58a70231c4a6d2f85ba6ac8915ee7c12503ddcbc9e9947b8687a80e9b47",
+      "bytes": 9527
+    },
+    "kvm-policy-metadata-budget-v1.json": {
+      "sha256": "cfc4f19f025232257938ee2cc8265bd1e7f93a88b1f7b69d60f66fb3bf6f715d",
+      "bytes": 7847
+    },
+    "policy-metadata-independent-cleanup-v1.json": {
+      "sha256": "ff66b41023cc6cc55fc5710055884e10f40c58957f431f29099b90651a23d10b",
+      "bytes": 734
+    },
+    "policy-metadata-native-artifacts-v1.txt": {
+      "sha256": "83499dddbc0522c903859a8add1ed7b1a482a46e0ac1e281cadf144d3b7a4460",
+      "bytes": 548
+    },
+    "policy-metadata-mock-derived-v1.json": {
+      "sha256": "999f07320bf773c6a3cd47c65daa0f47d08de6f8529a3740823fd70e3295d3ee",
+      "bytes": 5310
+    },
+    "policy-metadata-before-native-v1.txt": {
+      "sha256": "8be2a2c6ac48327615e4c931ea396f8f23d3732649ec00ce3ea45519e8ac2df2",
+      "bytes": 698
+    },
+    "policy-metadata-pipeline-v1.txt": {
+      "sha256": "8ea431e16e9f7c217a8174b073fc052237287e441f944506645036a9f4073572",
+      "bytes": 3105
+    }
+  }
+}

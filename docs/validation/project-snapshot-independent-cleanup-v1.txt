@@ -1,0 +1,5 @@
+kvm-project-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-project-snapshot-cold-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-project-snapshot-default-power-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-project-snapshot-default-state-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL4 snapshot-driver fixture scopes independently rechecked; 17 execution generations absent; read-only audit, no cleanup actions. Private quota record zero-usage proofs came from actual L1 readback, not this post-deletion path audit.

@@ -1,0 +1,378 @@
+{
+  "version": 1,
+  "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+  "source_archive_sha256": "9b99bb7a0190b213f299bc3a559277d2ceecafb0e17e44d5143dcd5ea693d120",
+  "production_ready": false,
+  "goal_complete": false,
+  "live_trace_pressure_and_cancel_scopes": 2,
+  "named_boundary_scopes": 10,
+  "all_fresh_scopes": 12,
+  "outer_generations_independently_absent": 24,
+  "independent_read_only_audit": {
+    "actually_read_only": true,
+    "batch": "boundaries",
+    "runner_terminal_status": 0,
+    "runner_absent": true,
+    "scope_count": 12,
+    "outer_generations_absent": 24,
+    "owned_loop_bindings_absent": 0,
+    "no_supplemental_cleanup": true,
+    "not_absolute_escape_or_all_machine_inventory": true,
+    "scopes": [
+      {
+        "name": "pressure",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "prepare",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "owner",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "inflight",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "operator",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "shutdown",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "ticket",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "control-pre",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "control-post",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "tls-pre",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "tls-post",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "tls",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      }
+    ]
+  },
+  "artifacts_sha256": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "xandbox-launch": "26f35a3df792fb4044b559d8dcbd4e74933105281d24c8f0b0666eb53415588e",
+    "fixture": "320109a433802b3d415f2dc1e6b179c60234af81d720999fa4408d18ee9f9c53",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "reports": {
+    "pressure": {
+      "original_name": "kvm-fiveb-boundaries-pressure-v1.json",
+      "original_sha256": "4da7d062c6e7e9e14722c8a63818e85d1d8a00c10560b07541ebe089b2c22329",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "prepare": {
+      "original_name": "kvm-fiveb-boundaries-prepare-v1.json",
+      "original_sha256": "599f70717c05bd0d55afa1aca3ed80327ac98d9059e331209c0a94bb2a16971f",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "owner": {
+      "original_name": "kvm-fiveb-boundaries-owner-v1.json",
+      "original_sha256": "63a650d60c347123f54559453b4b84c8f05fc9ecb81859d5179c923a04d6b612",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "inflight": {
+      "original_name": "kvm-fiveb-boundaries-inflight-v1.json",
+      "original_sha256": "8a4494f8f59c96ff086f86ec43953353602d36b1ed5fb9dae52df18d8ff93756",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "operator": {
+      "original_name": "kvm-fiveb-boundaries-operator-v1.json",
+      "original_sha256": "922db91fc4e64d0b6b46f42c137652c14deb22e5486aec0a1466d3fc615de12f",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "shutdown": {
+      "original_name": "kvm-fiveb-boundaries-shutdown-v1.json",
+      "original_sha256": "f8edac8c75721d1a0dfea3d527ab6ee37174ef7808047080af9a05f7302257a7",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "ticket": {
+      "original_name": "kvm-fiveb-boundaries-ticket-v1.json",
+      "original_sha256": "a13b3ab4bbc1bd548d40e99646eae67caa008573b00fd0f73bc222de39620b56",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "control-pre": {
+      "original_name": "kvm-fiveb-boundaries-control-pre-v1.json",
+      "original_sha256": "68407f101f90864ed7a4384a3358f410b7cec185b107049bcfd73a6b76f273be",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "control-post": {
+      "original_name": "kvm-fiveb-boundaries-control-post-v1.json",
+      "original_sha256": "75c988b8fff120ab2db1136ba3e225da86bd4670407752c1220b38a274647cd8",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "tls-pre": {
+      "original_name": "kvm-fiveb-boundaries-tls-pre-v1.json",
+      "original_sha256": "e1893bec6dea71284e32fc09afb720f440639e585fbb42584bada4e43f1e01cc",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "tls-post": {
+      "original_name": "kvm-fiveb-boundaries-tls-post-v1.json",
+      "original_sha256": "8dd07307f7b8d29cd97998d0fde7b6dd31365a0e88a711dec3a27d2033dde62e",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    },
+    "tls": {
+      "original_name": "kvm-fiveb-boundaries-tls-v1.json",
+      "original_sha256": "7af7b1aa048c009ab6466d687a6eebc1ec603c28c4cc17d5d6840a2f2798fe3a",
+      "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+      "l1_boots": 2,
+      "cases": 1
+    }
+  },
+  "actual_live_prepare_calibration": {
+    "all_eight_cpu_loss_counters_zero": true,
+    "calibration_only": true,
+    "completed_preparations": 2,
+    "entry_probe_only_no_uretprobe_or_user_memory_read": true,
+    "event_count": 12,
+    "exact_channel_linearization_or_latency_slo_claim": false,
+    "exact_ordinary_elf_sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "first_selected_token_observed_before_second_dispatch": true,
+    "instruction_entry_probes": 9,
+    "live_daemon_incarnation_inode_control_and_event_tgid_checked": true,
+    "normalized_transitions": [
+      {
+        "goroutine_index": 1,
+        "point": "enter"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "selected"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "ok"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "node_ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "enter"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "release"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "released"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "selected"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "node_ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "release"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "released"
+      }
+    ],
+    "queued_request_cancellation_and_cleanup_isolation_claim": false,
+    "second_actual_gate_entry_inside_first_held_interval": true
+  },
+  "actual_live_cancellation": {
+    "all_four_projects_zero_pins_zero_pools_idle": true,
+    "cancelled_key410_durable_destroyed_pools_baseline_no_backend_resources": true,
+    "continue_is_not_write_completion": true,
+    "exact_copy_stage_timing_scheduler_fairness_or_slo_claim": false,
+    "filesystem_D_or_physical_media_fault_claim": false,
+    "held_continue_response_count": 1,
+    "held_workspace_prefix_bytes": 16777216,
+    "held_write_to_continue_reply_observed_ms": 248.570788,
+    "hold_deadline_ms": 20000,
+    "holder_request_to_ready_observed_ms": 2227.901072,
+    "http_budget_ms_unchanged": 40000,
+    "keeper_delete_to_execution_domain_empty_observed_ms": 37.077618,
+    "keeper_delete_to_full_reclaim_observed_ms": 173.696563,
+    "keeper_holder_and_two_queued_frontend_allocated_four_fifth503": true,
+    "keeper_stop_cleanup_durable_destroyed_project_zero_while_write_still_held": true,
+    "observed_daemon_reaped_and_ordinary_daemon_restarted": true,
+    "original_queued_http_cancelled_without_token": true,
+    "other_continue_replies_during_keeper_cleanup": 28,
+    "prepare_timeout_ms_unchanged": 30000,
+    "real_nested_kvm": true,
+    "schema3_exact_prepare_workers_one": true,
+    "survivor_original_requests_ready_real_guests_independent_boots_clean_workspace": true,
+    "survivor_request_to_ready_observed_ms": 2732.442058,
+    "trace": {
+      "all_eight_cpu_loss_counters_zero": true,
+      "all_nine_probe_hits_equal_trace": true,
+      "cancelled_waiters_without_token": 1,
+      "completed_preparations": 2,
+      "event_count": 15,
+      "exact_channel_linearization_or_slo_claim": false,
+      "exact_ordinary_elf_sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+      "instruction_entry_probes": 9,
+      "live_incarnation_inode_control_event_tgid_checked": true,
+      "normalized_transitions": [
+        {
+          "goroutine_index": 1,
+          "point": "enter"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "selected",
+          "selected_case": 0
+        },
+        {
+          "goroutine_index": 1,
+          "point": "ok"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "node_ok"
+        },
+        {
+          "goroutine_index": 2,
+          "point": "enter"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "enter"
+        },
+        {
+          "goroutine_index": 2,
+          "point": "selected",
+          "selected_case": 1
+        },
+        {
+          "goroutine_index": 2,
+          "point": "cancel"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "release"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "released"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "selected",
+          "selected_case": 0
+        },
+        {
+          "goroutine_index": 3,
+          "point": "ok"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "node_ok"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "release"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "released"
+        }
+      ]
+    },
+    "two_queued_actual_gate_entries_no_backend_owner_jail_group": true
+  },
+  "limitations": [
+    "Fresh12 scopes only; not systemd TLS installer/catalog deployment or full Goal/production acceptance.",
+    "Healthy and specifically named notification/media/partial-copy scenarios only, not any physical failure or secure erase.",
+    "Exact ELF entry probes do not prove precise channel linearization, fairness or production SLO.",
+    "Original reports remain bound to frozen7fc and ordinary5bfb/newfixture320, not retagged old datasets.",
+    "Raw receipt/console/runtime identities and credentials remain private."
+  ],
+  "combined_runtime25_plus_this12_read_only_audit": {
+    "actually_read_only": true,
+    "two_terminal_runners_absent": true,
+    "scope_count": 37,
+    "globally_unique_nested_generations_absent": 67,
+    "owned_loop_bindings_absent": 4,
+    "all_original_receipt_hashes_unchanged": true,
+    "all_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "not_absolute_escape_or_all_machine_inventory": true
+  }
+}

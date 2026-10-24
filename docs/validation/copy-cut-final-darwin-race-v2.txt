@@ -1,0 +1,24 @@
+go version go1.27.3 darwin/arm64
+frozen_compiled_source=25423a68dc96a1330ea6c73a47990d86857f0436
+?   	github.com/123123213weqw/Xandbox/cmd/sandboxctl	[no test files]
+ok  	github.com/123123213weqw/Xandbox/cmd/sandboxd	1.737s
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-guestctl	[no test files]
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-keygen	[no test files]
+?   	github.com/123123213weqw/Xandbox/cmd/xandbox-template	[no test files]
+ok  	github.com/123123213weqw/Xandbox/internal/access	1.571s
+ok  	github.com/123123213weqw/Xandbox/internal/client	1.859s
+ok  	github.com/123123213weqw/Xandbox/internal/firecracker	30.494s
+ok  	github.com/123123213weqw/Xandbox/internal/fixturewire	2.012s
+ok  	github.com/123123213weqw/Xandbox/internal/guest	2.987s
+ok  	github.com/123123213weqw/Xandbox/internal/guestbridge	4.866s
+ok  	github.com/123123213weqw/Xandbox/internal/guestinit	2.384s
+ok  	github.com/123123213weqw/Xandbox/internal/guestwire	2.547s
+ok  	github.com/123123213weqw/Xandbox/internal/hostclock	3.027s
+ok  	github.com/123123213weqw/Xandbox/internal/httpapi	7.843s
+ok  	github.com/123123213weqw/Xandbox/internal/lease	1.832s
+ok  	github.com/123123213weqw/Xandbox/internal/observability	1.753s
+ok  	github.com/123123213weqw/Xandbox/internal/privatefile	1.749s
+ok  	github.com/123123213weqw/Xandbox/internal/sandbox	23.623s
+ok  	github.com/123123213weqw/Xandbox/internal/session	12.667s
+ok  	github.com/123123213weqw/Xandbox/internal/strictjson	1.315s
+ok  	github.com/123123213weqw/Xandbox/internal/telemetry	1.815s

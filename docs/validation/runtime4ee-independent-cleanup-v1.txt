@@ -1,0 +1,30 @@
+kvm-runtime4ee-default-cold-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-runtime4ee-default-snapshot-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-runtime4ee-io-snapshot-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-runtime4ee-default-initialization-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-runtime4ee-default-machine-id-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-runtime4ee-default-before-marker-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-runtime4ee-io-cold-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-runtime4ee-io-readonly-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-runtime4ee-default-readonly-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-runtime4ee-default-storage-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-runtime4ee-default-power-private-v1 all_exact_own_roots_control_cgroups_absent True l1_execution_generations 4
+kvm-runtime4ee-quota-negative-private-v1 all_exact_own_roots_control_cgroups_absent True l1_execution_generations 4
+kvm-runtime4ee-quota-unenforced-private-v1 all_exact_own_roots_control_cgroups_absent True l1_execution_generations 1
+ALL13 full-matrix fixture scopes independently rechecked; cold runtime/cgroup now from early private receipt plus actual controller path, not only finally assertion. Four own loop bindings absent; nine L1 execution generations absent; read-only audit, no cleanup actions.
+No private source export or unrelated PID/UID/cgroup/mount/loop is removed or adopted by this audit.
+kvm-runtime4ee-quota-mixed-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-loss-reserve-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-loss-release-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-syscalls-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-runtime4ee-quota-eio-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-preclear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-postclear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-reserve-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-clear-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 2
+kvm-runtime4ee-quota-snapshot-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 4
+kvm-runtime4ee-quota-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+kvm-runtime4ee-quota-default-io-private-v1 all_owned_roots_control_cgroups_absent True execution_generations 5
+ALL12 node-quota and shared-harness fixture scopes independently rechecked;34 execution generations absent;read-only audit,no cleanup actions.
+Quota/owner, injected syscall and recovery evidence was read inside L1 before owned disk deletion,not inferred from this final path audit.
+COMPLETE25 exact owned scopes; four own loop bindings and43 outer generations absent; readonly audit with no cleanup actions.
