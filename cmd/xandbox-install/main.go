@@ -7,16 +7,18 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/installtxn"
 )
 
 type operations struct {
-	apply     func(context.Context, string, uint64, string) (installtxn.Result, error)
-	reconcile func(context.Context, string) (installtxn.Result, error)
-	status    func(context.Context) (installtxn.Result, error)
-	verify    func(context.Context) error
+	apply       func(context.Context, string, uint64, string) (installtxn.Result, error)
+	reconcile   func(context.Context, string) (installtxn.Result, error)
+	status      func(context.Context) (installtxn.Result, error)
+	verify      func(context.Context) error
+	reconfigure func(context.Context, string, uint64, string) (installtxn.Result, error)
 }
 
 func run(args []string, out, errout io.Writer, op operations) int {
@@ -28,6 +30,13 @@ func run(args []string, out, errout io.Writer, op operations) int {
 	switch {
 	case len(args) == 7 && args[0] == "apply" && args[1] == "-plan" && args[2] != "" && args[3] == "-expected-revision" && args[4] == "0" && args[5] == "-request-id":
 		v, e = op.apply(ctx, args[2], 0, args[6])
+	case len(args) == 7 && args[0] == "reconfigure" && args[1] == "-plan" && args[2] != "" && args[3] == "-expected-revision" && args[5] == "-request-id":
+		expected, err := strconv.ParseUint(args[4], 10, 64)
+		if err != nil || expected == 0 || expected == ^uint64(0) || strconv.FormatUint(expected, 10) != args[4] || op.reconfigure == nil {
+			io.WriteString(errout, "xandbox-install: fixed reconfiguration arguments required\n")
+			return 1
+		}
+		v, e = op.reconfigure(ctx, args[2], expected, args[6])
 	case len(args) == 3 && args[0] == "reconcile" && args[1] == "-request-id":
 		v, e = op.reconcile(ctx, args[2])
 	case len(args) == 1 && args[0] == "status":
@@ -49,5 +58,5 @@ func run(args []string, out, errout io.Writer, op operations) int {
 	return 0
 }
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, operations{installtxn.Apply, installtxn.Reconcile, installtxn.Status, installtxn.Verify}))
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, operations{apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure}))
 }

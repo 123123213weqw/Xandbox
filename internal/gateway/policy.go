@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/netip"
 	"strconv"
@@ -29,6 +30,9 @@ const MaxLeases = 16
 const LeaseLifetime = 45 * time.Second
 const RequestTimeout = 40 * time.Second
 const ConnectionLifetime = 90 * time.Second
+
+// ManagedPolicyPath is an opt-in v2 composition input, never a tenant path.
+const ManagedPolicyPath = "/etc/xandbox-install/gateway-policy.json"
 
 // ClientKey is operator input. BackendToken is a different, private credential
 // of the existing controller; external keys can rotate without restarting VMs.
@@ -55,6 +59,18 @@ type Snapshot struct {
 	PrivateKeyPEM  string      `json:"private_key_pem"`
 	Keys           []ClientKey `json:"keys"`
 }
+
+// SnapshotDigest is the bounded canonical snapshot digest used by both durable
+// policy CAS and operator ACK observations, not a digest of a raw payload file.
+func SnapshotDigest(s Snapshot) (string, error) {
+	b, e := json.Marshal(s)
+	if e != nil || len(b) > MaxSnapshotBytes {
+		return "", errors.New("invalid canonical gateway snapshot")
+	}
+	h := sha256.Sum256(b)
+	return hex.EncodeToString(h[:]), nil
+}
+
 type credential struct {
 	digest               [32]byte
 	tenant, backend      string

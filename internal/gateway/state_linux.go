@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/123123213weqw/Xandbox/internal/policycontrol"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
@@ -40,10 +41,17 @@ func digestJSON(v any) string {
 	return hex.EncodeToString(x[:])
 }
 func gatewayBinding(c Config, authority []byte) string {
-	return digestJSON(struct {
+	legacy := digestJSON(struct {
 		UID, GID                                                                                uint32
 		Listen, ServerName, EmptyRoot, TenantSocket, BackendAuthFile, StateDir, AuthoritySHA256 string
 	}{c.UID, c.GID, c.Listen, c.ServerName, c.EmptyRoot, c.TenantSocket, c.BackendAuthFile, c.StateDir, digestJSON(json.RawMessage(authority))})
+	if c.Version == 1 {
+		return legacy
+	}
+	return digestJSON(struct {
+		Version                                                        int
+		Legacy, ManagedPolicyFile, OperatorSocket, InitialPolicySHA256 string
+	}{c.Version, legacy, c.ManagedPolicyFile, policycontrol.OperatorSocket, c.InitialPolicySHA256})
 }
 func openPolicyState(dir, binding string) (out *policyState, err error) {
 	if !filepath.IsAbs(dir) || filepath.Clean(dir) != dir || len(binding) != 64 {
@@ -206,7 +214,11 @@ func (s *policyState) atomic(name, prefix string, v any) error {
 // Commit happens BEFORE exposing a new snapshot. An unacknowledged attempted
 // policy may become durable; rollback/reuse of its revision is never allowed.
 func (s *policyState) Commit(snapshot Snapshot) error {
-	next := policyRecord{Version: 1, Revision: snapshot.Epoch, SnapshotSHA256: digestJSON(snapshot)}
+	digest, e := SnapshotDigest(snapshot)
+	if e != nil {
+		return e
+	}
+	next := policyRecord{Version: 1, Revision: snapshot.Epoch, SnapshotSHA256: digest}
 	if s.record.Revision == 0 {
 		if next.Revision != 1 {
 			return errors.New("fresh gateway policy must start at revision1")

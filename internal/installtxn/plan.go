@@ -15,6 +15,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/ingresslaunch"
 	"github.com/123123213weqw/Xandbox/internal/launch"
+	"github.com/123123213weqw/Xandbox/internal/policycontrol"
 	"github.com/123123213weqw/Xandbox/internal/releasestore"
 	"github.com/123123213weqw/Xandbox/internal/serviceready"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -58,6 +59,7 @@ type Plan struct {
 	Gateway         firecracker.Asset     `json:"gateway"`
 	Certificate     firecracker.Asset     `json:"certificate"`
 	PrivateKey      firecracker.Asset     `json:"private_key"`
+	Policy          *firecracker.Asset    `json:"policy,omitempty"`
 	DevicePath      string                `json:"device_path"`
 	Frontend        launch.Frontend       `json:"frontend"`
 	Parent          launch.ParentEnvelope `json:"parent"`
@@ -100,6 +102,24 @@ type Result struct {
 	ProductionReady   bool   `json:"production_ready"`
 }
 
+type RotationPlan struct {
+	Version int               `json:"version"`
+	Policy  firecracker.Asset `json:"policy"`
+}
+
+func DecodeRotation(raw []byte) (RotationPlan, error) {
+	var p RotationPlan
+	if len(raw) == 0 || len(raw) > MaxPlan || strictjson.Decode(raw, &p) != nil || p.Version != 1 || !canonical(p.Policy.Path) || !digestPattern.MatchString(p.Policy.SHA256) {
+		return p, ErrPolicy
+	}
+	for _, root := range []string{Root, DataRoot, UnitDir, "/usr/libexec"} {
+		if inside(p.Policy.Path, root) {
+			return p, ErrPolicy
+		}
+	}
+	return p, nil
+}
+
 func encode(v any) []byte {
 	b, e := json.Marshal(v)
 	if e != nil {
@@ -114,11 +134,23 @@ func canonical(p string) bool {
 func inside(p, dir string) bool { return p == dir || strings.HasPrefix(p, dir+"/") }
 func Decode(raw []byte) (Plan, error) {
 	var p Plan
-	if len(raw) == 0 || len(raw) > MaxPlan || strictjson.Decode(raw, &p) != nil || p.Version != 1 || p.ReleaseRevision == 0 || !digestPattern.MatchString(p.Release) || !devicePattern.MatchString(p.DevicePath) {
+	if len(raw) == 0 || len(raw) > MaxPlan || strictjson.Decode(raw, &p) != nil || (p.Version != 1 && p.Version != 2) || p.ReleaseRevision == 0 || !digestPattern.MatchString(p.Release) || !devicePattern.MatchString(p.DevicePath) {
 		return p, ErrPolicy
 	}
+	inputs := []firecracker.Asset{p.Self, p.Backend, p.Auth, p.Gateway}
+	if p.Version == 1 {
+		if p.Policy != nil {
+			return p, ErrPolicy
+		}
+		inputs = append(inputs, p.Certificate, p.PrivateKey)
+	} else {
+		if p.Policy == nil || p.Certificate != (firecracker.Asset{}) || p.PrivateKey != (firecracker.Asset{}) {
+			return p, ErrPolicy
+		}
+		inputs = append(inputs, *p.Policy)
+	}
 	paths := map[string]bool{}
-	for i, a := range []firecracker.Asset{p.Self, p.Backend, p.Auth, p.Gateway, p.Certificate, p.PrivateKey} {
+	for i, a := range inputs {
 		if !canonical(a.Path) || !digestPattern.MatchString(a.SHA256) || paths[a.Path] || inside(a.Path, Root) || inside(a.Path, DataRoot) || inside(a.Path, UnitDir) || (i != 0 && inside(a.Path, "/usr/libexec")) {
 			return p, ErrPolicy
 		}
@@ -180,6 +212,14 @@ func render(p Plan, device string, art map[string]Artifact) (map[string][]byte, 
 		return nil, ErrPolicy
 	}
 	main = strings.Replace(main, needle, "Type=exec\nExecStartPre="+SelfPath+" verify\nExecStart=", 1)
+	if p.Version == 2 {
+		line := "ReadWritePaths=" + policyDir + "\n"
+		if strings.Count(ingress, line) != 1 || strings.Count(ingress, "Type=exec\n") != 1 {
+			return nil, ErrPolicy
+		}
+		ingress = strings.Replace(ingress, line, "ReadWritePaths="+policyDir+" "+policycontrol.OperatorDirectory+"\n", 1)
+		ingress = strings.Replace(ingress, "Type=exec\n", "Type=exec\nRuntimeDirectory=xandbox-ingress-control\nRuntimeDirectoryMode=0700\nRuntimeDirectoryPreserve=no\n", 1)
+	}
 	return map[string][]byte{launchPath: encode(n), ingressPath: encode(g), readyPath: encode(r), UnitDir + "/" + MainUnit: []byte(main), UnitDir + "/" + IngressUnit: []byte(ingress)}, nil
 }
 

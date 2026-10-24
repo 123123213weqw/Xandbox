@@ -104,6 +104,14 @@ func reconcile(ctx context.Context, f *filesystem, request string, manager servi
 	if e == nil {
 		e = f.verifyTransaction(ctx, t)
 	}
+	if e == nil && t.Plan.Version == 2 {
+		_, p, err := f.effectivePolicy(t, true)
+		if err != nil {
+			e = err
+		} else if p.Revision != 1 {
+			e = ErrConflict
+		}
+	}
 	if e == nil {
 		e = f.removeIntent(t)
 	}
@@ -111,8 +119,26 @@ func reconcile(ctx context.Context, f *filesystem, request string, manager servi
 	if e != nil {
 		return zero, e
 	}
-	if e = manager.reconcile(ctx); e != nil {
+	if t.Plan.Version == 2 {
+		managed, ok := manager.(managedServiceManager)
+		if !ok {
+			return zero, ErrPlatform
+		}
+		e = managed.reconcileManaged(ctx)
+	} else {
+		e = manager.reconcile(ctx)
+	}
+	if e != nil {
 		return zero, e
+	}
+	if t.Plan.Version == 2 {
+		yes, e := f.policyReceipt(ctx, t, manager, true)
+		if e != nil {
+			return zero, e
+		}
+		if !yes {
+			return zero, ErrPlatform
+		}
 	}
 	// A manager success without a fresh on-disk proof is not a durable receipt.
 	unlock, e = f.existingLock(ctx, false)
@@ -130,17 +156,45 @@ func reconcile(ctx context.Context, f *filesystem, request string, manager servi
 	if e = f.verifyTransaction(ctx, t); e != nil {
 		return zero, e
 	}
-	result := fileCommitted(t)
+	result, e := f.committedResult(t)
+	if e != nil {
+		return zero, e
+	}
+	if t.Plan.Version == 2 {
+		yes, e := f.policyReceipt(ctx, t, manager, false)
+		if e != nil {
+			return zero, e
+		}
+		if !yes {
+			return zero, ErrPlatform
+		}
+	}
 	result.ManagerReconciled = true
 	return result, nil
 }
 func Reconcile(ctx context.Context, request string) (Result, error) {
+	if !requestPattern.MatchString(request) {
+		return Result{}, ErrPolicy
+	}
 	f, e := systemFS()
 	if e != nil {
 		return Result{}, e
 	}
 	defer f.root.Close()
-	return reconcile(ctx, f, request, systemManager{f, f.managerCommand})
+	manager := systemManager{f, f.managerCommand}
+	unlock, e := f.existingLock(ctx, false)
+	if e != nil {
+		return Result{}, e
+	}
+	t, e := f.readTransaction("commit")
+	unlock()
+	if e != nil {
+		return Result{}, e
+	}
+	if t.Plan.Version == 2 && request != t.RequestID {
+		return reconcileRotation(ctx, f, request, manager)
+	}
+	return reconcile(ctx, f, request, manager)
 }
 func Status(ctx context.Context) (Result, error) {
 	var zero Result
@@ -159,12 +213,13 @@ func (f *filesystem) status(ctx context.Context, manager serviceManager) (Result
 		return zero, e
 	}
 	defer unlock()
-	if e = f.rootInventory(true); e != nil {
-		return zero, e
-	}
 	t, e := f.readTransaction("commit")
 	if errors.Is(e, unix.ENOENT) {
-		if _, e = f.readTransaction("intent"); e != nil {
+		var pending transaction
+		if pending, e = f.readTransaction("intent"); e != nil {
+			return zero, e
+		}
+		if e = f.rootInventory(pending.Plan.Version, true); e != nil {
 			return zero, e
 		}
 		return Result{Version: 1}, nil
@@ -175,8 +230,14 @@ func (f *filesystem) status(ctx context.Context, manager serviceManager) (Result
 	if e = f.verifyTransaction(ctx, t); e != nil {
 		return zero, e
 	}
-	result := fileCommitted(t)
+	result, e := f.committedResult(t)
+	if e != nil {
+		return zero, e
+	}
 	result.ManagerReconciled, e = manager.current(ctx)
+	if e == nil && result.ManagerReconciled && t.Plan.Version == 2 {
+		result.ManagerReconciled, e = f.policyReceipt(ctx, t, manager, false)
+	}
 	return result, e
 }
 func restrictGate() error {

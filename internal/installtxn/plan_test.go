@@ -70,3 +70,62 @@ func TestRenderedCompositionHasOneGateBeforeOriginalLauncher(t *testing.T) {
 		t.Fatal("dependency changed")
 	}
 }
+
+func TestManagedPlanIsExplicitAndKeepsLegacyRenderUnchanged(t *testing.T) {
+	p := samplePlan()
+	p.Version = 2
+	p.Policy = &firecracker.Asset{Path: "/bootstrap/policy.json", SHA256: strings.Repeat("b", 64)}
+	p.Certificate = firecracker.Asset{}
+	p.PrivateKey = firecracker.Asset{}
+	if _, e := Decode(encode(p)); e != nil {
+		t.Fatal(e)
+	}
+	for _, mutate := range []func(*Plan){func(p *Plan) { p.Policy = nil }, func(p *Plan) { p.Certificate = samplePlan().Certificate }, func(p *Plan) { p.PrivateKey = samplePlan().PrivateKey }, func(p *Plan) { a := *p.Policy; a.Path = Root + "/policy.json"; p.Policy = &a }, func(p *Plan) { p.Version = 1 }, func(p *Plan) { a := *p.Policy; a.Path = p.Auth.Path; p.Policy = &a }} {
+		bad := p
+		mutate(&bad)
+		if _, e := Decode(encode(bad)); e == nil {
+			t.Fatal("mixed/retargeted managed plan")
+		}
+	}
+	art := map[string]Artifact{}
+	for _, role := range roles {
+		art[role] = Artifact{role, strings.Repeat("a", 64), 10}
+	}
+	v2, e := render(p, "1:1", art)
+	if e != nil {
+		t.Fatal(e)
+	}
+	v1, e := render(samplePlan(), "1:1", art)
+	if e != nil {
+		t.Fatal(e)
+	}
+	managed := string(v2[UnitDir+"/"+IngressUnit])
+	legacy := string(v1[UnitDir+"/"+IngressUnit])
+	for _, line := range []string{"RuntimeDirectory=xandbox-ingress-control\n", "RuntimeDirectoryMode=0700\n", "RuntimeDirectoryPreserve=no\n", "ReadWritePaths=" + policyDir + " /run/xandbox-ingress-control\n"} {
+		if strings.Count(managed, line) != 1 {
+			t.Fatal("missing fixed managed directive")
+		}
+	}
+	if strings.Contains(legacy, "RuntimeDirectory=") || strings.Contains(legacy, "xandbox-ingress-control") {
+		t.Fatal("legacy composition changed")
+	}
+}
+
+func TestRotationPlanClosedAndCannotSelectInstallationTargets(t *testing.T) {
+	p := RotationPlan{Version: 1, Policy: firecracker.Asset{Path: "/bootstrap/snapshot.json", SHA256: strings.Repeat("b", 64)}}
+	if _, e := DecodeRotation(encode(p)); e != nil {
+		t.Fatal(e)
+	}
+	for _, path := range []string{Root + "/policy.json", DataRoot + "/anything", UnitDir + "/any.service", "/usr/libexec/source", "relative", "/bootstrap/../elsewhere"} {
+		bad := p
+		bad.Policy.Path = path
+		if _, e := DecodeRotation(encode(bad)); e == nil {
+			t.Fatal("unbounded rotation input source")
+		}
+	}
+	for _, raw := range [][]byte{[]byte(`{"version":1,"version":1}`), append(encode(p), []byte(`{}`)...), append(bytes.TrimSuffix(encode(p), []byte("}\n")), []byte(`,"unknown":1}`)...), bytes.Repeat([]byte(" "), MaxPlan+1)} {
+		if _, e := DecodeRotation(raw); e == nil {
+			t.Fatal("unclosed rotation plan")
+		}
+	}
+}

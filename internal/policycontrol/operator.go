@@ -1,5 +1,5 @@
-// Package policycontrol provides a bounded, local operator transport for future
-// gateway activation. No current command starts it or depends on this package.
+// Package policycontrol provides a bounded local operator transport. The opt-in
+// managed gateway composition binds it separately from the tenant/child protocol.
 package policycontrol
 
 import (
@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-// Reserved for the future installed-node operator. The current gateway and
-// installer do NOT start this endpoint or support managed reconfiguration yet.
+// Fixed local endpoint of the managed gateway composition, never tenant input.
 const OperatorDirectory = "/run/xandbox-ingress-control"
 const OperatorSocket = OperatorDirectory + "/operator.sock"
 const OperatorPacketLimit = 1024

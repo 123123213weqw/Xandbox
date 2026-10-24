@@ -56,8 +56,8 @@ type Server struct {
 	wg          sync.WaitGroup
 }
 
-// Listen is deliberately not called by any current command. A future root
-// supervisor must first hold its exclusive durable policy-state lock, retain it
+// Listen requires the root supervisor to hold its exclusive durable policy-
+// state lock first, retain it
 // until Close returns, and arrange the dedicated private runtime directory.
 // It cannot select a tenant-facing address, path or protocol through this API.
 func Listen(initial PolicyStatus) (*Server, error) {

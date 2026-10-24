@@ -38,3 +38,24 @@ func TestFixedCLIAndNoSensitiveErrorOutput(t *testing.T) {
 		t.Fatal("result maturity inflated")
 	}
 }
+
+func TestFixedReconfigurationCLIRevisionAndClosedOutput(t *testing.T) {
+	calls := 0
+	op := operations{reconfigure: func(_ context.Context, path string, expected uint64, request string) (installtxn.Result, error) {
+		calls++
+		if path != "/private/plan" || expected != 1 || request != strings.Repeat("b", 32) {
+			t.Fatal("arguments changed")
+		}
+		return installtxn.Result{}, errors.New("PRIVATE_CREDENTIAL_PATH")
+	}}
+	for _, expected := range []string{"0", "01", "+1", "-1", " 1", "18446744073709551615", "18446744073709551616"} {
+		var out, errout bytes.Buffer
+		if run([]string{"reconfigure", "-plan", "/private/plan", "-expected-revision", expected, "-request-id", strings.Repeat("b", 32)}, &out, &errout, op) != 1 || calls != 0 || out.Len() != 0 {
+			t.Fatal("invalid revision reached operation")
+		}
+	}
+	var out, errout bytes.Buffer
+	if run([]string{"reconfigure", "-plan", "/private/plan", "-expected-revision", "1", "-request-id", strings.Repeat("b", 32)}, &out, &errout, op) != 1 || calls != 1 || out.Len() != 0 || strings.Contains(errout.String(), "PRIVATE") {
+		t.Fatal("failure payload escaped")
+	}
+}

@@ -22,6 +22,34 @@ type prepared struct {
 	close   func()
 }
 
+func planInputs(p Plan) []struct {
+	name string
+	a    firecracker.Asset
+	max  int64
+} {
+	values := []struct {
+		name string
+		a    firecracker.Asset
+		max  int64
+	}{{"backend.json", p.Backend, 16384}, {"auth.json", p.Auth, 65536}, {"gateway.json", p.Gateway, gateway.MaxSnapshotBytes}}
+	if p.Version == 2 && p.Policy != nil {
+		return append(values, struct {
+			name string
+			a    firecracker.Asset
+			max  int64
+		}{"gateway-policy.json", *p.Policy, gateway.MaxSnapshotBytes})
+	}
+	return append(values, struct {
+		name string
+		a    firecracker.Asset
+		max  int64
+	}{"tls.pem", p.Certificate, 65536}, struct {
+		name string
+		a    firecracker.Asset
+		max  int64
+	}{"tls.key", p.PrivateKey, 65536})
+}
+
 func (p prepared) transaction(request string) transaction {
 	t := transaction{Version: 1, Revision: 1, RequestID: request, Plan: p.plan, Release: p.release}
 	for _, v := range p.targets {
@@ -79,11 +107,7 @@ func (f *filesystem) prepare(ctx context.Context, p Plan, release *releaseView) 
 		}
 	}()
 	input := map[string][]byte{}
-	for _, v := range []struct {
-		name string
-		a    firecracker.Asset
-		max  int64
-	}{{"backend.json", p.Backend, 16384}, {"auth.json", p.Auth, 65536}, {"gateway.json", p.Gateway, gateway.MaxSnapshotBytes}, {"tls.pem", p.Certificate, 65536}, {"tls.key", p.PrivateKey, 65536}} {
+	for _, v := range planInputs(p) {
 		fd, raw, e := f.pinned(ctx, v.a, v.max, true)
 		if e != nil {
 			return nil, e
@@ -110,8 +134,8 @@ func (f *filesystem) prepare(ctx context.Context, p Plan, release *releaseView) 
 	appendTarget := func(path string, raw []byte, mode uint32) {
 		out.targets = append(out.targets, target{file: File{Path: path, SHA256: digest(raw), Bytes: int64(len(raw)), Mode: mode}, data: raw})
 	}
-	for _, name := range []string{"backend.json", "auth.json", "gateway.json", "tls.pem", "tls.key"} {
-		appendTarget(Root+"/"+name, input[name], 0600)
+	for _, v := range planInputs(p) {
+		appendTarget(Root+"/"+v.name, input[v.name], 0600)
 	}
 	for path, raw := range generated {
 		appendTarget(path, raw, 0600)
@@ -159,10 +183,24 @@ func validateInputs(p Plan, input map[string][]byte, art map[string]Artifact, no
 	if e != nil {
 		return ErrPolicy
 	}
-	if g.Version != 1 || g.PolicyRevision != 1 || g.StateDir != policyDir || g.EmptyRoot != childRoot || g.TenantSocket != stateDir+"/api.sock" || g.BackendAuthFile != inputDir+"/auth.json" || g.CertificateFile != Root+"/tls.pem" || g.PrivateKeyFile != Root+"/tls.key" {
+	if g.Version != p.Version || g.ValidateShape() != nil || g.PolicyRevision != 1 || g.StateDir != policyDir || g.EmptyRoot != childRoot || g.TenantSocket != stateDir+"/api.sock" || g.BackendAuthFile != inputDir+"/auth.json" {
 		return ErrPolicy
 	}
-	snapshot := gateway.Snapshot{Version: 1, Epoch: 1, UID: g.UID, GID: g.GID, Listen: g.Listen, ServerName: g.ServerName, CertificatePEM: string(input["tls.pem"]), PrivateKeyPEM: string(input["tls.key"]), Keys: g.Keys}
+	var snapshot gateway.Snapshot
+	if p.Version == 1 {
+		if g.CertificateFile != Root+"/tls.pem" || g.PrivateKeyFile != Root+"/tls.key" {
+			return ErrPolicy
+		}
+		snapshot = gateway.Snapshot{Version: 1, Epoch: 1, UID: g.UID, GID: g.GID, Listen: g.Listen, ServerName: g.ServerName, CertificatePEM: string(input["tls.pem"]), PrivateKeyPEM: string(input["tls.key"]), Keys: g.Keys}
+	} else {
+		if p.Policy == nil || g.InitialPolicySHA256 != p.Policy.SHA256 {
+			return ErrPolicy
+		}
+		snapshot, e = gateway.ValidateManagedSnapshot(g, input["gateway-policy.json"], "", authority, now)
+		if e != nil || snapshot.Epoch != 1 {
+			return ErrPolicy
+		}
+	}
 	if _, e = gateway.NewPolicy(snapshot, authority, now); e != nil {
 		return ErrPolicy
 	}

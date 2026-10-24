@@ -119,3 +119,67 @@ func TestInitialInputCoherenceBeforeMaterialization(t *testing.T) {
 		})
 	}
 }
+
+func TestManagedInputCoherenceUsesOneCompleteBoundPayload(t *testing.T) {
+	for _, kind := range []string{"valid", "bad-key", "bad-certificate", "backend-owner", "epoch", "mixed-certificate", "mixed-keys", "wrong-initial-pin", "wrong-listen", "expired-certificate", "unknown-payload"} {
+		t.Run(kind, func(t *testing.T) {
+			p, input, art, now := inputFixture(t)
+			var g gateway.Config
+			if strictjson.Decode(input["gateway.json"], &g) != nil {
+				t.Fatal("fixture")
+			}
+			s := gateway.Snapshot{Version: 1, Epoch: 1, UID: g.UID, GID: g.GID, Listen: g.Listen, ServerName: g.ServerName, CertificatePEM: string(input["tls.pem"]), PrivateKeyPEM: string(input["tls.key"]), Keys: g.Keys}
+			switch kind {
+			case "bad-key":
+				s.PrivateKeyPEM = "bad"
+			case "bad-certificate":
+				s.CertificatePEM = "bad"
+			case "backend-owner":
+				s.Keys[0].TenantID = "beta"
+			case "epoch":
+				s.Epoch = 2
+			case "expired-certificate":
+				now = now.Add(25 * time.Hour)
+			}
+			raw, e := gateway.EncodePolicyEnvelope(gateway.PolicyEnvelope{Version: 1, Revision: 1, Snapshot: s})
+			if e != nil {
+				t.Fatal(e)
+			}
+			g.Version = 2
+			g.CertificateFile = ""
+			g.PrivateKeyFile = ""
+			g.Keys = nil
+			g.ManagedPolicyFile = gateway.ManagedPolicyPath
+			g.InitialPolicySHA256 = digest(raw)
+			p.Version = 2
+			p.Certificate = firecracker.Asset{}
+			p.PrivateKey = firecracker.Asset{}
+			p.Policy = &firecracker.Asset{Path: "/bootstrap/policy.json", SHA256: digest(raw)}
+			switch kind {
+			case "mixed-certificate":
+				g.CertificateFile = Root + "/tls.pem"
+			case "mixed-keys":
+				g.Keys = s.Keys
+			case "wrong-initial-pin":
+				g.InitialPolicySHA256 = strings.Repeat("d", 64)
+			case "wrong-listen":
+				g.Listen = "127.0.0.1:19443"
+			case "unknown-payload":
+				raw = append([]byte(`{"unknown":true,`), raw[1:]...)
+			}
+			delete(input, "tls.pem")
+			delete(input, "tls.key")
+			input["gateway-policy.json"] = raw
+			input["gateway.json"] = encode(g)
+			p.Gateway.SHA256 = digest(input["gateway.json"])
+			path := t.TempDir() + "/backend.json"
+			if os.WriteFile(path, input["backend.json"], 0600) != nil {
+				t.Fatal("fixture")
+			}
+			e = validateInputs(p, input, art, now, path)
+			if (e == nil) != (kind == "valid") {
+				t.Fatal("managed input mismatch", e)
+			}
+		})
+	}
+}

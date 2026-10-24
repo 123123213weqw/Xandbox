@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func observationBytes(unit, load, active, enabled string, pid int) []byte {
@@ -142,5 +144,40 @@ func TestBoundedManagerWriterNeverExportsRawOverflow(t *testing.T) {
 	}
 	if _, e := b.Write([]byte("private-overflow")); e == nil || b.String() != "abc" {
 		t.Fatal("unbounded writer")
+	}
+}
+
+func TestRotationIngressRecoveryCannotPullInOrRestartMain(t *testing.T) {
+	for _, active := range []bool{true, false} {
+		t.Run(stringInt(map[bool]int{true: 1, false: 0}[active]), func(t *testing.T) {
+			f, _, _ := fixture(t)
+			var mutations [][]string
+			m := systemManager{f, func(_ context.Context, args []string) ([]byte, error) {
+				if args[0] == "show" {
+					u := args[len(args)-1]
+					state := "inactive"
+					pid := 0
+					if u == MainUnit && active {
+						state = "active"
+						pid = os.Getpid()
+					}
+					return observationBytes(u, "loaded", state, "enabled", pid), nil
+				}
+				mutations = append(mutations, append([]string(nil), args...))
+				return nil, nil
+			}}
+			_, fd, e := m.prepareManagedIngress(context.Background())
+			if active {
+				if e != nil || fd < 0 {
+					t.Fatal(e)
+				}
+				unix.Close(fd)
+				if len(mutations) != 1 || strings.Join(mutations[0], " ") != "--job-mode=ignore-requirements start "+IngressUnit {
+					t.Fatal("dependency/main activation escaped", mutations)
+				}
+			} else if e == nil || len(mutations) != 0 {
+				t.Fatal("inactive main was activated")
+			}
+		})
 	}
 }

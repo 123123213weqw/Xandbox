@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/access"
+	"github.com/123123213weqw/Xandbox/internal/policycontrol"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
@@ -146,7 +147,23 @@ func RunRoot(configPath string) error {
 	if e != nil {
 		return errors.New("invalid backend authority")
 	}
-	initial, e := c.snapshot(c.PolicyRevision, authority)
+	var readUnlock func()
+	if c.Version == 2 {
+		readUnlock, e = managedReadLock()
+		if e != nil {
+			return errors.New("managed gateway installation lock rejected")
+		}
+	}
+	defer func() {
+		if readUnlock != nil {
+			readUnlock()
+		}
+	}()
+	initialEpoch := c.PolicyRevision
+	if c.Version == 2 {
+		initialEpoch = 0
+	} // The immutable v2 base is not the current payload epoch.
+	initial, e := c.snapshot(initialEpoch, authority)
 	if e != nil {
 		return e
 	}
@@ -198,6 +215,22 @@ func RunRoot(configPath string) error {
 			<-exited
 		}
 	}()
+	var operator *policycontrol.Server
+	var operations <-chan policycontrol.Activation
+	var operatorErrors <-chan error
+	if c.Version == 2 {
+		digest, e := SnapshotDigest(initial)
+		if e != nil {
+			return e
+		}
+		operator, e = policycontrol.Listen(policycontrol.PolicyStatus{Version: 1, DurableEpoch: initial.Epoch, SnapshotSHA256: digest, Phase: "waiting"})
+		if e != nil {
+			return errors.New("managed gateway operator unavailable")
+		}
+		// state.Close was deferred first: its exclusive lock outlives the endpoint.
+		defer func() { fenceManaged(operator); operator.Close() }()
+		operations, operatorErrors = operator.Requests(), operator.Errors()
+	}
 	messages := make(chan incoming, 1)
 	stopRead := make(chan struct{})
 	defer close(stopRead)
@@ -225,7 +258,7 @@ func RunRoot(configPath string) error {
 	defer signal.Stop(reload)
 	tick := time.NewTicker(50 * time.Millisecond)
 	defer tick.Stop()
-	epoch := c.PolicyRevision
+	epoch := initial.Epoch
 	waiting := epoch
 	readyBy := time.Now().Add(5 * time.Second)
 	lastConnect := uint64(0)
@@ -246,6 +279,9 @@ func RunRoot(configPath string) error {
 			// closes the child listener and shuts down all brokered controller sockets.
 			return nil
 		case <-reload:
+			if operator != nil {
+				return errors.New("managed gateway requires operator activation")
+			}
 			if waiting != 0 {
 				return errors.New("gateway reload already pending")
 			}
@@ -279,6 +315,45 @@ func RunRoot(configPath string) error {
 			c = next
 			waiting = epoch
 			readyBy = time.Now().Add(2 * time.Second)
+		case <-operatorErrors:
+			return errors.New("managed gateway operator failed")
+		case request := <-operations:
+			duplicate, e := policycontrol.Classify(request.Command, operator.Status())
+			if e != nil {
+				_ = request.Respond(policycontrol.PolicyStatus{}, "CONFLICT")
+				continue
+			}
+			if duplicate {
+				_ = request.Respond(operator.Status(), "")
+				continue
+			}
+			readUnlock, e = managedReadLock()
+			if e != nil {
+				_ = request.Respond(policycontrol.PolicyStatus{}, "UNAVAILABLE")
+				continue
+			}
+			s, e := c.snapshot(request.Command.TargetEpoch, authority)
+			if e != nil {
+				readUnlock()
+				readUnlock = nil
+				_ = request.Respond(policycontrol.PolicyStatus{}, "CONFLICT")
+				continue
+			}
+			e = commitManaged(state, parent, s, request.Command, operator)
+			if errors.Is(e, errManagedConflict) {
+				readUnlock()
+				readUnlock = nil
+				_ = request.Respond(policycontrol.PolicyStatus{}, "CONFLICT")
+				continue
+			}
+			if e != nil {
+				_ = request.Respond(policycontrol.PolicyStatus{}, "UNAVAILABLE")
+				return e
+			}
+			epoch = s.Epoch
+			waiting = epoch
+			readyBy = time.Now().Add(2 * time.Second)
+			_ = request.Respond(operator.Status(), "")
 		case <-tick.C:
 			now = time.Now()
 			if waiting != 0 && now.After(readyBy) {
@@ -315,6 +390,15 @@ func RunRoot(configPath string) error {
 					return errors.New("invalid gateway readiness acknowledgement")
 				}
 				waiting = 0
+				if operator != nil {
+					if e = acknowledgeManaged(operator, q.request); e != nil {
+						return e
+					}
+					if readUnlock != nil {
+						readUnlock()
+						readUnlock = nil
+					}
+				}
 			case opRelease:
 				if q.request != 0 || q.lease == 0 {
 					return errors.New("invalid gateway lease release")

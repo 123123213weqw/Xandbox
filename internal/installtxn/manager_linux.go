@@ -134,6 +134,12 @@ func (m systemManager) current(ctx context.Context) (bool, error) {
 	return true, nil
 }
 func (m systemManager) reconcile(ctx context.Context) error {
+	return m.reconcileUnits(ctx, false)
+}
+func (m systemManager) reconcileManaged(ctx context.Context) error {
+	return m.reconcileUnits(ctx, true)
+}
+func (m systemManager) reconcileUnits(ctx context.Context, explicitIngress bool) error {
 	// These are idempotent manager operations, never restart/stop/reset-failed or
 	// node resume. The transaction file lock is NOT held while ExecStartPre runs.
 	if _, e := m.command(ctx, []string{"daemon-reload"}); e != nil {
@@ -153,6 +159,21 @@ func (m systemManager) reconcile(ctx context.Context) error {
 	}
 	if _, e := m.command(ctx, []string{"start", MainUnit}); e != nil {
 		return e
+	}
+	if explicitIngress {
+		main, e := m.observe(ctx, MainUnit)
+		if e != nil || main.active != "active" || main.pid <= 1 {
+			return ErrInventory
+		}
+		ingress, e := m.observe(ctx, IngressUnit)
+		if e != nil {
+			return e
+		}
+		if ingress.active != "active" {
+			if _, e = m.command(ctx, []string{"start", IngressUnit}); e != nil {
+				return e
+			}
+		}
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
