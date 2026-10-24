@@ -105,5 +105,22 @@ class InstallControls(unittest.TestCase):
         s=inspect.getsource(guest.recover)
         self.assertLess(s.index('probe()'),s.index('drain.restore_and_resume()'))
         self.assertNotIn('input/',s)
+    def test_observer_preserves_exact_go_json_bytes_and_never_overwrites(self):
+        raw=b'{"version":1,"keys":[]}\n'
+        self.assertNotEqual(json.dumps(json.loads(raw),sort_keys=True).encode()+b'\n',raw)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'installed';config=Path(tmp)/'observer';root.mkdir();config.mkdir()
+            (root/'auth.json').write_bytes(raw)
+            with patch.object(guest,'ROOT',root),patch.object(guest,'CONFIG',config):
+                guest.copy_snapshot('auth.json')
+                self.assertEqual((config/'auth.json').read_bytes(),raw)
+                self.assertEqual((config/'auth.json').stat().st_mode&0o777,0o600)
+                with self.assertRaises(FileExistsError):guest.copy_snapshot('auth.json')
+                with self.assertRaises(RuntimeError):guest.copy_snapshot('../unknown')
+    def test_capacity_is_retained_between_physical_stop_and_delete(self):
+        s=inspect.getsource(guest.stop_destroy)
+        self.assertLess(s.index("v['state']!='STOPPED'"),s.index("'install-stopped-still-full'"))
+        self.assertLess(s.index("'install-stopped-still-full'"),s.index("'DELETE'"))
+        self.assertIn('tenant=tenant',s)
 
 if __name__=='__main__':unittest.main()

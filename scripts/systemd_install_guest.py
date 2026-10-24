@@ -143,6 +143,17 @@ def pregate_pending():
     wait(lambda:not base.UNIT_ROOT.exists() and not Path('/run/xandbox-inputs').exists(),10)
     save(CONFIG/'pending-gate-observation.json',{'exact_caps_zero_nnp_control':True,'actual_commit_absent_start_failed':True,'no_ordinary_state_written':True})
 
+def copy_snapshot(name):
+    if name not in ('backend.json','auth.json','launch.json'):raise RuntimeError('fixed private observer snapshot')
+    # These observer copies must preserve the exact production bytes. Decoding
+    # and reserializing Go JSON would falsely reject a valid runtime snapshot.
+    raw=(ROOT/name).read_bytes()
+    fd=os.open(CONFIG/name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'wb') as f:f.write(raw);f.flush();os.fsync(f.fileno())
+    fd=os.open(CONFIG,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+    try:os.fsync(fd)
+    finally:os.close(fd)
+
 def setup():
     guard()
     if CHECKPOINT.exists():bind_observers();return
@@ -182,7 +193,7 @@ def setup():
     interrupt_before_commit(arguments('apply',request,CONFIG/'plan.json',True),str(CONFIG/'trace-child-output'),programs['install']['sha256'],base.sha)
     pregate_pending()
     call('apply',request,CONFIG/'plan.json',bootstrap=True)
-    for name in ('backend.json','auth.json','launch.json'):save(CONFIG/name,json.loads((ROOT/name).read_bytes()))
+    for name in ('backend.json','auth.json','launch.json'):copy_snapshot(name)
     save(CONFIG/'assets.json',assets);save(CONFIG/'ingress-assets.json',{r:assets[r] for r in ('gateway','ingress')});bind_observers()
     call('verify',want=1)
     call('apply','b'*32,CONFIG/'plan.json',want=1)
@@ -204,12 +215,13 @@ def probe():
     bind_observers();sources_absent();call('status');ingress.tls_ready();base.main_identity();ingress.ingress_identity();drain.probe_mode()
     return {k:True for k in PROBE_FLAGS}
 
-def stop_destroy(row,tenant):
+def stop_destroy(row,tenant,expect_full=False):
     owner=base.owner(row);start=time.monotonic_ns();v=base.call('POST',base.refpath(row)+'/stop',{'generation':row['generation']},tenant=tenant)
     if v['state']!='STOPPED':raise RuntimeError('physical STOPPED required')
     group=base.UNIT_ROOT/'node/instances'/base.key(row)
     if group.exists() and 'populated 0' not in read(group/'cgroup.events'):raise RuntimeError('actual execution still populated')
     stopped=(time.monotonic_ns()-start)/1e6
+    if expect_full:base.call('POST','/v1/sandboxes',base.create_spec(),tenant='beta',key='install-stopped-still-full',expected=503)
     base.call('DELETE',base.refpath(row),{'generation':row['generation']},tenant=tenant,expected=202);base.reclaimed(row,tenant,owner['project_id'])
     return stopped,(time.monotonic_ns()-start)/1e6
 
@@ -224,7 +236,7 @@ def checkpoint():
     base.call('GET',base.refpath(rows[0][0]),tenant='beta',expected=404);base.call('POST','/v1/sandboxes',{},tenant=None,key='install-no-auth',expected=401)
     base.call('POST','/v1/sandboxes',{},tenant='beta',key='install-node-fifth',expected=503)
     writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
-    ms=stop_destroy(rows[0][0],'alpha')
+    ms=stop_destroy(rows[0][0],'alpha',True)
     for row,tenant in rows[1:]:stop_destroy(row,tenant)
     warm=drain.warm(lambda:call('reconcile',request))
     fresh=base.create('alpha','install-before-cold');boot=base.verify_vm(fresh,'alpha')
