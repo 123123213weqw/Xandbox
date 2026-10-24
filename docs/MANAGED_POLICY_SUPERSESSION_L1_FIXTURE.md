@@ -1,8 +1,8 @@
-# New managed policy L1 cases — first repeat attempt failed
+# New managed policy L1 cases — one diagnostic repeat case accepted
 
-These are **not additional accepted hardware protocols**. The first repeat
-attempt failed; visible-publication recovery and ordinary hot rotation have not
-yet executed as independent named scopes.
+One diagnostic-source repeat case has limited actual acceptance; its failed
+predecessor remains retained. Visible-publication recovery, ordinary hot rotation
+and the newer blocking-observer source have no independent accepted scope yet.
 The two accepted [committed recovery cases](MANAGED_POLICY_L1_FIXTURE.md) remain
 bound to their own source, reports and inputs. They do not certify these cases.
 
@@ -83,8 +83,7 @@ stopped main; policy maintenance never implicitly starts main or resumes admissi
 
 The new cut points observe real child syscalls, not production test hooks or
 service PID attachment. Pure predicate/shape/file-loss controls do not execute
-those syscalls or the production maintenance protocol. No complete accepted source-bound
-reports for these three cases exist yet; the full cut/media/runtime/SLO matrix,
+those syscalls or the production maintenance protocol. Only the diagnostic repeat result below is accepted; the full cut/media/runtime/SLO matrix,
 partial-declaration/lost-source liveness gap and the whole production goal remain
 open. Do not expand a future named-case pass to the full supersession matrix.
 
@@ -115,3 +114,28 @@ both CGO-free and race selection (41 packages/240 files); the earlier full
 same-process race x3 is identified as earlier evidence, not a new run. The first
 metadata-reader preflight failure before tests/builds remains recorded separately.
 None of this software evidence converts the failed hardware original into a pass.
+
+## Diagnostic repeat result and unchanged-budget observer work
+
+The [second original](validation/managed-policy-supersession-repeat-observed-v2.json)
+at frozen `91b2949` exited zero, completed both L1 boots and passed its typed
+protocol plus independent two-generation/all-owned-path absence audit without
+supplemental cleanup. Its 259 Linux pure tests had zero skips. It qualifies only
+that named repeat case/source; it does not establish the cause of the first
+failure or complete the other cases/full fault matrix.
+
+Its private before-Stop observation still had an owner and positive sandbox TTL,
+but the original 45-second writer was already 44.253 seconds old. The traced A
+cut took 20.944 seconds; the untraced B replacement took 6.171 seconds. These are
+individual diagnostic timings, not production latency/SLO claims. The first
+failure remains unattributed rather than being retrospectively called a timeout.
+
+The newer observer removes the per-syscall polling sleep for only the three new
+cut modes: use blocking own-child wait with the **same 60-second bound**, a
+one-shot owned-process alarm, restoration of previous signal state and the same
+bounded kill/reap cleanup. Existing alarms refuse rather than being replaced.
+All syscall boundary/ELF/metadata predicates remain. Additionally all four VMM
+incarnations and the actual busy writer are rechecked immediately before Stop,
+after source-free retry/CAS/resume. No 300-second TTL, 45-second job, service,
+CLI, socket or operator limit is increased. These stricter/new-observer paths
+require fresh actual scopes and do not inherit the diagnostic-source pass.

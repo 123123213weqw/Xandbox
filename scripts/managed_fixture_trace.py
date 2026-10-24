@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import signal
 import time
+from contextlib import contextmanager
 from install_fixture_trace import Registers,ptrace,string_at
 from systemd_delegate_probe import guard as base_guard
 
@@ -72,6 +73,26 @@ def published_cut(mode,revision,request):
     return True
 
 
+@contextmanager
+def bounded_trace_wait(active):
+    # Own L1 operator process only. A blocking wait avoids a fixed sleep on
+    # every traced syscall; the existing 60-second bound remains enforced.
+    if type(active) is not bool:raise RuntimeError('closed trace wait mode required')
+    if not active:
+        yield
+        return
+    if signal.getitimer(signal.ITIMER_REAL)!=(0.,0.):raise RuntimeError('unowned trace alarm already active')
+    previous=signal.getsignal(signal.SIGALRM)
+    def expired(signum,frame):raise RuntimeError('managed trace deadline')
+    signal.signal(signal.SIGALRM,expired)
+    try:
+        signal.setitimer(signal.ITIMER_REAL,60.)
+        yield
+    finally:
+        try:signal.setitimer(signal.ITIMER_REAL,0.)
+        finally:signal.signal(signal.SIGALRM,previous)
+
+
 def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
     guard();trace_shape(args,mode,revision,request)
     pid=os.fork()
@@ -83,56 +104,58 @@ def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
             os.execve(args[0],args,{'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C'})
         finally:os._exit(91)
     threads={pid};hit=False;executed=False;options=1|8|16|(1<<20);end=time.monotonic()+60
+    blocking=mode in ('rotation-proposal','supersession-proposal','supersession-visible')
     try:
-        got,status=os.waitpid(pid,0)
-        if got!=pid or not os.WIFSTOPPED(status) or os.WSTOPSIG(status)!=signal.SIGSTOP:raise RuntimeError('owned managed trace handshake')
-        ptrace(0x4200,pid,0,options);ptrace(24,pid)
-        while threads:
-            if time.monotonic()>=end:raise RuntimeError('managed trace deadline')
-            tid,status=os.waitpid(-1,0x40000000|os.WNOHANG)
-            if not tid:time.sleep(.0005);continue
-            if os.WIFEXITED(status) or os.WIFSIGNALED(status):
-                threads.discard(tid)
-                if tid==pid and not hit:raise RuntimeError('actual installer main exited before managed cut')
-                continue
-            if not os.WIFSTOPPED(status):raise RuntimeError('unexpected owned trace state')
-            sig=os.WSTOPSIG(status);event=status>>16
-            if event==3:
-                child=ctypes.c_ulonglong();ptrace(0x4201,tid,0,ctypes.addressof(child));threads.add(child.value)
-            if event==4:
-                if tid!=pid or sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('owned managed exec pin')
-                executed=True
-            if sig==(signal.SIGTRAP|0x80) and executed and not hit:
-                r=Registers();ptrace(12,tid,0,ctypes.addressof(r));entry=r.rax==((1<<64)-errno.ENOSYS)
-                if mode=='initial-commit' and entry and r.orig_rax==257 and string_at(tid,r.rsi)==b'.commit.next':
-                    if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!='/etc/xandbox-install':raise RuntimeError('fixed commit dirfd required')
-                    hit=True
-                elif mode=='policy-activation' and entry and r.orig_rax==42 and sockaddr_at(tid,r.rsi,r.rdx)==OPERATOR:
-                    intent_path=ROOT/'rotation-intent.json'
-                    # The precommit status connection normally has no rotation
-                    # intent yet. Absence is NOT a cut and must not kill the child.
-                    if intent_path.is_file():
-                        raw=(ROOT/'gateway-policy.json').read_bytes();envelope=json.loads(raw);intent=json.loads(intent_path.read_bytes())
-                        if activation_candidate(envelope,intent,revision,request):
-                            if hashlib.sha256(raw).hexdigest()!=intent.get('new_payload_sha256'):raise RuntimeError('actual file/intent hash mismatch')
-                            if (ROOT/'.policy.next').exists() or (ROOT/'.rotation-intent.next').exists():raise RuntimeError('policy publication not complete')
-                            if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('installer incarnation drift')
-                            hit=True
-                elif mode in ('rotation-proposal','supersession-proposal') and entry and r.orig_rax==264 and string_at(tid,r.rsi)==b'.policy.next' and string_at(tid,r.r10)==b'gateway-policy.json':
-                    if any(os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(fd).value))!=str(ROOT) for fd in (r.rdi,r.rdx)):raise RuntimeError('fixed proposal rename dirfds required')
-                    hit=published_cut(mode,revision,request)
-                elif mode=='supersession-visible' and not entry and r.orig_rax==74 and r.rax==0:
-                    if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))==str(ROOT):
-                        installed=json.loads((ROOT/'gateway-policy.json').read_bytes())
-                        if installed.get('revision')==revision and installed.get('request_id')==request:hit=published_cut(mode,revision,request)
-                if hit:
-                    if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('final own exec pin drift')
-                    os.kill(pid,signal.SIGKILL);continue
-            forward=0 if sig in (signal.SIGTRAP,signal.SIGSTOP,signal.SIGTRAP|0x80) else sig
-            try:ptrace(24,tid,0,forward)
-            except OSError as e:
-                if e.errno!=errno.ESRCH:raise
-        if not hit:raise RuntimeError('fixed managed cut not reached')
+        with bounded_trace_wait(blocking):
+            got,status=os.waitpid(pid,0)
+            if got!=pid or not os.WIFSTOPPED(status) or os.WSTOPSIG(status)!=signal.SIGSTOP:raise RuntimeError('owned managed trace handshake')
+            ptrace(0x4200,pid,0,options);ptrace(24,pid)
+            while threads:
+                if time.monotonic()>=end:raise RuntimeError('managed trace deadline')
+                tid,status=os.waitpid(-1,0x40000000|(0 if blocking else os.WNOHANG))
+                if not tid:time.sleep(.0005);continue
+                if os.WIFEXITED(status) or os.WIFSIGNALED(status):
+                    threads.discard(tid)
+                    if tid==pid and not hit:raise RuntimeError('actual installer main exited before managed cut')
+                    continue
+                if not os.WIFSTOPPED(status):raise RuntimeError('unexpected owned trace state')
+                sig=os.WSTOPSIG(status);event=status>>16
+                if event==3:
+                    child=ctypes.c_ulonglong();ptrace(0x4201,tid,0,ctypes.addressof(child));threads.add(child.value)
+                if event==4:
+                    if tid!=pid or sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('owned managed exec pin')
+                    executed=True
+                if sig==(signal.SIGTRAP|0x80) and executed and not hit:
+                    r=Registers();ptrace(12,tid,0,ctypes.addressof(r));entry=r.rax==((1<<64)-errno.ENOSYS)
+                    if mode=='initial-commit' and entry and r.orig_rax==257 and string_at(tid,r.rsi)==b'.commit.next':
+                        if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))!='/etc/xandbox-install':raise RuntimeError('fixed commit dirfd required')
+                        hit=True
+                    elif mode=='policy-activation' and entry and r.orig_rax==42 and sockaddr_at(tid,r.rsi,r.rdx)==OPERATOR:
+                        intent_path=ROOT/'rotation-intent.json'
+                        # The precommit status connection normally has no rotation
+                        # intent yet. Absence is NOT a cut and must not kill the child.
+                        if intent_path.is_file():
+                            raw=(ROOT/'gateway-policy.json').read_bytes();envelope=json.loads(raw);intent=json.loads(intent_path.read_bytes())
+                            if activation_candidate(envelope,intent,revision,request):
+                                if hashlib.sha256(raw).hexdigest()!=intent.get('new_payload_sha256'):raise RuntimeError('actual file/intent hash mismatch')
+                                if (ROOT/'.policy.next').exists() or (ROOT/'.rotation-intent.next').exists():raise RuntimeError('policy publication not complete')
+                                if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('installer incarnation drift')
+                                hit=True
+                    elif mode in ('rotation-proposal','supersession-proposal') and entry and r.orig_rax==264 and string_at(tid,r.rsi)==b'.policy.next' and string_at(tid,r.r10)==b'gateway-policy.json':
+                        if any(os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(fd).value))!=str(ROOT) for fd in (r.rdi,r.rdx)):raise RuntimeError('fixed proposal rename dirfds required')
+                        hit=published_cut(mode,revision,request)
+                    elif mode=='supersession-visible' and not entry and r.orig_rax==74 and r.rax==0:
+                        if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))==str(ROOT):
+                            installed=json.loads((ROOT/'gateway-policy.json').read_bytes())
+                            if installed.get('revision')==revision and installed.get('request_id')==request:hit=published_cut(mode,revision,request)
+                    if hit:
+                        if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('final own exec pin drift')
+                        os.kill(pid,signal.SIGKILL);continue
+                forward=0 if sig in (signal.SIGTRAP,signal.SIGSTOP,signal.SIGTRAP|0x80) else sig
+                try:ptrace(24,tid,0,forward)
+                except OSError as e:
+                    if e.errno!=errno.ESRCH:raise
+            if not hit:raise RuntimeError('fixed managed cut not reached')
     finally:
         if threads:
             try:os.kill(pid,signal.SIGKILL)

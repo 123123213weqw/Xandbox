@@ -316,4 +316,36 @@ class ManagedControls(unittest.TestCase):
         self.assertEqual(writer,{'id':'synthetic-exec','fixture_started_monotonic':10.})
         self.assertIn('45000',inspect.getsource(guest.base.progressing_writer))
 
+    def test_blocking_trace_wait_keeps_sixty_second_bound_and_restores_alarm(self):
+        previous=object()
+        with patch.object(trace.signal,'getitimer',return_value=(0.,0.)),patch.object(trace.signal,'getsignal',return_value=previous),patch.object(trace.signal,'signal') as handler,patch.object(trace.signal,'setitimer') as timer:
+            with self.assertRaisesRegex(RuntimeError,'managed trace deadline'):
+                with trace.bounded_trace_wait(True):
+                    installed=handler.call_args.args[1];installed(None,None)
+            self.assertEqual(timer.call_args_list[0].args,(trace.signal.ITIMER_REAL,60.))
+            self.assertEqual(timer.call_args_list[-1].args,(trace.signal.ITIMER_REAL,0.))
+            self.assertEqual(handler.call_args_list[-1].args,(trace.signal.SIGALRM,previous))
+        with patch.object(trace.signal,'getitimer',return_value=(1.,0.)),patch.object(trace.signal,'signal') as handler,patch.object(trace.signal,'setitimer') as timer:
+            with self.assertRaisesRegex(RuntimeError,'unowned trace alarm'):
+                with trace.bounded_trace_wait(True):self.fail('foreign alarm must not be replaced')
+            handler.assert_not_called();timer.assert_not_called()
+        with patch.object(trace.signal,'signal') as handler,patch.object(trace.signal,'setitimer') as timer:
+            with trace.bounded_trace_wait(False):pass
+            handler.assert_not_called();timer.assert_not_called()
+
+    def test_trace_alarm_restores_on_arm_failure_and_new_stop_rechecks_busy_vmm(self):
+        previous=object()
+        with patch.object(trace.signal,'getitimer',return_value=(0.,0.)),patch.object(trace.signal,'getsignal',return_value=previous),patch.object(trace.signal,'signal') as handler,patch.object(trace.signal,'setitimer',side_effect=[OSError('synthetic'),None]) as timer:
+            with self.assertRaises(OSError):
+                with trace.bounded_trace_wait(True):self.fail('timer arming failed')
+            self.assertEqual(timer.call_args_list[-1].args,(trace.signal.ITIMER_REAL,0.))
+            self.assertEqual(handler.call_args_list[-1].args,(trace.signal.SIGALRM,previous))
+        s=inspect.getsource(trace.interrupt)
+        self.assertIn('0 if blocking else os.WNOHANG',s)
+        self.assertLess(s.index('with bounded_trace_wait(blocking):'),s.index('while threads:'))
+        s=inspect.getsource(guest.checkpoint)
+        self.assertLess(s.index("late_observation('before-stop'"),s.rindex("drain.busy(rows[0][0],writer['id'])"))
+        self.assertLess(s.rindex("drain.busy(rows[0][0],writer['id'])"),s.index("ms=install.stop_destroy"))
+        self.assertIn('main/four VMM incarnations changed before busy Stop',s)
+
 if __name__=='__main__':unittest.main()

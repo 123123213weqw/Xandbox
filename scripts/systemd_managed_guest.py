@@ -470,6 +470,9 @@ def checkpoint():
     # effect of maintenance. Capacity must not be confused with NODE_DRAINING.
     drain.change('resume',drain.state('drained',drained)['control']['committed']);drain.health('open')
     if case not in ('populated-gate','active-stop'):late_observation('before-stop',rows[0][0],writer)
+    if case not in ('populated-gate','active-stop'):
+        if base.main_identity()!=main_before or [vmm_identity(r) for r,_ in rows]!=vm_before:raise RuntimeError('main/four VMM incarnations changed before busy Stop')
+        drain.busy(rows[0][0],writer['id'])
     PHASE='managed-stop-reclaim';ms=install.stop_destroy(rows[0][0],'alpha',True)
     for r,t in rows[1:]:install.stop_destroy(r,t)
     PHASE='managed-warm-drain';warm=drain.warm(lambda:restart_after_explicit_warm_stop(request))
