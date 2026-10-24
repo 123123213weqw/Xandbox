@@ -62,14 +62,20 @@ type client struct {
 }
 
 func leaf(now time.Time, epoch uint64, ca *x509.Certificate, caKey *ecdsa.PrivateKey, s gateway.Snapshot, a *access.Authenticator) (gateway.Snapshot, client, error) {
-	var zero client
-	key, e := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if e != nil {
-		return s, zero, e
-	}
 	lifetime := 24 * time.Hour
 	if epoch == 2 {
 		lifetime = pendingLifetime
+	}
+	return leafLifetime(now, epoch, lifetime, ca, caKey, s, a)
+}
+func leafLifetime(now time.Time, epoch uint64, lifetime time.Duration, ca *x509.Certificate, caKey *ecdsa.PrivateKey, s gateway.Snapshot, a *access.Authenticator) (gateway.Snapshot, client, error) {
+	var zero client
+	if epoch < 1 || epoch > 3 || (lifetime != 24*time.Hour && (epoch != 2 || lifetime != pendingLifetime)) {
+		return s, zero, errors.New("fixed fixture leaf lifetime required")
+	}
+	key, e := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if e != nil {
+		return s, zero, e
 	}
 	cert := &x509.Certificate{SerialNumber: new(big.Int).SetUint64(epoch + 10), DNSNames: []string{sni}, NotBefore: now.Add(-time.Minute), NotAfter: now.Add(lifetime), BasicConstraintsValid: true, KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
 	der, e := x509.CreateCertificate(rand.Reader, cert, ca, &key.PublicKey, caKey)
@@ -145,8 +151,42 @@ func initial(now time.Time) (map[string][]byte, error) {
 	}
 	return map[string][]byte{"ca.pem": pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), "ca.key": caPrivate, "input/auth.json": encode(auth), "input/gateway.json": encode(c), "input/policy-initial.json": raw, "client-1.json": encode(cl)}, nil
 }
+
+type materialSpec struct {
+	epoch    uint64
+	stem     string
+	lifetime time.Duration
+}
+
+func materialOperation(operation string) (materialSpec, bool) {
+	switch operation {
+	case "rotation2":
+		return materialSpec{2, "2", pendingLifetime}, true
+	case "rotation2long":
+		return materialSpec{2, "2", 24 * time.Hour}, true
+	case "rotation3":
+		return materialSpec{3, "3", 24 * time.Hour}, true
+	case "replacement2a":
+		return materialSpec{2, "replacement-2a", 24 * time.Hour}, true
+	case "replacement2b":
+		return materialSpec{2, "replacement-2b", 24 * time.Hour}, true
+	}
+	return materialSpec{}, false
+}
+
 func rotation(now time.Time, epoch uint64, c gateway.Config, current gateway.PolicyEnvelope, authRaw, caRaw, keyRaw []byte) (map[string][]byte, error) {
-	if (epoch != 2 && epoch != 3) || current.Version != 1 || current.Revision+1 != epoch || current.Snapshot.Epoch != current.Revision || c.Version != 2 || c.ValidateShape() != nil || current.Snapshot.UID != c.UID || current.Snapshot.GID != c.GID || current.Snapshot.Listen != c.Listen || current.Snapshot.ServerName != c.ServerName || c.ServerName != sni {
+	operation := ""
+	if epoch == 2 {
+		operation = "rotation2"
+	} else if epoch == 3 {
+		operation = "rotation3"
+	}
+	return material(now, operation, c, current, authRaw, caRaw, keyRaw)
+}
+
+func material(now time.Time, operation string, c gateway.Config, current gateway.PolicyEnvelope, authRaw, caRaw, keyRaw []byte) (map[string][]byte, error) {
+	spec, ok := materialOperation(operation)
+	if !ok || current.Version != 1 || current.Revision+1 != spec.epoch || current.Snapshot.Epoch != current.Revision || c.Version != 2 || c.ValidateShape() != nil || current.Snapshot.UID != c.UID || current.Snapshot.GID != c.GID || current.Snapshot.Listen != c.Listen || current.Snapshot.ServerName != c.ServerName || c.ServerName != sni {
 		return nil, errors.New("fixture next epoch required")
 	}
 	var auth access.Config
@@ -187,14 +227,11 @@ func rotation(now time.Time, epoch uint64, c gateway.Config, current gateway.Pol
 	}
 	// The predecessor's certificate may already be expired. Only decode its
 	// installed authority; validate the fresh NEW candidate at actual now.
-	s, cl, e := leaf(now, epoch, ca, caKey, current.Snapshot, authority)
+	s, cl, e := leafLifetime(now, spec.epoch, spec.lifetime, ca, caKey, current.Snapshot, authority)
 	if e != nil {
 		return nil, e
 	}
-	name := "2"
-	if epoch == 3 {
-		name = "3"
-	}
+	name := spec.stem
 	path := root + "/sources/snapshot-" + name + ".json"
 	raw := encode(s)
 	plan := struct {
@@ -263,7 +300,8 @@ func writeFiles(files map[string][]byte) error {
 	return nil
 }
 func run(arg string) error {
-	if arg != "setup" && arg != "rotation2" && arg != "rotation3" {
+	_, supported := materialOperation(arg)
+	if arg != "setup" && !supported {
 		return errors.New("fixed fixture operation required")
 	}
 	if e := guard(); e != nil {
@@ -320,11 +358,7 @@ func run(arg string) error {
 	if e != nil {
 		return e
 	}
-	epoch := uint64(2)
-	if arg == "rotation3" {
-		epoch = 3
-	}
-	files, e := rotation(now, epoch, c, current, auth, ca, key)
+	files, e := material(now, arg, c, current, auth, ca, key)
 	if e != nil {
 		return e
 	}

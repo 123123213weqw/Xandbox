@@ -204,7 +204,7 @@ func TestManagedFixtureRejectsForeignAndMalformedAuthority(t *testing.T) {
 }
 
 func TestManagedFixtureUnknownOperationAndEscapeRefusedBeforeIO(t *testing.T) {
-	for _, arg := range []string{"", "setup extra", "rotation1", "rotation4", "/bin/sh", "--root=/tmp"} {
+	for _, arg := range []string{"", "setup extra", "rotation1", "rotation4", "rotation2long extra", "replacement2c", "replacement2a extra", "replacement2a/../x", "/bin/sh", "--root=/tmp"} {
 		if e := run(arg); e == nil || !strings.Contains(e.Error(), "fixed fixture operation") {
 			t.Fatal("unknown operation")
 		}
@@ -212,6 +212,104 @@ func TestManagedFixtureUnknownOperationAndEscapeRefusedBeforeIO(t *testing.T) {
 	for _, path := range []string{"", "/tmp/x", "../x", "input/../x", "sources/../../x", "subdir/x"} {
 		if writeFiles(map[string][]byte{path: []byte("test")}) == nil {
 			t.Fatal("escaping output")
+		}
+	}
+}
+
+func TestManagedFixtureUnconsumedReplacementMaterialAtSameNextEpoch(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	f, c, installed, auth := fixture(t, now)
+	before := mustEnvelope(t, installed)
+	old, e := rotation(now, 2, c, installed, f["input/auth.json"], f["ca.pem"], f["ca.key"])
+	if e != nil {
+		t.Fatal("old proposal")
+	}
+	var previous gateway.Snapshot
+	if strictjson.Decode(old["sources/snapshot-2.json"], &previous) != nil {
+		t.Fatal("old proposal schema")
+	}
+	after := now.Add(pendingLifetime + time.Second)
+	if _, e = gateway.NewPolicy(previous, auth, after); e == nil {
+		t.Fatal("abandoned expired proposal may not serve")
+	}
+	for _, tc := range []struct{ operation, stem string }{{"replacement2a", "replacement-2a"}, {"replacement2b", "replacement-2b"}, {"rotation2long", "2"}} {
+		t.Run(tc.operation, func(t *testing.T) {
+			// No old proposal, key or source is an input. The actual installed
+			// predecessor remains epoch1, even after another epoch2 proposal.
+			out, e := material(after, tc.operation, c, installed, f["input/auth.json"], f["ca.pem"], f["ca.key"])
+			if e != nil || len(out) != 3 {
+				t.Fatal("fresh unconsumed candidate")
+			}
+			var s gateway.Snapshot
+			var cl client
+			var plan struct {
+				Version int                  `json:"version"`
+				Policy  gateway.PolicySource `json:"policy"`
+			}
+			raw := out["sources/snapshot-"+tc.stem+".json"]
+			if strictjson.Decode(raw, &s) != nil || strictjson.Decode(out["client-"+tc.stem+".json"], &cl) != nil || strictjson.Decode(out["rotation-"+tc.stem+".json"], &plan) != nil {
+				t.Fatal("closed same-epoch output names")
+			}
+			if s.Epoch != 2 || plan.Version != 1 || plan.Policy.Path != root+"/sources/snapshot-"+tc.stem+".json" || plan.Policy.SHA256 != hash(raw) {
+				t.Fatal("same next epoch and fixed fresh source hash")
+			}
+			leaf := checkMaterial(t, s, cl, f["ca.pem"], after, auth)
+			if !leaf.NotAfter.Equal(after.Add(24*time.Hour)) || s.CertificatePEM == previous.CertificatePEM || s.PrivateKeyPEM == previous.PrivateKeyPEM {
+				t.Fatal("new coherent long-lived pair")
+			}
+			for i, k := range s.Keys {
+				if k.TokenSHA256 == previous.Keys[i].TokenSHA256 || k.TokenSHA256 == installed.Snapshot.Keys[i].TokenSHA256 || k.BackendToken != installed.Snapshot.Keys[i].BackendToken || k.TenantID != installed.Snapshot.Keys[i].TenantID || k.MaxInstances != installed.Snapshot.Keys[i].MaxInstances {
+					t.Fatal("new external keys without changing backend authority")
+				}
+			}
+			consumed := installed
+			consumed.Revision, consumed.Snapshot = 2, s
+			if _, e = material(after, tc.operation, c, consumed, f["input/auth.json"], f["ca.pem"], f["ca.key"]); e == nil {
+				t.Fatal("material operation must not reuse a consumed epoch2")
+			}
+			previous = s
+		})
+	}
+	if !bytes.Equal(before, mustEnvelope(t, installed)) {
+		t.Fatal("installed predecessor mutated by proposal production")
+	}
+}
+
+func TestManagedFixtureMaterialOperationsAndLifetimeAreClosed(t *testing.T) {
+	want := map[string]materialSpec{
+		"rotation2": {2, "2", pendingLifetime}, "rotation2long": {2, "2", 24 * time.Hour}, "rotation3": {3, "3", 24 * time.Hour},
+		"replacement2a": {2, "replacement-2a", 24 * time.Hour}, "replacement2b": {2, "replacement-2b", 24 * time.Hour},
+	}
+	for arg, spec := range want {
+		got, ok := materialOperation(arg)
+		if !ok || got != spec {
+			t.Fatal("closed operation mapping")
+		}
+	}
+	for _, arg := range []string{"", "replacement2c", "replacement3", "rotation2long extra", "../sources", "--lifetime=0"} {
+		if _, ok := materialOperation(arg); ok {
+			t.Fatal("arbitrary producer operation")
+		}
+	}
+	for _, tc := range []struct {
+		epoch uint64
+		life  time.Duration
+	}{{0, 24 * time.Hour}, {4, 24 * time.Hour}, {1, pendingLifetime}, {3, pendingLifetime}, {2, time.Second}, {2, 25 * time.Hour}} {
+		if _, _, e := leafLifetime(time.Now(), tc.epoch, tc.life, nil, nil, gateway.Snapshot{}, nil); e == nil {
+			t.Fatal("arbitrary leaf duration or epoch")
+		}
+	}
+}
+
+func TestManagedFixtureReplacementsRejectForeignAuthority(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	f, c, p, _ := fixture(t, now)
+	other, _, _, _ := fixture(t, now)
+	for _, op := range []string{"replacement2a", "replacement2b", "rotation2long"} {
+		for _, input := range []struct{ auth, ca, key []byte }{{other["input/auth.json"], f["ca.pem"], f["ca.key"]}, {f["input/auth.json"], other["ca.pem"], other["ca.key"]}, {f["input/auth.json"], f["ca.pem"], other["ca.key"]}} {
+			if _, e := material(now, op, c, p, input.auth, input.ca, input.key); e == nil {
+				t.Fatal("replacement cannot acquire foreign authority")
+			}
 		}
 	}
 }
