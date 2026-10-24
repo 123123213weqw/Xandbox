@@ -51,7 +51,7 @@ class TLSHTTP(http.client.HTTPConnection):
             self.close();raise RuntimeError('actual TLS leaf differs from expected private revision')
 
 
-def tls_call(method,path,body=None,tenant='alpha',key=None,expected=200,token=None,connection=None):
+def tls_call(method,path,body=None,tenant='alpha',key=None,expected=200,token=None,connection=None,expected_transport=None):
     conn=connection or TLSHTTP('xandbox.fixture',timeout=40)
     headers={}
     if body is not None:headers['Content-Type']='application/json'
@@ -59,6 +59,7 @@ def tls_call(method,path,body=None,tenant='alpha',key=None,expected=200,token=No
     if key is not None:headers['Idempotency-Key']=key
     try:
         conn.request(method,path,None if body is None else json.dumps(body),headers)
+        if expected_transport is not None:require_same_transport(conn,expected_transport)
         response=conn.getresponse();raw=response.read(65537)
         if response.status!=expected:raise RuntimeError('fixed TLS API status actual='+str(response.status)+' expected='+str(expected))
         if len(raw)>65536:raise RuntimeError('bounded TLS API response required')
@@ -245,8 +246,7 @@ def checkpoint():
         tls_call('GET',base.refpath(replacement),connection=held)
         original_transport=transport_identity(held);rotation_before=counter()
         run(HELPER,'rotate');run('systemctl','daemon-reload');run('systemctl','kill','--kill-whom=main','--signal=SIGHUP',UNIT);tls_ready()
-        tls_call('GET',base.refpath(replacement));tls_call('GET',base.refpath(replacement),token=old_token,expected=401,connection=held)
-        require_same_transport(held,original_transport)
+        tls_call('GET',base.refpath(replacement));tls_call('GET',base.refpath(replacement),token=old_token,expected=401,connection=held,expected_transport=original_transport)
     finally:held.close()
     if ingress_identity()!=old_gateway or base.main_identity()!=old_daemon or client()['revision']!=2:raise RuntimeError('live rotation must not restart services')
     prove_busy_progress()

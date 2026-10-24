@@ -123,8 +123,24 @@ class IngressDeploymentControls(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'transport replaced'):guest.require_same_transport(connection,original)
         finally:left.close();right.close()
         source=inspect.getsource(guest.checkpoint)
-        for text in ('require_same_transport(held,original_transport)','rotation_before=counter()','prove_busy_progress()',"+'/executions/'+busy['id']"):
+        for text in ('expected_transport=original_transport','rotation_before=counter()','prove_busy_progress()',"+'/executions/'+busy['id']"):
             self.assertIn(text,source)
+
+    def test_original_transport_is_verified_before_401_closes_it(self):
+        left,right=socket.socketpair()
+        try:
+            connection=SimpleNamespace(sock=left,request=lambda *args:None)
+            original=guest.transport_identity(connection)
+            def response():
+                connection.sock=None
+                return SimpleNamespace(status=401,read=lambda limit:b'{}')
+            connection.getresponse=response
+            with patch.object(guest,'client',return_value={'tokens':{'alpha':'test-token'}}):
+                guest.tls_call('GET','/healthz',connection=connection,expected=401,expected_transport=original)
+                connection.sock=right
+                with self.assertRaisesRegex(RuntimeError,'transport replaced'):
+                    guest.tls_call('GET','/healthz',connection=connection,expected=401,expected_transport=original)
+        finally:left.close();right.close()
 
 
 if __name__=='__main__':unittest.main()

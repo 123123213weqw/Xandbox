@@ -125,3 +125,11 @@ v5 native已通过完整race/vet、fixture/helper/filter与164项Python、12产�
 不能把HTTPConnection自动重连当成旧TLS连接撤权；忙writer须在ingress停机后与轮换后
 各自重新采样推进，并且原execution仍RUNNING。保持原401/角色PID/所有关闭与回收断言。
 新增重连身份负例控制；这是额外真实验证，不用对象复用或早期counter增量冒充结论。
+
+v6（5a2e9ad）已真正通过入口READY/ingress-probe并进入checkpoint，随后在旧令牌401
+之后的socket存活oracle失败。生产gatewayError明确发送Connection:close，Python读取
+401后清空HTTPConnection.sock属于预期关闭，不应要求错误响应后的socket仍存活。
+后续改为request实际发出后、读取响应前核对同一对象/dev/inode/端点，再严格要求401；
+自动重连仍必须失败，401后关闭允许且正向控制覆盖该行为。不放宽身份、401、PID、writer
+推进、资源回收或cold门槛。v6仍保留失败，原件及其一个代际/声明路径只读复核不存在；
+必须由新scope完成其余流程，不把前序部分步骤补写成完整通过。
