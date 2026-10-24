@@ -1,11 +1,30 @@
 # Managed policy v2 — explicit forward recovery candidate
 
-**Experimental implementation under native regression, not production ready.**
+**Experimental: native software regression passed; not production ready.**
 This follows the source-bound [persistence/locking foundation](POLICY_RECOVERY_FOUNDATION.md).
 That historical checkpoint did not expose a recovery command. The code now adds
 one, but neither its earlier evidence nor any older ELF hardware report certifies
 this workflow. Fresh root CLI/real TLS child/systemd/KVM/drain/cold/fault/cleanup
 acceptance remains required. An uncommitted-candidate liveness gap also remains.
+
+## Source-bound software evidence
+
+The [new software record](validation/managed-policy-recovery-native-v3.json)
+binds source `66dd051`, its archive/runner and all 21 actually rebuilt native
+artifacts. Linux Go 1.27.3 full `-race -count=3`, vet, 18 meaningful focused
+parents repeated three times, 17 returned-error cuts, 17 actual **test-process**
+death cuts and eight prior-committed settlement cuts repeated three times passed.
+The empty process-helper entry is excluded from that parent count. The unchanged
+Linux Python harness suite passed 235 tests with zero skips. Darwin race/vet and
+five cross/native byte-equal amd64 artifacts are separately bound. Manager, ACK,
+installer advance and kernel-positive observations remain models as described
+below; actual kernel fake-filesystem rejection is not a positive hardware proof.
+
+A separate [opt-in PKI producer](../cmd/xandbox-managed-fixture/README.md) at
+source `91c14c2` has its own [pure native tests and artifact record](validation/managed-policy-fixture-native-v1.json).
+It prepares synthetic initial/short-lived/fresh recovery inputs; no root fixture
+operation, interrupted real service or KVM acceptance is claimed by those tests.
+Its test-only tag does not change the 21 runtime/foundation artifact sources.
 
 ## Fixed administrative operation
 
@@ -135,3 +154,23 @@ per-package test-runner budget is now 15 minutes, and the matrix CI job budget i
 20 minutes. No test is removed, shard omitted, detector option relaxed or failure
 hidden. These are software test-runner limits, not sandbox switch/Stop/GC SLOs;
 no service resource limit, guest limit or owned-L1 runtime deadline was increased.
+
+
+### Preserved second failure and the same-source harness correction
+
+The next frozen run at `66dd051` passed the full installtxn race-three package in
+608.055 seconds, but the overall run failed two Firecracker UDS test parents:
+its private native-harness `TMPDIR` made actual socket paths 118–127 bytes long.
+Linux's [Unix-socket pathname field](https://www.man7.org/linux/man-pages/man7/unix.7.html)
+is 108 bytes. A controlled same-source probe of the same selected tests failed
+with the long prefix and passed with the short prefix; originals and hashes are
+retained in the new record. Subsequent stages and release builds did **not** run
+in that failed invocation. It is not retagged as a passing qualification.
+
+The final successful run used exactly the same source/archive with a shorter
+private test `TMPDIR`, first repeated both affected parents three times, then
+ran the entire unchanged matrix. No Unix endpoint became TCP, failing case was
+skipped, race option weakened, runtime deadline/resource increased, or historical
+hardware evidence re-signed. Three tagged-helper log basenames retained their
+older runner-version suffix; the new proof binds their actual final runner and
+hashes, not a nonexistent completed stage of the failed invocation.
