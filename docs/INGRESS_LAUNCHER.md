@@ -134,3 +134,9 @@ SHA256 `ad3bf629c6c1e40564c0bfb970200d30da0ea33f15cbd18d3ceb4279e1aa1114`。
 kind/reason，不导出stdout/stderr、路径、凭证或时间/记录身份。新增控制确认非零仍失败、
 原计数和管道门禁保留。此修改不改普通daemon或其他生产Go字节；新CI成功也不能回溯
 证明旧失败原因。尚未取得的复现或组合TLS验收不写成通过。
+
+[退出可观测性摘要](validation/diagnostic-exit-observability-v1.json)保留后续harness冻结源cf4e20a：
+Linux原生154项Python零skip、8项退出控制及新45轮mock烟测通过，生产Go源与21bb逐字相同。
+另用实际5bfb/ea48、Linux Go1.27.3、GOMAXPROCS1在有界100次新观测harness调用中完成
+4500次mock重启，84.206秒未复现；这不是原Go1.25 CI环境/退出码/原因的证明，不称flake
+或已修复。未再重复同样的100次实验；后续失败将保留原退出断言并输出闭集元数据。
