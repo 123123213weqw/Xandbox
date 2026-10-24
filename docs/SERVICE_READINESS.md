@@ -75,9 +75,12 @@ ready helper 的 `.control` 归属、所有观测线程的精确一项能力/NNP
 离线语义门禁还实际拒绝缺boot2、整数冒充bool、缺ready pin、未知harness、误加旧手动启动
 flag、source重贴、虚报生产和partial failure共8类负例。
 
-没有用这些结果勾选完整M1–M4。`admission_open`两种布尔值的严格健康解析有纯控制，但本scope未另做
-持久drain下的自动启动实机验收；此处更没有所有启动/文件系统介质故障的证明。生产安装事务、
-catalog、升级回滚/备份、人类operator、可靠审计、持续负载及各阶段延迟SLO仍另验。
+没有用这些结果勾选完整M1–M4。`admission_open`两种布尔值的严格健康解析有纯控制，但本9e4
+scope未另做持久drain下的自动启动实机验收。后续[e9c8069独立扩展](READINESS_DRAIN.md)
+已另取真实warm/cold完整drain提交保持、明确root resume及guest回收证据；13个Go产物不变，
+新14个harness与197项Linux Python零skip仍绑定新source，不回写本9e4报告。此处更没有
+所有启动/文件系统介质故障的证明。生产安装事务、catalog、升级回滚/备份、人类operator、
+可靠审计、持续负载及各阶段延迟SLO仍另验。
 
 ## ca500d3 的实际 CI 失败（不是 readiness 根因证明）
 

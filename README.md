@@ -8,6 +8,8 @@
 
 新增 [systemd readiness/enablement 组合](docs/SERVICE_READINESS.md)：固定 Go 后置闸门、启用依赖及原盘自动启动已取得新两启动有限实证，不继承手动启动报告，也不等于生产安装器。
 
+另有[持久drain下自动启动的独立扩展](docs/READINESS_DRAIN.md)：真实warm重启与原盘cold保留完整控制提交；健康恢复不隐式resume，旧任务/Stop/GC继续，新建与切换拒绝，显式root CAS恢复后被拒key可重用。197项Linux Python零skip、新双启动和独立只读清理复核通过，13个Go产物未改变；首轮managed执行路径失败保留，不等于生产安装器或SLO。
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。

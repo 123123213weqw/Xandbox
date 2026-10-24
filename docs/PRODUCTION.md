@@ -16,6 +16,8 @@
 
 自动启动/readiness 的[新独立组合](SERVICE_READINESS.md)已另取9e4da26两启动实证：真实后置闸门/坏pin与冻结后端拒绝、单main启动及原盘enable自动启动通过；新两个外层代际独立只读清理复核，含前序共9scopes/13个全局唯一代际再次复核不存在。不勾选完整生产安装或M4。
 
+后续[持久drain自动启动扩展](READINESS_DRAIN.md)已另取e9c8069双启动实证：完整epoch/revision/最后request提交跨warm/cold保持，健康服务不隐式resume，旧执行/回收继续，新准入拒绝，明确root CAS恢复后真实新guest通过。新增197项Linux Python零skip，13个Go产物未变；首个managed路径测试失败保留。含历史失败的11scopes/16个全局唯一外层代际/49个唯一声明路径再次只读确认不存在，无补充清理，不是完整生产验收。
+
 当前普通 sandboxd 为新 `5bfb2394…`（SIGTERM注册先于Serve），新增[固定清单 Go 启动器](GO_LAUNCHER.md)
 `26f35a3d…`。真实systemd→普通认证UDS→四并行KVM、busy Stop/GC、main SIGKILL与原盘cold
 有限验证通过，5 scopes/7外层代际独立只读清理复核；后续[25个全新命名运行scope](FIVEB_RUNTIME.md)
@@ -30,7 +32,7 @@
 
 另有[schema3 snapshot/inode/字节压力与低free cold有限门槛](NODE_SNAPSHOT_PRESSURE.md)：生产ELF不变、新fixture实测及8scope/19外层代际独立审计通过；实际permit并发、全RAM/OOM、外部日志/export硬边界及完整节点/生产门槛仍未完成。
 
-部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。[systemd接口冲突与部署契约](DEPLOYMENT_CONSTRAINTS.md)记录 `.control` 边界；后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已通过两次启动、独立 operator/委派/reload/stop-start，136项原生Python零skip及含失败前序5代际只读复核。选择 nested node 布局，后续Go启动器与普通UDS/KVM有限通过见上方新报告；自动安装与readiness编排仍未完成；TLS→KVM有限组合已另取上方新证据，不据此勾选M4。
+部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。[systemd接口冲突与部署契约](DEPLOYMENT_CONSTRAINTS.md)记录 `.control` 边界；后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已通过两次启动、独立 operator/委派/reload/stop-start，136项原生Python零skip及含失败前序5代际只读复核。选择 nested node 布局，后续Go启动器与普通UDS/KVM有限通过见上方新报告；自动安装仍未完成；自动readiness与TLS→KVM有限组合已另取上方独立证据，不据此勾选M4。
 
 ## 信任与隔离边界
 
