@@ -17,7 +17,7 @@ from process_exit import require_clean_exit
 def terminate_cleanly(process, node, state, cycle):
     process.terminate()
     try:
-        require_clean_exit(process, node, state)
+        require_clean_exit(process, node, state, previous_sequence=cycle*3)
     except AssertionError as error:
         # The shared helper only projects integer status / timeout and closed
         # diagnostic enums. Never inspect or drain the inherited full streams.

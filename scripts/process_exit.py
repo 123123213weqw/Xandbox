@@ -27,8 +27,26 @@ def project_view(raw):
     return records[-6:]
 
 
-def failure_summary(status,node,state):
+def project_cycle(raw,previous_sequence):
+    # Export only the bounded number of NEW events relative to the test's prior
+    # completed cycles. Absolute sequence/timestamp/record identities stay private.
+    events=project_view(raw);value=json.loads(raw);observed=value.get('observed_sequence')
+    if type(previous_sequence) is not int or not 0<=previous_sequence<=135 or type(observed) is not int or not 0<=observed<1<<64:
+        raise ValueError('invalid cycle observation')
+    delta=observed-previous_sequence
+    if delta<0:state,count,current='behind',None,[]
+    elif delta==0:state,count,current='unchanged',0,[]
+    elif delta<=6:
+        if delta>len(value['records']):raise ValueError('incomplete cycle view')
+        state,count,current='within_six',delta,events[-delta:]
+    else:state,count,current='more_than_six',None,[]
+    return {'cycle_observation':state,'cycle_new_events':count,'cycle_events':current,
+            'cycle_collector_closed':bool(current and current[-1]['kind']=='collector_closed')}
+
+
+def failure_summary(status,node,state,previous_sequence=None):
     result={'exit_status':status,'diagnostic_view':'unavailable','closed_records':[]}
+    if previous_sequence is not None:result['cycle_observation']='unavailable'
     # Temp file bounds memory even if a buggy CLI emits more than its contract.
     # No console, path, credentials, timestamp, sequence or third-party error is relayed.
     try:
@@ -39,13 +57,14 @@ def failure_summary(status,node,state):
             output.seek(0);raw=output.read(MAX_VIEW+1)
         if proc.returncode==0:
             result['closed_records']=project_view(raw);result['diagnostic_view']='closed'
+            if previous_sequence is not None:result.update(project_cycle(raw,previous_sequence))
     except (OSError,ValueError,TypeError,subprocess.TimeoutExpired):pass
     return result
 
 
-def require_clean_exit(process,node,state):
+def require_clean_exit(process,node,state,previous_sequence=None):
     try:status=process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         raise AssertionError(json.dumps({'exit_status':None,'wait_timeout':True},sort_keys=True)) from None
     if status!=0:
-        raise AssertionError(json.dumps(failure_summary(status,node,state),sort_keys=True))
+        raise AssertionError(json.dumps(failure_summary(status,node,state,previous_sequence),sort_keys=True))

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import subprocess
 import unittest
 from unittest.mock import patch
-from process_exit import project_view, failure_summary, require_clean_exit, MAX_VIEW
+from process_exit import project_view, failure_summary, require_clean_exit, project_cycle, MAX_VIEW
 
 
 class ClosedProcessExitTests(unittest.TestCase):
@@ -56,6 +56,39 @@ class ClosedProcessExitTests(unittest.TestCase):
         for gate in ('range(45)',"os.set_blocking(write_fd, True)","stdout=write_fd, stderr=write_fd",'terminate_cleanly(proc, node, state, cycle)',"observed['observed_sequence'] == (cycle + 1) * 3","observed['observed_sequence'] == 135",'assert total == filled'):
             self.assertIn(gate,source)
         self.assertNotIn('assert proc.wait(timeout=10) == 0',source)
+
+
+class CurrentCycleObservationTests(unittest.TestCase):
+    def raw(self,observed,kinds):
+        return json.dumps({'version':1,'observed_sequence':observed,'private':'do-not-export',
+            'records':[{'sequence':observed-i,'event':{'kind':kind,'reason':'other','time_ns':123,'private':'do-not-export'}} for i,kind in enumerate(kinds)]}).encode()
+    def test_previous_clean_tail_is_not_current_cycle(self):
+        raw=self.raw(78,['service_mock','process_stopped','collector_closed']*2)
+        v=project_cycle(raw,78)
+        self.assertEqual(v,{'cycle_observation':'unchanged','cycle_new_events':0,'cycle_events':[],'cycle_collector_closed':False})
+    def test_current_events_are_relative_and_redacted(self):
+        v=project_cycle(self.raw(81,['service_mock','process_stopped','collector_closed']*2),78)
+        self.assertEqual(v['cycle_new_events'],3);self.assertTrue(v['cycle_collector_closed'])
+        self.assertEqual(v['cycle_events'],[{'kind':k,'reason':'other'} for k in ('service_mock','process_stopped','collector_closed')])
+        for value in ('sequence','time_ns','do-not-export','81','78'):
+            self.assertNotIn(value,json.dumps(v))
+    def test_partial_behind_overflow_and_invalid_are_distinct(self):
+        self.assertEqual(project_cycle(self.raw(79,['service_mock']),78)['cycle_new_events'],1)
+        self.assertEqual(project_cycle(self.raw(77,[]),78)['cycle_observation'],'behind')
+        self.assertEqual(project_cycle(self.raw(90,['service_mock']*12),78)['cycle_observation'],'more_than_six')
+        for previous,observed in ((True,78),(136,78),(-1,78),(78,True),(78,-1),(78,1<<64)):
+            with self.assertRaises(ValueError):project_cycle(self.raw(observed,[]),previous)
+        with self.assertRaises(ValueError):project_cycle(self.raw(81,[]),78)
+    def test_nonzero_failure_uses_closed_cycle_summary_without_streams(self):
+        process=SimpleNamespace(wait=lambda timeout:1)
+        with patch('process_exit.failure_summary',return_value={'exit_status':1,'cycle_observation':'unchanged'}) as summary:
+            with self.assertRaisesRegex(AssertionError,'unchanged'):require_clean_exit(process,'/unexecuted','/private',previous_sequence=78)
+            summary.assert_called_once_with(1,'/unexecuted','/private',78)
+    def test_restart_passes_exact_prior_success_count_not_untrusted_record_identity(self):
+        from diagnostics_smoke import terminate_cleanly
+        with patch('diagnostics_smoke.require_clean_exit') as clean:
+            terminate_cleanly(SimpleNamespace(terminate=lambda:None),'/unexecuted','/private',26)
+            self.assertEqual(clean.call_args.kwargs,{'previous_sequence':78})
 
 
 if __name__=='__main__':unittest.main()

@@ -78,3 +78,17 @@ flag、source重贴、虚报生产和partial failure共8类负例。
 没有用这些结果勾选完整M1–M4。`admission_open`两种布尔值的严格健康解析有纯控制，但本scope未另做
 持久drain下的自动启动实机验收；此处更没有所有启动/文件系统介质故障的证明。生产安装事务、
 catalog、升级回滚/备份、人类operator、可靠审计、持续负载及各阶段延迟SLO仍另验。
+
+## ca500d3 的实际 CI 失败（不是 readiness 根因证明）
+
+同提交 push 六个job成功；PR 的 Ubuntu Go1.25 在 diagnostics mock 重启烟测第26轮退出1，
+其余五个job成功。保留[实际失败job](https://github.com/123123213weqw/Xandbox/actions/runs/40059984042/job/120771298426)
+与私有原始日志摘要 `827d02fe7f43233f2d99e79c20802ba30a6e21d6d4f93374e82835b14dbebcc2`。
+闭集视图读取成功，尾部是重复的 service_mock/process_stopped/collector_closed；**不能据此认定
+当前这一轮已经正常关闭**：原投影没有区分尾记录属于前一成功轮还是当前轮。精确退出原因未知，
+不归因于新 ready，不称 flake/已修复，也不回溯解释更早的 a147/a161 失败。
+
+后续只补测试harness的相对轮次观测：输出相对已完成轮数新增的0–6条闭集事件/数量，区分
+unchanged、within_six、behind、more_than_six，不输出绝对sequence、时间戳、路径或凭证。
+仍要求10秒内退出0、45轮/135条、满管道不读取；非零仍失败。它不是生产程序修复，新CI成功
+也不能倒推旧失败原因。原9e4硬件证据与Go产物保持原绑定，未修改成别的源码通过声明。
