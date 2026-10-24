@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "scope": "limited ordinary initial installer on owned Linux/systemd L1, with real TLS/KVM/drain and original-disk cold recovery",
+  "source_revision": "0ff735aa6d6d1da91e2d5745377530d7f24d7d37",
+  "source_archive_sha256": "02cc1eb447574775de6812dc076f75269f25f281659cfd2a0a67e5d7ecb38782",
+  "native_source_revision": "921b3107467b94cfff0c76afd3032c2d3450a7ee",
+  "native_source_archive_sha256": "8689b19fb470285aec1c169b6f4ab2e31777f1849cc260f69fd625347a694c9e",
+  "toolchain": "go1.27.3",
+  "artifacts_sha256": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+    "xandbox-ingress-launch": "3da0c06a0f440b73a438280de0b2d4f93ee5457d28bc7b16e611de114ae5be8a",
+    "xandbox-ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+    "deploy-helper": "897afa0e619f6e634df74d1f65b884afb3b4d1d6e5c6cabd93efc0123a66cf6e",
+    "fixture": "bac82851ad34af5e4c5c4bffac909095986ac1679f2b802d1ad98ce6f10ae988",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568",
+    "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "releasestore.test": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3",
+    "xandbox-install": "a6679b2456c26359e7d0097e1aa87f5b2238f7ea32d37630df9e8e62f9e9c763",
+    "installtxn.test": "6afc7b53e1c1982e3d37942a4f95e1d7b4d689568f359e65a9d9f8c1666c854e",
+    "setup": "6dd186c65d6aa5f9c2c72e8e7b9f82d6a7ccbf504f689138b395c16fff204893",
+    "setup.test": "336a8c39d4cb23a54e7e853683c263e2d77bc17be9c484541aae3216931bf0fd"
+  },
+  "native": {
+    "full_linux_race_count": 3,
+    "vet": true,
+    "actual_pinned_vmm_data_parser_count": 3,
+    "vmm_executed_or_compiled_on_build_host_for_parser": false,
+    "role_bound_static_pie_no_interpreter_or_external_dependency_controls": true,
+    "old_fifteen_and_two_fixture_artifacts_actually_rebuilt_byte_equal": true,
+    "new_installer_and_test_native_cross_equal": true,
+    "linux_amd64_arm64_cross_builds": true,
+    "macos_full_race_count": 3,
+    "macos_python_tests": 235,
+    "macos_python_skips": 5,
+    "native_python_tests": 234,
+    "native_python_skips": 0
+  },
+  "hardware": {
+    "complete_typed_profile_qualified": true,
+    "protocol_ready_boots": 2,
+    "actual_readonly_namespace_audit": true,
+    "source_paths_absent_without_regeneration_or_cold_operator_activation": true,
+    "negative_semantic_controls": 139,
+    "python_tests_before_hardware": 235,
+    "python_skips": 0,
+    "resources": {
+      "profile": "systemd-ingress-v1",
+      "memory_mib": 16384,
+      "disk_bytes": 25769803776,
+      "cgroup_memory_max": 19327352832
+    },
+    "stop_observed_ms_n1": 112.362039,
+    "durable_reclaim_observed_ms_n1": 592.641606,
+    "metrics_are_not_slo_or_media_erasure": true,
+    "raw_report_sha256": "b21cbacb3324fbd015ca80cc5e17cb2a37990eea28f50d89257f6a15cbfe5217",
+    "receipt_sha256": "7fc8a13f4c2253f0eb761034abad40e3c3a0f5f5185b2f9ee0d9c0ee7efb0051"
+  },
+  "raw_evidence_sha256": {
+    "work/install-profile-kvm-v9.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "work/kvm-install-profile-private-v9/resource-receipt.json": "7fc8a13f4c2253f0eb761034abad40e3c3a0f5f5185b2f9ee0d9c0ee7efb0051",
+    "work/kvm-install-profile-v9.json": "b21cbacb3324fbd015ca80cc5e17cb2a37990eea28f50d89257f6a15cbfe5217",
+    "work/kvm-install-profile-private-v9/console-1.log": "c0e4b710dda0f2d5d7f3547cda21adb6db160321a4f824c44b35dfe128a070c0",
+    "work/kvm-install-profile-private-v9/private-cgroup-1.json": "c95efd1bec132ffe75c2f64d514b51423f6c59871e4835482a54acd3db4e4cb1",
+    "work/kvm-install-profile-private-v9/final-private-console.log": "f0d68295dccefadb52201b76f7ffffebb6ce8561b2ced4e0be81caa50baf347c",
+    "work/run-install-profile-kvm-v9.sh": "6c1cb036bdfb4b9fb8a88870f01415cbcd3f120ecd4a86013d12cc3bb9f307a3",
+    "work/install-profile-kvm-v9.pipeline.log": "c3d8d2dcd9221bb5a907981aff7382d874b2de6d0a2076ad5c9de104be5a9378",
+    "work/install-profile-assets-v9.json": "824b74de1a8e93cb8f76f8c53b51cecc4cee153b96608348e30a7f31155ba2ed",
+    "work/install-profile-native-python-v9.log": "bda4a79cca97a562fa3ae203f586569f86718650c7fd043d1e4beac2088baa02",
+    "work/install-profile-nineteen-programs-v9.log": "35c82be9606143b765be5b91888d1651ce5f0ebda24ed6ab23bb0f0efe9d28fa"
+  },
+  "native_raw_sha256": {
+    "run-install-pie-native-v2.sh": "deb0edcf59e388068ef3ae3c4fe45c8e6fdd9c4d75f02da5109966096bb5fce4",
+    "install-pie-native-v2.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "install-pie-native-v2.pipeline.log": "c12335c2331675ad548c98803db6e8040297fa0d4ab070df630b59feab11ef13",
+    "install-pie-native-full-race-v2.log": "185f62944f8f39f48987960ef59acf9d2a615a0b0a2490ffef3d0b7dec0ecdb4",
+    "install-pie-native-controls-v2.log": "591aa1746757eed4790a8d517d8961a9370080cec1e69746553c775b33eea04b",
+    "install-pie-actual-data-v2.log": "6a06b0372195d2d931aa1f9bc67e8835b0f3ea9ed1ac1e8c6fe678a53978293f",
+    "install-pie-native-vet-v2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "install-pie-native-fixture-v2.log": "4cac5b6ad275e8e8e30228f1b61ab2604ec858955d2b20aa3e5b9ddb73bb3cc9",
+    "install-pie-native-helper-v2.log": "3321121dd3b6a20ee003ba2caff3315cd65d59cb7b11a08a6522537b7c7a6f2b",
+    "install-pie-pki-helper-v2.log": "a1fab08daa92fa518af32b4d2449e23e8512cb4aae8239852c3725894e6ed982",
+    "install-pie-pki-vet-v2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "install-pie-native-quota-v2.log": "c90480f40986e8cb4bcd6deca3a7edfa714d1c78bc074ae98b57c473f98e66d8",
+    "install-pie-native-python-v2.log": "ff7c2d370e2e9bed87653d40c0a0d6887dd1c7d99261bd9dcd18c419b25e2e7d",
+    "install-pie-fifteen-old-bytes-v2.log": "7136daf3c7d104f6068844690b88d88f60e00154efc8d73368936b0505cbecd4",
+    "install-pie-two-helper-old-bytes-v2.log": "459723a278a17ea58b8092201bb341324d24c1a13f2617d69bba72b003e3a20e",
+    "install-pie-native-v2.sha256": "50a15bbb59c1afaf4d48e3f2c5c3e6509a58e293dd82eafe40c831ccaed10405"
+  },
+  "failed_hardware_predecessors": [
+    {
+      "attempt": 2,
+      "source_revision": "32e6370a060e2faf148bfcc26020d9255547626a",
+      "source_archive_sha256": "ef5bf266c379aa5345d585bdd5d07ae629afe2ec96e0dfc03eb131fe63db05c6",
+      "raw_report_sha256": "809122cc5b12561378f50d24af4df29cea8e61a1812dcd8def28386a3ef3893b",
+      "receipt_sha256": "0a9d06f4f1e734dc7bbfdc58240ec92c5d6617f10b49eb7ffa4390cb8e294e94",
+      "confirmed_ready_boots": 0,
+      "actual_outer_generations": 1,
+      "result": "failed, not acceptance",
+      "observation": "operator failure before READY; traceback lost to the early terminal sentinel; underlying cause not established"
+    },
+    {
+      "attempt": 3,
+      "source_revision": "932fa560e7ae1b8217e11ed00a08022149793cfd",
+      "source_archive_sha256": "894ed3ebf36882a8329f3aa9bb67a01f924cb8b019b4f4a599b5045250ee08fa",
+      "raw_report_sha256": "1abfe8e9e8c2ef8025afc5bfb533a953c28199586469f6f776c1a47ba8770115",
+      "receipt_sha256": "ed61c124338a60ac406e4043c6454f390529280c751bb1a90ea6694bd66b41aa",
+      "confirmed_ready_boots": 0,
+      "actual_outer_generations": 1,
+      "result": "failed, not acceptance",
+      "observation": "trace reported a thread exit before the target boundary; actual main exit code/output not retained"
+    },
+    {
+      "attempt": 4,
+      "source_revision": "9ace7513a600fe6bfaa2474dae37a0251fbeae2d",
+      "source_archive_sha256": "9304287d2aabcfac90a5d81e4230451a04f9f468aa66e944d1fc85531bd06dd9",
+      "raw_report_sha256": "457d78533096078e63d3e530b351ac9e939c5415a601b192666a52abf72d48b6",
+      "receipt_sha256": "3039fff395a790046aeb7d727aab2af393029204268a922b5f20c8a9cc4100a9",
+      "confirmed_ready_boots": 0,
+      "actual_outer_generations": 1,
+      "result": "failed, not acceptance",
+      "observation": "actual main exit before target; closed diagnostic sent to null stdout, so underlying code not retained"
+    },
+    {
+      "attempt": 6,
+      "source_revision": "cbee9ceaf34c18ab30c29d31f87d27083c8a00b0",
+      "source_archive_sha256": "4ca6277ec2e8c5f7ffabb0cfbdbff26e058f0b1a82cb217adba86cecda17166a",
+      "raw_report_sha256": "a52c7ea46aabd71869d90b283ae49e60bf64b26be5d7355359778227bc1ada1c",
+      "receipt_sha256": "b89ccb48eed8f6991672edb293298e5f04237c7bc619915bfb33c69f67e9b3af",
+      "confirmed_ready_boots": 0,
+      "actual_outer_generations": 1,
+      "result": "failed, not acceptance",
+      "observation": "trace resume raced terminal thread exit and returned ESRCH; no success inferred from ESRCH"
+    },
+    {
+      "attempt": 7,
+      "source_revision": "cdb1350c5e0cf39576f282c362aa1b895b021045",
+      "source_archive_sha256": "5f99538ce3d9a0ef90454fe24453ffc19efb40a0ec985215c25fcb4a510b0ccf",
+      "raw_report_sha256": "5fd059152b2af9c3d6aaba25a8e8d76905e2163b06faf98843afbb46a45084dd",
+      "receipt_sha256": "8999d13854217f55929eb07aced10706c96163177e3e2735567417d7116bd780",
+      "confirmed_ready_boots": 0,
+      "actual_outer_generations": 1,
+      "result": "failed, not acceptance",
+      "observation": "actual pinned installer exited1 with closed refusal before intent/state; last known role firecracker; its pinned ELF is static PIE, rejected by old ET_EXEC-only consumer"
+    },
+    {
+      "attempt": 8,
+      "source_revision": "921b3107467b94cfff0c76afd3032c2d3450a7ee",
+      "source_archive_sha256": "8689b19fb470285aec1c169b6f4ab2e31777f1849cc260f69fd625347a694c9e",
+      "raw_report_sha256": "38b9c26fa3f5e402894327da0be2a4bd48d2cccd764a2afb024b3764f4dc63c4",
+      "receipt_sha256": "5f1e587a8fba9848fa9b63dc568de5dcc0d3b4645ce83150b05b52cb54b8b305",
+      "confirmed_ready_boots": 0,
+      "actual_outer_generations": 1,
+      "result": "failed, not acceptance",
+      "observation": "pre-gate observer rejected executable before observing its lock FD; final correction waits for lock FD then keeps exact ELF/caps checks; original transient executable not captured"
+    }
+  ],
+  "prelaunch_failures": [
+    {
+      "attempt": 1,
+      "source_archive_sha256": "3f2294dd523a945dc9193e05cc027941336ce4ee5cd70e957734c785aa513962",
+      "reason": "unprivileged wrapper could not hash existing root-private source; no harness/VM launch; fixed by existing authorized root readonly hash route, not chmod"
+    },
+    {
+      "attempt": 5,
+      "source_archive_sha256": "4ca6277ec2e8c5f7ffabb0cfbdbff26e058f0b1a82cb217adba86cecda17166a",
+      "reason": "wrapper global version substitution changed a frozen external asset inventory path to nonexistent v5; no harness/VM launch; frozen v4 reference preserved"
+    }
+  ],
+  "combined_fresh_readonly_audit": {
+    "read_only": true,
+    "completed_scopes": 7,
+    "unique_outer_generations": 8,
+    "declared_unique_paths": 29,
+    "all_absent": true,
+    "supplemental_cleanup": false,
+    "records": [
+      {
+        "attempt": 2,
+        "receipt_sha256": "0a9d06f4f1e734dc7bbfdc58240ec92c5d6617f10b49eb7ffa4390cb8e294e94",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      },
+      {
+        "attempt": 3,
+        "receipt_sha256": "ed61c124338a60ac406e4043c6454f390529280c751bb1a90ea6694bd66b41aa",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      },
+      {
+        "attempt": 4,
+        "receipt_sha256": "3039fff395a790046aeb7d727aab2af393029204268a922b5f20c8a9cc4100a9",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      },
+      {
+        "attempt": 6,
+        "receipt_sha256": "b89ccb48eed8f6991672edb293298e5f04237c7bc619915bfb33c69f67e9b3af",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      },
+      {
+        "attempt": 7,
+        "receipt_sha256": "8999d13854217f55929eb07aced10706c96163177e3e2735567417d7116bd780",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      },
+      {
+        "attempt": 8,
+        "receipt_sha256": "5f1e587a8fba9848fa9b63dc568de5dcc0d3b4645ce83150b05b52cb54b8b305",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      },
+      {
+        "attempt": 9,
+        "receipt_sha256": "7fc8a13f4c2253f0eb761034abad40e3c3a0f5f5185b2f9ee0d9c0ee7efb0051",
+        "runner_absent": true,
+        "scope_paths_absent": true
+      }
+    ]
+  },
+  "prior_public_proofs_unchanged": {
+    "docs/validation/release-publisher-kvm-v1.json": "da8da5ec61bd694e0a536d683610baa33d430e692f5aa260ecec5037d83b6f9b",
+    "docs/validation/release-store-native-v1.json": "11ea7ffa0c1afe7ac4baaadd944a16d4e929ebba36e5f91a1c92256a084cb516",
+    "docs/validation/readiness-drain-v1.json": "a75b68e958421ce27366fca6fcc6c3fcd34b69fd7ac7233207c87b59758e3928",
+    "docs/validation/service-readiness-v1.json": "fc4b03fb8af1c60c0503197b6ea3a22fe3c617c16d904f080bf354072e2c2fac",
+    "docs/validation/diagnostic-cycle-observability-v1.json": "6f0efd5a06b46b57483b96f7bd0dc9249a2472386bb71cdf1a8260e003fa21be",
+    "docs/validation/systemd-ingress-tls-v1.json": "c5d5ccfab3363c489ae4ae4fd758340f841518298888f78f9a973bcca20c062b",
+    "docs/validation/initial-install-native-v1.json": "46d28bac0a0a291af7aa761e56c6abcbcd15c183b3e01b5230d38c69c84100ef"
+  },
+  "acceptance": {
+    "limited_fresh_install": true,
+    "full_installer_filesystem_fault_matrix": false,
+    "configuration_rotation_upgrade_rollback_consistent_backup_catalog": false,
+    "audit_retention_saturation_slo": false,
+    "production_ready": false,
+    "goal_complete": false
+  }
+}

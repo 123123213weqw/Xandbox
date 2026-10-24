@@ -1,11 +1,11 @@
-# Initial installation transaction — not yet systemd/KVM accepted
+# Initial installation transaction — limited owned-L1 acceptance
 
 `xandbox-install` connects a committed [artifact publication](RELEASE_STORE.md)
 to fixed files and a fixed service-manager composition. It is **new, experimental
-initial-install code**, not a production deployment recommendation. Its own
-root CLI, capability-free startup gate and real PID1/cold-boot path have **not
-yet been accepted on an owned Linux/KVM host**. Older launcher/readiness/
-publisher reports do not certify this new installer.
+initial-install code**, not a production deployment recommendation. Its root CLI, capability-free startup gate and real PID1/cold-boot path now have
+[a new finite owned-L1 qualification](INITIAL_INSTALL_KVM.md). This does not
+certify upgrades, rotation, every persistence-failure window or full production
+readiness. Older launcher/readiness/publisher reports do not certify it.
 
 ## Deliberately narrow contract
 
@@ -22,8 +22,10 @@ publisher reports do not certify this new installer.
   committed reference. The consumer holds the **existing publisher lock inode**
   while checking/copying the selected bundle. Both retained bundles' complete
   inventory, ownership, modes, sizes and SHA256 are checked. Executable roles
-  require native static ET_EXEC ELF with a file-backed executable entry and no
-  interpreter; workspace must be exactly 128 MiB. This is not malware analysis
+  require native static ELF with a file-backed executable entry and no interpreter.
+  Go roles retain ET_EXEC; only Firecracker/jailer may use ET_DYN static PIE,
+  with DF_1_PIE and bounded program-header dynamic tags rejecting imports, loader
+  search paths and audit/filter dependencies. Workspace must be exactly 128 MiB. This is not malware analysis
   or a malicious-root ELF trust boundary.
 - Five private, hash-pinned operator inputs: backend, auth, gateway policy,
   certificate and key; plus the installer executable pinned to its actual
@@ -83,8 +85,8 @@ That process drops all threads' ambient/bounding/effective/permitted capabilitie
 sets NNP, requires sole-process placement in this unit's `.control`, rejects
 inherited authority FDs, and takes a shared **existing** installer lock. It
 verifies the committed files and regenerated composition, without repairing,
-creating a lock, activating a service or executing a task. **This placement and
-capability contract still needs real PID1 validation.**
+creating a lock, activating a service or executing a task. **This placement and capability contract has a new limited real PID1
+observation in the initial-install profile; it is not a complete fault matrix.**
 
 ## Receipts and recovery
 
@@ -114,7 +116,7 @@ installation; they do not promise that nothing happened.
   treating file commit as service health. `status` is observational and never
   manufactures a missing lock or calls activation operations.
 - Existing independently proven drain/readiness semantics are reused in code,
-  **not yet certified in this installer composition**. No fast-stop, full
+  **now covered by the named finite installer profile, not full production acceptance**. No fast-stop, full
   reclaim, media-erasure or SLO claim follows from an installation receipt.
 
 ## Evidence boundary and remaining work
@@ -127,11 +129,13 @@ test-hook flag. Model service assets are not executed and are not usable VMMs.
 Returning a persistence-hook error is not process death, fsync failure injection,
 physical power loss or hardware acceptance.
 
-Before deployment acceptance: run the ordinary installer in an owned systemd L1
-with real artifacts/config/PKI, exercise pending-commit start refusal, manager
-failure/exact reconciliation, unchanged drain, real TLS→KVM and original-disk
-cold recovery, then independently verify all owned resources absent. Verify the
-cap0 pre-gate and its timing under the unchanged startup budget.
+The [new named profile](INITIAL_INSTALL_KVM.md) runs the ordinary installer in
+an owned systemd L1 with real artifacts/config/PKI, actual precommit child death,
+cap0 pending-commit start refusal, exact reconciliation, unchanged drain,
+TLS→KVM, source-path absence and original-disk cold recovery. Its scoped resources
+were independently absent. It does not cover filesystem D/EIO during installation,
+every manager crash boundary, malicious root, independent human reproduction or
+production saturation/latency guarantees.
 
 This revision is immutable **initial configuration only**. Manually rotating its
 installed TLS/gateway/auth files would invalidate its commit proof; the older
@@ -141,7 +145,7 @@ cross-ledger/session/owner/catalog/policy backup, trusted key distribution,
 catalog installation, reliable audit/retention, saturation and production SLO
 acceptance remain unfinished. No M1–M4 completion box is changed.
 
-## Frozen native qualification (limited scope)
+## Earlier native qualification (frozen pre-PIE correction)
 
 [Machine-readable evidence](validation/initial-install-native-v1.json) binds
 source `4167804f75f6daf0169d22f5cb9b9f1cdf75c110` to actual Go 1.27.3 Linux full
@@ -162,4 +166,5 @@ checks. This cleanup is not runtime GC evidence. The final frozen suite includes
 the later permanent-lock-loss refusal and observational status controls.
 
 No privileged installer or actual manager mutation ran on the shared build host.
-**The root/systemd/KVM/cold acceptance listed above remains unfinished.**
+The later [native correction and owned-L1 profile](INITIAL_INSTALL_KVM.md) have
+distinct source bindings; the earlier JSON is retained unchanged, not re-signed.
