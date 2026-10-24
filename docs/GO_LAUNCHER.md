@@ -103,3 +103,9 @@ bounding 与活动集合的含义不同，见 [Linux capabilities](https://man7.
 固定 [jailer v1.17.0 源码](https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/src/jailer/src/env.rs)
 通过 uid/gid 配置 exec，并未承诺 bounding 全清零。后续结果必须来自新的实际运行，
 不能仅凭上述解释宣布通过。
+
+v3（83f205a）通过 capability 检查后，在启动45秒 heartbeat writer 的 API 请求处失败；
+原创建请求使用普通默认 max_exec_ms=5000，超出该实例限额的执行本来就应被拒绝。
+v4 测试创建时显式请求现有上限60000，所有旧 key 重放共用相同 spec；新增纯控制确认
+参数一致性，不扩大生产默认值、不提高执行/Stop/GC 超时。API失败信息现区分整数
+actual/expected状态与frame越界，不回显响应体或凭证。v3原件和清理审计继续保留。

@@ -80,7 +80,8 @@ def call(method,path,body=None,tenant='alpha',key=None,expected=200):
     if key is not None:headers['Idempotency-Key']=key
     try:
         conn.request(method,path,None if body is None else json.dumps(body),headers);response=conn.getresponse();raw=response.read(65537)
-        if response.status!=expected or len(raw)>65536:raise RuntimeError('fixed guest API status/frame mismatch')
+        if response.status!=expected:raise RuntimeError('fixed guest API status mismatch actual='+str(response.status)+' expected='+str(expected))
+        if len(raw)>65536:raise RuntimeError('fixed guest API frame exceeded')
         return json.loads(raw)
     finally:conn.close()
 
@@ -204,7 +205,10 @@ def deployment_probe():
     return {'ordinary_firecracker_health':True,'manager_main_is_pinned_daemon':True,'main_in_nested_control':True,'immutable_backend_auth_snapshots':True,'no_mock_or_host_fallback':True,'instance_capacity':4}
 
 
-def create(tenant,key_value):return call('POST','/v1/sandboxes',{'ttl_ms':300000},tenant=tenant,key=key_value,expected=201)
+def create_spec():return {'ttl_ms':300000,'limits':{'max_exec_ms':60000}}
+
+
+def create(tenant,key_value):return call('POST','/v1/sandboxes',create_spec(),tenant=tenant,key=key_value,expected=201)
 
 
 def progressing_writer(row,tenant):
@@ -246,7 +250,7 @@ def first_checkpoint():
     if (old_pid,old_start)==(new_pid,new_start):raise RuntimeError('new daemon incarnation required')
     for item in rows:
         reclaimed(item['row'],item['tenant'],item['owner']['project_id'])
-        call('POST','/v1/sandboxes',{'ttl_ms':300000},tenant=item['tenant'],key=item['key'],expected=410)
+        call('POST','/v1/sandboxes',create_spec(),tenant=item['tenant'],key=item['key'],expected=410)
     fresh=create('alpha','systemd-before-cold');boot=verify_vm(fresh,'alpha')
     execute(fresh,['sh','-c','printf cold-proof > /workspace/cold-marker; sync'],'alpha')
     running=progressing_writer(fresh,'alpha')
@@ -262,7 +266,7 @@ def recover():
     old=json.loads(CHECKPOINT.read_bytes())
     if old['boot_id']==read('/proc/sys/kernel/random/boot_id') or old['machine_id']!=read('/etc/machine-id'):raise RuntimeError('original disk cold boot required')
     deployment_probe();reclaimed(old['row'],'alpha',old['owner']['project_id'])
-    call('POST','/v1/sandboxes',{'ttl_ms':300000},key=old['key'],expected=410)
+    call('POST','/v1/sandboxes',create_spec(),key=old['key'],expected=410)
     fresh=create('alpha','systemd-after-cold');boot=verify_vm(fresh,'alpha')
     if boot==old['guest_boot']:raise RuntimeError('old assigned guest resurrected')
     execute(fresh,['test','!','-e','/workspace/cold-marker'],'alpha');owned=owner(fresh)

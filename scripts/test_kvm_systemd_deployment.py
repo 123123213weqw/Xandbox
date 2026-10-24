@@ -68,6 +68,18 @@ class SystemdDeploymentControls(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'quota bypass'):observe_vmm_capabilities({**good,name:'0000000001000000'},good['CapBnd'])
         with self.assertRaisesRegex(RuntimeError,'quota bypass'):observe_vmm_capabilities(good,'0000000001000000')
 
+    def test_create_explicitly_allows_fixed_busy_writer_and_replay_uses_same_spec(self):
+        import inspect
+        import systemd_deployment_guest as guest
+        spec=guest.create_spec()
+        self.assertEqual(spec,{'ttl_ms':300000,'limits':{'max_exec_ms':60000}})
+        with patch('systemd_deployment_guest.call',return_value={'not_executed':True}) as request:
+            self.assertEqual(guest.create('alpha','test-key'),{'not_executed':True})
+        request.assert_called_once_with('POST','/v1/sandboxes',spec,tenant='alpha',key='test-key',expected=201)
+        self.assertIn('tenant,45000)',inspect.getsource(guest.progressing_writer))
+        self.assertIn('create_spec()',inspect.getsource(guest.first_checkpoint))
+        self.assertIn('create_spec()',inspect.getsource(guest.recover))
+
     def test_unmarked_host_guard_cannot_fall_back_to_console(self):
         with patch('systemd_delegate_probe.guard',side_effect=RuntimeError('unmarked')),patch('systemd_delegate_probe.failure_console') as output:
             with self.assertRaises(RuntimeError):systemd_delegate_probe.entry('operator')
