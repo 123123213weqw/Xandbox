@@ -54,6 +54,16 @@ func gatewayBinding(c Config, authority []byte) string {
 	}{c.Version, legacy, c.ManagedPolicyFile, policycontrol.OperatorSocket, c.InitialPolicySHA256})
 }
 func openPolicyState(dir, binding string) (out *policyState, err error) {
+	return openPolicyStateMode(dir, binding, true)
+}
+
+// Maintenance must never manufacture a used-directory marker or bootstrap a
+// missing authority. Keep this distinct from the supervisor's initial opener.
+func openExistingPolicyState(dir, binding string) (*policyState, error) {
+	return openPolicyStateMode(dir, binding, false)
+}
+
+func openPolicyStateMode(dir, binding string, bootstrap bool) (out *policyState, err error) {
 	if !filepath.IsAbs(dir) || filepath.Clean(dir) != dir || len(binding) != 64 {
 		return nil, errors.New("invalid gateway policy state binding")
 	}
@@ -62,10 +72,14 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 	}
 	// The durable lock inode is also a used-directory marker. A surviving lock
 	// must never authorize bootstrap after both authority records disappear.
-	fd, e := unix.Open(filepath.Join(dir, "gateway.lock"), unix.O_RDWR|unix.O_CREAT|unix.O_EXCL|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0600)
-	freshLock := e == nil
-	if errors.Is(e, unix.EEXIST) {
-		fd, e = unix.Open(filepath.Join(dir, "gateway.lock"), unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	flags := unix.O_RDWR | unix.O_CLOEXEC | unix.O_NOFOLLOW | unix.O_NONBLOCK
+	if bootstrap {
+		flags |= unix.O_CREAT | unix.O_EXCL
+	}
+	fd, e := unix.Open(filepath.Join(dir, "gateway.lock"), flags, 0600)
+	freshLock := bootstrap && e == nil
+	if bootstrap && errors.Is(e, unix.EEXIST) {
+		fd, e = unix.Open(filepath.Join(dir, "gateway.lock"), unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	}
 	if e != nil {
 		return nil, e
@@ -85,7 +99,7 @@ func openPolicyState(dir, binding string) (out *policyState, err error) {
 		return nil, e
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
-	if !ok || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 || st.Uid != uint32(os.Geteuid()) || st.Nlink != 1 {
+	if !ok || !info.Mode().IsRegular() || st.Mode&07777 != 0600 || st.Uid != uint32(os.Geteuid()) || st.Nlink != 1 || info.Size() != 0 {
 		return nil, errors.New("private single-link gateway lock required")
 	}
 	if unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil {

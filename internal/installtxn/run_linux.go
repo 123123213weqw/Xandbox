@@ -54,10 +54,6 @@ func Apply(ctx context.Context, path string, expected uint64, request string) (R
 	if e = f.mkdir(Root, 0700); e != nil {
 		return zero, e
 	}
-	unlock, e := f.initialLock(ctx)
-	if e != nil {
-		return zero, e
-	}
 	manager := systemManager{f, f.managerCommand}
 	load := func(ctx context.Context, p Plan, pending bool) (*prepared, func(), error) {
 		self, e := launch.StaticServiceELF(p.Self)
@@ -75,6 +71,20 @@ func Apply(ctx context.Context, path string, expected uint64, request string) (R
 			return nil, nil, e
 		}
 		return prepared, func() { prepared.close(); r.close() }, nil
+	}
+	return installOperation(ctx, f, plan, request, manager, load)
+}
+
+func installOperation(ctx context.Context, f *filesystem, plan Plan, request string, manager serviceManager, load func(context.Context, Plan, bool) (*prepared, func(), error)) (Result, error) {
+	var zero Result
+	operationDone, e := f.initialOperationLock(ctx)
+	if e != nil {
+		return zero, e
+	}
+	defer operationDone()
+	unlock, e := f.existingLock(ctx, true)
+	if e != nil {
+		return zero, e
 	}
 	t, e := f.installLocked(ctx, plan, request, manager, load)
 	unlock()
@@ -181,7 +191,15 @@ func Reconcile(ctx context.Context, request string) (Result, error) {
 		return Result{}, e
 	}
 	defer f.root.Close()
-	manager := systemManager{f, f.managerCommand}
+	return reconcileOperation(ctx, f, request, systemManager{f, f.managerCommand})
+}
+
+func reconcileOperation(ctx context.Context, f *filesystem, request string, manager serviceManager) (Result, error) {
+	operationDone, e := f.operationLock(ctx, false)
+	if e != nil {
+		return Result{}, e
+	}
+	defer operationDone()
 	unlock, e := f.existingLock(ctx, false)
 	if e != nil {
 		return Result{}, e

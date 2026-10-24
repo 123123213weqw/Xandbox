@@ -14,36 +14,41 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/gateway"
 )
 
+func pinModelSelf(t *testing.T, p *prepared) {
+	t.Helper()
+	path, e := os.Executable()
+	if e != nil {
+		t.Fatal(e)
+	}
+	in, e := os.Open(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	t.Cleanup(func() { in.Close() })
+	st, e := in.Stat()
+	if e != nil {
+		t.Fatal(e)
+	}
+	sum, e := hashFile(context.Background(), in, st.Size())
+	if e != nil {
+		t.Fatal(e)
+	}
+	p.plan.Self.SHA256 = sum
+	for i := range p.targets {
+		if p.targets[i].file.Path == SelfPath {
+			p.targets[i].file.SHA256 = sum
+			p.targets[i].file.Bytes = st.Size()
+			p.targets[i].source = in
+			p.targets[i].data = nil
+		}
+	}
+}
+
 func rotationFixture(t *testing.T, pinSelf bool) (*filesystem, transaction, RotationPlan) {
 	t.Helper()
 	f, p, m := managedFixture(t)
 	if pinSelf {
-		path, e := os.Executable()
-		if e != nil {
-			t.Fatal(e)
-		}
-		in, e := os.Open(path)
-		if e != nil {
-			t.Fatal(e)
-		}
-		t.Cleanup(func() { in.Close() })
-		st, e := in.Stat()
-		if e != nil {
-			t.Fatal(e)
-		}
-		sum, e := hashFile(context.Background(), in, st.Size())
-		if e != nil {
-			t.Fatal(e)
-		}
-		p.plan.Self.SHA256 = sum
-		for i := range p.targets {
-			if p.targets[i].file.Path == SelfPath {
-				p.targets[i].file.SHA256 = sum
-				p.targets[i].file.Bytes = st.Size()
-				p.targets[i].source = in
-				p.targets[i].data = nil
-			}
-		}
+		pinModelSelf(t, p)
 	}
 	tx, e := applyModel(context.Background(), f, p, request(), m)
 	if e != nil {

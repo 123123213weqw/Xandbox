@@ -314,6 +314,16 @@ func Reconfigure(ctx context.Context, path string, expected uint64, request stri
 	if e != nil {
 		return zero, e
 	}
+	return reconfigureOperation(ctx, f, p, expected, request, systemManager{f, f.managerCommand})
+}
+
+func reconfigureOperation(ctx context.Context, f *filesystem, p RotationPlan, expected uint64, request string, manager serviceManager) (Result, error) {
+	var zero Result
+	operationDone, e := f.operationLock(ctx, false)
+	if e != nil {
+		return zero, e
+	}
+	defer operationDone()
 	unlock, e := f.existingLock(ctx, true)
 	if e != nil {
 		return zero, e
@@ -322,7 +332,6 @@ func Reconfigure(ctx context.Context, path string, expected uint64, request stri
 	if e == nil {
 		e = f.self(ctx, t.Plan)
 	}
-	manager := systemManager{f, f.managerCommand}
 	if e == nil {
 		_, e = f.rotationLocked(ctx, t, p, expected, request, func() error {
 			yes, e := f.policyReceipt(ctx, t, manager, false)
