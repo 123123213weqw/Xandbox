@@ -140,3 +140,26 @@ A separate consistent reconfiguration transaction is required. Upgrade/rollback,
 cross-ledger/session/owner/catalog/policy backup, trusted key distribution,
 catalog installation, reliable audit/retention, saturation and production SLO
 acceptance remain unfinished. No M1–M4 completion box is changed.
+
+## Frozen native qualification (limited scope)
+
+[Machine-readable evidence](validation/initial-install-native-v1.json) binds
+source `4167804f75f6daf0169d22f5cb9b9f1cdf75c110` to actual Go 1.27.3 Linux full
+`-race -count=3`/vet, 85 selected returned-error boundaries, eight abrupt test
+process exits and fresh-handle recovery (three repetitions), four independent
+same/competing-request processes, generated ephemeral TLS/ordinary policy
+validation and retained-release/ELF/permanent-lock controls. Tagged fixture/helper
+race and CGO-free quota-filter controls passed; Linux Python 219 tests had zero
+skips. macOS full race/vet passed; its Python suite has five platform skips.
+
+Both new amd64 CLI/test artifacts are native/cross byte-equal; arm64 cross builds
+passed. All 15 previous artifacts were actually rebuilt and byte-equal, so their
+prior source-bound reports stay unchanged, **not re-signed as installer tests**.
+The first development run failed test-owned TempDir teardown at a sealed 0555
+child root; its original failure log is retained. The test-only cleanup was fixed,
+and 270 exact logged leftover test directories were removed with owner/inventory
+checks. This cleanup is not runtime GC evidence. The final frozen suite includes
+the later permanent-lock-loss refusal and observational status controls.
+
+No privileged installer or actual manager mutation ran on the shared build host.
+**The root/systemd/KVM/cold acceptance listed above remains unfinished.**
