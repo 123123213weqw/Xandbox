@@ -155,6 +155,19 @@ def copy_snapshot(name):
     try:os.fsync(fd)
     finally:os.close(fd)
 
+def fresh_manager_observation():
+    # Read-only primary evidence from THIS owned systemd255, not a different
+    # shared build host's manager. Closed fields only, no raw error projection.
+    fields=('LoadState','ActiveState','FragmentPath','DropInPaths','UnitFileState','MainPID')
+    observations=[]
+    for unit in ('xandbox.service','xandbox-ingress.service'):
+        args=['/usr/bin/systemctl','--no-ask-password','--no-pager','--quiet','show']+['--property='+k for k in fields]+[unit]
+        r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=5,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','SYSTEMD_COLORS':'0','SYSTEMD_PAGER':''})
+        if len(r.stdout)>16384 or len(r.stderr)>4096:raise RuntimeError('bounded manager probe')
+        data=dict(l.split('=',1) for l in r.stdout.decode().splitlines() if '=' in l)
+        observations.append({'unit':unit,'status':r.returncode,'stderr_bytes':len(r.stderr),'six_fields':set(data)==set(fields),'not_found':data.get('LoadState')=='not-found','inactive':data.get('ActiveState')=='inactive','fragment_empty':data.get('FragmentPath')=='','dropins_empty':data.get('DropInPaths')=='','enabled_empty':data.get('UnitFileState')=='','pid_zero':data.get('MainPID')=='0'})
+    with open('/dev/console','w') as c:c.write('XANDBOX_INSTALL_PRIVATE_MANAGER '+json.dumps(observations,sort_keys=True)+'\n');c.flush()
+
 def setup():
     global PHASE
     guard()
@@ -194,7 +207,7 @@ def setup():
         else:bad['release_revision']=2
         path=CONFIG/(kind+'.json');save(path,bad);call('apply',request,path,want=1,bootstrap=True)
         if (ROOT/'intent.json').exists() or Path('/etc/systemd/system/xandbox.service').exists():raise RuntimeError('invalid input materialized a candidate')
-    PHASE='commit-interrupt';interrupt_before_commit(arguments('apply',request,CONFIG/'plan.json',True),str(CONFIG/'trace-child-output'),programs['install']['sha256'],base.sha)
+    PHASE='commit-interrupt';fresh_manager_observation();interrupt_before_commit(arguments('apply',request,CONFIG/'plan.json',True),str(CONFIG/'trace-child-output'),programs['install']['sha256'],base.sha)
     PHASE='pending-gate';pregate_pending()
     PHASE='apply-recovery'
     call('apply',request,CONFIG/'plan.json',bootstrap=True)

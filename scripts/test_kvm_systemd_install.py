@@ -135,5 +135,11 @@ class InstallControls(unittest.TestCase):
         self.assertNotIn('print(raw',s)
         self.assertIn("with open('/dev/console','w') as console",s)
         self.assertIn('json.dumps(diag,sort_keys=True)',s)
+        self.assertIn('if e.errno!=errno.ESRCH:raise',s)
+    def test_fresh_manager_diagnostic_never_activates_or_relays_raw_errors(self):
+        s=inspect.getsource(guest.fresh_manager_observation)
+        self.assertIn("'--quiet','show'",s)
+        self.assertIn("'stderr_bytes':len(r.stderr)",s)
+        for op in ("'start'","'enable'","'restart'",'r.stderr.decode()'):self.assertNotIn(op,s)
 
 if __name__=='__main__':unittest.main()

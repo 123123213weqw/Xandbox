@@ -92,7 +92,10 @@ def interrupt_before_commit(args,output,expected_sha,sha):
             forward=0 if sig in (signal.SIGTRAP,signal.SIGSTOP,signal.SIGTRAP|0x80) else sig
             try:ptrace(24,tid,0,forward)
             except OSError as e:
-                if not hit or e.errno!=errno.ESRCH:raise
+                # exit_group can kill a known stopped thread before resume.
+                # ESRCH is NOT completion or success: keep it in threads until
+                # its actual terminal wait event, under the original deadline.
+                if e.errno!=errno.ESRCH:raise
         if not hit:raise RuntimeError('no exact commit entry observed')
     finally:
         if threads:
