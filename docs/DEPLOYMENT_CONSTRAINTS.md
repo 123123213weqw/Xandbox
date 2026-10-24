@@ -55,3 +55,5 @@ reload、严格 node 库存、stop/start 与原盘第二次启动。选择与 OP
 真实 TLS→KVM、busy drain、主进程崩溃、service kill、原盘 cold/旧键拒绝、新 guest 执行、
 密钥权限与独立操作员复现，以及升级/回滚/备份恢复。不得改共享 L0 unit、内核、挂载或 quota
 来让测试通过。启动器已落实固定清单、同PID exec 与嵌套预算；其余验收仍未完成，不改变[生产状态](PRODUCTION.md)。
+
+后续[自动readiness/enablement组合](SERVICE_READINESS.md)已取得新冻结源两启动有限证据，取代新组合中的operator等待/启动入口动作；旧d5f3c2e报告仍保持手动启动来源，不是生产安装事务通过。

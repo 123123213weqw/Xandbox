@@ -99,7 +99,7 @@ root/manager/发布流程仍是信任根：配置摘要检查后，gateway 会�
 
 后续owned systemd L1已取得精确envelope/能力/ELF/归属、双租户TLS→KVM、启动漂移拒绝、
 独立ingress关闭、key/leaf轮换、main crash及同盘cold的[新冻结源证据](SYSTEMD_INGRESS_FIXTURE.md)。
-仍须补自动启动/readiness编排、catalog、可复现安装升级/备份及独立操作员，未改共享L0部署。
+[自动启动/readiness组合](SERVICE_READINESS.md)已另取得新有限实证；仍须生产安装事务、catalog、可复现升级/备份及独立操作员，未改共享L0部署。
 整体[生产门槛](PRODUCTION.md)仍未完成。
 
 ## source21bb 的实际原生检查与普通 launcher 回归

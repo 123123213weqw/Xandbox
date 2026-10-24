@@ -1,8 +1,10 @@
-# systemd 自动启动/readiness 组合（代码已实现，实机待验）
+# systemd 自动启动/readiness 组合（有限实机通过）
 
 现有[独立入口有限实测](SYSTEMD_INGRESS_FIXTURE.md)需要可信 operator 先等 UDS 再启动入口。
 新增 `cmd/xandbox-ready` / `internal/serviceready`，将这项启动闸门交给 systemd。
-当前没有把该新组合记为实机通过，更不等于生产安装器、升级或完整生产就绪。
+冻结源 `9e4da26d1ec4bda9b678966e88c7adb0b3133965` 已取得独立两启动实机证据。
+这是有限的自动启动/启用组合，不等于事务生产安装器、升级或完整生产就绪。
+[脱敏摘要](validation/service-readiness-v1.json)绑定原生/交叉13产物、13个harness与原始报告摘要。
 
 ## 选择与边界
 
@@ -38,13 +40,13 @@ bearer token、恢复/准入变更或宿主执行 fallback。Helper CLI 只接�
 root/内核/固定程序仍是信任根；没有恶意 root 防护、跨 root 变更的原子路径保证或远程证明。
 总体预算仍为显式核算，不是共同硬父组或 OS 实际容量/预留证明。
 
-## 新 owned-L1 验证代码（待执行）
+## 本次实际执行的 owned-L1 闭集流程
 
 独立 `--readiness-assets` 选择器与旧 primitive/UDS/手动 ingress profile 互斥，复用已界定
 16GiB/CPU12/24GiB盘、18GiB外层硬组、无NIC/15分钟lease，不扩大共享L0权限。
 13个固定资产增加真实 ready ELF；fixture helper 仅在新专用 marker 下生成上述候选 unit。
 
-计划实际检查：
+实际通过：
 
 1. 原三个 ingress 预检负例保留；另将 ready NodeLaunch pin 改错，要求启动失败、入口无TCP、
    manager 清除两个组与输入目录，之后才 reset-failed。
@@ -57,6 +59,22 @@ root/内核/固定程序仍是信任根；没有恶意 root 防护、跨 root �
 4. 健康同步原盘第二次开机，仅由 enable 链接启动两个服务；operator 不发送 start，验证
    原 unit/policy/链接持久、旧guest回收、新guest干净及正常stop。独立只读审计所有代际/路径。
 
-纯控制、原生构建或新代码存在均不能代替上述实机证据。旧 d5f3c2e 报告保持原绑定；新增
-helper 字节、自动启动流程与源码须单独冻结、原生/交叉比较并取得新原件。生产安装/升级回滚、
-catalog、备份、人类operator、可靠审计、持续负载及各阶段延迟SLO仍另验。
+原生 Linux Go1.27.3 完整 race(count3)/vet、host fixture 与 helper race/vet、quota filter及
+174项Python零skip通过；13产物原生/交叉一致。与269799f的12产物相比，仅 TEST ONLY
+deploy-helper 改变并新增 ready ELF；其他11产物保持原字节，包括普通daemon5bfb、gateway41e9、
+launcher8f、ingress guard3da与outer fixture bac828，不重贴旧 d5f3c2e 或其他历史报告。
+
+实际 runner 退出0且原PID不存在；新原件两boot的probe/checkpoint/recover全部闭集typed true。
+ready helper 的 `.control` 归属、所有观测线程的精确一项能力/NNP是在真正冻结后端负例期间
+核对，不用模型代替。原单独入口restart仍显式进行；daemon restart/cold则验证自动依赖启动。
+负例后恢复原生成unit，cold时原unit、readiness policy、asset pin和实际enable链接保持。
+
+独立只读复核原root600/单链接/NOFOLLOW receipt，新scope两个唯一外层代际及所有声明路径
+均不存在，无补充清理。随后将本系列含历史失败的9 scopes/13个全局唯一外层代际/40个唯一
+声明路径重新只读核对不存在；历史失败与诊断scope仍不是通过，前序VM前编排失败不算scope。
+离线语义门禁还实际拒绝缺boot2、整数冒充bool、缺ready pin、未知harness、误加旧手动启动
+flag、source重贴、虚报生产和partial failure共8类负例。
+
+没有用这些结果勾选完整M1–M4。`admission_open`两种布尔值的严格健康解析有纯控制，但本scope未另做
+持久drain下的自动启动实机验收；此处更没有所有启动/文件系统介质故障的证明。生产安装事务、
+catalog、升级回滚/备份、人类operator、可靠审计、持续负载及各阶段延迟SLO仍另验。

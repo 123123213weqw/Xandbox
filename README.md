@@ -4,9 +4,9 @@
 
 新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新daemon的[25个全新命名运行scope](docs/FIVEB_RUNTIME.md)已另行通过；[fixture320的live trace两组与十边界](docs/FIVEB_BOUNDARIES.md)也已独立通过，完整部署门槛仍未完成，不能继承旧矩阵或宣称生产就绪。
 
-[独立 ingress 启动器](docs/INGRESS_LAUNCHER.md)：固定清单/单独资源域已在[真实systemd TLS→KVM、轮换、崩溃及原盘cold有限验证](docs/SYSTEMD_INGRESS_FIXTURE.md)通过；安装升级、自动readiness编排与生产验收仍未完成。
+[独立 ingress 启动器](docs/INGRESS_LAUNCHER.md)：固定清单/单独资源域已在[真实systemd TLS→KVM、轮换、崩溃及原盘cold有限验证](docs/SYSTEMD_INGRESS_FIXTURE.md)通过；安装升级与完整生产验收仍未完成。
 
-新增 [systemd readiness/enablement 组合](docs/SERVICE_READINESS.md)：固定 Go 后置闸门与自动启动验证代码已实现，实机尚待验，不继承上面的手动启动报告。
+新增 [systemd readiness/enablement 组合](docs/SERVICE_READINESS.md)：固定 Go 后置闸门、启用依赖及原盘自动启动已取得新两启动有限实证，不继承手动启动报告，也不等于生产安装器。
 
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
