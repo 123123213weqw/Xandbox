@@ -1,0 +1,87 @@
+# New managed policy L1 cases — implemented, not yet executed
+
+These are **unexecuted fixture protocols**, not additional hardware acceptance.
+The two accepted [committed recovery cases](MANAGED_POLICY_L1_FIXTURE.md) remain
+bound to their own source, reports and inputs. They do not certify these cases.
+
+The opt-in producer now has independently fresh `replacement2a`/`replacement2b`
+material at epoch2 while the actual installed predecessor is still epoch1, plus
+`rotation2long` for ordinary hot rotation. It never changes installed authority,
+consumes an epoch, starts a service or acknowledges a proposal. New producer
+race/CGO-free tests and fresh artifacts must be independently qualified; neither
+producer tests nor input production is a root maintenance/hardware pass.
+
+## Closed independent cases
+
+Each uses its own fresh owned L1 disk/report and the existing 16 GiB / CPU12 /
+24 GiB / no-NIC launcher and unchanged operator, CLI, guest and socket deadlines.
+All task argv still crosses the ordinary controller/guest APIs. Case metadata,
+closed reply flags and original-disk cold checkpoint remain bound to that case.
+
+### `supersession-repeat`
+
+1. Ordinary root `reconfigure` proposes a synthetic short-lived epoch2 policy.
+   Trace only the operator's own newly forked, exact-ELF installer; kill/reap it
+   at **renameat entry** for `.policy.next` -> `gateway-policy.json`, after the
+   complete proposal and future intent exist but before file2 publishes. Require
+   installed file1, actual gateway state1 and original active ingress unchanged.
+2. ACK a real drain. Wait for that proposal's actual certificate NotAfter without
+   changing clocks, remove only its exact hash-pinned private source, and generate
+   separate fresh A2/B2 material from installed1. Admit the original 45-second busy
+   writer only after expiry, never count an already-expired execution as progress.
+3. Actual root `replace-pending-policy A` stops active ingress and confirms state1.
+   Kill/reap its own traced child at the same pre-publication rename boundary.
+   Require file/state1, future A intent and A declaration; never claim an A ACK.
+4. **Explicit owned-fixture data-loss injection:** after proving inactive/empty
+   ingress, unchanged main/file/state1 and the exact A declaration, unlink only
+   the full known A source and `.policy.next` bytes under bounded owner/mode/
+   single-link/inode/hash checks. This deletes no metadata, unknown path or opaque
+   authority; it is not a production cleanup API, real media fault or memory
+   erasure claim. Keep the declaration/intent and require actual startup `verify`
+   plus predecessor retry to refuse. No production process is manually stopped.
+5. Actual root `replace-pending-policy B` names A, settles A without its source/
+   proposal files or ACK, and publishes/ACKs B at the **same still-unconsumed 2**.
+   Require actual state2 and B's marker, with A and its intent removed only by the
+   production protocol. Remove B's exact source, reconcile without restart, then
+   ordinary hot-rotate 2 -> 3 while proving old-key refusal on the held TLS2
+   transport. A 401 deliberately closes that transport; never claim post-401 reuse.
+
+### `supersession-visible-recovery`
+
+Start with the same unconsumed expired ordinary proposal. Publish B2 through the
+actual replacement command, but trace the own installer until a **successful
+fsync exit on the fixed installation directory**, with file2 + exact intent/B
+journal visible and proposal scratch absent. Kill/reap before the CLI can start
+new ingress. Require durable gateway state1 and no active ingress/child ACK2.
+
+A fresh valid epoch2 A source must not permit `replace-pending-policy` to reuse
+published2. Require its actual refusal without state advance. Remove B's source,
+generate fresh epoch3 from actual installed2, then invoke ordinary root
+`recover-policy` naming B. Only installed2 may be advanced before final file3/
+child ACK3. This is a distinct case, not a relabeling of the uncommitted workflow.
+
+### `hot-rotation`
+
+Hold a policy1 TLS connection, ordinary root reconfigure to a fresh long-lived
+policy2, and require no main/ingress restart plus old-key refusal on that **same
+original TLS1 transport**. Repeat 2 -> 3 with an independently held TLS2 transport.
+Fresh connections must see the coherent new leaf and credentials. Error 401
+closes intentionally; auto-reconnect is not accepted as transport continuity.
+
+## Common mandatory tail and remaining gates
+
+All cases retain four simultaneous real KVM guests, original main/four VMM
+incarnations and guest boots, a progressing busy writer and the entire committed
+drain state across the relevant policy operations. Source3 removal, exact retry,
+conflicting CAS refusal, separate explicit resume, distinct physical Stop and
+durable reclaim/capacity observations, intentional later warm restart, source-free
+original-disk cold recovery and independent external owned-scope absence audits
+remain mandatory. Only the warm test's separate root operator starts an already
+stopped main; policy maintenance never implicitly starts main or resumes admission.
+
+The new cut points observe real child syscalls, not production test hooks or
+service PID attachment. Pure predicate/shape/file-loss controls do not execute
+those syscalls or the production maintenance protocol. No source-bound actual
+reports for these three cases exist yet; the full cut/media/runtime/SLO matrix,
+partial-declaration/lost-source liveness gap and the whole production goal remain
+open. Do not expand a future named-case pass to the full supersession matrix.

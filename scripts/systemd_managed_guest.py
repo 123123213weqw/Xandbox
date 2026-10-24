@@ -5,12 +5,14 @@ controller API. Private keys/refs/process identities stay in the owned L1.
 Uncommitted supersession hardware acceptance is a separate, still-open gate.
 """
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
 import secrets
 import signal
 import ssl
+import stat
 import subprocess
 import termios
 import time
@@ -25,10 +27,11 @@ base=ingress.base
 CONFIG=Path('/etc/xandbox-managed-fixture');ROOT=Path('/etc/xandbox-install')
 CLI='/usr/libexec/xandbox-install';BOOTSTRAP='/usr/libexec/xandbox-install-bootstrap'
 CHECKPOINT=CONFIG/'checkpoint.json';PHASE='entry'
-PROBE_FLAGS=('managed_v2_exact_root_cli_and_24_target_commit','automatic_tls_child_caps_placement_budgets_and_epoch','initial_capless_pending_gate_observation_preserved','immutable_backend_auth_base_self_and_release','not_full_production_or_supersession_hardware_acceptance')
-COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','old_key_refused_on_existing_policy3_tls_transport_and_closed','fresh_policy3_tls_and_new_key_accepted_after_expected_401_close','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
-CASE_FLAGS={'populated-gate':('real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack'),'active-stop':('actual_cli_stopped_active_ingress_old_incarnations_absent','actual_active_stop_to_fresh_epoch3_child_ack')}
-CHECKPOINT_FLAGS=COMMON_CHECKPOINT_FLAGS+CASE_FLAGS['populated-gate']
+PROBE_FLAGS=('managed_v2_exact_root_cli_and_24_target_commit','automatic_tls_child_caps_placement_budgets_and_epoch','initial_capless_pending_gate_observation_preserved','immutable_backend_auth_base_self_and_release','not_full_production_or_full_supersession_matrix_acceptance')
+COMMITTED_CHECKPOINT_FLAGS=('own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3')
+COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','old_key_refused_on_existing_policy3_tls_transport_and_closed','fresh_policy3_tls_and_new_key_accepted_after_expected_401_close','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
+CASE_FLAGS={'supersession-repeat':('unconsumed_file_and_runtime1_old_proposal2_expired_and_source_absent','actual_supersession_a_killed_before_publication_source_and_proposal_data_lost','actual_supersession_b_settled_a_without_ack_and_consumed2_only_once','ordinary_2_to_3_hot_rotation_old_token_refused_on_original_tls2_transport'),'supersession-visible-recovery':('actual_supersession2_fsynced_before_ingress_start_no_ack','actual_replace_refused_reuse_of_published2','actual_recovery3_advanced_installed2_then_new_child_ack'),'hot-rotation':('normal_1_to_2_rotation_retained_original_tls1_transport','normal_2_to_3_rotation_retained_original_tls2_transport','both_normal_rotations_kept_ingress_and_main_incarnations'),'populated-gate':('real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack'),'active-stop':('actual_cli_stopped_active_ingress_old_incarnations_absent','actual_active_stop_to_fresh_epoch3_child_ack')}
+CHECKPOINT_FLAGS=COMMON_CHECKPOINT_FLAGS+COMMITTED_CHECKPOINT_FLAGS+CASE_FLAGS['populated-gate']
 
 RECOVERY_FLAGS=('original_disk_new_boot_same_machine','installed_epoch3_and_source_absence_preserved','automatic_cold_tls_epoch3_no_operator_activation','old_guest_recovered_no_implicit_resume_and_old_key_refused','all_four_kernel_projects_and_private_generations_released','manager_clean_stop_removed_both_units_and_inputs')+drain.RECOVERY_FLAGS
 
@@ -48,17 +51,19 @@ def maintenance_case():return decode_maintenance_case(json.loads((CONFIG/'mainte
 
 def checkpoint_flags(case):
     if case not in CASE_FLAGS:raise RuntimeError('fixed managed case required')
-    return COMMON_CHECKPOINT_FLAGS+CASE_FLAGS[case]
+    return COMMON_CHECKPOINT_FLAGS+(COMMITTED_CHECKPOINT_FLAGS if case in ('populated-gate','active-stop') else ())+CASE_FLAGS[case]
 
 
 def bind_observers():
     guard();install.CONFIG=CONFIG;install.guard=guard
     base.STATE=Path('/srv/xi/s');base.RUNTIME=Path('/srv/xi/r');base.CONFIG=CONFIG
-    epoch=json.loads((CONFIG/'active-client.json').read_bytes())['epoch'] if (CONFIG/'active-client.json').exists() else 1
-    if type(epoch) is not int or epoch not in (1,3):raise RuntimeError('fixed active test client required')
+    active=json.loads((CONFIG/'active-client.json').read_bytes()) if (CONFIG/'active-client.json').exists() else {'epoch':1}
+    if type(active) is not dict:raise RuntimeError('closed active client required')
+    epoch=active.get('epoch');variant=active.get('variant')
+    if set(active) not in ({'epoch'},{'epoch','variant'}) or type(epoch) is not int or epoch not in (1,2,3) or ('variant' in active and (epoch!=2 or variant!='replacement-2b')):raise RuntimeError('fixed active test client required')
     envelope=json.loads((ROOT/'gateway-policy.json').read_bytes())
     base.TOKENS={k['tenant_id']:k['backend_token'] for k in envelope['snapshot']['keys']}
-    ingress.CONFIG=CONFIG;ingress.CLIENT=CONFIG/('client-'+str(epoch)+'.json');ingress.MANIFEST=ROOT/'ingress.json';ingress.CHILD_ROOT='/srv/xi/g/root';ingress.CHECKPOINT=CONFIG/'guest-checkpoint.json'
+    ingress.CONFIG=CONFIG;ingress.CLIENT=CONFIG/('client-'+(variant or str(epoch))+'.json');ingress.MANIFEST=ROOT/'ingress.json';ingress.CHILD_ROOT='/srv/xi/g/root';ingress.CHECKPOINT=CONFIG/'guest-checkpoint.json'
     base.call=ingress.tls_call;drain.guard=guard;drain.control=install.control;drain.CHECKPOINT=CONFIG/'drain-checkpoint.json'
 
 
@@ -69,12 +74,16 @@ def arguments(operation,request=None,plan=None,expected=None,supersedes=None):
     if operation=='reconcile':
         if plan is not None or expected is not None or supersedes is not None or not isinstance(request,str) or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed exact reconcile')
         return [CLI,operation,'-request-id',request]
-    if operation not in ('reconfigure','recover-policy') or not isinstance(plan,Path) or plan.parent!=CONFIG or plan.name not in ('rotation-2.json','rotation-3.json') or type(expected) is not int or expected not in (1,2) or not isinstance(request,str) or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed managed policy operation')
+    if operation not in ('reconfigure','recover-policy','replace-pending-policy') or not isinstance(plan,Path) or plan.parent!=CONFIG or plan.name not in ('rotation-2.json','rotation-3.json','rotation-replacement-2a.json','rotation-replacement-2b.json') or type(expected) is not int or expected not in (1,2) or not isinstance(request,str) or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed managed policy operation')
     args=[CLI,operation,'-plan',str(plan),'-expected-revision',str(expected),'-request-id',request]
-    if operation=='recover-policy':
+    if operation=='replace-pending-policy':
+        if expected!=1 or plan.name not in ('rotation-replacement-2a.json','rotation-replacement-2b.json') or not isinstance(supersedes,str) or not re.fullmatch('[0-9a-f]{32}',supersedes) or supersedes==request:raise RuntimeError('explicit unconsumed replacement CAS required')
+        args+=['-replaces-request-id',supersedes]
+    elif operation=='recover-policy':
         if expected!=2 or not isinstance(supersedes,str) or not re.fullmatch('[0-9a-f]{32}',supersedes) or supersedes==request:raise RuntimeError('explicit committed recovery CAS required')
         args+=['-supersedes-request-id',supersedes]
     elif supersedes is not None:raise RuntimeError('ordinary rotation has no supersession override')
+    if operation!='replace-pending-policy' and plan.name not in ('rotation-2.json','rotation-3.json'):raise RuntimeError('ordinary fixed rotation source required')
     return args
 
 
@@ -180,8 +189,9 @@ def vmm_identity(row):
     return found[0]
 
 
-def wait_pending_expiry():
-    envelope=json.loads((ROOT/'gateway-policy.json').read_bytes());p=CONFIG/'pending-certificate.pem'
+def wait_pending_expiry(proposal=False):
+    if type(proposal) is not bool:raise RuntimeError('fixed expiry source required')
+    envelope=json.loads((ROOT/('.policy.next' if proposal else 'gateway-policy.json')).read_bytes());p=CONFIG/'pending-certificate.pem'
     fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     with os.fdopen(fd,'w') as out:out.write(envelope['snapshot']['certificate_pem']);out.flush();os.fsync(out.fileno())
     expires=ssl.cert_time_to_seconds(ssl._ssl._test_decode_cert(str(p))['notAfter'])
@@ -257,6 +267,127 @@ def restart_after_explicit_warm_stop(request):
     run('systemctl','start',base.UNIT);ingress.tls_ready();call('reconcile',3,request)
 
 
+def produce(operation):
+    guard()
+    if operation not in ('rotation2','rotation2long','rotation3','replacement2a','replacement2b'):raise RuntimeError('fixed owned material producer required')
+    program=json.loads((CONFIG/'programs.json').read_bytes())['setup']
+    if base.sha(program['path'])!=program['sha256']:raise RuntimeError('qualified current producer required')
+    run(program['path'],operation)
+
+
+def trace_policy(operation,request,plan,expected,mode,replaces=None):
+    guard()
+    interrupt(arguments(operation,request,CONFIG/plan,expected,replaces),str(CONFIG/(mode+'-'+request+'-output')),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,mode,2,request)
+
+
+def remove_known_file(path,pin):
+    # Explicit owned-fixture DATA LOSS injection, never a production cleanup API.
+    # No metadata pathname, arbitrary root, symlink or unknown bytes are admitted.
+    guard()
+    allowed={CONFIG/'sources'/('snapshot-'+n+'.json') for n in ('2','3','replacement-2a','replacement-2b')}|{ROOT/'.policy.next'}
+    if path not in allowed or type(pin) is not str or not re.fullmatch('[0-9a-f]{64}',pin):raise RuntimeError('fixed known fixture data only')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        before=os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_uid!=os.geteuid() or stat.S_IMODE(before.st_mode)!=0o600 or before.st_nlink!=1 or not 0<before.st_size<=32768:raise RuntimeError('bounded owned fixture data required')
+        with os.fdopen(os.dup(fd),'rb') as f:raw=f.read(32769)
+        if len(raw)!=before.st_size or hashlib.sha256(raw).hexdigest()!=pin:raise RuntimeError('exact known fixture data required')
+        now=path.lstat()
+        if (now.st_dev,now.st_ino,now.st_size,now.st_nlink,now.st_mode)!=(before.st_dev,before.st_ino,before.st_size,1,before.st_mode):raise RuntimeError('fixture data incarnation changed')
+        path.unlink()
+        directory=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+        try:os.fsync(directory)
+        finally:os.close(directory)
+    finally:os.close(fd)
+
+
+def remove_source(stem):
+    guard()
+    if stem not in ('2','3','replacement-2a','replacement-2b'):raise RuntimeError('closed source loss required')
+    pin=json.loads((CONFIG/('rotation-'+stem+'.json')).read_bytes())['policy'];path=CONFIG/'sources'/('snapshot-'+stem+'.json')
+    if pin['path']!=str(path):raise RuntimeError('fixed private source binding required')
+    remove_known_file(path,pin['sha256'])
+
+
+def stopped_original_ingress():
+    guard()
+    if run('systemctl','show','--property=MainPID','--value',ingress.UNIT)!='0' or run('systemctl','show','--property=ActiveState','--value',ingress.UNIT) not in ('inactive','failed'):raise RuntimeError('actual stopped ingress required')
+    if ingress.GROUP.exists() and set(read(ingress.GROUP/'cgroup.events').splitlines())!={'populated 0','frozen 0'}:raise RuntimeError('actual absent or empty unfrozen ingress required')
+
+
+def lose_a_proposal(request,main_before):
+    guard();stopped_original_ingress();policy_state(1)
+    if base.main_identity()!=main_before or json.loads((ROOT/'gateway-policy.json').read_bytes()).get('revision')!=1:raise RuntimeError('unchanged installed/runtime1 required for owned data loss')
+    record=json.loads((ROOT/'policy-supersession.json').read_bytes());intent=json.loads((ROOT/'rotation-intent.json').read_bytes())
+    required={'version','expected_revision','request_id','replaces_request_id','base_commit_sha256','config_sha256','initial_policy_sha256','old_payload_sha256','previous_snapshot_sha256','new_payload_sha256','source','previous_intent'}
+    if set(record)!=required or type(record['version']) is not int or record['version']!=1 or type(record['expected_revision']) is not int or record['expected_revision']!=1 or record['request_id']!=request or record['source']['path']!=str(CONFIG/'sources/snapshot-replacement-2a.json') or intent['request_id']!=request or intent['new_payload_sha256']!=record['new_payload_sha256'] or base.sha(ROOT/'gateway-policy.json')!=record['old_payload_sha256']:raise RuntimeError('exact own uncommitted A declaration required')
+    remove_source('replacement-2a')
+    remove_known_file(ROOT/'.policy.next',record['new_payload_sha256'])
+    if (CONFIG/'sources/snapshot-replacement-2a.json').exists() or (ROOT/'.policy.next').exists():raise RuntimeError('owned A source/proposal data still present')
+    call('verify',1,want=1)
+
+
+def ordinary_hot_step(epoch):
+    guard()
+    if type(epoch) is not int or epoch not in (2,3):raise RuntimeError('fixed normal rotation required')
+    old_client=ingress.client();before=ingress.ingress_identity();conn=ingress.TLSHTTP('xandbox.fixture',timeout=40)
+    try:
+        ingress.tls_call('GET','/healthz',connection=conn);transport=ingress.transport_identity(conn)
+        produce('rotation2long' if epoch==2 else 'rotation3');request=secrets.token_hex(16)
+        call('reconfigure',epoch,request,CONFIG/('rotation-'+str(epoch)+'.json'),epoch-1)
+        save(CONFIG/'active-client.json',{'epoch':epoch});bind_observers();ingress.tls_ready();policy_state(epoch)
+        if ingress.ingress_identity()!=before:raise RuntimeError('normal hot rotation restarted ingress')
+        ingress.tls_call('GET','/healthz',token=old_client['tokens']['alpha'],expected=401,connection=conn,expected_transport=transport)
+        if conn.sock is not None:raise RuntimeError('normal old-token 401 must close the held transport')
+    finally:conn.close()
+    ingress.tls_call('GET','/healthz')
+    return request
+
+
+def unconsumed_prelude(ingress_before):
+    guard();produce('rotation2');old_request=secrets.token_hex(16)
+    trace_policy('reconfigure',old_request,'rotation-2.json',1,'rotation-proposal')
+    if json.loads((ROOT/'gateway-policy.json').read_bytes())['revision']!=1 or ingress.ingress_identity()!=ingress_before:raise RuntimeError('old proposal consumed an epoch or restarted ingress')
+    policy_state(1);drained=drain.change('drain',drain.state('open')['control']['committed'])
+    wait_pending_expiry(True);remove_source('2');produce('replacement2a');produce('replacement2b')
+    return old_request,drained
+
+
+def new_case(case,rows,main_before,ingress_before):
+    guard()
+    if case=='hot-rotation':
+        drained=drain.change('drain',drain.state('open')['control']['committed'])
+        writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
+        old_request=ordinary_hot_step(2);request=ordinary_hot_step(3)
+        return request,old_request,drained,writer
+    if case not in ('supersession-repeat','supersession-visible-recovery'):raise RuntimeError('fixed new managed case required')
+    old_request,drained=unconsumed_prelude(ingress_before)
+    writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
+    if case=='supersession-repeat':
+        first=secrets.token_hex(16)
+        trace_policy('replace-pending-policy',first,'rotation-replacement-2a.json',1,'supersession-proposal',old_request)
+        lose_a_proposal(first,main_before);policy_state(1)
+        call('reconfigure',2,old_request,CONFIG/'rotation-2.json',1,want=1);policy_state(1)
+        second=secrets.token_hex(16)
+        call('replace-pending-policy',2,second,CONFIG/'rotation-replacement-2b.json',1,first)
+        save(CONFIG/'active-client.json',{'epoch':2,'variant':'replacement-2b'});bind_observers();ingress.tls_ready();policy_state(2)
+        envelope=json.loads((ROOT/'gateway-policy.json').read_bytes())
+        if envelope.get('request_id')!=second or envelope.get('replaced_pending_request_id')!=first or (ROOT/'policy-supersession.json').exists() or (ROOT/'rotation-intent.json').exists():raise RuntimeError('exact B2 child ACK/receipt required, never ACK A')
+        remove_source('replacement-2b');before=ingress.ingress_identity();call('reconcile',2,second)
+        if ingress.ingress_identity()!=before:raise RuntimeError('exact source-free B2 retry restarted ingress')
+        request=ordinary_hot_step(3)
+    else:
+        second=secrets.token_hex(16)
+        trace_policy('replace-pending-policy',second,'rotation-replacement-2b.json',1,'supersession-visible',old_request)
+        stopped_original_ingress();policy_state(1)
+        if json.loads((ROOT/'gateway-policy.json').read_bytes())['revision']!=2:raise RuntimeError('actual published file2 required')
+        call('replace-pending-policy',2,secrets.token_hex(16),CONFIG/'rotation-replacement-2a.json',1,second,want=1);policy_state(1)
+        remove_source('replacement-2b');produce('rotation3');request=secrets.token_hex(16)
+        call('recover-policy',3,request,CONFIG/'rotation-3.json',2,second)
+        save(CONFIG/'active-client.json',{'epoch':3});bind_observers();ingress.tls_ready();policy_state(3)
+    return request,old_request,drained,writer
+
+
 def checkpoint():
     global PHASE
     probe();rows=[];boots=[];PHASE='managed-four-kvm'
@@ -267,23 +398,29 @@ def checkpoint():
     base.call('GET',base.refpath(rows[0][0]),tenant='beta',expected=404);base.call('POST','/v1/sandboxes',{},tenant=None,key='managed-no-auth',expected=401)
     base.call('POST','/v1/sandboxes',{},tenant='beta',key='managed-node-fifth',expected=503)
     main_before=base.main_identity();vm_before=[vmm_identity(r) for r,_ in rows];ingress_before=ingress.ingress_identity();immutable={n:base.sha(ROOT/n) for n in ('commit.json','gateway.json','auth.json','backend.json')}
-    PHASE='managed-short-policy2';program=json.loads((CONFIG/'programs.json').read_bytes())['setup'];run(program['path'],'rotation2')
-    old_request=secrets.token_hex(16);args=arguments('reconfigure',old_request,CONFIG/'rotation-2.json',1)
-    PHASE='managed-before-policy2-activation'
-    interrupt(args,str(CONFIG/'rotation-child-output'),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,'policy-activation',2,old_request)
-    if json.loads((ROOT/'gateway-policy.json').read_bytes())['revision']!=2 or ingress.ingress_identity()!=ingress_before:raise RuntimeError('not actual committed-but-unactivated2')
-    policy_state(1)
-    drained=drain.change('drain',drain.state('open')['control']['committed'])
-    PHASE='managed-actual-expiry';wait_pending_expiry()
-    run(program['path'],'rotation3');request=secrets.token_hex(16)
-    # Admit the busy job AFTER waiting for leaf2 expiry. Its original 45-second
-    # budget is unchanged; waiting a minute must not falsely count an expired job.
-    writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
-    case=maintenance_case();PHASE='managed-'+case
-    if case=='populated-gate':populated_negative_then_recover(request,old_request,main_before)
-    else:active_stop_recover(request,old_request,ingress_before)
+    case=maintenance_case()
+    if case in ('populated-gate','active-stop'):
+        PHASE='managed-short-policy2';program=json.loads((CONFIG/'programs.json').read_bytes())['setup'];run(program['path'],'rotation2')
+        old_request=secrets.token_hex(16);args=arguments('reconfigure',old_request,CONFIG/'rotation-2.json',1)
+        PHASE='managed-before-policy2-activation'
+        interrupt(args,str(CONFIG/'rotation-child-output'),json.loads((CONFIG/'programs.json').read_bytes())['install']['sha256'],base.sha,'policy-activation',2,old_request)
+        if json.loads((ROOT/'gateway-policy.json').read_bytes())['revision']!=2 or ingress.ingress_identity()!=ingress_before:raise RuntimeError('not actual committed-but-unactivated2')
+        policy_state(1)
+        drained=drain.change('drain',drain.state('open')['control']['committed'])
+        PHASE='managed-actual-expiry';wait_pending_expiry()
+        run(program['path'],'rotation3');request=secrets.token_hex(16)
+        # Admit the busy job AFTER waiting for leaf2 expiry. Its original 45-second
+        # budget is unchanged; waiting a minute must not falsely count an expired job.
+        writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
+        PHASE='managed-'+case
+        if case=='populated-gate':populated_negative_then_recover(request,old_request,main_before)
+        else:active_stop_recover(request,old_request,ingress_before)
+    else:
+        PHASE='managed-'+case;request,old_request,drained,writer=new_case(case,rows,main_before,ingress_before)
     PHASE='managed-continuity'
-    if ingress.ingress_identity()==ingress_before or identity(ingress_before[0])==ingress_before[1] or identity(ingress_before[2])==ingress_before[3]:raise RuntimeError('actual old ingress incarnations remain')
+    if case=='hot-rotation':
+        if ingress.ingress_identity()!=ingress_before:raise RuntimeError('ordinary hot rotation replaced ingress')
+    elif ingress.ingress_identity()==ingress_before or identity(ingress_before[0])==ingress_before[1] or identity(ingress_before[2])==ingress_before[3]:raise RuntimeError('actual old ingress incarnations remain')
     if base.main_identity()!=main_before or [vmm_identity(r) for r,_ in rows]!=vm_before:raise RuntimeError('main/VMM restarted during ingress maintenance')
     if [base.verify_vm(r,t) for r,t in rows]!=boots:raise RuntimeError('guest boot changed during maintenance')
     drain.state('drained',drained);drain.busy(rows[0][0],writer['id'])

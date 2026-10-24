@@ -140,7 +140,7 @@ def main():
     profiles.add_argument("--readiness-assets",help="TEST ONLY explicit16GiB automatic readiness/enablement composition; not a release installer")
     profiles.add_argument("--ingress-assets",help="TEST ONLY explicit16GiB/CPU12/24GiB ordinary daemon + separate bounded ingress profile")
     profiles.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
-    parser.add_argument('--managed-case',choices=('populated-gate','active-stop'),help='closed independent managed fixture case, requires --managed-assets')
+    parser.add_argument('--managed-case',choices=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation'),help='closed independent managed fixture case, requires --managed-assets')
     args=parser.parse_args()
     if args.managed_case is not None and args.managed_assets is None:parser.error('--managed-case requires --managed-assets')
     managed_case=args.managed_case or 'populated-gate';os.umask(0o077)
@@ -183,7 +183,7 @@ def main():
     def ours(path):return same_owned_directory(path,owned.get(path))
     def receipt():
         replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),'cgroup_parent':str(parent),'all_cgroups':[str(g) for g in groups]})
-    result={'test':'owned_l1_systemd_managed_v2_committed_recovery_tls_kvm_drain_cold' if managed is not None else 'owned_l1_systemd_initial_install_pending_gate_tls_kvm_drain_cold' if install is not None else 'owned_l1_systemd_release_publication_readiness_ingress_tls_kvm_cold' if release is not None else 'owned_l1_systemd_automatic_readiness_ingress_tls_kvm_cold' if readiness is not None else 'owned_l1_systemd_separate_ingress_tls_kvm_cold' if ingress is not None or readiness is not None else ('owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployed else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive'),'source_revision':args.source_revision,
+    result={'test':'owned_l1_systemd_managed_v2_'+managed_case+'_tls_kvm_drain_cold' if managed is not None else 'owned_l1_systemd_initial_install_pending_gate_tls_kvm_drain_cold' if install is not None else 'owned_l1_systemd_release_publication_readiness_ingress_tls_kvm_cold' if release is not None else 'owned_l1_systemd_automatic_readiness_ingress_tls_kvm_cold' if readiness is not None else 'owned_l1_systemd_separate_ingress_tls_kvm_cold' if ingress is not None or readiness is not None else ('owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployed else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive'),'source_revision':args.source_revision,
             'production_ready':False,'sandboxd_deployment_accepted':False,'l2_task_execution_accepted':False,
             'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],
             'resources':resources,'l1_boots':0,'cases':[],'passed':False,'cleanup_confirmed':False,
@@ -200,7 +200,7 @@ def main():
         if release is not None:result['limitations'][0]='Ordinary root immutable artifact publication with live guest/service continuity and healthy original-disk recovery only; no installation, activation, upgrade, catalog, backup, production CLI syscall crash windows or SLO acceptance.'
         if install is not None:result['limitations'][0]='Experimental fresh ordinary initial installer, pending commit gate and healthy TLS/KVM/drain/original-disk cold only; no reconfiguration, upgrade, catalog, backup, filesystem/media fault, human operator or production SLO acceptance.'
         if managed is not None:
-            result['limitations'][0]='Fresh managed-v2 initial root CLI and one independently named committed-policy recovery case with TLS-KVM/drain/cold only; the other maintenance case, uncommitted supersession, physical media faults, full runtime matrix and production SLO acceptance remain separate gates.'
+            result['limitations'][0]='Fresh managed-v2 initial root CLI and one independently named policy protocol with TLS-KVM/drain/cold only; other named cases, full supersession cut/media fault matrix, full runtime matrix and production SLO acceptance remain separate gates.'
             result['managed_maintenance_case']=managed_case
             result['uncommitted_supersession_hardware_accepted']=False
         uid=850000+secrets.randbelow(30000)
@@ -276,7 +276,10 @@ def main():
         if readiness is not None:result['limited_readiness_ingress_passed']=True
         if release is not None:result['limited_artifact_publication_passed']=True
         if install is not None:result['limited_initial_installer_passed']=True
-        if managed is not None:result['limited_managed_v2_committed_recovery_passed']=True
+        if managed is not None:
+            if managed_case in ('populated-gate','active-stop'):result['limited_managed_v2_committed_recovery_passed']=True
+            elif managed_case=='hot-rotation':result['limited_managed_v2_ordinary_hot_rotation_passed']=True
+            else:result['limited_managed_v2_named_unconsumed_supersession_passed']=True
         result['passed']=True
     finally:
         if ours(group):

@@ -39,13 +39,41 @@ def sockaddr_at(pid,address,length):
     if raw[:2]!=b'\x01\x00':return None
     return raw[2:].split(b'\0',1)[0]
 
-def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
-    guard()
-    if mode not in ('initial-commit','policy-activation'):raise RuntimeError('fixed managed cut required')
-    if type(args) is not list or len(args)!=8 or args[0] not in ('/usr/libexec/xandbox-install-bootstrap','/usr/libexec/xandbox-install'):raise RuntimeError('fixed own installer argv required')
+def proposal_candidate(payload,intent,installed,revision,request,record=None,visible=False):
+    if type(visible) is not bool:return False
+    if not activation_candidate(payload,intent,revision,request):return False
+    if type(intent.get('new_payload_sha256')) is not str or not re.fullmatch('[0-9a-f]{64}',intent['new_payload_sha256']):return False
+    if type(installed) is not dict or type(installed.get('revision')) is not int or installed['revision']!=(revision if visible else revision-1):return False
+    if record is not None:
+        if type(record) is not dict or type(record.get('version')) is not int or record['version']!=1 or type(record.get('expected_revision')) is not int or record['expected_revision']!=revision-1 or record.get('request_id')!=request or record.get('new_payload_sha256')!=intent.get('new_payload_sha256'):return False
+    return True
+
+
+def trace_shape(args,mode,revision,request):
+    modes=('initial-commit','policy-activation','rotation-proposal','supersession-proposal','supersession-visible')
+    if mode not in modes or type(revision) is not int or type(args) is not list or not all(type(a) is str for a in args):raise RuntimeError('fixed managed cut required')
     if mode=='initial-commit':
-        if args[:2]!=['/usr/libexec/xandbox-install-bootstrap','apply'] or revision!=0 or request!='':raise RuntimeError('fixed initial commit child required')
-    elif args[:2]!=['/usr/libexec/xandbox-install','reconfigure'] or revision<2 or not re.fullmatch('[0-9a-f]{32}',request):raise RuntimeError('fixed reconfiguration child required')
+        if len(args)!=8 or args[:7]!=['/usr/libexec/xandbox-install-bootstrap','apply','-plan','/etc/xandbox-managed-fixture/plan.json','-expected-revision','0','-request-id'] or not re.fullmatch('[0-9a-f]{32}',args[7]) or revision!=0 or request!='':raise RuntimeError('fixed initial commit child required')
+    elif mode.startswith('supersession-'):
+        if len(args)!=10 or args[:2]!=['/usr/libexec/xandbox-install','replace-pending-policy'] or type(revision) is not int or revision!=2 or args[2]!='-plan' or args[3] not in ('/etc/xandbox-managed-fixture/rotation-replacement-2a.json','/etc/xandbox-managed-fixture/rotation-replacement-2b.json') or args[4:7]!=['-expected-revision','1','-request-id'] or args[7]!=request or args[8]!='-replaces-request-id' or not re.fullmatch('[0-9a-f]{32}',args[9]) or args[9]==request:raise RuntimeError('fixed own supersession child required')
+    elif len(args)!=8 or args[:2]!=['/usr/libexec/xandbox-install','reconfigure'] or revision not in (2,3) or args[2]!='-plan' or args[3]!='/etc/xandbox-managed-fixture/rotation-'+str(revision)+'.json' or args[4:7]!=['-expected-revision',str(revision-1),'-request-id'] or args[7]!=request:raise RuntimeError('fixed reconfiguration child required')
+    if mode!='initial-commit' and (type(request) is not str or not re.fullmatch('[0-9a-f]{32}',request)):raise RuntimeError('fixed own request required')
+
+
+def published_cut(mode,revision,request):
+    installed_raw=(ROOT/'gateway-policy.json').read_bytes();installed=json.loads(installed_raw)
+    raw=installed_raw if mode=='supersession-visible' else (ROOT/'.policy.next').read_bytes()
+    intent=json.loads((ROOT/'rotation-intent.json').read_bytes());payload=json.loads(raw)
+    record=json.loads((ROOT/'policy-supersession.json').read_bytes()) if mode.startswith('supersession-') else None
+    if not proposal_candidate(payload,intent,installed,revision,request,record,mode=='supersession-visible'):raise RuntimeError('actual proposal publication cut mismatch')
+    if hashlib.sha256(raw).hexdigest()!=intent.get('new_payload_sha256') or (ROOT/'.rotation-intent.next').exists() or (ROOT/'.policy-supersession.next').exists():raise RuntimeError('actual proposal hash or metadata scratch mismatch')
+    if record is not None and mode!='supersession-visible' and hashlib.sha256(installed_raw).hexdigest()!=record.get('old_payload_sha256'):raise RuntimeError('supersession changed installed predecessor early')
+    if mode=='supersession-visible' and (ROOT/'.policy.next').exists():raise RuntimeError('visible proposal scratch remains')
+    return True
+
+
+def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
+    guard();trace_shape(args,mode,revision,request)
     pid=os.fork()
     if pid==0:
         try:
@@ -90,6 +118,13 @@ def interrupt(args,output,expected_sha,sha,mode,revision=0,request=''):
                             if (ROOT/'.policy.next').exists() or (ROOT/'.rotation-intent.next').exists():raise RuntimeError('policy publication not complete')
                             if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('installer incarnation drift')
                             hit=True
+                elif mode in ('rotation-proposal','supersession-proposal') and entry and r.orig_rax==264 and string_at(tid,r.rsi)==b'.policy.next' and string_at(tid,r.r10)==b'gateway-policy.json':
+                    if any(os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(fd).value))!=str(ROOT) for fd in (r.rdi,r.rdx)):raise RuntimeError('fixed proposal rename dirfds required')
+                    hit=published_cut(mode,revision,request)
+                elif mode=='supersession-visible' and not entry and r.orig_rax==74 and r.rax==0:
+                    if os.readlink('/proc/'+str(tid)+'/fd/'+str(ctypes.c_int(r.rdi).value))==str(ROOT):
+                        installed=json.loads((ROOT/'gateway-policy.json').read_bytes())
+                        if installed.get('revision')==revision and installed.get('request_id')==request:hit=published_cut(mode,revision,request)
                 if hit:
                     if sha(Path('/proc',str(pid),'exe'))!=expected_sha:raise RuntimeError('final own exec pin drift')
                     os.kill(pid,signal.SIGKILL);continue

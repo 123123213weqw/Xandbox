@@ -198,4 +198,101 @@ class ManagedControls(unittest.TestCase):
         self.assertLess(s.index("subprocess.run(['journalctl'"),s.index('XANDBOX_SYSTEMD_HOST_FAILED'))
         self.assertIn('c.flush()',s)
 
+    def test_supersession_trace_shapes_are_closed_before_fork(self):
+        req='a'*32;old='b'*32
+        args=guest.arguments('replace-pending-policy',req,guest.CONFIG/'rotation-replacement-2a.json',1,old)
+        for mode in ('supersession-proposal','supersession-visible'):trace.trace_shape(args,mode,2,req)
+        trace.trace_shape(guest.arguments('reconfigure',req,guest.CONFIG/'rotation-2.json',1),'rotation-proposal',2,req)
+        for mode,rev,request,changed in (('other',2,req,args),('supersession-proposal',True,req,args),('supersession-proposal',3,req,args),('supersession-proposal',2,old,args),('supersession-proposal',2,req,args[:-1]+[req]),('supersession-proposal',2,req,args[:3]+['/tmp/source']+args[4:]),('supersession-proposal',2,req,args+['extra'])):
+            with self.assertRaises(RuntimeError):trace.trace_shape(changed,mode,rev,request)
+        with patch.object(trace,'guard'),patch.object(trace.os,'fork') as fork:
+            with self.assertRaises(RuntimeError):trace.interrupt(args+['extra'],None,None,None,'supersession-proposal',2,req)
+            fork.assert_not_called()
+        for plan in ('rotation-2.json','rotation-replacement-2a.json'):
+            with self.assertRaises(RuntimeError):guest.arguments('replace-pending-policy',req,guest.CONFIG/plan,2,old)
+        with self.assertRaises(RuntimeError):guest.arguments('reconfigure',req,guest.CONFIG/'rotation-replacement-2a.json',1)
+
+    def test_proposal_predicates_distinguish_unconsumed_and_visible_epochs(self):
+        req='a'*32;pin='c'*64
+        env={'version':1,'revision':2,'expected_revision':1,'request_id':req,'snapshot':{'epoch':2}}
+        intent={'version':1,'expected_revision':1,'request_id':req,'new_payload_sha256':pin}
+        record={'version':1,'expected_revision':1,'request_id':req,'new_payload_sha256':pin}
+        self.assertTrue(trace.proposal_candidate(env,intent,{'revision':1},2,req))
+        self.assertTrue(trace.proposal_candidate(env,intent,{'revision':1},2,req,record))
+        self.assertTrue(trace.proposal_candidate(env,intent,env,2,req,record,True))
+        for installed,metadata,visible in (({'revision':2},record,False),({'revision':1},record,True),({'revision':True},record,False),({'revision':1},{**record,'expected_revision':True},False),({'revision':1},{**record,'request_id':'b'*32},False),({'revision':1},{**record,'new_payload_sha256':'d'*64},False),({'revision':1},record,1)):
+            self.assertFalse(trace.proposal_candidate(env,intent,installed,2,req,metadata,visible))
+        self.assertFalse(trace.proposal_candidate(env,{**intent,'new_payload_sha256':None},{'revision':1},2,req))
+        s=inspect.getsource(trace.interrupt)
+        self.assertIn('r.orig_rax==264',s);self.assertIn('r.orig_rax==74 and r.rax==0',s)
+        self.assertLess(s.index("mode=='supersession-visible'"),s.index('if hit:'))
+
+    def test_actual_file_cut_view_requires_exact_hashes_and_no_metadata_scratch(self):
+        req='a'*32
+        with tempfile.TemporaryDirectory() as tmp,patch.object(trace,'ROOT',Path(tmp)):
+            root=Path(tmp);before=json.dumps({'revision':1}).encode()
+            env={'version':1,'revision':2,'expected_revision':1,'request_id':req,'snapshot':{'epoch':2}}
+            raw=json.dumps(env).encode();pin=hashlib.sha256(raw).hexdigest()
+            intent={'version':1,'expected_revision':1,'request_id':req,'new_payload_sha256':pin}
+            record={'version':1,'expected_revision':1,'request_id':req,'new_payload_sha256':pin,'old_payload_sha256':hashlib.sha256(before).hexdigest()}
+            (root/'gateway-policy.json').write_bytes(before);(root/'.policy.next').write_bytes(raw)
+            (root/'rotation-intent.json').write_text(json.dumps(intent));(root/'policy-supersession.json').write_text(json.dumps(record))
+            self.assertTrue(trace.published_cut('rotation-proposal',2,req));self.assertTrue(trace.published_cut('supersession-proposal',2,req))
+            (root/'.rotation-intent.next').write_bytes(b'unknown')
+            with self.assertRaises(RuntimeError):trace.published_cut('supersession-proposal',2,req)
+            (root/'.rotation-intent.next').unlink();(root/'gateway-policy.json').write_bytes(raw);(root/'.policy.next').unlink()
+            self.assertTrue(trace.published_cut('supersession-visible',2,req))
+            (root/'rotation-intent.json').write_text(json.dumps({**intent,'new_payload_sha256':'d'*64}))
+            with self.assertRaises(RuntimeError):trace.published_cut('supersession-visible',2,req)
+
+    def test_fixture_data_loss_never_unlinks_unknown_metadata_or_changed_data(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp,patch.object(guest,'guard'),patch.object(guest,'ROOT',Path(tmp)),patch.object(guest,'CONFIG',Path(tmp)/'config'):
+            root=Path(tmp);p=root/'.policy.next';raw=b'known complete synthetic proposal data';pin=hashlib.sha256(raw).hexdigest()
+            for mode,content in ((0o644,raw),(0o600,b'different'),(0o600,b'x'*32769)):
+                p.write_bytes(content);p.chmod(mode)
+                with self.assertRaises(RuntimeError):guest.remove_known_file(p,pin)
+                self.assertTrue(p.exists())
+            p.write_bytes(raw);p.chmod(0o600);other=root/'linked';os.link(p,other)
+            with self.assertRaises(RuntimeError):guest.remove_known_file(p,pin)
+            self.assertTrue(p.exists());other.unlink()
+            for name in ('policy-supersession.json','.policy-supersession.next','rotation-intent.json'):
+                meta=root/name;meta.write_bytes(raw);meta.chmod(0o600)
+                with self.assertRaises(RuntimeError):guest.remove_known_file(meta,pin)
+                self.assertTrue(meta.exists())
+            p.unlink();target=root/'unknown-target';target.write_bytes(raw);p.symlink_to(target)
+            with self.assertRaises(OSError):guest.remove_known_file(p,pin)
+            self.assertTrue(target.exists());p.unlink()
+            p.write_bytes(raw);p.chmod(0o600);guest.remove_known_file(p,pin);self.assertFalse(p.exists())
+
+    def test_new_case_guards_and_epoch_order_cannot_bypass_production_cli(self):
+        with patch.object(guest,'guard',side_effect=RuntimeError('unmarked')),patch.object(guest,'remove_source') as source,patch.object(guest,'remove_known_file') as data,patch.object(guest,'produce') as produce:
+            with self.assertRaises(RuntimeError):guest.lose_a_proposal('a'*32,None)
+            with self.assertRaises(RuntimeError):guest.new_case('supersession-repeat',None,None,None)
+            source.assert_not_called();data.assert_not_called();produce.assert_not_called()
+        s=inspect.getsource(guest.new_case)
+        self.assertLess(s.index('lose_a_proposal(first'),s.index("call('replace-pending-policy',2,second"))
+        self.assertLess(s.index("call('replace-pending-policy',2,secrets"),s.index("call('recover-policy',3,request"))
+        self.assertIn("'supersession-visible'",s);self.assertNotIn("'systemctl'",s)
+        s=inspect.getsource(guest.unconsumed_prelude)
+        self.assertLess(s.index('wait_pending_expiry(True)'),s.index("produce('replacement2a')"))
+        self.assertLess(s.index("remove_source('2')"),s.index("produce('replacement2a')"))
+        self.assertNotIn('clock_settime',s)
+
+    def test_ordinary_hot_rotation_uses_held_old_transport_and_never_restarts_ingress(self):
+        class Connection:
+            sock=object()
+            def close(self):self.sock=None
+        conn=Connection();transport=object();calls=[]
+        def tls(*a,**kw):
+            calls.append(kw)
+            if kw.get('expected')==401:
+                self.assertIs(kw['connection'],conn);self.assertIs(kw['expected_transport'],transport)
+                self.assertEqual(kw['token'],'synthetic-old');conn.sock=None
+        with patch.object(guest,'guard'),patch.object(guest.ingress,'client',return_value={'tokens':{'alpha':'synthetic-old'}}),patch.object(guest.ingress,'ingress_identity',return_value=(1,2,3,4)),patch.object(guest.ingress,'TLSHTTP',return_value=conn),patch.object(guest.ingress,'transport_identity',return_value=transport),patch.object(guest.ingress,'tls_call',side_effect=tls),patch.object(guest,'produce') as produce,patch.object(guest,'call') as call,patch.object(guest,'save'),patch.object(guest,'bind_observers'),patch.object(guest.ingress,'tls_ready'),patch.object(guest,'policy_state'):
+            request=guest.ordinary_hot_step(2)
+            produce.assert_called_once_with('rotation2long')
+            call.assert_called_once_with('reconfigure',2,request,guest.CONFIG/'rotation-2.json',1)
+        self.assertEqual(len(calls),3);self.assertIsNone(conn.sock)
+
 if __name__=='__main__':unittest.main()
