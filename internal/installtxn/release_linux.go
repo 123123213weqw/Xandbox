@@ -6,7 +6,9 @@ import (
 	"bytes"
 	"context"
 	"debug/elf"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 
@@ -131,7 +133,7 @@ func (f *filesystem) release(ctx context.Context, p Plan, pending bool) (*releas
 				return nil, ErrInventory
 			}
 			if executable(a.Role) {
-				if e = staticProgram(in, a.Bytes); e != nil {
+				if e = staticArtifact(in, a.Bytes, a.Role); e != nil {
 					in.Close()
 					return nil, e
 				}
@@ -157,6 +159,15 @@ func (f *filesystem) release(ctx context.Context, p Plan, pending bool) (*releas
 // A staged role is data until the consumer verifies a native static executable.
 // This rejects script/interpreter fallbacks, not a malicious trusted root's ELF.
 func staticProgram(in *os.File, size int64) error {
+	return staticNative(in, size, false)
+}
+func staticArtifact(in *os.File, size int64, role string) error {
+	// The pinned Firecracker/jailer distributions are static PIE (ET_DYN), not
+	// the ET_EXEC required by the existing Go service launchers. A role-specific
+	// exception must still forbid interpreters and all shared-library imports.
+	return staticNative(in, size, role == "firecracker" || role == "jailer")
+}
+func staticNative(in *os.File, size int64, allowPIE bool) error {
 	if size < 64 || size > 64<<20 {
 		return ErrPolicy
 	}
@@ -171,13 +182,45 @@ func staticProgram(in *os.File, size int64) error {
 	} else if runtime.GOARCH != "amd64" {
 		return ErrPlatform
 	}
-	if v.Type != elf.ET_EXEC || v.Class != elf.ELFCLASS64 || v.Data != elf.ELFDATA2LSB || v.Machine != machine || len(v.Progs) < 1 || len(v.Progs) > 256 {
+	if (v.Type != elf.ET_EXEC && !(allowPIE && v.Type == elf.ET_DYN)) || v.Class != elf.ELFCLASS64 || v.Data != elf.ELFDATA2LSB || v.Machine != machine || len(v.Progs) < 1 || len(v.Progs) > 256 {
 		return ErrPolicy
 	}
 	entry := false
+	pie, dynamic := false, false
 	for _, p := range v.Progs {
 		if p.Type == elf.PT_INTERP {
 			return ErrPolicy
+		}
+		if p.Type == elf.PT_DYNAMIC {
+			if dynamic || p.Filesz == 0 || p.Filesz > 65536 || p.Filesz%16 != 0 || p.Off > uint64(size) || p.Filesz > uint64(size)-p.Off {
+				return ErrPolicy
+			}
+			dynamic = true
+			reader := p.Open()
+			null := false
+			for left := p.Filesz; left > 0; left -= 16 {
+				var b [16]byte
+				if _, e := io.ReadFull(reader, b[:]); e != nil {
+					return ErrPolicy
+				}
+				tag, value := binary.LittleEndian.Uint64(b[:8]), binary.LittleEndian.Uint64(b[8:])
+				if tag == uint64(elf.DT_NULL) {
+					null = true
+					break
+				}
+				switch tag {
+				case uint64(elf.DT_NEEDED), uint64(elf.DT_RPATH), uint64(elf.DT_RUNPATH), 0x6ffffefb, 0x6ffffefc, 0x7ffffffd, 0x7fffffff:
+					// Includes DEPAUDIT/AUDIT/AUXILIARY/FILTER. Inspect the
+					// program header, not optional section names a stripped
+					// ELF can omit, so dependencies cannot be hidden there.
+					return ErrPolicy
+				case uint64(elf.DT_FLAGS_1):
+					pie = pie || value&0x08000000 != 0 // DF_1_PIE
+				}
+			}
+			if !null {
+				return ErrPolicy
+			}
 		}
 		if p.Type == elf.PT_LOAD {
 			if p.Filesz > p.Memsz || p.Off > uint64(size) || p.Filesz > uint64(size)-p.Off || p.Memsz > ^uint64(0)-p.Vaddr || (p.Align > 1 && (p.Align&(p.Align-1) != 0 || p.Vaddr%p.Align != p.Off%p.Align)) {
@@ -188,7 +231,7 @@ func staticProgram(in *os.File, size int64) error {
 			}
 		}
 	}
-	if !entry {
+	if !entry || (v.Type == elf.ET_DYN && !pie) {
 		return ErrPolicy
 	}
 	return nil
