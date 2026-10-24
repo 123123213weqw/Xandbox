@@ -15,6 +15,8 @@ TLS/key refusal, source-free exact retry and healthy original-disk cold recovery
 Two scopes/four boots have independent four-generation absence audits. This
 does not qualify unconsumed supersession, ordinary hot rotation's old transport,
 media faults, full runtime/SLO matrices or the complete production goal.
+Later [separately frozen named supersession/hot-rotation cases](MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)
+have their own limited evidence; they do not retroactively expand these earlier cases.
 
 This follows the source-bound [persistence/locking foundation](POLICY_RECOVERY_FOUNDATION.md).
 That historical checkpoint did not expose a recovery command. The code now adds

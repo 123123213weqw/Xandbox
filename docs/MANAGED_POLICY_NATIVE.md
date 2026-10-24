@@ -168,8 +168,12 @@ not re-sign old ingress or v1 installation reports.
 
 Known unfinished edge: a committed policy that **never obtained its ACK and then
 expires** cannot currently be superseded through this strict pending-intent API.
-Forward recovery needs an explicit bounded design and tests; deleting the intent,
-restoring an old credential policy or reusing an epoch is not a supported workaround.
+The separate [explicit forward-recovery protocol](MANAGED_POLICY_RECOVERY.md),
+rather than bypassing this API, now has software and named limited real evidence.
+[Additional independent supersession/hot-rotation cases](MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)
+remain source-bound and do not turn this early native checkpoint into a hardware
+report. Deleting intent, restoring old credential policy or reusing a consumed
+epoch is not a supported workaround; full fault/runtime/SLO gates remain open.
 Already-admitted requests may finish with an old snapshot; rotation is not guest
 execution cancellation. Backend-authority migration, self-upgrade/rollback,
 consistent backup/catalog operations, audit retention and saturation/SLO gates

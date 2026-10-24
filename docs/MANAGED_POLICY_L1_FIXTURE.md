@@ -165,6 +165,8 @@ Actual n=1 physical Stop observations were 108.201/108.450 ms; durable reclaim
 observations were 375.019/382.673 ms respectively. These are distinct bounded
 observations, not a switch/Stop/GC SLO, saturation result or physical media erasure.
 Healthy fsynced original-disk cold recovery is not an in-flight media-fault test.
-Uncommitted supersession and its cut matrix, ordinary hot rotation retaining the
-old policy1 transport, upgrade/rollback, authority migration, catalog/backup,
-audit retention, saturation and full current-artifact runtime matrices remain open.
+These committed-recovery cases do not qualify unconsumed supersession or ordinary
+hot rotation. Later [independent named cases](MANAGED_POLICY_SUPERSESSION_L1_FIXTURE.md)
+provide limited evidence for those protocols without inheriting this report.
+Their full cut/negative/media matrix, upgrade/rollback, authority migration,
+catalog/backup, audit retention, saturation and full runtime matrices remain open.
