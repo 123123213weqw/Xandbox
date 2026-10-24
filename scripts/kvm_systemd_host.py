@@ -101,12 +101,13 @@ def validate_install_reply(operation,value):
         assert value['durable_reclaim_observed_ms']>=value['stop_observed_ms']
 
 
-def validate_managed_reply(operation,value):
-    from systemd_managed_guest import PROBE_FLAGS,CHECKPOINT_FLAGS,RECOVERY_FLAGS
+def validate_managed_reply(operation,value,maintenance_case='populated-gate'):
+    from systemd_managed_guest import PROBE_FLAGS,RECOVERY_FLAGS,checkpoint_flags
     import math
-    flags={'managed-probe':PROBE_FLAGS,'managed-checkpoint':CHECKPOINT_FLAGS,'managed-recover':RECOVERY_FLAGS}[operation]
+    flags={'managed-probe':PROBE_FLAGS,'managed-checkpoint':checkpoint_flags(maintenance_case),'managed-recover':RECOVERY_FLAGS}[operation]
     extra={'stop_observed_ms','durable_reclaim_observed_ms'} if operation=='managed-checkpoint' else set()
-    assert type(value) is dict and set(value)==set(flags)|extra
+    assert type(value) is dict and set(value)==set(flags)|extra|{'maintenance_case'}
+    assert value['maintenance_case']==maintenance_case and type(value['maintenance_case']) is str
     assert all(type(value[k]) is bool and value[k] is True for k in flags)
     if extra:
         assert all(type(value[k]) in (int,float) and math.isfinite(value[k]) and 0<value[k]<=45000 for k in extra)
@@ -139,7 +140,10 @@ def main():
     profiles.add_argument("--readiness-assets",help="TEST ONLY explicit16GiB automatic readiness/enablement composition; not a release installer")
     profiles.add_argument("--ingress-assets",help="TEST ONLY explicit16GiB/CPU12/24GiB ordinary daemon + separate bounded ingress profile")
     profiles.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
-    args=parser.parse_args();os.umask(0o077)
+    parser.add_argument('--managed-case',choices=('populated-gate','active-stop'),help='closed independent managed fixture case, requires --managed-assets')
+    args=parser.parse_args()
+    if args.managed_case is not None and args.managed_assets is None:parser.error('--managed-case requires --managed-assets')
+    managed_case=args.managed_case or 'populated-gate';os.umask(0o077)
     deployment=None;ingress=None;readiness=None;release=None;install=None;managed=None
     if args.deployment_assets:
         from build_systemd_deployment import load_assets
@@ -196,7 +200,8 @@ def main():
         if release is not None:result['limitations'][0]='Ordinary root immutable artifact publication with live guest/service continuity and healthy original-disk recovery only; no installation, activation, upgrade, catalog, backup, production CLI syscall crash windows or SLO acceptance.'
         if install is not None:result['limitations'][0]='Experimental fresh ordinary initial installer, pending commit gate and healthy TLS/KVM/drain/original-disk cold only; no reconfiguration, upgrade, catalog, backup, filesystem/media fault, human operator or production SLO acceptance.'
         if managed is not None:
-            result['limitations'][0]='Fresh managed-v2 initial root CLI and committed-expired-policy recovery with pre-stopped populated/empty-ingress proof/TLS-KVM/drain/cold only; active-unit production-stop branch, uncommitted supersession, physical media faults, full runtime matrix and production SLO acceptance remain open.'
+            result['limitations'][0]='Fresh managed-v2 initial root CLI and one independently named committed-policy recovery case with TLS-KVM/drain/cold only; the other maintenance case, uncommitted supersession, physical media faults, full runtime matrix and production SLO acceptance remain separate gates.'
+            result['managed_maintenance_case']=managed_case
             result['uncommitted_supersession_hardware_accepted']=False
         uid=850000+secrets.randbelow(30000)
         try:pwd.getpwuid(uid)
@@ -206,7 +211,7 @@ def main():
             shutil.copyfile(Path(getattr(args,argument)).resolve(),control/name);(control/name).chmod(0o555)
         shutil.copyfile(kernel,root/'kernel');(root/'kernel').chmod(0o444)
         result['build']=build(ubuntu=Path(args.ubuntu).resolve(),alpine=Path(args.alpine).resolve(),
-                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment,ingress_assets=ingress,readiness_assets=None if release is not None else readiness,release_assets=release,install_assets=install,managed_assets=managed)
+                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment,ingress_assets=ingress,readiness_assets=None if release is not None else readiness,release_assets=release,install_assets=install,managed_assets=managed,managed_case=managed_case)
         result['fixture_sha256']=digest(control/'fixture');result['warden_sha256']=digest(control/'warden')
         for path in root.iterdir():os.chown(path,uid,uid);path.chmod(0o600 if path.name=='disk.raw' else 0o400)
         os.chown(root,uid,uid)
@@ -240,7 +245,7 @@ def main():
         def request(operation):
             channel.send({'version':1,'operation':operation});reply=channel.read()
             assert reply['ok'] is True,'fixed L1 systemd operation failed; inspect private console'
-            if managed is not None:validate_managed_reply(operation,reply['result'])
+            if managed is not None:validate_managed_reply(operation,reply['result'],managed_case)
             elif install is not None:validate_install_reply(operation,reply['result'])
             elif release is not None:validate_release_reply(operation,reply['result'])
             elif readiness is not None:validate_readiness_reply(operation,reply['result'])

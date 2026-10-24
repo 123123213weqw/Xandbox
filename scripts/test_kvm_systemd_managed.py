@@ -37,26 +37,64 @@ class ManagedControls(unittest.TestCase):
             self.assertEqual((root/'etc/xandbox-systemd-managed-fixture').read_text(),builder.MARKER)
             self.assertEqual((root/builder.CONFIG).stat().st_mode&0o777,0o700)
             meta=json.loads((root/builder.CONFIG/'programs.json').read_bytes())
+            case_path=root/builder.CONFIG/'maintenance-case.json'
+            self.assertEqual(guest.decode_maintenance_case(json.loads(case_path.read_bytes())),'populated-gate')
+            self.assertEqual(case_path.stat().st_mode&0o777,0o600)
             self.assertEqual(meta['setup']['path'],'/usr/libexec/xandbox-managed-fixture')
             self.assertEqual(meta['install']['path'],guest.BOOTSTRAP)
             for name in builder.SCRIPTS:self.assertEqual((root/'opt/xandbox'/name).stat().st_mode&0o777,0o444)
             self.assertIn('systemd_managed_guest.py',(root/'etc/systemd/system/xandbox-systemd-operator.service').read_text())
             with self.assertRaises(ValueError):builder.configure(root,{k:{} for k in builder.ASSETS})
     def test_closed_flags_and_independent_positive_measurements(self):
-        for op,flags in (('managed-probe',guest.PROBE_FLAGS),('managed-checkpoint',guest.CHECKPOINT_FLAGS),('managed-recover',guest.RECOVERY_FLAGS)):
-            value={k:True for k in flags}
+        for case in builder.MAINTENANCE_CASES:
+          for op,flags in (('managed-probe',guest.PROBE_FLAGS),('managed-checkpoint',guest.checkpoint_flags(case)),('managed-recover',guest.RECOVERY_FLAGS)):
+            value={'maintenance_case':case,**{k:True for k in flags}}
             if op=='managed-checkpoint':value.update(stop_observed_ms=5.,durable_reclaim_observed_ms=20.)
-            validate_managed_reply(op,value)
+            validate_managed_reply(op,value,case)
             for key in flags:
                 for bad in (False,1,None):
-                    with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,key:bad})
+                    with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,key:bad},case)
                 bad=copy.deepcopy(value);del bad[key]
-                with self.assertRaises(AssertionError):validate_managed_reply(op,bad)
-            with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'private_ref':'not-exported'})
+                with self.assertRaises(AssertionError):validate_managed_reply(op,bad,case)
+            with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'private_ref':'not-exported'},case)
+            with self.assertRaises(AssertionError):validate_managed_reply(op,{k:v for k,v in value.items() if k!='maintenance_case'},case)
+            for wrong in ('unknown',True,None,*[c for c in builder.MAINTENANCE_CASES if c!=case]):
+                with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'maintenance_case':wrong},case)
             if op=='managed-checkpoint':
                 for n in (True,0,-1,float('inf'),float('nan'),45001):
-                    with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'stop_observed_ms':n})
-                with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'durable_reclaim_observed_ms':1})
+                    with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'stop_observed_ms':n},case)
+                with self.assertRaises(AssertionError):validate_managed_reply(op,{**value,'durable_reclaim_observed_ms':1},case)
+                other=next(c for c in builder.MAINTENANCE_CASES if c!=case)
+                crossed={'maintenance_case':case,**{k:True for k in guest.checkpoint_flags(other)},'stop_observed_ms':5.,'durable_reclaim_observed_ms':20.}
+                with self.assertRaises(AssertionError):validate_managed_reply(op,crossed,case)
+    def test_closed_case_metadata_and_no_image_changes_for_invalid_case(self):
+        for case in builder.MAINTENANCE_CASES:
+            self.assertEqual(guest.decode_maintenance_case({'version':1,'case':case}),case)
+            self.assertTrue(set(guest.CASE_FLAGS[case]).isdisjoint(guest.CASE_FLAGS[next(c for c in builder.MAINTENANCE_CASES if c!=case)]))
+        for bad in ({},{'version':True,'case':'active-stop'},{'version':2,'case':'active-stop'},{'version':1,'case':True},{'version':1,'case':'other'},{'version':1,'case':'active-stop','extra':1},None):
+            with self.assertRaises(RuntimeError):guest.decode_maintenance_case(bad)
+        for bad in ('other',True,None):
+            with self.assertRaises((RuntimeError,TypeError)):guest.checkpoint_flags(bad)
+            with self.assertRaises(ValueError):builder.configure(None,{},maintenance_case=bad)
+        with self.assertRaises(ValueError):build(ubuntu=None,alpine=None,probe=None,output_disk=None,output_initrd=None,managed_case='active-stop')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'root';root.mkdir();(root/'etc/cloud').mkdir(parents=True)
+            source=Path(tmp)/'source';source.write_bytes(b'pure bytes not executed');pin=hashlib.sha256(source.read_bytes()).hexdigest()
+            configure_root(root,source);builder.configure(root,{k:{'path':str(source),'sha256':pin} for k in builder.ASSETS},maintenance_case='active-stop')
+            self.assertEqual(guest.decode_maintenance_case(json.loads((root/builder.CONFIG/'maintenance-case.json').read_bytes())),'active-stop')
+    def test_active_branch_never_prestops_and_cold_case_is_bound(self):
+        s=inspect.getsource(guest.active_stop_recover)
+        for forbidden in ('systemctl','os.fork','os.kill','cgroup.procs','group.mkdir'):
+            self.assertNotIn(forbidden,s)
+        self.assertLess(s.index('guard()'),s.index('ingress.ingress_identity()'))
+        self.assertLess(s.index('policy_state(1)'),s.index("call('recover-policy'"))
+        with patch.object(guest,'guard',side_effect=RuntimeError('unmarked')),patch.object(guest,'call') as call,patch.object(guest.ingress,'ingress_identity') as observation:
+            with self.assertRaises(RuntimeError):guest.active_stop_recover('a'*32,'b'*32,None)
+            call.assert_not_called();observation.assert_not_called()
+        self.assertIn("old['maintenance_case']!=maintenance_case()",inspect.getsource(guest.recover))
+        checkpoint=inspect.getsource(guest.checkpoint)
+        self.assertIn("if case=='populated-gate':",checkpoint)
+        self.assertIn('else:active_stop_recover(',checkpoint)
     def test_real_receipt_and_exact_refusal_not_exec_failure(self):
         v={'version':1,'revision':3,'files_committed':True,'manager_reconciled':True,'production_ready':False}
         def reply(v):return subprocess.CompletedProcess([],0,json.dumps(v).encode(),b'')

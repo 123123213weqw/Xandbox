@@ -26,13 +26,29 @@ CONFIG=Path('/etc/xandbox-managed-fixture');ROOT=Path('/etc/xandbox-install')
 CLI='/usr/libexec/xandbox-install';BOOTSTRAP='/usr/libexec/xandbox-install-bootstrap'
 CHECKPOINT=CONFIG/'checkpoint.json';PHASE='entry'
 PROBE_FLAGS=('managed_v2_exact_root_cli_and_24_target_commit','automatic_tls_child_caps_placement_budgets_and_epoch','initial_capless_pending_gate_observation_preserved','immutable_backend_auth_base_self_and_release','not_full_production_or_supersession_hardware_acceptance')
-CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3','real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','new_tls_leaf_and_external_keys_old_key_rejected_on_same_new_transport','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
+COMMON_CHECKPOINT_FLAGS=('four_simultaneous_real_tls_kvm_guests_and_owner_refusals','own_actual_cli_killed_after_policy2_file_before_operator_activation','expired_committed2_recovered_by_actual_root_cli3','same_main_four_vmm_incarnations_boots_and_busy_writer_continue','entire_drain_commit_unchanged_across_maintenance','new_tls_leaf_and_external_keys_old_key_rejected_on_same_new_transport','source_absent_reconcile_and_bad_cas_no_service_restart','physical_stop_distinct_from_durable_reclaim_and_capacity','ordinary_original_disk_checkpoint_fsynced')+drain.CHECKPOINT_FLAGS
+CASE_FLAGS={'populated-gate':('real_populated_ingress_subtree_refused_before_state_advance','same_request_real_empty_retry_and_exact_epoch3_child_ack'),'active-stop':('actual_cli_stopped_active_ingress_old_incarnations_absent','actual_active_stop_to_fresh_epoch3_child_ack')}
+CHECKPOINT_FLAGS=COMMON_CHECKPOINT_FLAGS+CASE_FLAGS['populated-gate']
+
 RECOVERY_FLAGS=('original_disk_new_boot_same_machine','installed_epoch3_and_source_absence_preserved','automatic_cold_tls_epoch3_no_operator_activation','old_guest_recovered_no_implicit_resume_and_old_key_refused','all_four_kernel_projects_and_private_generations_released','manager_clean_stop_removed_both_units_and_inputs')+drain.RECOVERY_FLAGS
 
 
 def guard():
     base_guard()
     if read('/etc/xandbox-systemd-managed-fixture')!='Xandbox owned managed policy fixture v1':raise RuntimeError('owned managed fixture required')
+
+
+def decode_maintenance_case(value):
+    if type(value) is not dict or set(value)!={'version','case'} or type(value['version']) is not int or value['version']!=1 or type(value['case']) is not str or value['case'] not in CASE_FLAGS:raise RuntimeError('closed managed case metadata required')
+    return value['case']
+
+
+def maintenance_case():return decode_maintenance_case(json.loads((CONFIG/'maintenance-case.json').read_bytes()))
+
+
+def checkpoint_flags(case):
+    if case not in CASE_FLAGS:raise RuntimeError('fixed managed case required')
+    return COMMON_CHECKPOINT_FLAGS+CASE_FLAGS[case]
 
 
 def bind_observers():
@@ -148,7 +164,7 @@ def probe():
     if commit['plan']['version']!=2 or len(commit['files'])!=24 or (ROOT/'tls.pem').exists() or (ROOT/'tls.key').exists():raise RuntimeError('actual managed24-target composition required')
     observation=json.loads((CONFIG/'pending-gate-observation.json').read_bytes())
     if observation!={'exact_caps_zero_nnp_control':True,'actual_commit_absent_start_failed':True,'no_ordinary_state_written':True}:raise RuntimeError('initial real capless gate evidence required')
-    return {k:True for k in PROBE_FLAGS}
+    return {'maintenance_case':maintenance_case(),**{k:True for k in PROBE_FLAGS}}
 
 
 def vmm_identity(row):
@@ -207,6 +223,17 @@ def populated_negative_then_recover(request,old_request,main_before):
     save(CONFIG/'active-client.json',{'epoch':3});bind_observers();ingress.tls_ready();policy_state(3)
 
 
+def active_stop_recover(request,old_request,old_ingress):
+    # Unlike the population differential, NOTHING pre-stops the unit here.
+    # Only the production fixed root CLI may perform stop/start/advance/ACK.
+    guard()
+    if ingress.ingress_identity()!=old_ingress:raise RuntimeError('original active ingress required')
+    policy_state(1)
+    call('recover-policy',3,request,CONFIG/'rotation-3.json',2,old_request)
+    save(CONFIG/'active-client.json',{'epoch':3});bind_observers();ingress.tls_ready();policy_state(3)
+    if ingress.ingress_identity()==old_ingress or identity(old_ingress[0])==old_ingress[1] or identity(old_ingress[2])==old_ingress[3]:raise RuntimeError('production maintenance did not replace actual old ingress incarnations')
+
+
 def checkpoint():
     global PHASE
     probe();rows=[];boots=[];PHASE='managed-four-kvm'
@@ -229,8 +256,11 @@ def checkpoint():
     # Admit the busy job AFTER waiting for leaf2 expiry. Its original 45-second
     # budget is unchanged; waiting a minute must not falsely count an expired job.
     writer=base.progressing_writer(rows[0][0],'alpha');drain.busy(rows[0][0],writer['id'])
-    PHASE='managed-real-population-gate';populated_negative_then_recover(request,old_request,main_before)
+    case=maintenance_case();PHASE='managed-'+case
+    if case=='populated-gate':populated_negative_then_recover(request,old_request,main_before)
+    else:active_stop_recover(request,old_request,ingress_before)
     PHASE='managed-continuity'
+    if ingress.ingress_identity()==ingress_before or identity(ingress_before[0])==ingress_before[1] or identity(ingress_before[2])==ingress_before[3]:raise RuntimeError('actual old ingress incarnations remain')
     if base.main_identity()!=main_before or [vmm_identity(r) for r,_ in rows]!=vm_before:raise RuntimeError('main/VMM restarted during ingress maintenance')
     if [base.verify_vm(r,t) for r,t in rows]!=boots:raise RuntimeError('guest boot changed during maintenance')
     drain.state('drained',drained);drain.busy(rows[0][0],writer['id'])
@@ -257,12 +287,13 @@ def checkpoint():
     base.execute(fresh,['test','!','-e','/workspace/heartbeat'],'alpha');running=base.progressing_writer(fresh,'alpha')
     save(ingress.CHECKPOINT,{'row':fresh,'guest_boot':boot,'owner':base.owner(fresh),'writer_execution_id':running['id']})
     sealed=drain.seal_cold();sources_absent();call('status',3)
-    save(CHECKPOINT,{'boot_id':read('/proc/sys/kernel/random/boot_id'),'machine_id':read('/etc/machine-id'),'files':{p.name:base.sha(p) for p in ROOT.iterdir() if p.name!='.lock'},'request':request})
-    return {**{k:True for k in CHECKPOINT_FLAGS if k not in drain.CHECKPOINT_FLAGS},**warm,**sealed,'stop_observed_ms':ms[0],'durable_reclaim_observed_ms':ms[1]}
+    save(CHECKPOINT,{'boot_id':read('/proc/sys/kernel/random/boot_id'),'machine_id':read('/etc/machine-id'),'files':{p.name:base.sha(p) for p in ROOT.iterdir() if p.name!='.lock'},'request':request,'maintenance_case':case})
+    return {'maintenance_case':case,**{k:True for k in checkpoint_flags(case) if k not in drain.CHECKPOINT_FLAGS},**warm,**sealed,'stop_observed_ms':ms[0],'durable_reclaim_observed_ms':ms[1]}
 
 
 def recover():
     old=json.loads(CHECKPOINT.read_bytes());probe()
+    if old['maintenance_case']!=maintenance_case():raise RuntimeError('original case must persist across cold')
     if old['boot_id']==read('/proc/sys/kernel/random/boot_id') or old['machine_id']!=read('/etc/machine-id'):raise RuntimeError('actual original disk cold boot required')
     if {p.name:base.sha(p) for p in ROOT.iterdir() if p.name!='.lock'}!=old['files']:raise RuntimeError('installed managed files changed across cold')
     restored=drain.restore_and_resume();base.call('POST','/v1/sandboxes',base.create_spec(),key='managed-before-cold',expected=410)
@@ -272,7 +303,7 @@ def recover():
     if any(p.is_dir() for p in (base.UNIT_ROOT/'node/instances').iterdir()) or list((base.RUNTIME/'j/firecracker').iterdir()):raise RuntimeError('private generation remains')
     call('reconcile',3,old['request']);sources_absent();call('status',3);run('systemctl','stop',base.UNIT)
     wait(lambda:not base.UNIT_ROOT.exists() and not ingress.GROUP.exists() and not Path('/run/xandbox-inputs').exists() and not ingress.tcp()[1],25)
-    return {**{k:True for k in RECOVERY_FLAGS if k not in drain.RECOVERY_FLAGS},**restored}
+    return {'maintenance_case':maintenance_case(),**{k:True for k in RECOVERY_FLAGS if k not in drain.RECOVERY_FLAGS},**restored}
 
 
 def failure():

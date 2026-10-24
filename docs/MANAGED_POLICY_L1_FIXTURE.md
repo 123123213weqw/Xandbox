@@ -8,8 +8,13 @@ source remains pinned to `9db9603`; the launcher must require a successful fresh
 native qualification, compare all declared current ELF hashes, and retain its
 own separately frozen harness source/inputs and raw report.
 
-`kvm_systemd_host.py --managed-assets PRIVATE_MANIFEST` is exclusive with all
-older profiles. It starts only from `configure_root`, not an existing deployment.
+`kvm_systemd_host.py --managed-assets PRIVATE_MANIFEST --managed-case CASE` is
+exclusive with all older profiles. The closed cases are `populated-gate`
+(default) and `active-stop`; each needs its **own fresh disk, launch and report**.
+The case is stored in private image metadata, echoed in every closed reply and
+bound across the original-disk cold checkpoint. A result from one case cannot
+satisfy the other case's flags. Case selection without the managed profile is
+rejected before image work. It starts only from `configure_root`, not an existing deployment.
 The image stages exactly 13 release roles plus installer, publisher and the
 opt-in managed PKI producer. No ordinary main/ingress unit, production state or
 installation is preinstalled. Old v1 builder source pins are not reused for the
@@ -41,14 +46,21 @@ shared host service/module/mount/quota/sysctl/network mutation or task fallback.
    clock changes. Generate valid policy3 from the installed immutable backend/CA.
    Admit the original 45-second busy writer **after** that wait, rather than
    pretending a job that expired during the minute is still running.
-5. Stop only ingress using the fixed dependency-isolated administrative command.
-   Fork one inert test child, place **only that owned child** into the fixed L1
-   ingress cgroup, and require actual `populated 1`. The manager must show no main
-   PID/inactive. Root recovery3 must refuse, leave durable epoch1 and main intact,
-   and have admitted its exact recovery declaration. Kill/reap only that child;
-   require absent or real empty/unfrozen group and exact same-request recovery3
-   success with actual store/child epoch3. No cgroup freeze or production-process
-   migration is introduced by this negative control.
+5. Run exactly the selected maintenance case:
+   - **`populated-gate`:** stop only ingress using the fixed dependency-isolated
+     administrative command. Fork one inert test child, place **only that owned
+     child** into the fixed L1 ingress cgroup, and require actual `populated 1`.
+     The manager must show no main PID/inactive. Root recovery3 must refuse,
+     leave durable epoch1 and main intact, and have admitted its exact recovery
+     declaration. Kill/reap only that child; require absent or real empty/unfrozen
+     group and exact same-request recovery3 success with actual store/child
+     epoch3. No cgroup freeze or production-process migration is introduced.
+   - **`active-stop`:** require the original actual root/child ingress pair still
+     active and the durable store still at epoch1 immediately before recovery3.
+     Do **not** manually stop a service, insert a test process or write cgroup
+     membership. Only the production root CLI performs maintenance. Require its
+     exact epoch3 receipt, actual fresh child ACK/TLS and absence of both old
+     process incarnations. The common checks still prove main/VMM continuity.
 6. Same main/VMM incarnations, guest boots and busy execution still progress;
    the entire acknowledged drain commit is unchanged. New TLS leaf/key material
    is coherent, and the old token fails on a new policy3 TLS transport which then
@@ -66,18 +78,21 @@ All task argv crosses ordinary controller/guest APIs, never a host task route.
 The inert negative-control child only blocks on its own pipe; it is not a task
 executor. Raw credentials/refs/console/process identities remain private.
 
-## Deliberately unqualified branches
+## Deliberately separate qualification gates
 
-This first profile's recovery CLI sees an already stopped ingress for the
-populated/empty differential. The fixed stop command itself runs in the test
-operator, so **the production active-unit stop branch still needs a separate
-actual CLI scope**. Uncommitted supersession, its repeated-failure/cut matrix,
+The `populated-gate` CLI sees an already stopped ingress for its population
+differential; that case alone cannot qualify the active-unit production-stop
+branch. The separately implemented `active-stop` case does not exercise the
+population negative control. **Neither case has been executed yet.** Both
+source-bound actual scopes and independent absence audits remain required.
+Uncommitted supersession, its repeated-failure/cut matrix,
 all remaining filesystem/media faults and current-artifact runtime/SLO matrices
 also remain required. An eventual pass of this named profile must not be expanded
 to any of those claims, a full production milestone or the whole goal.
 
 The pure unit controls validate assembly exclusivity, closed messages/receipts,
 trace predicates/guards, old-versus-new activation observation, timing order,
-negative-control ownership and failure reporting. They do not execute the above
+negative-control ownership, case isolation/cold binding and failure reporting.
+They do not execute the above
 actual checks. Only actual source-bound reports and independent resource audits
 can change their acceptance status.
