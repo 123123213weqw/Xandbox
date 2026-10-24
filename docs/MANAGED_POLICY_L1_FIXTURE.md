@@ -1,7 +1,8 @@
-# Opt-in fresh managed-v2 owned-L1 fixture — actual predecessors retained
+# Opt-in fresh managed-v2 owned-L1 fixture — two limited actual cases accepted
 
-**No complete new root CLI, real kernel-positive, TLS/KVM or cold acceptance
-is claimed. Two actual populated-gate predecessors failed and are retained.**
+**Two independent committed-policy recovery cases have limited actual root
+CLI/TLS-KVM/cold acceptance. This is not production readiness or uncommitted
+supersession acceptance. Two failed predecessors remain retained separately.**
 The [new proposal supersession code](PENDING_POLICY_SUPERSESSION.md) and its
 changed binaries cannot inherit old installation/ingress reports. Runtime Go
 source remains pinned to `9db9603`; the launcher must require a successful fresh
@@ -26,7 +27,7 @@ bounds and test operator limits are unchanged. Building is offline extraction
 and metadata assembly only: no chroot, downloaded userspace/VMM execution on L0,
 shared host service/module/mount/quota/sysctl/network mutation or task fallback.
 
-## Intended actual checks (not results)
+## Case protocol (results and limits below)
 
 1. Ordinary root publisher and Plan v2 initial installation with 24 targets.
    Trace only the operator's own freshly forked, exact-ELF installer at fixed
@@ -89,9 +90,9 @@ executor. Raw credentials/refs/console/process identities remain private.
 The `populated-gate` CLI sees an already stopped ingress for its population
 differential; that case alone cannot qualify the active-unit production-stop
 branch. The separately implemented `active-stop` case does not exercise the
-population negative control. Neither case has a complete accepted actual scope.
-The first populated-gate attempt below is a failure, not a partial acceptance.
-Both source-bound successful scopes and independent absence audits remain required.
+population negative control. Each now has its own complete source-bound actual
+scope and independent absence audit. The first two populated-gate attempts
+below remain failures, not partial acceptance or substitutes for those scopes.
 Uncommitted supersession, its repeated-failure/cut matrix,
 all remaining filesystem/media faults and current-artifact runtime/SLO matrices
 also remain required. An eventual pass of this named profile must not be expanded
@@ -126,7 +127,7 @@ its intended 401 close, and checks new-key success separately. It changes only
 fixture code/control tests, not Go artifacts, runtime limits or deadlines. The
 failed original's report/console remain private and hash-bound; independent
 read-only audit found its one declared outer generation and all owned paths
-absent without supplemental cleanup. A corrected fresh run is still required.
+absent without supplemental cleanup. The later successful runs do not erase it.
 
 The [second actual original](validation/managed-policy-l1-populated-failed-v2.json)
 used frozen `a966af9` and 250 Linux pure tests/zero skips. It passed the corrected
@@ -143,3 +144,27 @@ TLS and exact policy reconciliation. No maintenance continuity check is removed,
 no resume is implicit, and no production Go byte or deadline changes. The second
 original and independent one-generation absence audit are retained separately;
 it is not accepted or merged with the first attempt into a pass.
+
+## Source-bound limited actual results
+
+The [new two-case evidence](validation/managed-policy-l1-committed-recovery-v3.json)
+binds frozen harness `c665d4f`, runtime Go `9db9603`, native harness `6173527`,
+251 Linux pure tests/zero skips and all 23 actual current native artifacts.
+No production Go bytes changed for either fixture correction. The same 16 pinned
+program/data inputs were independently rehashed for each new scope.
+
+Both `populated-gate` and `active-stop` originals exited zero, completed their
+closed typed two-boot protocol and passed independent read-only absence audits:
+**two accepted scopes, four L1 boots and four outer generations absent**, without
+supplemental cleanup. The two failed predecessors have another two independently
+absent generations, reported separately. The active case proves the production
+CLI stops the original active ingress; it does not inherit that proof from the
+pre-stopped population case.
+
+Actual n=1 physical Stop observations were 108.201/108.450 ms; durable reclaim
+observations were 375.019/382.673 ms respectively. These are distinct bounded
+observations, not a switch/Stop/GC SLO, saturation result or physical media erasure.
+Healthy fsynced original-disk cold recovery is not an in-flight media-fault test.
+Uncommitted supersession and its cut matrix, ordinary hot rotation retaining the
+old policy1 transport, upgrade/rollback, authority migration, catalog/backup,
+audit retention, saturation and full current-artifact runtime matrices remain open.

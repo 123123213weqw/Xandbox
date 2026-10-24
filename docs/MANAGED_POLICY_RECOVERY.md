@@ -5,6 +5,17 @@ record below does not qualify its command or changed artifacts.
 # Managed policy v2 — explicit forward recovery candidate
 
 **Experimental: native software regression passed; not production ready.**
+
+New [source-bound limited owned-L1 acceptance](MANAGED_POLICY_L1_FIXTURE.md)
+now covers this committed-but-expired recovery through ordinary root CLI,
+real positive/negative cgroup-empty proof and, in a separate case, production
+active-ingress stop. Both cases preserve main/four VMM incarnations, busy KVM
+progress and the acknowledged drain commit across maintenance; they also cover
+TLS/key refusal, source-free exact retry and healthy original-disk cold recovery.
+Two scopes/four boots have independent four-generation absence audits. This
+does not qualify unconsumed supersession, ordinary hot rotation's old transport,
+media faults, full runtime/SLO matrices or the complete production goal.
+
 This follows the source-bound [persistence/locking foundation](POLICY_RECOVERY_FOUNDATION.md).
 That historical checkpoint did not expose a recovery command. The code now adds
 one, but neither its earlier evidence nor any older ELF hardware report certifies

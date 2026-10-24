@@ -18,7 +18,7 @@
 
 后续[过期策略恢复地基](docs/POLICY_RECOVERY_FOUNDATION.md)新增只打开既有策略状态的持久化原语，以及覆盖文件提交到 ACK 的整段操作锁；原生 race/vet 与进程死亡测试通过。后续已接入[显式 ingress-only 前向恢复候选](docs/MANAGED_POLICY_RECOVERY.md)，已完成独立 Linux 原生 race×3/vet/错误与进程死亡回归（保留两次失败前序），另有独立短时证书测试输入生成器；真实 root CLI/TLS/KVM 维护验收及未提交过期候选的恢复仍未完成。
 
-新增[未消费候选的显式替换实现](docs/PENDING_POLICY_SUPERSESSION.md)，已完成新源码原生 race×3/vet、进程死亡/CAS 回归与 23 个产物重建：区分“替换 N+1 提案”与“消费已提交 epoch”。另有两条独立受管 L1 验收路径及 249 项纯测试；真实 root CLI/TLS/KVM 尚待执行，不继承旧硬件报告，尚未完成生产验收。
+新增[未消费候选的显式替换实现](docs/PENDING_POLICY_SUPERSESSION.md)，已完成新源码原生 race×3/vet、进程死亡/CAS 回归与 23 个产物重建。另有[已提交过期策略恢复的两条独立实机路径](docs/MANAGED_POLICY_L1_FIXTURE.md)：普通 root CLI、真实 TLS→四并行 KVM、残留进程拒绝与运行中 ingress 停止、drain、原盘冷恢复均取得有限验证；2 scopes/4 boots 独立核验清理，251 项 Linux 纯测试零跳过，两个失败前序保留。未消费候选替换本身的硬件矩阵及完整生产验收仍未完成。
 
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 

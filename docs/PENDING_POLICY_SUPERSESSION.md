@@ -132,7 +132,8 @@ passed 247/zero skips; later fixture pure controls passed 249/zero skips on Linu
 and 249 with five platform skips on macOS. These are not root-runtime evidence.
 All 627 older validation files remain byte-unchanged.
 
-Fresh owned-L1 root CLI, real positive/negative kernel empty proof,
+For this **unconsumed supersession command**, fresh owned-L1 root CLI,
+real positive/negative kernel empty proof,
 coherent TLS revocation, continuing KVM writer, unchanged main/guest incarnation,
 persisted drain, source absence, actual cuts/ACK/cold and independent cleanup are
 still required. Older software or hardware records must not be re-signed.
@@ -170,7 +171,9 @@ qualification/build stages. Its full installtxn race x3 package took 953.137
 seconds. This is software-runner timing, not a sandbox switch/Stop/GC SLO.
 
 A [fresh managed-v2 owned-L1 harness](MANAGED_POLICY_L1_FIXTURE.md) is now
-implemented with pure controls only. It has not executed or qualified root/TLS/KVM
-checks. Independently selected populated/empty-gate and active-ingress-stop cases
-need separate actual reports; neither can satisfy the other's flags. Uncommitted
-supersession hardware remains a further independent gate.
+implemented and subsequently passed two independent limited actual **committed
+expired-policy recovery** cases: populated/empty gate and active-ingress stop,
+with separate two-boot reports and absence audits. Frozen fixture `c665d4f`
+uses the same Go bytes with 251 Linux pure tests/zero skips. Neither case can
+satisfy the other's flags, and neither executes this unconsumed supersession
+command. Its actual hardware/cut matrix remains an independent open gate.
