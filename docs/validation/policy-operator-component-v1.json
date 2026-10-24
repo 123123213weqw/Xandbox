@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "scope": "policy_operator_transport_component_only",
+  "source_revision": "f74ac631a02b44e074cc6d6448881ec64fdc2e15",
+  "source_archive_sha256": "d1994a418396fd7fa6a7fa29b746780054f9d99cb8015e6aa6a1070ac9c68c80",
+  "native_runner_sha256": "d43adf0afb2a1238fd17ecbe408f9f35c8715b487994ef05036cdaaa04940cb6",
+  "toolchain": "go1.27.3",
+  "source_files": [
+    {
+      "path": "internal/policycontrol/operator.go",
+      "sha256": "04c4c17493a654682c93f1c3acbaadbdb73d0e217861794832fa22d7a0ff177b"
+    },
+    {
+      "path": "internal/policycontrol/operator_linux.go",
+      "sha256": "90bea50dc2f8c7c89417aba6d18c070a4c85d299eeca7b3292dc74e29870a454"
+    },
+    {
+      "path": "internal/policycontrol/operator_linux_test.go",
+      "sha256": "c5fcc224d96994425060d1f1cf420c330fef3774383e42f67731fc2643fd8c51"
+    },
+    {
+      "path": "internal/policycontrol/operator_other.go",
+      "sha256": "7e2733d5ae13c3970f7b701ca684747d25934f782c9cd8b56d871b5e265e98e3"
+    },
+    {
+      "path": "internal/policycontrol/operator_test.go",
+      "sha256": "635d3d9acbbde5acc12b8b901b440a64965ccf77561e39b282753504d03816c9"
+    }
+  ],
+  "production_graph": {
+    "current_command_importers": 0,
+    "existing_code_files_changed": 0,
+    "prior_qualification_artifacts_rebuilt": 19,
+    "all_19_byte_identical_to_prior_native_qualification": true,
+    "prior_artifact_manifest_sha256": "50a15bbb59c1afaf4d48e3f2c5c3e6509a58e293dd82eafe40c831ccaed10405",
+    "rebuilt_manifest_sha256": "50a15bbb59c1afaf4d48e3f2c5c3e6509a58e293dd82eafe40c831ccaed10405"
+  },
+  "validation": {
+    "linux_amd64": {
+      "terminal_exit": 0,
+      "runner_observed_gone": true,
+      "full_race_repetitions": 3,
+      "vet_exit": 0,
+      "focused_control_names": 11,
+      "focused_repetitions": 10,
+      "focused_passes": 110,
+      "focused_skips": 0,
+      "host_deploy_install_fixture_race_repetitions_each": 3,
+      "cgo_free_quota_repetitions": 3,
+      "python_tests": 235,
+      "python_skips": 0
+    },
+    "darwin_arm64": {
+      "terminal_exit": 0,
+      "full_race_repetitions": 3,
+      "vet_exit": 0,
+      "actual_source_header_verified": true
+    },
+    "cross_compile": {
+      "linux_amd64_test_native_byte_identical": true,
+      "linux_amd64_test_sha256": "cd6b60e7c534f43c7b0e6c217c0e73264eef90fef614873747817cb0a243d90b",
+      "linux_arm64_test_compiled_not_executed": true,
+      "linux_arm64_test_sha256": "e104ad729ef602bc78e7e8cd053af78d19d13533ada38f291992f5d8d88f672f"
+    },
+    "controls": [
+      "real_private_named_unix_seqpacket",
+      "kernel_peer_uid_and_pid_checks",
+      "strict_bounded_commands_and_replies",
+      "received_and_truncated_scm_rights_closed",
+      "synthetic_lost_response_exact_retry",
+      "synthetic_durable_vs_active_progress",
+      "single_response_closed_error_vocabulary",
+      "full_activation_queue_and_missing_reply_deadline",
+      "wrong_target_or_fence_client_rejection",
+      "stale_socket_vs_live_or_unknown_endpoint",
+      "idle_handler_limit_and_joined_shutdown",
+      "inode_safe_socket_replacement",
+      "private_modes_and_link_counts"
+    ],
+    "private_evidence": [
+      {
+        "name": "policy-operator-all19-old-bytes-v1.log",
+        "sha256": "35c82be9606143b765be5b91888d1651ce5f0ebda24ed6ab23bb0f0efe9d28fa",
+        "bytes": 417
+      },
+      {
+        "name": "policy-operator-native-controls-v1.log",
+        "sha256": "f91c55039072a237c2eb87559eace41b6e776b5d244fbb639beae809a76d4632",
+        "bytes": 15994
+      },
+      {
+        "name": "policy-operator-native-deploy-v1.log",
+        "sha256": "6aab03bdf809094860c084cbfead9b223a0ea7c77cc0fd1b7a92dc8b5d0a754e",
+        "bytes": 72
+      },
+      {
+        "name": "policy-operator-native-full-race-v1.log",
+        "sha256": "c26613e6ad033493790b2acf63d974fe6b93ea23ef4925d2006998d117754269",
+        "bytes": 2707
+      },
+      {
+        "name": "policy-operator-native-host-v1.log",
+        "sha256": "fa019fe1478898b4b23d01bb1bfbe07b7591fc87616bd1548ac88d6889389649",
+        "bytes": 70
+      },
+      {
+        "name": "policy-operator-native-install-v1.log",
+        "sha256": "39f5c4b765bffe6031942e70b5304b7893637869154110269e9f420b9f3e2621",
+        "bytes": 73
+      },
+      {
+        "name": "policy-operator-native-python-v1.log",
+        "sha256": "5efda7739b0f1b37e06512db3ca9c9b00ddc57aa85e049c9faa5a6db5a47a87d",
+        "bytes": 335
+      },
+      {
+        "name": "policy-operator-native-quota-v1.log",
+        "sha256": "5d335c767bec97baaabad5d9922c0087b0d87f5987ad7ac958ae3a36b8b46b73",
+        "bytes": 61
+      },
+      {
+        "name": "policy-operator-native-v1.sha256",
+        "sha256": "50a15bbb59c1afaf4d48e3f2c5c3e6509a58e293dd82eafe40c831ccaed10405",
+        "bytes": 1519
+      },
+      {
+        "name": "policy-operator-native-v1.status",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      {
+        "name": "policy-operator-native-vet-v1.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "policy-operator-test-native-v1.sha256",
+        "sha256": "a1ab2ea1edc720604ae50a4c1cdb7e2ec826b0cd49fcc33b386cdefa4c5a7aef",
+        "bytes": 153
+      },
+      {
+        "name": "policy-operator-darwin-full-v1.log",
+        "sha256": "72dfc0ba9c05bd2ed1c44ccf9c3933e35f93dfc91e87549e1939d59dfa572ae4",
+        "bytes": 2606
+      },
+      {
+        "name": "policy-operator-native-audit-v1.json",
+        "sha256": "9342014bf5c35dcbbd1808048d7f52ea01cbd0cb6638d6244200ec3272835559",
+        "bytes": 827
+      }
+    ]
+  },
+  "claims": {
+    "transport_component_tested": true,
+    "actual_policy_store_commit_in_new_transport_test": false,
+    "actual_frontend_child_ack_in_new_transport_test": false,
+    "root_fixed_path_positive_test": false,
+    "runroot_operator_wired": false,
+    "installer_rotation_wired": false,
+    "installed_node_rotation_supported": false,
+    "old_self_pinned_install_upgrade_supported": false,
+    "new_kvm_or_cold_rotation_qualification": false,
+    "production_ready": false
+  },
+  "historical_initial_install_proof": {
+    "path": "docs/validation/initial-install-kvm-v1.json",
+    "sha256": "f4082aa1aa09af21f95bd5afa33dc247e9d1ec580f843067598f0e8a405c9cd6",
+    "reused_as_new_hardware_evidence": false
+  },
+  "limitations": [
+    "Only one future supervisor writer may classify and mutate; Classify is not a filesystem CAS.",
+    "Transport progress and ACK tests use a synthetic supervisor, not RunRoot.",
+    "A queued command may outlive its client; timeout is unconfirmed, not rollback.",
+    "Waiting is not active, and active is an ACK observation, not health or installation proof.",
+    "PID pinning alone is not manager executable/incarnation proof.",
+    "No live TLS/KVM continuity, root CLI, installation rotation crash or cold rotation acceptance in this checkpoint.",
+    "Backend authority migration, self-upgrade/rollback, consistent backup, audit retention and saturation/SLO remain unfinished."
+  ]
+}
