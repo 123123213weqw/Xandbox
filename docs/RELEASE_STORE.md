@@ -3,7 +3,9 @@
 `xandbox-release` / `internal/releasestore` 为后续安装事务提供真实的发布物暂存、完整性校验和
 CAS 提交，不是 systemd 安装器。它**不**写 unit、操作服务、改节点绑定/准入、执行发布物、
 恢复 guest、处理 catalog pin 或删除旧发布物；不能用它代替升级/回滚/备份与独立操作员验收。
-既有真实 KVM 报告仍只绑定各自的源码/ELF，本项没有新的 privileged CLI / owned-L1 验收声明。
+既有真实 KVM 报告仍只绑定各自的源码/ELF，本0a51原生scope不包含privileged CLI / owned-L1验收。
+后续[3587有限独立组合](RELEASE_PUBLISHER_KVM.md)已另取普通CLI、真实guest持续性及双启动证据；
+不回写本原生报告，也不宣称服务安装或升级完成。
 
 冻结源 `0a51f39893fd8d317c4905a603294d6028f92dcf` 已实际通过Linux Go1.27.3完整race(count3)/
 vet、新文件系统/8处进程退出控制(count3)、fixture/helper及quota回归；新CLI/test的原生与
@@ -80,4 +82,4 @@ production_ready；不输出输入路径、request ID、资源身份、令牌或
 位置、版本兼容与备份协议。未完成这些之前，完整安装事务和M1–M4仍未通过。
 
 后续普通root CLI与实际服务/guest组合的[独占L1验证代码](RELEASE_PUBLISHER_KVM.md)已加入，
-当前仍待实机，不用新harness的纯控制替代root CLI验收。
+后续限定组合已另取双启动新原件，不用纯控制或本原生报告替代独立root CLI验收。

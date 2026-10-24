@@ -10,6 +10,8 @@
 
 另有[持久drain下自动启动的独立扩展](docs/READINESS_DRAIN.md)：真实warm重启与原盘cold保留完整控制提交；健康恢复不隐式resume，旧任务/Stop/GC继续，新建与切换拒绝，显式root CAS恢复后被拒key可重用。197项Linux Python零skip、新双启动和独立只读清理复核通过，13个Go产物未改变；首轮managed执行路径失败保留，不等于生产安装器或SLO。
 
+新增[普通发布CLI的有限实机组合](docs/RELEASE_PUBLISHER_KVM.md)：真实资产提交、并发CAS、缺源重试和原盘恢复不改变节点准入，既有服务/guest持续与完整readiness/drain回归通过。它只是安装事务地基，不是已完成的安装/升级工具。
+
 [新5bfb复验](docs/FIVEB_REQUALIFICATION.md)现已补齐[25个全新运行scope](docs/FIVEB_RUNTIME.md)，43个嵌套代际和4个loop绑定独立只读清理复核；[另外12个live trace/边界scope](docs/FIVEB_BOUNDARIES.md)也取得新原件与独立24代际复核；合计37 scopes/67嵌套代际/4 loop，无补充清理，不是生产就绪。
 
 仓库新增[固定扫描器的全历史秘密门禁](docs/SECRET_SCAN.md)。[真实 systemd L1 地基](docs/SYSTEMD_HOST_FIXTURE.md)完成两次启动与委派/reload/stop-start原语；[生产部署契约](docs/DEPLOYMENT_CONSTRAINTS.md)中的完整安装/升级/自动TLS部署仍未验收；旧原语报告不代表普通服务部署通过。

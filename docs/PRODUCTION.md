@@ -34,7 +34,9 @@
 
 部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。[systemd接口冲突与部署契约](DEPLOYMENT_CONSTRAINTS.md)记录 `.control` 边界；后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已通过两次启动、独立 operator/委派/reload/stop-start，136项原生Python零skip及含失败前序5代际只读复核。选择 nested node 布局，后续Go启动器与普通UDS/KVM有限通过见上方新报告；自动安装仍未完成；自动readiness与TLS→KVM有限组合已另取上方独立证据，不据此勾选M4。
 
-新增[有界发布物仓库](RELEASE_STORE.md)作为安装事务地基：固定清单复制/密封、持久意图及CAS发布引用、精确重试和中断恢复代码已加入；没有unit/服务变更，也尚无privileged CLI/owned-L1安装验收，不勾选安装或升级门槛。
+新增[有界发布物仓库](RELEASE_STORE.md)作为安装事务地基：固定清单复制/密封、持久意图及CAS发布引用、精确重试和中断恢复代码已加入；没有unit/服务变更；原0a51原生scope不含privileged CLI组合，后续另见下段；完整owned-L1安装/升级门槛仍不勾选。
+
+后续[普通发布CLI/服务持续性/原盘冷恢复](RELEASE_PUBLISHER_KVM.md)已取得3587双启动有限实证：真实13角色资产、两次4进程CAS、缺源精确重试、库存拒绝、原服务/guest持续及完整readiness/drain回归通过。219项Linux Python零skip，15个既有程序未变；三个失败前序保留，含前序15scopes/21代际/66声明路径独立只读无残留。不是服务安装/激活、升级、备份或完整M4。
 
 ## 信任与隔离边界
 

@@ -1,14 +1,17 @@
-# 普通发布 CLI 与既有服务的 L1 组合（新增验证代码，实机待验）
+# 普通发布 CLI 与既有服务的 L1 组合（有限实机通过）
 
-[发布物仓库](RELEASE_STORE.md)已有Linux原生unit/测试进程中断证据，但还没有普通root CLI
-在真实服务宿主中的执行证据。本项补这道门，不把它称为服务安装、升级/回滚、catalog或备份。
+[发布物仓库](RELEASE_STORE.md)的0a51原生scope不含真实服务宿主中的普通root CLI验收。
+本项冻结源 `3587c50a433a57708ea29f2c4edb8194e57de0c0` 已取得完整双启动新原件；
+[脱敏摘要](validation/release-publisher-kvm-v1.json)绑定15资产、16harness、219项Linux Python
+零skip与原报告指纹。15个既有原生程序逐项核对未变、未重编译；生产Go保持0a51来源。
+不把这道有限门槛称为服务安装、升级/回滚、catalog或备份。
 
 新增显式互斥 `--release-assets`，不是减掉既有检查的轻量profile。复用完整readiness/drain/
 TLS→KVM流程，保持16GiB/CPU12/24GiB盘、18GiB外层硬组、无NIC/15分钟租约；固定资产15项、
 harness16项。额外两项是普通publisher与template ELF，原13项部署资产不替换。所有Go源不变，
 复用实际原生校验的publisher `fa3538fd…`，不重贴原生或旧硬件报告。
 
-## 追加的闭集门槛
+## 本次实际追加的闭集检查
 
 - 真实13角色资产：8个普通Go程序及Firecracker/jailer/kernel/initrd/128MiB workspace，而非
   微小伪文件。先逐项核对冻结摘要，复制到私有incoming目录，声明分别绑定9e4/0a51两个
@@ -31,10 +34,15 @@ guest任务始终经普通TLS API→真实KVM。publisher只复制资产，没�
 新增结果只含闭集typed true；source路径、请求ID、引用、凭证、guest/进程/资源身份和完整
 console保持私有。仍须独立只读核验本次全部外层代际与声明路径已消失，不能用补充清理冒充。
 
-上述目前是代码和验收门槛，不是已经通过的实机结果。它不测试生产CLI的精确syscall中断/
-介质故障窗口，也不完成完整安装事务、激活、升级/回滚/备份、可靠审计、饱和负载或SLO。
+实际runner退出0且原PID消失；两次真实启动的完整probe/checkpoint/recover闭集typed true，
+17类离线篡改/缺项/虚报负例均拒绝。独立只读核验本scope两个外层代际及全部声明路径消失，
+无补充清理；含历史失败的15 scopes/21个全局唯一外层代际/66个唯一声明路径再次只读复核
+不存在。历史失败不因此变成通过，也不把这些计数说成整机资源清单或绝对逃逸证明。
 
-## 首轮失败与镜像权限修正（修正后实机仍待验）
+本项不测试生产CLI的精确syscall中断/介质故障窗口，也不完成完整安装事务、激活、
+升级/回滚/备份、可靠审计、饱和负载或SLO。
+
+## 保留的失败前序与证据驱动修正
 
 `ed255f2`的首个L1在非root检查时失败：execve返回EACCES，CLI没有进入程序，不能冒充
 程序UID门禁拒绝。原始报告及该外层代际/声明路径的独立只读无残留审计保留。
@@ -63,4 +71,5 @@ directory给出mode=None，private umask077下实际创建/usr为0700。旧build
 全部inode/device/size/mtime/ctime/mode/owner/link及配置摘要，每次仍哈希普通CLI；身份漂移
 直接拒绝而非更新cache。发布程序本身的全部SHA/复制/fsync/status深校验、两个4进程CAS、
 所有负例、13个真实角色及最终每份密封字节核对都保留，不提高60秒上限或扩大资源。
-这是测试器减少重复观测，不是发布程序加速比或SLO证明；修正后仍须新原件验收。
+这是测试器减少重复观测，不是发布程序加速比或SLO证明。随后3587新原件已完整通过，
+上述三个失败原件、原报告指纹与独立清理复核不改写；不回溯宣布第二轮的精确退出原因。
