@@ -7,6 +7,7 @@ import shutil
 from build_nested_host import digest, static_elf
 
 ASSETS=('launcher','daemon','warden','firecracker','jailer','kernel','initrd','workspace','node')
+MAX_ASSET={'launcher':64<<20,'daemon':64<<20,'warden':32<<20,'firecracker':32<<20,'jailer':32<<20,'kernel':64<<20,'initrd':64<<20,'workspace':128<<20,'node':32<<20}
 
 
 def load_assets(path):
@@ -15,8 +16,9 @@ def load_assets(path):
     for name,asset in value.items():
         if set(asset)!={'path','sha256'} or not re.fullmatch('[0-9a-f]{64}',asset['sha256']):raise ValueError('fixed asset schema required')
         source=Path(asset['path'])
-        if not source.is_absolute() or source.is_symlink() or not source.is_file() or not 0<source.stat().st_size<=128<<20 or digest(source)!=asset['sha256']:
+        if not source.is_absolute() or source.is_symlink() or not source.is_file() or not 0<source.stat().st_size<=MAX_ASSET[name] or digest(source)!=asset['sha256']:
             raise ValueError('pinned regular bounded deployment asset required')
+        if name=='workspace' and source.stat().st_size!=128<<20:raise ValueError('fixed 128MiB workspace required')
         if name in ('launcher','daemon','warden','firecracker','jailer','node'):static_elf(source.read_bytes())
     return value
 
