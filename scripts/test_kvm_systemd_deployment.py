@@ -45,6 +45,18 @@ class SystemdDeploymentControls(unittest.TestCase):
             with self.assertRaises(AssertionError):validate_deployment_reply(operation,{**good,'private_ref':'forbidden'})
         with self.assertRaises(AssertionError):validate_deployment_reply('deployment-probe',{**{k:True for k in DEPLOYMENT_PROBE_FLAGS},'instance_capacity':True})
 
+    def test_vmm_failure_projection_retains_all_five_zero_assertions(self):
+        from systemd_deployment_guest import observe_vmm_capabilities
+        fields=('CapInh','CapPrm','CapEff','CapBnd','CapAmb')
+        good={name:'0000000000000000' for name in fields}
+        observe_vmm_capabilities(good)
+        for name in fields:
+            with self.assertRaisesRegex(RuntimeError,'ordinary VMM capability zero flags'):
+                observe_vmm_capabilities({**good,name:'0000000000000001'})
+            bad=good.copy();del bad[name]
+            with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities(bad)
+        with self.assertRaisesRegex(RuntimeError,'observation malformed'):observe_vmm_capabilities({**good,'CapBnd':'secret-not-relayed'})
+
     def test_unmarked_host_guard_cannot_fall_back_to_console(self):
         with patch('systemd_delegate_probe.guard',side_effect=RuntimeError('unmarked')),patch('systemd_delegate_probe.failure_console') as output:
             with self.assertRaises(RuntimeError):systemd_delegate_probe.entry('operator')

@@ -139,6 +139,19 @@ def owner(row):
     return value
 
 
+def observe_vmm_capabilities(status):
+    fields=('CapInh','CapPrm','CapEff','CapBnd','CapAmb')
+    values={}
+    for name in fields:
+        raw=status.get(name,'').strip()
+        if not re.fullmatch('[0-9a-fA-F]{16}',raw):raise RuntimeError('ordinary VMM capability observation malformed')
+        values[name]=int(raw,16)
+    if any(values.values()):
+        closed=','.join(name+'='+str(int(value==0)) for name,value in values.items())
+        resource_absent=all(value&(1<<24)==0 for value in values.values())
+        raise RuntimeError('ordinary VMM capability zero flags '+closed+';resource_absent='+str(int(resource_absent)))
+
+
 def verify_vm(row,tenant):
     assets=json.loads((CONFIG/'assets.json').read_bytes());owned=owner(row)
     if execute(row,['id','-u'],tenant).strip()!='65534':raise RuntimeError('guest UID boundary failed')
@@ -153,7 +166,10 @@ def verify_vm(row,tenant):
         status=dict(line.split(':',1) for line in Path('/proc',str(pid),'status').read_text().splitlines() if ':' in line)
         if set(status['Uid'].split())!={str(owned['uid'])} or status['NoNewPrivs'].strip()!='1' or status['Seccomp'].strip()!='2' or int(status['Seccomp_filters'])<2:
             raise RuntimeError('ordinary VMM identity/filter boundary failed')
-        if any(int(status[k],16)!=0 for k in ('CapInh','CapPrm','CapEff','CapBnd','CapAmb')) or identity(pid)!=start:raise RuntimeError('ordinary VMM cap/start identity mismatch')
+        # Retain the original all-five-zero assertion while diagnosing the first
+        # hardware failure; report only closed booleans, never raw process state.
+        observe_vmm_capabilities(status)
+        if identity(pid)!=start:raise RuntimeError('ordinary VMM start identity changed')
         found=True
     if not found:raise RuntimeError('real exact Firecracker ELF not observed in owned group')
     q=quota(owned['project_id'])

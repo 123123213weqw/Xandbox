@@ -1,6 +1,6 @@
-# systemd 部署契约（L1地基通过，生产启动器未实现）
+# systemd 部署契约（Go启动器已实现，完整部署未验收）
 
-当前没有可按生产部署的 systemd unit/安装器。不能把样例 unit、静态 lint 或已有自定义
+新增[实验性 Go 启动器](GO_LAUNCHER.md)，当前仍没有可按生产部署的 systemd unit/安装器。不能把样例 unit、静态 lint 或已有自定义
 PID1 的 owned-L1 KVM 试验当成独立 systemd 操作员安装/恢复通过。
 
 ## 已确认的接口冲突
@@ -15,7 +15,7 @@ ExecReload/ExecStartPost/ExecStop/Post 等控制进程采用 `.control`，不是
 [cgroup delegation](https://systemd.io/CGROUP_DELEGATION/)。
 所以不能直接套上带 ExecStartPre/ExecReload 清理脚本的常见模板。
 
-## 已选择的层级与待实施契约
+## 已选择的层级与实现边界
 
 后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已完成独立 operator、实际 `.control`
 reload、严格 node 库存、stop/start 与原盘第二次启动。选择与 OPERATIONS.md 一致的
@@ -40,4 +40,4 @@ reload、严格 node 库存、stop/start 与原盘第二次启动。选择与 OP
 验收必须在自己拥有的、真正运行 systemd 的 L1 中完成：干净安装/重启、委派与预算读回、
 真实 TLS→KVM、busy drain、主进程崩溃、service kill、原盘 cold/旧键拒绝、新 guest 执行、
 密钥权限与独立操作员复现，以及升级/回滚/备份恢复。不得改共享 L0 unit、内核、挂载或 quota
-来让测试通过。上述仍为工作计划，不改变[生产状态](PRODUCTION.md)。
+来让测试通过。启动器已落实固定清单、同PID exec 与嵌套预算；其余验收仍未完成，不改变[生产状态](PRODUCTION.md)。

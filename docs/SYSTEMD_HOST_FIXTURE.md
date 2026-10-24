@@ -77,8 +77,8 @@ CI 只跑纯控制及语法检查；这些并不自动赋予 hosted runner KVM/s
 
 ## 下一步（尚未完成）
 
-采用上述 nested node 层级实现真正 Go launcher：核验不可变发布清单、真实委派/预算与配置，
-只搬自身，进入 node/control 后 exec 固定 daemon，保持没有宿主执行 fallback。
+后续新增[实验性 Go launcher](GO_LAUNCHER.md)：固定清单、委派/预算与配置预检、只搬自身后
+同PID exec 普通 daemon。它的实机验证不追记到本页原977 primitive报告中。
 还需实际安装/启动普通 TLS→Firecracker 服务、catalog 管理位置、busy drain/崩溃/原盘恢复、
 凭证与权限、升级/备份回滚及独立操作员复现。可靠审计/背压、全局资源饱和、长期 SLO 等
 仍属[完整生产门槛](PRODUCTION.md)。现有 Python probe/unit 不能当成生产 launcher 或安装器。
