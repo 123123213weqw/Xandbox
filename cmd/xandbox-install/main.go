@@ -16,6 +16,7 @@ import (
 )
 
 type operations struct {
+	discardDraft   func(context.Context, uint64, string, string) (installtxn.DraftResult, error)
 	replacePending func(context.Context, string, uint64, string, string) (installtxn.Result, error)
 	recoverPolicy  func(context.Context, string, uint64, string, string) (installtxn.Result, error)
 	apply          func(context.Context, string, uint64, string) (installtxn.Result, error)
@@ -28,10 +29,19 @@ type operations struct {
 func run(args []string, out, errout io.Writer, op operations) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	var v installtxn.Result
+	var v any
 	var e error
 	silent := false
 	switch {
+	case len(args) == 7 && args[0] == "discard-supersession-draft" && args[1] == "-expected-revision" && args[3] == "-pending-request-id" && args[5] == "-draft-sha256":
+		expected, err := strconv.ParseUint(args[2], 10, 64)
+		_, requestErr := hex.DecodeString(args[4])
+		_, hashErr := hex.DecodeString(args[6])
+		if err != nil || expected == 0 || expected == ^uint64(0) || strconv.FormatUint(expected, 10) != args[2] || len(args[4]) != 32 || strings.ToLower(args[4]) != args[4] || requestErr != nil || len(args[6]) != 64 || strings.ToLower(args[6]) != args[6] || hashErr != nil || op.discardDraft == nil {
+			io.WriteString(errout, "xandbox-install: fixed draft discard arguments required\n")
+			return 1
+		}
+		v, e = op.discardDraft(ctx, expected, args[4], args[6])
 	case len(args) == 7 && args[0] == "apply" && args[1] == "-plan" && args[2] != "" && args[3] == "-expected-revision" && args[4] == "0" && args[5] == "-request-id":
 		v, e = op.apply(ctx, args[2], 0, args[6])
 	case len(args) == 7 && args[0] == "reconfigure" && args[1] == "-plan" && args[2] != "" && args[3] == "-expected-revision" && args[5] == "-request-id":
@@ -84,5 +94,5 @@ func run(args []string, out, errout io.Writer, op operations) int {
 	return 0
 }
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, operations{replacePending: installtxn.ReplacePendingPolicy, apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure, recoverPolicy: installtxn.RecoverPolicy}))
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, operations{discardDraft: installtxn.DiscardSupersessionDraft, replacePending: installtxn.ReplacePendingPolicy, apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure, recoverPolicy: installtxn.RecoverPolicy}))
 }

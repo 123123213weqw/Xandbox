@@ -1,5 +1,10 @@
 # Unconsumed policy proposal supersession — regression candidate
 
+Later candidate: [hash-bound uncommitted supersession draft discard](supersession-draft-discard.md)
+addresses partial declaration bytes plus lost source without deleting committed
+authority or the future-intent startup fence. It needs separate fresh software
+and actual owned-L1 qualification; no earlier hardware result qualifies it.
+
 **Experimental implementation under new native regression, not production ready.**
 The earlier [committed recovery software proof](MANAGED_POLICY_RECOVERY.md)
 remains bound to its old source/artifacts. It does not qualify this new command,

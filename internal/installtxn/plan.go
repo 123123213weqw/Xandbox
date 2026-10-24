@@ -102,6 +102,20 @@ type Result struct {
 	ProductionReady   bool   `json:"production_ready"`
 }
 
+// DraftResult certifies CURRENT absence under stopped-ingress maintenance, not
+// a prior request's receipt or a committed/activated policy. DraftRemoved is
+// false on an already-absent retry, even when a prior invocation unlinked it.
+type DraftResult struct {
+	Version              int    `json:"version"`
+	Revision             uint64 `json:"revision"`
+	PendingRequestID     string `json:"pending_request_id"`
+	RequestedDraftSHA256 string `json:"requested_draft_sha256"`
+	DraftRemoved         bool   `json:"draft_removed"`
+	DraftAbsent          bool   `json:"draft_absent"`
+	IngressStopped       bool   `json:"ingress_stopped"`
+	ProductionReady      bool   `json:"production_ready"`
+}
+
 type RotationPlan struct {
 	Version int               `json:"version"`
 	Policy  firecracker.Asset `json:"policy"`

@@ -19,3 +19,7 @@ func RecoverPolicy(context.Context, string, uint64, string, string) (Result, err
 func ReplacePendingPolicy(context.Context, string, uint64, string, string) (Result, error) {
 	return Result{}, ErrPlatform
 }
+
+func DiscardSupersessionDraft(context.Context, uint64, string, string) (DraftResult, error) {
+	return DraftResult{}, ErrPlatform
+}

@@ -132,3 +132,53 @@ func TestFixedPendingReplacementCLIExplicitCASAndClosedErrors(t *testing.T) {
 		t.Fatal("raw failure escaped")
 	}
 }
+
+func TestFixedSupersessionDraftCLIHashBoundNoSelectorsOrSensitiveErrors(t *testing.T) {
+	pending, sha := strings.Repeat("b", 32), strings.Repeat("c", 64)
+	args := []string{"discard-supersession-draft", "-expected-revision", "1", "-pending-request-id", pending, "-draft-sha256", sha}
+	calls := 0
+	op := operations{discardDraft: func(_ context.Context, n uint64, p, s string) (installtxn.DraftResult, error) {
+		calls++
+		if n != 1 || p != pending || s != sha {
+			t.Fatal("arguments changed")
+		}
+		return installtxn.DraftResult{}, errors.New("PRIVATE_DRAFT_BYTES_KEY_PATH")
+	}}
+	for _, kind := range []string{"0", "01", "+1", "18446744073709551615", "18446744073709551616", "request", "hash", "short-hash", "flag", "path", "extra", "missing"} {
+		a := append([]string(nil), args...)
+		switch kind {
+		case "request":
+			a[4] = strings.Repeat("A", 32)
+		case "hash":
+			a[6] = strings.Repeat("C", 64)
+		case "short-hash":
+			a[6] = "ab"
+		case "flag":
+			a[3] = "-request-id"
+		case "path":
+			a[5] = "-path"
+		case "extra":
+			a = append(a, "--force")
+		case "missing":
+			a = a[:6]
+		default:
+			a[2] = kind
+		}
+		var out, err bytes.Buffer
+		if run(a, &out, &err, op) != 1 || calls != 0 || out.Len() != 0 {
+			t.Fatal("invalid discard reached operation", kind)
+		}
+	}
+	var out, err bytes.Buffer
+	if run(args, &out, &err, op) != 1 || calls != 1 || out.Len() != 0 || strings.Contains(err.String(), "PRIVATE") {
+		t.Fatal("raw discard error escaped")
+	}
+	out.Reset()
+	err.Reset()
+	op.discardDraft = func(context.Context, uint64, string, string) (installtxn.DraftResult, error) {
+		return installtxn.DraftResult{Version: 1, Revision: 1, DraftAbsent: true, IngressStopped: true}, nil
+	}
+	if run(args, &out, &err, op) != 0 || !strings.Contains(out.String(), `"draft_removed":false`) || !strings.Contains(out.String(), `"production_ready":false`) || strings.Contains(out.String(), "files_committed") {
+		t.Fatal("absence receipt promoted to policy activation", out.String())
+	}
+}
