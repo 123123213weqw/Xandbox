@@ -200,11 +200,11 @@ def first_checkpoint():
     if CHECKPOINT.exists():raise RuntimeError('first checkpoint cannot replay')
     deployment_probe();rows=[];boots=[]
     for n,tenant in enumerate(('alpha','alpha','alpha','beta')):
+        if n==3:call('POST','/v1/sandboxes',{},tenant='alpha',key='alpha-fourth',expected=429)
         request_key='systemd-first-'+str(n);row=create(tenant,request_key);boots.append(verify_vm(row,tenant));rows.append({'row':row,'tenant':tenant,'key':request_key,'owner':owner(row)})
     if len(set(boots))!=4:raise RuntimeError('four distinct guest boots required')
     call('GET',refpath(rows[0]['row']),tenant='beta',expected=404)
     call('POST','/v1/sandboxes',{},tenant=None,key='no-auth',expected=401)
-    call('POST','/v1/sandboxes',{},tenant='alpha',key='alpha-fourth',expected=429)
     call('POST','/v1/sandboxes',{},tenant='beta',key='node-fifth',expected=503)
     victim=rows[0];busy=progressing_writer(victim['row'],'alpha')
     if call('GET',refpath(victim['row'])+'/executions/'+busy['id'])['status']!='RUNNING':raise RuntimeError('busy old guest required')
