@@ -81,11 +81,21 @@ def validate_readiness_reply(operation,value):
     assert type(value) is dict and set(value)==set(flags) and all(type(v) is bool and v is True for v in value.values()),'closed true readiness result flags required'
 
 
-def harness_files(deployed,ingress,readiness):
+from systemd_release_guest import PROBE_FLAGS as RELEASE_PROBE_FLAGS, CHECKPOINT_FLAGS as RELEASE_CHECKPOINT_FLAGS, RECOVERY_FLAGS as RELEASE_RECOVERY_FLAGS
+
+def validate_release_reply(operation,value):
+    base_flags={'release-probe':READINESS_PROBE_FLAGS,'release-checkpoint':READINESS_CHECKPOINT_FLAGS,'release-recover':READINESS_RECOVERY_FLAGS}[operation]
+    extra={'release-probe':RELEASE_PROBE_FLAGS,'release-checkpoint':RELEASE_CHECKPOINT_FLAGS,'release-recover':RELEASE_RECOVERY_FLAGS}[operation]
+    assert type(value) is dict and set(value)==set(base_flags)|set(extra) and all(type(v) is bool and v is True for v in value.values()),'complete typed publication/readiness/drain result required'
+
+
+def harness_files(deployed,ingress,readiness,release=False):
+    if release and (not deployed or not readiness):raise ValueError('publication profile requires complete readiness composition')
     names=('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')
     if deployed:names+=('build_systemd_deployment.py','systemd_deployment_guest.py')
     if ingress or readiness:names+=('build_systemd_ingress.py','systemd_ingress_guest.py','ingress_guard_probe.py')
     if readiness:names+=('build_systemd_readiness.py','systemd_readiness_guest.py','readiness_fixture_gate.py','systemd_drain_probe.py')
+    if release:names+=('build_systemd_release.py','systemd_release_guest.py')
     return names
 
 
@@ -93,11 +103,12 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('ubuntu','alpine','fixture','warden','source-revision','report','log-dir'):parser.add_argument('--'+name,required=True)
     profiles=parser.add_mutually_exclusive_group()
+    profiles.add_argument("--release-assets",help="TEST ONLY ordinary root publisher plus full16GiB readiness/drain/TLS/KVM/cold composition, not an installer")
     profiles.add_argument("--readiness-assets",help="TEST ONLY explicit16GiB automatic readiness/enablement composition; not a release installer")
     profiles.add_argument("--ingress-assets",help="TEST ONLY explicit16GiB/CPU12/24GiB ordinary daemon + separate bounded ingress profile")
     profiles.add_argument("--deployment-assets",help="TEST ONLY explicit frozen asset manifest; selects 8GiB/12GiB/CPU8 profile, not the legacy primitive")
     args=parser.parse_args();os.umask(0o077)
-    deployment=None;ingress=None;readiness=None
+    deployment=None;ingress=None;readiness=None;release=None
     if args.deployment_assets:
         from build_systemd_deployment import load_assets
         deployment=load_assets(args.deployment_assets)
@@ -107,6 +118,9 @@ def main():
     if args.readiness_assets:
         from build_systemd_readiness import load_assets
         readiness=load_assets(args.readiness_assets)
+    if args.release_assets:
+        from build_systemd_release import load_assets
+        release=load_assets(args.release_assets);readiness=release
     deployed=deployment is not None or ingress is not None or readiness is not None
     assert os.geteuid()==0 and os.uname().sysname=='Linux' and os.uname().machine=='x86_64'
     assert len(bytes.fromhex(args.source_revision))==20
@@ -127,11 +141,11 @@ def main():
     def ours(path):return same_owned_directory(path,owned.get(path))
     def receipt():
         replace_private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),'cgroup_parent':str(parent),'all_cgroups':[str(g) for g in groups]})
-    result={'test':'owned_l1_systemd_automatic_readiness_ingress_tls_kvm_cold' if readiness is not None else 'owned_l1_systemd_separate_ingress_tls_kvm_cold' if ingress is not None or readiness is not None else ('owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployed else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive'),'source_revision':args.source_revision,
+    result={'test':'owned_l1_systemd_release_publication_readiness_ingress_tls_kvm_cold' if release is not None else 'owned_l1_systemd_automatic_readiness_ingress_tls_kvm_cold' if readiness is not None else 'owned_l1_systemd_separate_ingress_tls_kvm_cold' if ingress is not None or readiness is not None else ('owned_l1_systemd_go_launch_ordinary_kvm_cold' if deployed else 'owned_l1_systemd_delegation_reload_stop_and_cold_primitive'),'source_revision':args.source_revision,
             'production_ready':False,'sandboxd_deployment_accepted':False,'l2_task_execution_accepted':False,
             'qemu_sha256':policy['qemu_sha256'],'kernel_sha256':policy['l1_kernel_sha256'],
             'resources':resources,'l1_boots':0,'cases':[],'passed':False,'cleanup_confirmed':False,
-            'harness_files_sha256':{name:digest(Path(__file__).with_name(name)) for name in harness_files(deployed,ingress is not None,readiness is not None)},
+            'harness_files_sha256':{name:digest(Path(__file__).with_name(name)) for name in harness_files(deployed,ingress is not None,readiness is not None,release is not None)},
             'limitations':['Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.',
                            'Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.',
                            'No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private.']}
@@ -141,6 +155,7 @@ def main():
             result['deployment_assets_sha256']={k:v['sha256'] for k,v in (readiness if readiness is not None else (ingress if ingress is not None else deployment)).items()}
             result['limitations'][0]='Experimental separate ingress TLS/KVM/cold profile only, explicit operator start after UDS readiness; no automatic combined install, catalog, upgrade, backup, human operator or SLO acceptance.' if ingress is not None else 'Experimental ordinary UDS Go-launcher/unit KVM and cold recovery only; no TLS, catalog, installer, upgrade or independent human operator acceptance.'
         if readiness is not None:result['limitations'][0]='Experimental automatic systemd readiness/enablement composition only, not transactional production installation, catalog, upgrade, backup, human operator or SLO acceptance.'
+        if release is not None:result['limitations'][0]='Ordinary root immutable artifact publication with live guest/service continuity and healthy original-disk recovery only; no installation, activation, upgrade, catalog, backup, production CLI syscall crash windows or SLO acceptance.'
         uid=850000+secrets.randbelow(30000)
         try:pwd.getpwuid(uid)
         except KeyError:pass
@@ -149,7 +164,7 @@ def main():
             shutil.copyfile(Path(getattr(args,argument)).resolve(),control/name);(control/name).chmod(0o555)
         shutil.copyfile(kernel,root/'kernel');(root/'kernel').chmod(0o444)
         result['build']=build(ubuntu=Path(args.ubuntu).resolve(),alpine=Path(args.alpine).resolve(),
-                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment,ingress_assets=ingress,readiness_assets=readiness)
+                              probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment,ingress_assets=ingress,readiness_assets=None if release is not None else readiness,release_assets=release)
         result['fixture_sha256']=digest(control/'fixture');result['warden_sha256']=digest(control/'warden')
         for path in root.iterdir():os.chown(path,uid,uid);path.chmod(0o600 if path.name=='disk.raw' else 0o400)
         os.chown(root,uid,uid)
@@ -183,7 +198,8 @@ def main():
         def request(operation):
             channel.send({'version':1,'operation':operation});reply=channel.read()
             assert reply['ok'] is True,'fixed L1 systemd operation failed; inspect private console'
-            if readiness is not None:validate_readiness_reply(operation,reply['result'])
+            if release is not None:validate_release_reply(operation,reply['result'])
+            elif readiness is not None:validate_readiness_reply(operation,reply['result'])
             elif ingress is not None:validate_ingress_reply(operation,reply['result'])
             elif deployed:validate_deployment_reply(operation,reply['result'])
             else:validate_reply(operation,reply['result'],result['l1_boots']==2)
@@ -199,16 +215,17 @@ def main():
             group.rmdir()
         boot()
         result['cases'].append({'boot':1})
-        for operation in (('readiness-probe','readiness-checkpoint') if readiness is not None else (('ingress-probe','ingress-checkpoint') if ingress is not None or readiness is not None else (('deployment-probe','deployment-checkpoint') if deployed else ('probe','reload','stop-restart','checkpoint')))):
+        for operation in (('release-probe','release-checkpoint') if release is not None else ('readiness-probe','readiness-checkpoint') if readiness is not None else (('ingress-probe','ingress-checkpoint') if ingress is not None or readiness is not None else (('deployment-probe','deployment-checkpoint') if deployed else ('probe','reload','stop-restart','checkpoint')))):
             result['cases'][-1][operation]=request(operation)
         cut();boot()
         result['cases'].append({'boot':2})
-        for operation in (('readiness-probe','readiness-recover') if readiness is not None else (('ingress-probe','ingress-recover') if ingress is not None or readiness is not None else (('deployment-probe','deployment-recover') if deployed else ('probe','reload','checkpoint')))):
+        for operation in (('release-probe','release-recover') if release is not None else ('readiness-probe','readiness-recover') if readiness is not None else (('ingress-probe','ingress-recover') if ingress is not None or readiness is not None else (('deployment-probe','deployment-recover') if deployed else ('probe','reload','checkpoint')))):
             result['cases'][-1][operation]=request(operation)
         result['limited_ordinary_uds_launch_passed']=deployment is not None
         result['l2_task_execution_accepted']=deployed
         result['limited_separate_ingress_tls_passed']=ingress is not None
         if readiness is not None:result['limited_readiness_ingress_passed']=True
+        if release is not None:result['limited_artifact_publication_passed']=True
         result['passed']=True
     finally:
         if ours(group):

@@ -78,3 +78,6 @@ production_ready；不输出输入路径、request ID、资源身份、令牌或
 安装/升级或KVM组合验收。后续须在独占L1运行普通CLI，核对root/权限/原盘恢复、实际服务
 和guest持续性；再把发布提交接到停准入/服务切换、固定路径物化、manager启用/恢复、catalog
 位置、版本兼容与备份协议。未完成这些之前，完整安装事务和M1–M4仍未通过。
+
+后续普通root CLI与实际服务/guest组合的[独占L1验证代码](RELEASE_PUBLISHER_KVM.md)已加入，
+当前仍待实机，不用新harness的纯控制替代root CLI验收。

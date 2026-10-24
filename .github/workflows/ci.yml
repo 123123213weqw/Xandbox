@@ -66,7 +66,7 @@ jobs:
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
           python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
-          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/build_systemd_ingress.py scripts/systemd_ingress_guest.py scripts/build_systemd_readiness.py scripts/systemd_readiness_guest.py scripts/readiness_fixture_gate.py scripts/systemd_drain_probe.py scripts/process_exit.py
+          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/build_systemd_ingress.py scripts/systemd_ingress_guest.py scripts/build_systemd_readiness.py scripts/systemd_readiness_guest.py scripts/readiness_fixture_gate.py scripts/systemd_drain_probe.py scripts/build_systemd_release.py scripts/systemd_release_guest.py scripts/process_exit.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
