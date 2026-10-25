@@ -9,6 +9,7 @@
 | 需求 | 入口 | 边界 |
 | --- | --- | --- |
 | macOS/Linux 先接通 API、鉴权和生命周期 | 下方本地 mock 示例 | **不执行任意代码，不提供 VM 隔离** |
+| 安装前判断节点的基本缺项 | [只读节点预检](NODE_PREFLIGHT.md) | 不修复宿主，不创建 VM，不代表已具备部署条件 |
 | Linux 上真实隔离运行命令 | [Firecracker 后端](FIRECRACKER.md)、[guest 构建](GUEST.md) | 需要操作员准备专用 Linux/KVM 节点、镜像和资源域 |
 | 会话切换、快照恢复 | [会话协议](SESSIONS.md)、[快照 catalog](CATALOG.md) | 实验性；不是热迁移，也没有预热池 |
 | systemd/TLS/固定安装事务 | [初始安装](INITIAL_INSTALL.md)、[部署恢复](OPERATIONS.md) | 实验性；不是通用一键安装或原地升级工具 |
@@ -76,6 +77,16 @@ mock 只支持 `echo`、`sleep`、`write`、`read`、`fail` 等固定模拟命�
 mock，不能作为 root Firecracker 部署目录。不要把 token、auth 配置或运行态数据提交到 Git。
 
 ## 3. 真正运行隔离代码：Linux/KVM
+
+先在目标节点以普通用户执行：
+
+```sh
+./bin/xandbox-doctor
+```
+
+它会给出固定格式的基本缺项，包括运行中的 systemd 版本，而不是自动更改宿主。
+当前 systemd 组合需要 254+；版本过低应选择专用兼容环境，不能默默升级共享节点。
+退出 0 也只表示所检查的基本条件满足，仍需完成下面各项。详见[预检边界](NODE_PREFLIGHT.md)。
 
 真实后端需要单独准备，不能只把上例 `mock` 改成 `firecracker`：
 

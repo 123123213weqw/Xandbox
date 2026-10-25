@@ -3,6 +3,9 @@
 **开始试用：[构建、带鉴权的本地示例，以及真实 Linux/KVM 部署入口](docs/GETTING_STARTED.md)。**
 主分支合并不等于生产认证；mock 不执行任意代码，真实执行需要单独准备 Linux/KVM 节点。
 
+安装前可用 [`xandbox-doctor` 只读预检](docs/NODE_PREFLIGHT.md)检查节点基本缺项；
+不会自动升级宿主、修改服务或创建 VM，检查通过也不等于部署/生产验收通过。
+
 > 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 
 新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新daemon的[25个全新命名运行scope](docs/FIVEB_RUNTIME.md)已另行通过；[fixture320的live trace两组与十边界](docs/FIVEB_BOUNDARIES.md)也已独立通过，完整部署门槛仍未完成，不能继承旧矩阵或宣称生产就绪。
