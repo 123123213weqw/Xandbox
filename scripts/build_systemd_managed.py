@@ -10,7 +10,7 @@ CONFIG='etc/xandbox-managed-fixture'
 MAINTENANCE_CASES=('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut','draft-kernel-guard')
 # The launcher must independently compare every ELF to this source's native
 # qualification. This is a composition pin, not inheritance of an old report.
-PRODUCTION_SOURCE='df679bb868f8fbab68b9b7563b9aee5824ea771e'
+PRODUCTION_SOURCE='ae990b6b8e86677644465dd76539a20a8f580a4c'
 SCRIPTS=('systemd_managed_guest.py','managed_fixture_trace.py','install_fixture_trace.py','systemd_install_guest.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
 
 def configure(root,assets,maintenance_case='populated-gate'):
