@@ -36,6 +36,10 @@ func modelIngressGroup(t *testing.T, path string, events string) {
 	if e := os.WriteFile(filepath.Join(path, "cgroup.events"), []byte(events), 0444); e != nil {
 		t.Fatal(e)
 	}
+	// Match the kernel file mode even under the required private umask 077.
+	if e := os.Chmod(filepath.Join(path, "cgroup.events"), 0444); e != nil {
+		t.Fatal(e)
+	}
 }
 
 func modelIngressProof(t *testing.T, path string, check func(int) error) error {
