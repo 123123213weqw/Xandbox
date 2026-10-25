@@ -1,0 +1,11 @@
+admission all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+node all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+owner all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+inflight all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+partial all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 1
+snapshot all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 4
+clear all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+syscalls all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 4
+ALL8 schema3 original-queued-cancel/held-copy keeper-stop-reclaim plus node-pressure and related fixture scopes,19 outer generations independently absent; read-only audit, no cleanup actions.
+Both private outer-L0 cut receipts retained0600 and excluded from public reports; no receipt contents printed.
+Actual quota/namespace/pins were read inside L1 before owned disk deletion; no quota inference from final path deletion.

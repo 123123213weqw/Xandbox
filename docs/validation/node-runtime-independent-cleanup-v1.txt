@@ -1,0 +1,16 @@
+kvm-node-runtime-default-cold-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-node-runtime-default-snapshot-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-node-runtime-io-snapshot-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-node-runtime-default-initialization-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-node-runtime-default-machine-id-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-node-runtime-default-before-marker-private-v1 private_receipt_and_actual_controller_root_crosschecked_all_owned_paths_cgroups_absent True
+kvm-node-runtime-io-cold-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-node-runtime-io-readonly-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-node-runtime-default-readonly-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-node-runtime-default-storage-private-v1 exact_own_root_cgroup_loop_binding_absent_parent_mount_namespace_unchanged True
+kvm-node-runtime-default-power-private-v1 all_exact_own_roots_control_cgroups_absent True l1_execution_generations 4
+kvm-node-runtime-quota-negative-private-v1 all_exact_own_roots_control_cgroups_absent True l1_execution_generations 4
+kvm-node-runtime-quota-unenforced-private-v1 all_exact_own_roots_control_cgroups_absent True l1_execution_generations 1
+ALL13 full-matrix fixture scopes independently rechecked; cold runtime/cgroup now from early private receipt plus actual controller path, not only finally assertion. Four own loop bindings absent; nine L1 execution generations absent; read-only audit, no cleanup actions.
+No private source export or unrelated PID/UID/cgroup/mount/loop is removed or adopted by this audit.
+Exact default runtime subrunner absent and its terminal status0 verified; separate quota submatrix not attested by this default audit.

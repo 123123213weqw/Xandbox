@@ -39,7 +39,7 @@ func checkRuntimeIO(root string, p IOPolicy) error {
 		return e
 	}
 	if device != p.Device {
-		return errors.New("IO policy must name the exact runtime backing queue")
+		return ErrIOBackingQueue
 	}
 	return nil
 }

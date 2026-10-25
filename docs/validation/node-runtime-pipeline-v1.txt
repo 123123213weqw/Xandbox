@@ -1,0 +1,46 @@
+work/node-budget-source-v2.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+bin/sandboxd-lease-v2: 成功
+work/fixture-machine-id-v4.cpio.gz: 成功
+work/fixture-before-marker-v4.cpio.gz: 成功
+stage: full native tests already passed in exact-source foundation; independently check frozen ELF inputs and build native test2/process5
+stage: native process5 with trimpath/buildvcsfalse; smoke daemon must equal new3ea runtime
+bin/sandboxd-node-runtime-v1: 成功
+bin/node-runtime-smoke-v1/sandboxd: 成功
+bin/xandbox-template-node-runtime-v1: 成功
+bin/firecracker-node-runtime-v1.test: 成功
+bin/session-node-runtime-v1.test: 成功
+bin/xandbox-warden-node-budget-v2: 成功
+bin/fixture-node-budget-v2: 成功
+bin/builder-node-budget-v2: 成功
+3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2  bin/sandboxd-node-runtime-v1
+19bbd460b8cd526f55fe0fe892985c593b47f3f102f0e071f35e7c7cf071d613  bin/xandbox-template-node-runtime-v1
+46e1ce4e75723f17460e1e566bee9cb09e2993cbeda483688f87a4846ad275c2  bin/firecracker-node-runtime-v1.test
+208f21b37ed1902d5cf6986a6a5f1587dae94adb46a732d180c5c2387ef714a2  bin/session-node-runtime-v1.test
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-node-budget-v2
+8fbd839984d424c28459ce28af92f4a7cc48e2af9abb9f6524fe474dbe20727a  bin/fixture-node-budget-v2
+243dedf173271f269391a84375c561409082bba3ddcde6f09143646ba10f3a62  bin/builder-node-budget-v2
+3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2  bin/node-runtime-smoke-v1/sandboxd
+stage: NEW default cold30/load5/queue9/binding9; trusted legacy setup022 only
+{"passed": 30, "production_ready": false, "samples": {"create_api_ready_ms": [1413.429, 1582.845, 1399.061, 1539.771, 1588.018, 1419.242, 1396.724, 1609.949, 1514.528], "controller_sigkill_to_empty_cgroup_ms": 39.593, "restart_to_durable_reclaim_ms": 791.386, "stop_api_confirmed_ms": 57.149, "delete_phases": [{"from_state": "STOPPED", "accepted_ms": 1.558, "observed_stopped_ms": 1.813, "durable_destroyed_ms": 57.449}, {"from_state": "READY", "accepted_ms": 2.485, "observed_stopped_ms": 52.064, "durable_destroyed_ms": 145.082}, {"from_state": "READY", "accepted_ms": 4.149, "observed_stopped_ms": 41.722, "durable_destroyed_ms": 106.601}]}}
+stage: NEW default snapshot10 and mixed120 per tenant >=180sec
+{"passed": true, "checks": 10, "cleanup_confirmed": true}
+stage: NEW initialization6 + historical explicit TEST1 each
+{"passed": true, "cases": 6, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: NEW IO cold7 + paused-snapshot pressure/catalog12
+{"passed": true, "cases": 7, "cleanup_confirmed": true}
+{"passed": true, "checks": 12, "cleanup_confirmed": true}
+stage: NEW IO ledgerRO5 / default ledgerRO3 / default ENOSPC5
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+{"passed": true, "cases": 5, "cleanup_confirmed": true}
+stage: NEW healthy L1 power3 / ordinary quota negatives6+cold3 / fresh unenforced rejection
+47957 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+48087 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+48087 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+ALL new3ea full default/IO service matrix passed; quota240 separate; node pressure and full Goal remain

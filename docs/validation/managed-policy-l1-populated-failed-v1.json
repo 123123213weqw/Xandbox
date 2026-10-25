@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "scope": "preserved_failed_managed_populated_gate_original_not_hardware_acceptance",
+  "harness_source_revision": "848b814aab2911f6d4c9bdf7347a657062a65c23",
+  "runtime_go_source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+  "native_harness_source_revision": "617352753f4c32d2b57769c472db657977f64a89",
+  "source_archive_sha256": "92d1297fb83241c65d5e387f6908f7017fed6a228d4351efb24f931733652047",
+  "runner_sha256": "cad511c085f9875edb897b5f479630a48c7abd1fb80e0abc3acb35aeffd306f7",
+  "original_terminal": 1,
+  "passed": false,
+  "l1_boots": 1,
+  "failed_stage": "managed-continuity",
+  "failure": "Fixture incorrectly required the same TLS transport after an old-token 401; gatewayError deliberately closes error responses, so automatic reconnect correctly failed the identity assertion.",
+  "actual_gateway_behaviour_not_changed": true,
+  "correction_preserves_refusal_on_existing_transport_and_requires_expected_401_close": true,
+  "all23_native_artifacts_reverified_before_launch": true,
+  "linux_python_pure_tests": 249,
+  "python_skips": 0,
+  "independent_audit": {
+    "read_only": true,
+    "runner_absent": true,
+    "owned_outer_generations_absent": 1,
+    "all_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "receipt_sha256": "23a861d1046dbf70d703442f0daec1c06a88f640b2f000edd2f84545ed1b4b4a"
+  },
+  "raw_sha256": {
+    "work/managed-profile-populated-gate-v1.status": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "work/managed-profile-populated-gate-v1-private/resource-receipt.json": "23a861d1046dbf70d703442f0daec1c06a88f640b2f000edd2f84545ed1b4b4a",
+    "work/managed-profile-populated-gate-v1-report.json": "af94d4f7e6cac712610f43a3acb5b60ca36f7655c7984a24553e8ccd0e7b76b3",
+    "work/managed-profile-populated-gate-v1-private/final-private-console.log": "0f7f6d40ce9918c95a8b0bc67d8b84c480a8616af1fc224c40b0b337008fc4fe",
+    "work/managed-profile-populated-gate-v1-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+    "work/run-managed-profile-populated-gate-v1.sh": "cad511c085f9875edb897b5f479630a48c7abd1fb80e0abc3acb35aeffd306f7",
+    "work/managed-profile-populated-gate-v1-assets.json": "fd7833d5946c4226c653850704a2c5691e54ea7ed87abbe7aaec54f191919e7d",
+    "work/managed-profile-populated-gate-v1-root-pure.log": "10af16d0027abfb9f7f232b9664fbcfdb1273c68297d1e4ebabd7ce938997485",
+    "work/managed-profile-populated-gate-v1-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+  },
+  "complete_case_accepted": false,
+  "cold_accepted": false,
+  "production_ready": false,
+  "goal_complete": false
+}

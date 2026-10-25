@@ -1,0 +1,311 @@
+{
+  "status": "finite_actual_used_root_bootstrap_fix_with_native_red_control_and_tls_kvm_cold_regression_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m4": false,
+  "complete_pr19_acceptance": false,
+  "final_frozen_source_revision": "0b4eb8cfde8090350ef9a081dfc0e0bc0303f5ad",
+  "source_archive": {
+    "name": "tls-gateway-source-v4.tar.gz",
+    "sha256": "c73585e28dc7289862e9d5c46212ce354d879859711ae5a2c57aa4b833788a58",
+    "bytes": 1892944
+  },
+  "production_delta_since_public_b048": [
+    "internal/gateway/state_linux.go",
+    "internal/gateway/state_linux_test.go"
+  ],
+  "source_inputs": {
+    ".github/workflows/ci.yml": {
+      "sha256": "2fc057fcff142bb51f4baf75ad655c953e29315f614146a9f6347b9dd6b72f22",
+      "bytes": 4831
+    },
+    "Makefile": {
+      "sha256": "8a3db39f68ab530f23073d7afd5976bfec66e9f3d9c29030a52ea73305ead71c",
+      "bytes": 1403
+    },
+    "cmd/xandbox-gateway/main_linux.go": {
+      "sha256": "74018d1f5e2a83becf040652562099f4e3bb527fbdb2368c4844936fa1e663a1",
+      "bytes": 728
+    },
+    "cmd/xandbox-gateway/main_other.go": {
+      "sha256": "efb52ad98e59064ce31bd52c45a906dccc53204994cc61e18a7e627133222abb",
+      "bytes": 171
+    },
+    "cmd/xandbox-host-fixture/node_linux.go": {
+      "sha256": "ed32d6de12f67f79058c226f774ff7703a4c4dbbb80323c204ed337ddcc81427",
+      "bytes": 26897
+    },
+    "cmd/xandbox-host-fixture/node_tls_gateway_linux.go": {
+      "sha256": "33259cbbdbd4618938cf5f17c3ae2c63a31635390a10ca09aea0ac0247a9f554",
+      "bytes": 40120
+    },
+    "cmd/xandbox-host-fixture/node_tls_gateway_linux_test.go": {
+      "sha256": "be6000b890144a914f0152b59dbb7093f2f580260de65306519e84542f790835",
+      "bytes": 3585
+    },
+    "internal/gateway/broker_linux.go": {
+      "sha256": "e591176370b85a15bf0373f62be8b32ab12f853990b99ddfef263c7800a47002",
+      "bytes": 14664
+    },
+    "internal/gateway/child_linux.go": {
+      "sha256": "2fe50e22393beaff14b5725d40c0ca20b2e0f524d550a3c99519df21655a9cad",
+      "bytes": 6138
+    },
+    "internal/gateway/config_linux.go": {
+      "sha256": "2a86bd4b8fd1f5c092265f0a84fa045a07ba5629ccfdbc18b336d196069f73a1",
+      "bytes": 5463
+    },
+    "internal/gateway/diagnostic.go": {
+      "sha256": "5541ef3e1e547c35e3f9a2a0e65f115995668aa0ea7a673241ed895264775c8a",
+      "bytes": 2146
+    },
+    "internal/gateway/policy.go": {
+      "sha256": "ada13b1c2502074bfc2e98841bee6aaad6652d61bfb6fb29779192039e7e8df7",
+      "bytes": 8640
+    },
+    "internal/gateway/policy_test.go": {
+      "sha256": "588300f9441b679b9d2951d0ad2ed196f22742ce69044874b41727ee8a768fdf",
+      "bytes": 7864
+    },
+    "internal/gateway/request.go": {
+      "sha256": "b9a541631540cd84e4f49e4f35f2ddda24763561ac7b64d9d69f8bf1ea0db64c",
+      "bytes": 7801
+    },
+    "internal/gateway/request_test.go": {
+      "sha256": "782bfe1d3450e4c366c2e50182859f6e8f7461f21552e3dc77abd240128a0bf3",
+      "bytes": 9878
+    },
+    "internal/gateway/state_linux.go": {
+      "sha256": "e8deeba67fff378980f42ac08fe66ce9e6d92784a389baed297e1af48b1aad08",
+      "bytes": 6192
+    },
+    "internal/gateway/state_linux_test.go": {
+      "sha256": "53f11d79e3dcbed9bea5272dd739939f5e4744edc9799727f783836d02b78a56",
+      "bytes": 4013
+    },
+    "internal/gateway/wire_linux.go": {
+      "sha256": "3effe0c36568ffc4908bc012ff09b1fbbd50496703779cad93eb057004f754e4",
+      "bytes": 4754
+    },
+    "internal/gateway/wire_linux_test.go": {
+      "sha256": "b210f822c787a89c83f5f0936017b32cff71d828da514dc1d9e872dca7ea973f",
+      "bytes": 8887
+    },
+    "scripts/kvm_nested_host.py": {
+      "sha256": "789c9fb6bcf38f0e16261f9b7444e05a3adbc4123e953a06d1ff5e1a7cfdb50d",
+      "bytes": 104314
+    },
+    "scripts/test_kvm_tls_gateway.py": {
+      "sha256": "73480551940571d077e31e0848a12b8d1edd313422647b311b9cf7f9bf33fc29",
+      "bytes": 2813
+    },
+    "go.mod": {
+      "sha256": "f71439d7c2332632fc2c35b694ff6b98a1a0af35307517fd1936f804c87a2810",
+      "bytes": 261
+    },
+    "go.sum": {
+      "sha256": "eae41579a1200dd75cc394a61944d2255153c015e23227fde325e8c5b700d2dd",
+      "bytes": 968
+    }
+  },
+  "ordinary_five_artifacts_byte_exact_to_prior4ee": true,
+  "native_artifacts_sha256": {
+    "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "xandbox-gateway": "241ca933d03ee472492f3ea4bc50fb0a7b816e2ae1aa09505bade852cac101fe",
+    "fixture": "8af6803bb0f004f55b3adb6c0e2f71dbb93e01279ac3e302c903b0097c50b07e",
+    "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+  },
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_cgo": false,
+  "actual_gates": {
+    "full_linux_race_count": 3,
+    "linux_vet": true,
+    "fixture_race_count": 10,
+    "fixture_vet": true,
+    "root_python_tests": 107,
+    "root_python_skips": 0,
+    "cgo0_kernel_quota_count": 3,
+    "mock_objects": 6,
+    "darwin_race_count": 3,
+    "darwin_vet": true,
+    "darwin_log": {
+      "sha256": "c858a8fe5e163fa8bc54f242957e20d7e43070ed4ba1c68bf56d25d02f83fe64",
+      "bytes": 1742
+    },
+    "independent_frozen_native7_cross_exact": true
+  },
+  "before_regression": {
+    "old_production_source_revision": "93c5be6c70087eb273dab3266de0524ab46a0de3",
+    "old_state_source_sha256": "374963f74a92a7753f30247efeb546587130d4f23c35e0ad23c148806a38ab79",
+    "new_test_source_sha256": "53f11d79e3dcbed9bea5272dd739939f5e4744edc9799727f783836d02b78a56",
+    "actual_native_linux_race_control_exit": 1,
+    "actual_two_missing_marker_assertions_reproduced": true,
+    "source_override_is_test_only": true,
+    "deleted_records_only_unit_owned_temporary_directories": true,
+    "old_source_plus_new_test_initial_nonprivate_umask_failed_private_directory_guard_not_regression": true,
+    "initial_bulk_elf_upload_observation_timeout_target_absent_then_small_source_native_recovery": true,
+    "test_uses_required_private_umask": "077",
+    "hardware_failure_or_fixture_authority_patch": false
+  },
+  "marker_contract": "O_EXCL durable lock file+directory Sync first. Existing lock with no identity/record refuses, initialized state with missing lock refuses, interrupted first bootstrap does not reset. Whole StateDir erasure is not detectable from only internal files and is not a supported recovery procedure or malicious-root defense.",
+  "final_hardware": {
+    "accepted_scopes": 2,
+    "accepted_outer_generations": 4,
+    "tls_boots": 2,
+    "normal_budget_boots": 2,
+    "guest_generations_through_tls": 4,
+    "busy_switch_samples": 1,
+    "fixture_pacing_ms": 50,
+    "checkpoint": {
+      "actual_old_policy_revision1_startup_refused_no_listener": true,
+      "all_three_generations_destroyed_all_four_projects_zero_pools_idle": true,
+      "durable_policy_revision2_key_and_leaf_rotation_without_controller_or_guest_restart": true,
+      "fixture_http_pacing_ms": 50,
+      "gateway_and_ordinary_controller_reaped_before_private_receipt_and_cold": true,
+      "invalid_reload_closes_ingress_root_child_reaped_backend_guest_continue": true,
+      "old_execution_stop_private_quota0_and_durable_destroy_independent_observations": true,
+      "old_external_key401_on_existing_tls_connection_new_key_and_leaf2_verified": true,
+      "operator_metrics_routes_ambiguous_headers_and_tls12_wrong_sni_rejected": true,
+      "physical_policy_media_fault_or_complete_dos_claim": false,
+      "policy_revision": 2,
+      "private_backend_tokens401_at_external_frontend": true,
+      "production_slo_or_full_tls_qualification_claim": false,
+      "real_nested_kvm_through_verified_tls13": true,
+      "root_broker_no_tcp_listener_child_uid_caps_nnp_chroot_cwd_fd_hygiene_rlimits_and_control_checked": true,
+      "same_current_policy_gateway_restart_without_controller_restart": true,
+      "session_switch_busy_old_job_new_real_guest_old_revision409": true,
+      "switch_to_binding_observed_ms": 3454.827,
+      "switch_to_first_validated_new_guest_observed_ms": 3518.551,
+      "switch_to_old_execution_empty_observed_ms": 3511.796,
+      "switch_to_old_private_destroy_quota_zero_observed_ms": 3874.491,
+      "two_tenants_independent_real_guest_uid_boot_workspace_cross404": true,
+      "verified_real_guest_generations_before_cold": 3
+    },
+    "physical_journal_loss_crash_window_qualification": false
+  },
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "final_scopes": 2,
+    "final_outer_generations_absent": 4,
+    "all_original_and_current_scopes": 7,
+    "all_original_and_current_outer_generations_absent": 13,
+    "all_five_runners_terminal_and_absent": true,
+    "exact_roots_control_parents_all_groups_absent": true,
+    "no_supplemental_cleanup": true,
+    "live_quota_not_inferred_from_outer_deletion": true
+  },
+  "prior_evidence": {
+    "file": "tls-gateway-provenance-v3.json",
+    "sha256": "d9eb8a913cef6c282d31c3b7b5a26b11fdea29ee68595ace8d2adf4ba205237a",
+    "bytes": 25781,
+    "all_prior_public_inputs_unchanged": true,
+    "old_original9d_false_remains_false": true,
+    "no_retagging_or_new_readiness_claim": true
+  },
+  "private_raw_archive": {
+    "name": "tls-gateway-final-reports-v4.tar.gz",
+    "sha256": "e79d02ce62b86e1a10e31ecff8f8d4b70537297d3614b72c843082a92e06e48a",
+    "bytes": 9794,
+    "regular_members": 13
+  },
+  "private_raw_members": {
+    "kvm-tls-gateway-live-v4.json": {
+      "sha256": "807cf103b261a47b07e064d333679f9f52dfe4a01c756ac22b8eafec9062b7d7",
+      "bytes": 9501
+    },
+    "kvm-tls-gateway-budget-v4.json": {
+      "sha256": "7ecb95f385c898b4360141a566a0bce1c9717f28234fb37b48d3270695558283",
+      "bytes": 7821
+    },
+    "tls-gateway-race-v4.log": {
+      "sha256": "c871f8b834e9a9100ada1ec6ab0773cde295e81c7fc8fc8183c46246d7e64a3f",
+      "bytes": 1903
+    },
+    "tls-gateway-vet-v4.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "tls-gateway-fixture-v4.log": {
+      "sha256": "b9c95cfad989cc5aa995519bb48670b9a26fcde61891908c96613ebeed79a1d7",
+      "bytes": 70
+    },
+    "tls-gateway-fixture-vet-v4.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "tls-gateway-filter-v4.log": {
+      "sha256": "87d6580a5cbba8e27363d6633af9048c585d337679d0f4a0c0162c12f3e90766",
+      "bytes": 846
+    },
+    "tls-gateway-python-v4.log": {
+      "sha256": "f2aab1f183f195357f56ffba017bf8ee03777d487f5e89b40ae398a13635e7a4",
+      "bytes": 207
+    },
+    "tls-gateway-smoke-v4.log": {
+      "sha256": "d392e5cffda9b0c82e7e6fdc5790040337ea24519f5fcc233ab0da21061494ca",
+      "bytes": 6681
+    },
+    "tls-gateway-v4.status": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "tls-gateway-v4.pipeline.log": {
+      "sha256": "b4ccfda7a449f62c18f15f1981362c7c048777f44b410f111ed6c342b65f399b",
+      "bytes": 1036
+    },
+    "tls-gateway-artifacts-v4.sha256": {
+      "sha256": "6e86cffa640ee1d104a7d70959cc2f0a4acf2d0073893ce173cf23147fd9249f",
+      "bytes": 681
+    },
+    "run-tls-gateway-v4.sh": {
+      "sha256": "754010d41af8c0a45a88ffa978be56314f017dd15ed58fd977fd4825876cc249",
+      "bytes": 5273
+    }
+  },
+  "offline_verifier": {
+    "actually_executed": true,
+    "negative_mutations_rejected": 38,
+    "script_sha256": "ec606a2bfc7f207db07c231ab41bed82140e2736f3c37e851e83c9d9ced5a9c1",
+    "source_native_cross_report_archive_gate_privacy_bindings_verified": true
+  },
+  "limitations": [
+    "New lock bootstrap tests are actual native unit filesystem deletions, not a physical media fault. KVM tests exercise ordinary healthy TLS/cold regression on the new source. No fixture edits real authority records.",
+    "N1 TLS switch timings include20req/s pacing and independent sampling/readback; not internal durations, speedup, percentile, fairness or production SLO.",
+    "Policy per-fsync/media crash matrix, backend authority lifecycle, PKI issuer/distribution, production cgroup/log/audit budgets, systemd/operator acceptance, long load, backups/upgrades/rollback and full M1-M4 remain incomplete. PR stays draft and Goal active."
+  ],
+  "public_inputs": {
+    "kvm-tls-gateway-live-v4.json": {
+      "sha256": "807cf103b261a47b07e064d333679f9f52dfe4a01c756ac22b8eafec9062b7d7",
+      "bytes": 9501
+    },
+    "kvm-tls-gateway-budget-v4.json": {
+      "sha256": "7ecb95f385c898b4360141a566a0bce1c9717f28234fb37b48d3270695558283",
+      "bytes": 7821
+    },
+    "tls-gateway-bootstrap-before-native-v4.txt": {
+      "sha256": "3d9faf6cb19cba89bcb66eed2b19ee7ca7060b654f5f2da2d7ea4821ba4b9314",
+      "bytes": 724
+    },
+    "tls-gateway-independent-cleanup-v4.json": {
+      "sha256": "f29b9d3463a12774a82748a792c9e6193d4699a67dc5fb9e67e59c67dd0bd1cc",
+      "bytes": 1387
+    },
+    "tls-gateway-native-artifacts-v4.txt": {
+      "sha256": "fc1a22d11002b98ad828ae27e0af0790d33ec0a8f6948ed9165886e312a45581",
+      "bytes": 548
+    },
+    "tls-gateway-mock-derived-v4.json": {
+      "sha256": "790d90c65a887147d4f18c1d28c22dc7feb7a5426ccb20673e668acbd3464170",
+      "bytes": 5309
+    },
+    "tls-gateway-pipeline-v4.txt": {
+      "sha256": "9d04b849453a968065bbfc5141fd16e769747df59ab117913d3cc22c98a89e9e",
+      "bytes": 1854
+    }
+  }
+}

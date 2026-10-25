@@ -1,0 +1,300 @@
+{
+  "version": 1,
+  "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+  "production_ready": false,
+  "goal_complete": false,
+  "source_archive_sha256": "15e2d63d628778f85481871b96742d702d98e8c76ff2a7fd9ff4eda6dd34f325",
+  "native_cross_equal_artifacts_sha256": {
+    "sandboxd": "d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "fixture": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "scope": {
+    "fresh_runtime_scopes": 18,
+    "same_source_previously_verified_cause_scopes_reused": 7,
+    "combined_named_compatibility_scopes": 25,
+    "fresh_outer_execution_generations_independently_absent": 36,
+    "same_source_reused_outer_execution_generations_independently_absent": 7,
+    "combined_outer_execution_generations_absent": 43,
+    "reused_owned_loop_bindings_independently_absent": 4,
+    "historical_source_or_elf_rows_retagged": false,
+    "original_raw_files_not_renamed_or_reconstructed": true
+  },
+  "gates": {
+    "default_cold_checks": 30,
+    "queue_expanded_checks": 9,
+    "session_expanded_checks": 9,
+    "closed_loop_new_guest_cycles": 5,
+    "default_snapshot_checks": 10,
+    "default_mixed_cycles_per_tenant": 120,
+    "default_mixed_duration_seconds": 246.985,
+    "quota_busy_mixed_cycles_per_tenant": 120,
+    "quota_busy_mixed_duration_seconds": 602.698309405,
+    "quota_two_live_tenants_original_disk_cold_recovery": true,
+    "initialization_faults": 6,
+    "explicit_historical_test_guest_faults": 2,
+    "io_snapshot_checks": 12,
+    "same_source_io_cold_checks": 7,
+    "same_source_default_and_io_storage_checks": [
+      5,
+      3,
+      7,
+      5
+    ],
+    "whole_state_eio_and_held_fsync_profiles": [
+      "default",
+      "quota_enabled"
+    ],
+    "reserve_and_pre_post_clear_and_listener_and_repeated_syscall_failures": true
+  },
+  "observations_ms": {
+    "default_alpha": {
+      "binding": {
+        "p95": 759.529,
+        "n": 120
+      },
+      "first_new_command": {
+        "p95": 785.053,
+        "n": 120
+      },
+      "old_host_stopped": {
+        "p95": 789.286,
+        "n": 120
+      },
+      "old_durable_destroyed": {
+        "p95": 871.462,
+        "n": 120
+      }
+    },
+    "default_beta": {
+      "binding": {
+        "p95": 769.341,
+        "n": 120
+      },
+      "first_new_command": {
+        "p95": 790.784,
+        "n": 120
+      },
+      "old_host_stopped": {
+        "p95": 806.193,
+        "n": 120
+      },
+      "old_durable_destroyed": {
+        "p95": 875.778,
+        "n": 120
+      }
+    },
+    "quota_busy_alpha": {
+      "binding": {
+        "p95": 1369.804,
+        "n": 120
+      },
+      "first_new_command": {
+        "p95": 1471.644,
+        "n": 120
+      },
+      "old_host_stopped": {
+        "p95": 1398.415,
+        "n": 120
+      },
+      "old_durable_destroyed": {
+        "p95": 1599.916,
+        "n": 120
+      }
+    },
+    "quota_busy_beta": {
+      "binding": {
+        "p95": 1372.045,
+        "n": 120
+      },
+      "first_new_command": {
+        "p95": 1464.024,
+        "n": 120
+      },
+      "old_host_stopped": {
+        "p95": 1397.383,
+        "n": 120
+      },
+      "old_durable_destroyed": {
+        "p95": 1637.53,
+        "n": 120
+      }
+    }
+  },
+  "observation_limits": [
+    "Nearest-rank p95 independently recomputed from120 rows per tenant; not an SLO or demonstrated speedup.",
+    "Default measured switching begins after preceding jobs finish; quota switching has an actually running old writer each time. Different workload/resource contexts are not a speedup comparison.",
+    "Binding, first new command, old host execution stop and durable reclaim are distinct observations.",
+    "Paced finite closed-loop tests are not open-loop arrivals, scheduler fairness, long-term stability or unique RAM billing."
+  ],
+  "independent_audit": {
+    "actually_executed_read_only": true,
+    "runner_terminal_exit": 0,
+    "runner_absent": true,
+    "no_supplemental_cleanup": true,
+    "path_source": "Original bounded private fsynced receipts and frozen harness scope construction.",
+    "raw_controller_log_path_crosscheck_claim": false,
+    "absolute_escape_or_all_process_inventory_proof_claim": false,
+    "private_receipt_hashes_or_runtime_identities_exported": false
+  },
+  "raw_provenance": {
+    "runtime_23_files_archive_sha256": "6a5fd3328b5e111dc5dcd5ff7e378e5ad5c46e3bf2e93f70e737e3ec4468244f",
+    "same_source_cause_15_files_archive_sha256": "672aafbed44a86802f3bd60db5e3cfcccc7b10496baf82f7c6be12dbf29d83b0",
+    "known_report_mutants_rejected": 81,
+    "allocation_contract_recovered_negative_checks": 136,
+    "allocation_contract_live_io_negative_checks": 8,
+    "reviewed_verifier_contracts_sha256": {
+      "verify-runtime4ee-default-v1.py": "0a14b647fbf4e4f55977b8cbf440f1b0817d16d2b17a2cbe833923e74db93691",
+      "verify-runtime4ee-quota-v1.py": "ff18f45e5131eed490939d3c5ad95550cb3fae4e056bdafe39c81f9eae69beb8",
+      "d163_allocation_contract_v1.py": "c8a6fd3c9492c09fa4a75037de0868ea0bc61790a95d7867bb3c0e82b11153ab"
+    }
+  },
+  "reports": {
+    "kvm-d163-composite-default-before-marker-v1.json": {
+      "original_name": "kvm-d163-requalification-default-before-marker-v1.json",
+      "sha256": "5405b35bc2338a76625a471ea41bdd3a538e6c63baaefb4ace1a8d135ca9b3e0",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-cold-v1-queue.json": {
+      "original_name": "kvm-d163-requalification-default-cold-v1-queue.json",
+      "sha256": "db53182abfeaac66f7ddad96492deb0faeebbc996ccbcb4e53a67b9d86be8d91",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-cold-v1-session.json": {
+      "original_name": "kvm-d163-requalification-default-cold-v1-session.json",
+      "sha256": "dcb691b9fcf0aaecdabdcb27ebd6ad2ebd123b38fc7b1b93446622413d830a58",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-cold-v1.json": {
+      "original_name": "kvm-d163-requalification-default-cold-v1.json",
+      "sha256": "c9d0859e2837724ace51de611378da7df279ae6ce54ea3b169aabc7a603655f6",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-initialization-v1.json": {
+      "original_name": "kvm-d163-requalification-default-initialization-v1.json",
+      "sha256": "1a71de2cc0e84e06b15d1a3b9db7531fc5cb6f64a7cbe83ded83ae920343df75",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-machine-id-v1.json": {
+      "original_name": "kvm-d163-requalification-default-machine-id-v1.json",
+      "sha256": "32ab2d9820994fbd4d25af56ac98df12aa72e1a899ca640803dd7a99d1b62541",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-power-v1.json": {
+      "original_name": "kvm-d163-requalification-default-power-v1.json",
+      "sha256": "028c0ae1043f5e3b69791d935dad17428bedfd1891cd0b3fc788e0253fd1009d",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-readonly-v1.json": {
+      "original_name": "kvm-diagnostics-cause-readonly-v3.json",
+      "sha256": "d94739514d1ff6cd54136d9c39f30db0c28cb39798e3d9dfc95677d3a4baca3b",
+      "fresh_runtime_archive": false
+    },
+    "kvm-d163-composite-default-snapshot-v1.json": {
+      "original_name": "kvm-d163-requalification-default-snapshot-v1.json",
+      "sha256": "0605ce00fac60b2a8f7a2a4b9784587e5ed823b8e9e87156a266d6b21018bfce",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-default-storage-v1.json": {
+      "original_name": "kvm-diagnostics-cause-enospc-v3.json",
+      "sha256": "6be5417bbb2abaa9bf4623b22decae748a823d448a51917bc931797ca2161079",
+      "fresh_runtime_archive": false
+    },
+    "kvm-d163-composite-io-cold-v1.json": {
+      "original_name": "kvm-diagnostics-cause-io-enospc-v3.json",
+      "sha256": "78cbdee1c60240ae2b253746cb1bbd233ad34369d02a06c6f513345b20efd508",
+      "fresh_runtime_archive": false
+    },
+    "kvm-d163-composite-io-readonly-v1.json": {
+      "original_name": "kvm-diagnostics-cause-io-readonly-v3.json",
+      "sha256": "7b87295c945a896651992de277e5f2b9b3999e5a986e8375c2bc2a0d516f6806",
+      "fresh_runtime_archive": false
+    },
+    "kvm-d163-composite-io-snapshot-v1.json": {
+      "original_name": "kvm-d163-requalification-io-snapshot-v1.json",
+      "sha256": "4e28b77091396dae44dc772988108e0aa17fc8bde5b12baa3d39d0587151caea",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-clear-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-clear-v1.json",
+      "sha256": "50b3b47a1fe3523943a3ed3ca1abc04b19ac8c5cdefddc7fb3b21beb40078abc",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-default-io-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-default-io-v1.json",
+      "sha256": "e3d60f1264071afad9e3c9587102cb84f469fe5baf5835b3975093074c3df98d",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-eio-v1.json": {
+      "original_name": "kvm-diagnostics-cause-eio-v3.json",
+      "sha256": "0dedb7cd86daa2bcfd26abf184c54de4a18ceff5c0709ab3957ceb6a195d71c9",
+      "fresh_runtime_archive": false
+    },
+    "kvm-d163-composite-quota-io-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-io-v1.json",
+      "sha256": "b593480e98fc04e90d8dac2f4a41e192bba737dba9353a4593cb0edea55252c1",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-loss-release-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-loss-release-v1.json",
+      "sha256": "b3d50e6511c79a234c697a8f99ee421385dc6128e0ca6680dfa7d2a7e80e14a9",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-loss-reserve-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-loss-reserve-v1.json",
+      "sha256": "c0c65fc9c6b3b774bbc4cb668213cae65585c432a860d7f57ed92043899240b6",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-mixed-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-mixed-v1.json",
+      "sha256": "af1c0b885491a21163ce9448aa44d902f983e2234364c178eef159b2c0bb97b7",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-negative-v1.json": {
+      "original_name": "kvm-diagnostics-cause-negative-v3.json",
+      "sha256": "260ddb7e5e01d1c125231cbb715e0f0570e5a42b926d549b8fd450beeb4999cf",
+      "fresh_runtime_archive": false
+    },
+    "kvm-d163-composite-quota-postclear-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-postclear-v1.json",
+      "sha256": "384810b532d44098b2f275f6d7b8b92c396d73666069d931c128ba972d13cb6f",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-preclear-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-preclear-v1.json",
+      "sha256": "2131a3bfe47995d5d3c050cbb55441d83d32cd8679327dea16f4a04d72dd45d8",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-reserve-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-reserve-v1.json",
+      "sha256": "63f55dc3c68713e3f98515a1ae4c447cb8a9f613c4249148833d3598437de55c",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-snapshot-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-snapshot-v1.json",
+      "sha256": "711665b0b10d15e1d386fe2e0d00c559a7df13ae2e70a5f0558f9aa95cf0b58f",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-syscalls-v1.json": {
+      "original_name": "kvm-d163-requalification-quota-syscalls-v1.json",
+      "sha256": "734ca96b44ca84bec3d610dfa4342e843ab26f8be15bfe77769763360fa7e068",
+      "fresh_runtime_archive": true
+    },
+    "kvm-d163-composite-quota-unenforced-v1.json": {
+      "original_name": "kvm-diagnostics-cause-unenforced-v3.json",
+      "sha256": "2df00ea06961153e3b47af2fa82ab8c09d8c4f38b941147e1c9615a3fe1e86a3",
+      "fresh_runtime_archive": false
+    }
+  },
+  "not_completed": [
+    "Owner unlink and in-flight partial copy, operator/session ticket/shutdown/commit and TLS/policy metadata paths for this exact ordinary ELF remain separate qualification until their own actual reports and independent audit exist.",
+    "Node-wide disk/RAM/CPU saturation, open-loop/fairness/long-duration/SLO, independent operator/systemd installation, reliable tenant audit/alerts, PKI/distribution and backup/upgrade/rollback remain incomplete.",
+    "No secure-erasure, physical-media-fault, arbitrary malicious host-owner or whole Goal completion claim."
+  ]
+}

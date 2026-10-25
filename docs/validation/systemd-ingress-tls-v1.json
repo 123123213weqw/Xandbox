@@ -1,0 +1,318 @@
+{
+  "schema": 1,
+  "scope": "limited_owned_systemd255_separate_ingress_tls_kvm_healthy_checkpoint_cold_v1",
+  "production_ready": false,
+  "goal_complete": false,
+  "sandboxd_deployment_accepted": false,
+  "qualification": {
+    "source_revision": "d5f3c2e63d7c045a6089d062da31314524d75313",
+    "source_archive_sha256": "67382632cbfa257b89c763a1ee36d14dfd8bcc7e4e19b504fa1badabeea31fe2",
+    "production_go_byte_equal_native_source": "269799f909693cfda748cd3dd3c813f4a296e81e",
+    "actual_limited_ingress_tls_kvm_cold_qualified": true,
+    "python_count": 166,
+    "python_skips": 0,
+    "artifacts_sha256": {
+      "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+      "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+      "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+      "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+      "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+      "xandbox-ingress-launch": "3da0c06a0f440b73a438280de0b2d4f93ee5457d28bc7b16e611de114ae5be8a",
+      "deploy-helper": "5b044e260ef00789acd442094262fbef1b7c330f72685ee960dea71909c88cc4",
+      "fixture": "bac82851ad34af5e4c5c4bffac909095986ac1679f2b802d1ad98ce6f10ae988",
+      "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+      "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+      "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+    },
+    "deployment_assets_sha256": {
+      "launcher": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+      "daemon": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+      "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+      "gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+      "ingress": "3da0c06a0f440b73a438280de0b2d4f93ee5457d28bc7b16e611de114ae5be8a",
+      "helper": "5b044e260ef00789acd442094262fbef1b7c330f72685ee960dea71909c88cc4",
+      "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+      "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+      "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+      "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+      "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954"
+    },
+    "harness_files_sha256": {
+      "build_systemd_host.py": "df9b9dfe39f3cdc13f661fd04f8e14070016ef75d5206178f98ffff2b0046311",
+      "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+      "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+      "kvm_systemd_host.py": "55b94755d158c033f44262079ca8f2bf39723b396b58d42e496e907bb62dd2f8",
+      "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925",
+      "build_systemd_deployment.py": "b318954ccb17e93a7666730d4704d34fa0e736cf9626a8331f8b08d7cc3af51d",
+      "systemd_deployment_guest.py": "5dfa9fe053ffc5d1b755ffd18616827a763ad44af9f840b725712554a11d2d02",
+      "build_systemd_ingress.py": "a162d9f679810bf5bfd89a327da6f75710565245032fe2a3c630919667a8b718",
+      "systemd_ingress_guest.py": "5cc1373bfc48569642c4c27b19876fd6eb2ec05c404ae2f0e72777b1437dfb5b",
+      "ingress_guard_probe.py": "d43a70d1721a7fe69663904495c6383b7a92b77abca67461ec4f3df89b58cbc3"
+    },
+    "raw_report_sha256": "1a7cc1b01a8a6cafff55671bfdba058f2ad1964a1e79f8516761b23793274355",
+    "resources": {
+      "profile": "systemd-ingress-v1",
+      "memory_mib": 16384,
+      "disk_bytes": 25769803776,
+      "cgroup_memory_max": 19327352832
+    },
+    "l1_boots": 2,
+    "cases": [
+      {
+        "boot": 1,
+        "ingress-probe": {
+          "actual_parent_budgets_and_no_root_tcp_listener": true,
+          "manager_main_is_pinned_gateway": true,
+          "no_mock_or_host_fallback": true,
+          "ordinary_tls_firecracker_health": true,
+          "root_and_child_in_separate_exact_ingress_domain": true,
+          "root_three_caps_child_unprivileged_nnp_root_cwd_fds": true
+        },
+        "ingress-checkpoint": {
+          "busy_stop_distinct_from_durable_gc_capacity": true,
+          "daemon_sigkill_binds_to_closed_ingress_and_manager_removed_groups": true,
+          "explicit_start_after_backend_ready_not_automatic_install": true,
+          "four_simultaneous_real_guests_via_tls": true,
+          "fresh_live_guest_checkpoint_fsynced": true,
+          "guest_uid_boot_vmm_caps_filters_and_quota_checked": true,
+          "ingress_stop_restart_did_not_stop_busy_guest": true,
+          "live_key_leaf_rotation_two_no_daemon_or_guest_restart": true,
+          "old_create_keys_refused410": true,
+          "old_token_rejected_on_existing_tls_connection": true,
+          "reused_slot_fresh_guest_and_workspace": true,
+          "same_policy_daemon_and_gateway_recovered_old_guests_revision_two": true,
+          "three_real_preflight_refusals_no_child_or_tcp": true,
+          "two_tenant_auth_quota_and_node_refusals": true
+        }
+      },
+      {
+        "boot": 2,
+        "ingress-probe": {
+          "actual_parent_budgets_and_no_root_tcp_listener": true,
+          "manager_main_is_pinned_gateway": true,
+          "no_mock_or_host_fallback": true,
+          "ordinary_tls_firecracker_health": true,
+          "root_and_child_in_separate_exact_ingress_domain": true,
+          "root_three_caps_child_unprivileged_nnp_root_cwd_fds": true
+        },
+        "ingress-recover": {
+          "all_four_projects_zero_and_private_generations_absent": true,
+          "gateway_revision_two_leaf_and_new_credentials_survived": true,
+          "manager_clean_stop_removed_both_units_and_inputs": true,
+          "new_real_guest_boot_pristine_workspace_and_destroyed": true,
+          "not_installer_catalog_backup_or_production_slo": true,
+          "old_create_key_refused410": true,
+          "old_guest_durably_destroyed_and_exact_quota_resources_absent": true,
+          "old_token_refused401": true,
+          "original_disk_new_l1_boot_same_machine": true
+        }
+      }
+    ],
+    "negative_semantic_controls": [
+      "missing_cold",
+      "integer_bool",
+      "unknown_flag",
+      "missing_asset",
+      "source_retag",
+      "production_inflation",
+      "partial_pass"
+    ],
+    "independent_audit": {
+      "actually_read_only": true,
+      "runner_absent": true,
+      "owned_generations_absent": 2,
+      "all_declared_paths_absent": true,
+      "private_receipt_sha256": "5d7362c345f18974a7a94ad9d4c9bbf3c195989337216711764dd39f1ae374f5",
+      "no_supplemental_cleanup": true,
+      "not_absolute_escape_or_machine_inventory": true
+    },
+    "production_ready": false,
+    "goal_complete": false
+  },
+  "native_verification": {
+    "source_revision": "269799f909693cfda748cd3dd3c813f4a296e81e",
+    "source_archive_sha256": "f4666afebd74d83e84b866ddb51d01012de4c08ab907a357a432a5af6f0fc1a1",
+    "actual_native_passed": true,
+    "toolchain": "go1.27.3 linux/amd64",
+    "full_go_race_count": 3,
+    "full_go_vet": true,
+    "fixture_race_count": 3,
+    "fixture_vet": true,
+    "deploy_helper_race_count": 3,
+    "deploy_helper_vet": true,
+    "quota_filter_count": 3,
+    "python_count": 164,
+    "python_skips": 0,
+    "cross_native_twelve_equal": true,
+    "ten_existing_artifacts_byte_equal": true,
+    "artifacts_sha256": {
+      "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+      "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+      "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+      "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+      "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+      "xandbox-ingress-launch": "3da0c06a0f440b73a438280de0b2d4f93ee5457d28bc7b16e611de114ae5be8a",
+      "deploy-helper": "5b044e260ef00789acd442094262fbef1b7c330f72685ee960dea71909c88cc4",
+      "fixture": "bac82851ad34af5e4c5c4bffac909095986ac1679f2b802d1ad98ce6f10ae988",
+      "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+      "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+      "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+    },
+    "native_runner_absent": true,
+    "new_ingress_systemd_tls_accepted": false,
+    "production_ready": false,
+    "private_log_sha256": {
+      "systemd-ingress-native5-v1.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "systemd-ingress-native5-v1.pipeline.log": "95f1aab8fd085a522e9a27ee4345dde1030488bf3a7ec48f41264e8f2ab50138",
+      "run-systemd-ingress-native5-v1.sh": "7617aa6874d6a5fcb1fde298e14034742b7b6aa02f26b9eaf5a04c7b89ed3558",
+      "systemd-ingress-native5-race-v1.log": "0fe1d03c05b2305fa55814609ba63a7414fd73a65c865898b44d5fc6c9bddebb",
+      "systemd-ingress-native5-vet-v1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "systemd-ingress-native5-fixture-v1.log": "25fbd60d19425efb719eb53c91244ebbf8b7dbb11b19de2034467c1a01b7a189",
+      "systemd-ingress-native5-fixture-vet-v1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "systemd-ingress-native5-helper-v1.log": "773f0c836ddc5c4510537dc92487b17a102b29a77fd94cfefa257f4e22dceb66",
+      "systemd-ingress-native5-helper-vet-v1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "systemd-ingress-native5-filter-v1.log": "3b25e04cfe62e602ef517da3519a5d7d1d451781aeda43afccc4cfa389e7c641",
+      "systemd-ingress-native5-python-v1.log": "8d5899b5eb1f415b0851a7394c5fe40eee3e76298d81e4a5063952321bbcac7e",
+      "systemd-ingress-native5-v1.sha256": "2fb9d17e403a8d65fc6e3884452c071e671fb59e6c858f95fd863031a441707a"
+    }
+  },
+  "legacy_profile_compatibility": {
+    "source_revision": "62d5c271bd0bfe712d0d29d28de9d185a848c0a1",
+    "source_archive_sha256": "ecff036b06d6641d1d40ea99d6ddcd045eec0d742fba47025e5f2cca79070376",
+    "profiles": {
+      "default": {
+        "l1_boots": 2,
+        "resources": {
+          "profile": "",
+          "memory_mib": 2048,
+          "disk_bytes": 2147483648,
+          "cgroup_memory_max": 3221225472
+        },
+        "original_report_sha256": "e31fd334de4845e4559157695a41f9396656d39517ba9001f66ecddf29433564",
+        "harness_files_sha256": {
+          "build_systemd_host.py": "df9b9dfe39f3cdc13f661fd04f8e14070016ef75d5206178f98ffff2b0046311",
+          "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+          "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+          "kvm_systemd_host.py": "1d96382c901e3d488af3da2824190fb1309cf19ca3a1c521df338ec410f24dd2",
+          "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925"
+        }
+      },
+      "uds": {
+        "l1_boots": 2,
+        "resources": {
+          "profile": "node-budget-v1",
+          "memory_mib": 8192,
+          "disk_bytes": 12884901888,
+          "cgroup_memory_max": 10737418240
+        },
+        "original_report_sha256": "89fc1dd160081aeefa04995627d6a935092bb1a6dc597165765c1a8e23bf1c0f",
+        "harness_files_sha256": {
+          "build_systemd_host.py": "df9b9dfe39f3cdc13f661fd04f8e14070016ef75d5206178f98ffff2b0046311",
+          "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+          "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+          "kvm_systemd_host.py": "1d96382c901e3d488af3da2824190fb1309cf19ca3a1c521df338ec410f24dd2",
+          "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925",
+          "build_systemd_deployment.py": "b318954ccb17e93a7666730d4704d34fa0e736cf9626a8331f8b08d7cc3af51d",
+          "systemd_deployment_guest.py": "5dfa9fe053ffc5d1b755ffd18616827a763ad44af9f840b725712554a11d2d02"
+        }
+      }
+    },
+    "not_relabelled_as_new_source": true
+  },
+  "failed_tls_predecessors": [
+    {
+      "attempt": 1,
+      "source_revision": "62d5c271bd0bfe712d0d29d28de9d185a848c0a1",
+      "passed": false,
+      "diagnostic_only": false,
+      "original_report_sha256": "357f258f95447e24a2fb130d624400c2881489670168c3c9f9bf8a38ec67d5d0",
+      "owned_generations_independently_absent": 1
+    },
+    {
+      "attempt": 2,
+      "source_revision": "78f1fb65148625cdc74956c38d62d0fa42730e79",
+      "passed": false,
+      "diagnostic_only": false,
+      "original_report_sha256": "cda4f7592925e3df7466f22e2d29ed516d4a4340ab1acc52b3ecfd93bd1ad50d",
+      "owned_generations_independently_absent": 1
+    },
+    {
+      "attempt": 3,
+      "source_revision": "ac2e5d2607fe7ce14d2af98397e318250eec1940",
+      "passed": false,
+      "diagnostic_only": true,
+      "original_report_sha256": "31ab95bc2ddc81be1c0ce46a736028971d7cb037f01e0544a5844ab7989de50b",
+      "owned_generations_independently_absent": 1
+    },
+    {
+      "attempt": 4,
+      "source_revision": "6a85035783d43f16ffd8f94297f6241a96b42a4d",
+      "passed": false,
+      "diagnostic_only": false,
+      "original_report_sha256": "ae8475a176928cf18578233ac0ab2fb75a483fd8a123df5f84d3f1c128b45d45",
+      "owned_generations_independently_absent": 1
+    },
+    {
+      "attempt": 6,
+      "source_revision": "5a2e9ada11a23066ceca89151f4887832e5be132",
+      "passed": false,
+      "diagnostic_only": false,
+      "original_report_sha256": "6f46c2f611bed2d53c2c66c0f8265b521a149ab0b815a7fb6ab4fcf4f486360c",
+      "owned_generations_independently_absent": 1
+    }
+  ],
+  "prevm_orchestration_failure": {
+    "source_revision": "269799f909693cfda748cd3dd3c813f4a296e81e",
+    "pre_l1_orchestration_failed": true,
+    "no_l1_launcher_call_reached": true,
+    "exclusive_asset_create_refused_existing_v4_without_overwrite": true,
+    "old_asset_digests_still_match_original_v4_report": true,
+    "runner_absent": true,
+    "not_a_new_kvm_attempt": true,
+    "raw_sha256": {
+      "run-systemd-ingress-v5.sh": "d5ca6d4c5a73be78188c43dd6e9eca557ac65d9de34287ae2833ee7a42cce6a4",
+      "systemd-ingress-v5.status": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "systemd-ingress-v5.pipeline.log": "bbea171328c12fe07c9ffc23e3ed5a5f3aef23e4857577d5f915531968b74646",
+      "systemd-ingress-assets-v4.json": "e77efd4c15aaaa23257028a560a3f167806edabfaf55904879991b8e96f4fecd"
+    },
+    "production_ready": false
+  },
+  "derived_private_metadata_correction": {
+    "v5_payload_sha256": "6fafc5bb85e6423a01a1d0fa6910c66eac3e8d9e1f557227fb9f6ddcec02d220",
+    "v5_payload_moved_byte_unchanged_to_correct_index": true,
+    "v4_derived_metadata_reconstructed_from_original_raw": true,
+    "all_v4_original_raw_hashes_still_equal": true,
+    "no_measurement_retagged_or_rewritten": true
+  },
+  "combined_fresh_read_only_absence_audit": {
+    "read_only": true,
+    "scopes": 8,
+    "globally_unique_outer_generations_absent": 11,
+    "globally_unique_declared_paths_absent": 35,
+    "all_original_runners_absent": true,
+    "no_supplemental_cleanup": true,
+    "receipts_sha256": {
+      "batch1-default": "cac45aa939ae97a53bfa62cbfac8e27fca75b863cd6cff11b52e1bd5a1ca9ff5",
+      "batch1-uds": "2d5dda2ae99cf3f52b7e15a2e710d6582eeec9a4abc419de0a9ac597615b2bb9",
+      "batch1-tls": "af4df5e18e6f0250d05261aeb4ac2b4320cd2bacef9d64feec75741db176fbe1",
+      "tls2": "9a52f678cd557486e37c6de98e54c7ba3269513e834c13961518253e1bfd8bc7",
+      "tls3": "003fc7e0722ef0d1705c035c8d509af0cfbd74e80a945a01a3043842b690438a",
+      "tls4": "746b73b421be40df855197f8c99da64611a4e3a714554963fc0aece1741f92e0",
+      "tls6": "47e7277d044d1616afa1a60b8108e75422a2550fc2c9f1a6f3e5b115257e28ad",
+      "tls7": "5d7362c345f18974a7a94ad9d4c9bbf3c195989337216711764dd39f1ae374f5"
+    },
+    "v5_prevm_orchestration_failure_not_counted_as_scope": true,
+    "not_absolute_escape_or_machine_inventory": true
+  },
+  "limitations": [
+    "Explicit trusted operator start after backend UDS readiness, not automatic install/WantedBy/readiness orchestration.",
+    "Config and manifest pin are separate trusted-root writes, not an atomic publication protocol.",
+    "Budget accounting is not a common hard parent, OS/operator hard reserve or actual host capacity proof.",
+    "Healthy fsynced original-disk checkpoint, not arbitrary in-flight persistence, physical power loss, secure erase or latency/SLO acceptance.",
+    "No catalog, reproducible production installer/upgrade/rollback/backup, independent human operator, saturation or audit retention acceptance.",
+    "Raw consoles, CA, credentials, process identities and resource receipts remain private. Failed original measurements retained without rewriting."
+  ]
+}

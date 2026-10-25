@@ -1,0 +1,110 @@
+{
+  "status": "partial_experimental_driver_evidence_not_final_PR_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "ordinary_driver_implementation_source": "93b6573f953f2f79e0aa7a71b55615a061b56389",
+  "warden_and_cgo_test_source": "8edb9d5b8afc3d10ffd02eb69f93d7da4f3ed0e5",
+  "cold_guard_and_basic_harness_source": "2624bf5344b300eca82fd3481fb531060be97a61",
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "daemon_sha256": "1d66fc406491531e6372dd110e2d9ba8cee8b55ba6b3d27654999c69ec645ed6",
+  "warden_sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+  "fixture_sha256": "1f4e345c1b6144f8f5a57bc3779f45aa4a629fcf7cf0282819d20ca96f83a18a",
+  "native_and_independent_cross_builds_exact": true,
+  "production_go_unchanged_after_warden_source": true,
+  "ordinary_pristine_guest_unchanged": true,
+  "quota_driver_cold_cases": 3,
+  "quota_driver_l1_boots": 4,
+  "default_power_cases": 3,
+  "default_power_l1_boots": 4,
+  "default_state_io_cases": 4,
+  "default_state_io_l1_boots": 5,
+  "native_race_all_count": 3,
+  "native_vet_all_passed": true,
+  "native_fixture_race_count": 10,
+  "native_fixture_vet_passed": true,
+  "root_python_tests": 40,
+  "actual_cgo0_kernel_filter_proof_count": 3,
+  "basic_runner_exit_status": 0,
+  "failed_predecessors": {
+    "v1": "Unit-only failure: all-thread prctl unsupported in cgo/race. Production fails closed; actual syscall/exec proof runs separately with CGO0. No L1 launched.",
+    "v2_v3_v4": "Raw passed=false retained. Fixture incorrectly compared mutable allocation across a running L1 power cut; 192MiB/inode hard limits unchanged and quota charge matched independent namespace allocation before and after.",
+    "v5_v6": "Raw passed=false retained. Stronger metadata check exposed a 3-byte non-fsynced jailer PID file becoming empty. Only this fixed non-authoritative file may change bounded size; inode/owner/mode/names, other logical sizes and actual quota accounting remain checked."
+  },
+  "cold_recovery_scope": "Ordinary daemon recovers from original disk without consulting saved PID contents; old key410, fresh real KVM/UID/boot/exec/destroy, all four private project records cleared. Not physical L0 media power failure or all persistence windows.",
+  "independent_cleanup": {
+    "scopes": 8,
+    "execution_generations": 23,
+    "all_owned_roots_control_cgroups_absent": true,
+    "read_only_no_cleanup_actions": true
+  },
+  "not_completed": [
+    "Move quota clear out of catalog global pin lock and verify concurrent prepares.",
+    "Quota-enabled snapshot/pins/initialization actual acceptance.",
+    "Actual quota block/inode exhaustion, startup rejection and quota I/O/crash fault matrix.",
+    "Full new-native default cold/snapshot/mixed/initialization/storage/IO runtime regression.",
+    "Final PR19 head CI, production readiness, complete M1-M4."
+  ],
+  "files": {
+    "kvm-project-driver-default-power-v7.json": {
+      "sha256": "499fd24df6b1fef0d64f6f02cbbd9223117cd4b1c8f82e95d40e95ecf81cbf05",
+      "bytes": 4897
+    },
+    "kvm-project-driver-default-state-io-v7.json": {
+      "sha256": "1fa1c2132f4ec0959aa7bec29baa8ce93e5a20b00f91da53a22cdd9b294de25a",
+      "bytes": 9596
+    },
+    "kvm-project-driver-v2.json": {
+      "sha256": "a353ddad3595d26590457ea075f3f05d433c39697783f2e5494368817f719f07",
+      "bytes": 3478
+    },
+    "kvm-project-driver-v3.json": {
+      "sha256": "999ff82ec6b2f969d16803f2cb838b184000bf6d75433b3780e232157875a6e8",
+      "bytes": 3479
+    },
+    "kvm-project-driver-v4.json": {
+      "sha256": "4e043fd69dd0b85379f0944864cce08950bd83892904a5df31934f8e2e4f6170",
+      "bytes": 3479
+    },
+    "kvm-project-driver-v5.json": {
+      "sha256": "8b2205c7b71c25657e0d9f69ffaa770880a235d90ea748dd0a06dfacb8554014",
+      "bytes": 3525
+    },
+    "kvm-project-driver-v6.json": {
+      "sha256": "ef57fa33b499f0f042e575715434a3d8cc2c350cd92827a890965cdb31b4a0ca",
+      "bytes": 3968
+    },
+    "kvm-project-driver-v7.json": {
+      "sha256": "6f08ffcc83e37f102fd232d47e0699bb1788ffeb6964fc145e63e5a5e6a8b563",
+      "bytes": 7332
+    },
+    "project-driver-cgo-race-negative-v1.txt": {
+      "sha256": "9802387da1cbe6d1060b3018ff6cbb305bb51ca3ec306cb75f9139329fd79327",
+      "bytes": 2527
+    },
+    "project-driver-native-race-v7.txt": {
+      "sha256": "e646b27a40b1101b05a6e64c2f57b4ea7a06a8ddf22512bcb590e2795719cc04",
+      "bytes": 1639
+    },
+    "project-driver-fixture-native-race-v7.txt": {
+      "sha256": "502326b94c071f06ad007385ed3371bb06a28fbec2cdb9a8cf65311e221fe288",
+      "bytes": 70
+    },
+    "project-driver-cgo0-kernel-filter-v7.txt": {
+      "sha256": "6b61b71547bae1a430816cda44b374b54473497bb773c13cafb750d1dbbb945b",
+      "bytes": 846
+    },
+    "project-driver-basic-pipeline-v7.txt": {
+      "sha256": "5ad441ee2f1119e4bb4520ec554af04d4c102d61dcb9e3a3024723cd32ab38be",
+      "bytes": 1218
+    },
+    "project-driver-independent-cleanup-v7.txt": {
+      "sha256": "2a708611008a45588c1fe5388565f9777c7097a4d3f0cbebdbd819cde30569ad",
+      "bytes": 995
+    }
+  }
+}

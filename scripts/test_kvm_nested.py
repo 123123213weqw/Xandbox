@@ -6,11 +6,402 @@ import tempfile
 from pathlib import Path
 import unittest
 
+from kvm_nested_host import (NODE_BUDGET_CHECKPOINT_FLAGS,NODE_BUDGET_RECOVERY_FLAGS,nested_node_resources,nested_group_limits,node_budget_policy,validate_node_budget_checkpoint,validate_node_budget_recovery,OWNER_CUT_CHECKPOINT_FLAGS, OWNER_CUT_RECOVERY_FLAGS, validate_quota_owner_cut_checkpoint, validate_quota_owner_cut_recovery, owner_cut_recovery_packet, detach_owner_cut_checkpoint, nested_copy_resources,validate_quota_copy_setup, COPY_CUT_CHECKPOINT_FLAGS, COPY_CUT_RECOVERY_FLAGS, validate_quota_copy_cut_checkpoint, validate_quota_copy_cut_recovery, copy_cut_recovery_packet, detach_copy_cut_checkpoint)
+
 from build_nested_host import init_scripts, validate_manifest
-from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options
+from kvm_nested_host import JSONSocket, replace_private_json, quota_format_options, validate_negative_setup, validate_unenforced_setup, validate_quota_clear_checkpoint, validate_quota_clear_recovery, validate_quota_syscall_setup, validate_quota_barrier_checkpoint, validate_quota_barrier_recovery, validate_quota_commit_checkpoint, validate_quota_commit_recovery, COMMIT_PROFILES, validate_quota_listener_checkpoint, validate_quota_listener_recovery, LISTENER_PROFILES, nested_resources, QUOTA_SWITCH_MAX_FRAME, validate_quota_switch_setup, validate_quota_switch_run, validate_quota_switch_recovery, validate_quota_switch_checkpoint
 
 
 class NestedFixtureTests(unittest.TestCase):
+    def test_node_budget_profile_never_expands_legacy_memory_cpu_or_disk(self):
+        self.assertEqual(nested_node_resources(),{'profile':'node-budget-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30})
+        self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
+        self.assertEqual(nested_copy_resources()['memory_mib'],3072)
+        self.assertEqual(nested_group_limits(nested_node_resources())['cpu.max'],'800000 100000')
+        self.assertEqual(nested_group_limits(nested_node_resources())['pids.max'],'256')
+        self.assertEqual(nested_group_limits(nested_resources(False))['cpu.max'],'400000 100000')
+        self.assertEqual(nested_group_limits(nested_copy_resources())['pids.max'],'128')
+        _,service=init_scripts([],node_budget=True)
+        self.assertIn('node-budget',service);self.assertIn('prjquota',service)
+        with self.assertRaises(ValueError):init_scripts([],node_budget=True,quota_driver=True)
+        p=node_budget_policy();self.assertEqual(p['max_instances'],4);self.assertEqual(p['prepare_workers'],1);self.assertEqual(p['cpu_quota'],800000)
+
+    def test_node_budget_checkpoint_requires_all_refusal_cleanup_and_real_guest_proofs(self):
+        good={**{k:True for k in NODE_BUDGET_CHECKPOINT_FLAGS},'guest_memory_touched_bytes_each':8<<20,'node_memory_max_bytes':7<<30,'controller_memory_max_bytes':1<<30,'node_cpu_quota_us':800000,'node_pids_max':384,'prepare_workers':1,'node_io_bytes_per_second':256<<20,'node_io_operations_per_second':8192}
+        validate_node_budget_checkpoint(good)
+        for k in NODE_BUDGET_CHECKPOINT_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_node_budget_checkpoint(bad)
+        for k,v in [('prepare_workers',True),('node_memory_max_bytes',8<<30),('node_pids_max',385),('guest_memory_touched_bytes_each',512<<20)]:
+            bad=copy.deepcopy(good);bad[k]=v
+            with self.assertRaises(AssertionError):validate_node_budget_checkpoint(bad)
+
+    def test_node_budget_cold_recovery_is_not_proved_by_only_parent_cleanup(self):
+        good={k:True for k in NODE_BUDGET_RECOVERY_FLAGS};validate_node_budget_recovery(good)
+        for k in NODE_BUDGET_RECOVERY_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_node_budget_recovery(bad)
+
+    def owner_cut_checkpoint(self):
+        value={k:True for k in OWNER_CUT_CHECKPOINT_FLAGS}
+        value['genuine_l1_snapshot_setup']=self.copy_cut_checkpoint()['genuine_l1_snapshot_setup']
+        value['other_fsync_continue_reply_submissions']=100
+        return value
+
+    def test_owner_cut_requires_exact_post_unlink_pending_commit_and_no_forcing(self):
+        good=self.owner_cut_checkpoint();validate_quota_owner_cut_checkpoint(good)
+        for k in OWNER_CUT_CHECKPOINT_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_checkpoint(bad)
+        for value in (0,8192,True):
+            bad=copy.deepcopy(good);bad['other_fsync_continue_reply_submissions']=value
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_checkpoint(bad)
+
+    def test_owner_cut_cold_may_retain_or_lose_owner_but_never_pin_accounting(self):
+        good={**{k:True for k in OWNER_CUT_RECOVERY_FLAGS},'cold_victim_owner_present':True,'cold_durable_owner_pins':2}
+        validate_quota_owner_cut_recovery(good)
+        good.update(cold_victim_owner_present=False,cold_durable_owner_pins=1);validate_quota_owner_cut_recovery(good)
+        for k in OWNER_CUT_RECOVERY_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_recovery(bad)
+        for key,value in [('cold_victim_owner_present',0),('cold_durable_owner_pins',True),('cold_durable_owner_pins',2)]:
+            bad=copy.deepcopy(good);bad[key]=value
+            with self.assertRaises(AssertionError):validate_quota_owner_cut_recovery(bad)
+
+    def test_owner_cut_private_receipt_detached_exclusive0600_not_a_public_result(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target=Path(temporary)/'private-owner-cut-receipt.json'
+            out={'ok':True,'result':self.owner_cut_checkpoint(),'private_receipt':{'version':1,'private':'not-public'}}
+            public,receipt=detach_owner_cut_checkpoint(out,target)
+            self.assertNotIn('private_receipt',out);self.assertNotIn('not-public',json.dumps(public))
+            self.assertEqual(json.loads(target.read_text()),receipt);self.assertEqual(stat.S_IMODE(target.stat().st_mode),0o600)
+            with self.assertRaises(FileExistsError):detach_owner_cut_checkpoint({**out,'private_receipt':receipt},target)
+
+    def test_owner_cut_fixed_recovery_request_keeps_original_scanner_budget(self):
+        value=owner_cut_recovery_packet({'version':1,'x':'a'*6900})
+        self.assertEqual(value['operation'],'quota-owner-cut-recover');self.assertNotIn('phase',value)
+        self.assertLess(len(json.dumps(value,separators=(',',':')).encode())+1,8192)
+        for receipt in (None,[],{'version':True},{'version':2},{'version':1,'x':'a'*7000}):
+            with self.assertRaises(AssertionError):owner_cut_recovery_packet(receipt)
+
+    def copy_cut_checkpoint(self):
+        setup={k:True for k in ('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated')};setup['snapshot_memory_bytes']=512<<20
+        return {**{k:True for k in COPY_CUT_CHECKPOINT_FLAGS},'genuine_l1_snapshot_setup':setup,'actual_live_workspace_prefix_bytes':16<<20,'live_kernel_quota_space_bytes':20<<20,'live_named_allocated_bytes':4096,'live_quota_inodes':3,'live_named_inodes':3}
+
+    def test_partial_cut_no_sync_predicates_and_delalloc_views(self):
+        good=self.copy_cut_checkpoint();validate_quota_copy_cut_checkpoint(good)
+        for k in COPY_CUT_CHECKPOINT_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_quota_copy_cut_checkpoint(bad)
+        for k,v in [('actual_live_workspace_prefix_bytes',128<<20),('live_named_inodes',True),('live_kernel_quota_space_bytes',193<<20)]:
+            bad=copy.deepcopy(good);bad[k]=v
+            with self.assertRaises(AssertionError):validate_quota_copy_cut_checkpoint(bad)
+
+    def test_partial_cut_cold_subset_and_ordinary_recovery_all_required(self):
+        good={**{k:True for k in COPY_CUT_RECOVERY_FLAGS},'cold_partial_entries':0,'cold_partial_workspace_size_bytes':0,'cold_partial_project_space_bytes':0,'cold_partial_project_inodes':0}
+        validate_quota_copy_cut_recovery(good)
+        good.update(cold_partial_entries=3,cold_partial_workspace_size_bytes=4096,cold_partial_project_space_bytes=12288,cold_partial_project_inodes=3)
+        validate_quota_copy_cut_recovery(good)
+        for k in COPY_CUT_RECOVERY_FLAGS:
+            bad=copy.deepcopy(good);bad[k]=False
+            with self.assertRaises(AssertionError):validate_quota_copy_cut_recovery(bad)
+        for k,v in [('cold_partial_workspace_size_bytes',(16<<20)+1),('cold_partial_entries',4),('cold_partial_project_inodes',2),('cold_partial_project_space_bytes',True)]:
+            bad=copy.deepcopy(good);bad[k]=v
+            with self.assertRaises(AssertionError):validate_quota_copy_cut_recovery(bad)
+
+    def test_partial_cut_private_receipt_detached_and_exclusive0600(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target=Path(temporary)/'private-copy-cut-receipt.json'
+            out={'ok':True,'result':self.copy_cut_checkpoint(),'private_receipt':{'version':1,'private':'not-public'}}
+            public,receipt=detach_copy_cut_checkpoint(out,target)
+            self.assertNotIn('private_receipt',out);self.assertNotIn('not-public',json.dumps(public))
+            self.assertEqual(json.loads(target.read_text()),receipt)
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode),0o600)
+            self.assertEqual(copy_cut_recovery_packet(receipt)['operation'],'quota-copy-cut-recover')
+            with self.assertRaises(FileExistsError):detach_copy_cut_checkpoint({**out,'private_receipt':receipt},target)
+
+    def test_partial_cut_private_request_never_enlarges_scanner(self):
+        packet=copy_cut_recovery_packet({'version':1,'x':'a'*6900})
+        self.assertLess(len(json.dumps(packet,separators=(',',':')).encode())+1,8192)
+        for receipt in (None,[],{'version':True},{'version':2},{'version':1,'x':'a'*7000}):
+            with self.assertRaises(AssertionError):copy_cut_recovery_packet(receipt)
+
+    def test_copy_resources_are_explicit_and_do_not_change_legacy_profiles(self):
+        self.assertEqual(nested_copy_resources(),{'profile':'quota-copy-v1','memory_mib':3072,'disk_bytes':4<<30,'cgroup_memory_max':4<<30})
+        self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
+
+    def test_partial_copy_requires_actual_prefix_keeper_pins_error_and_gc(self):
+        flags=('test_only_write_errno_not_physical_eio','exact_child_thread_fd_owner_and_project_checked','actual_positive_partial_prefix_before_shared_links_and_vmm_birth','healthy_observer_sync_for_stable_prefix_not_latency_measurement','independent_named_inode_quota_accounting','durable_creating_and_exec409_and_capacity503_while_held','retired_template_pins_two_and_gc_zero_at_partial_boundary','live_keeper_data_and_execution_survived','ordinary_prepare500_and_private_eio_diagnostic_checked','victim_destroyed_resources_absent_quota_zero_key410','same_uid_project_reused_only_after_clear_with_new_ref_template_and_clean_guest','new_declaration_only_from_never_assigned_export','retired_backing_survived_until_last_keeper_release','last_pin_gc_removed_exact_old_template','all_four_project_records_zero_controller_reaped_parent_removed')
+        setup={k:True for k in ('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated')};setup['snapshot_memory_bytes']=512<<20
+        good={'genuine_l1_snapshot_setup':setup,'partial_copy':{**{k:True for k in flags},'partial_workspace_bytes':16<<20,'partial_project_space_bytes':(16<<20)+8192,'partial_project_inodes':3,'fixed_write_error_replies':1,'real_kernel_write_continue_replies':2200}}
+        validate_quota_copy_setup(good)
+        for k in flags:
+            bad=copy.deepcopy(good);bad['partial_copy'][k]=False
+            with self.assertRaises(AssertionError):validate_quota_copy_setup(bad)
+        for k,v in [('partial_workspace_bytes',128<<20),('partial_project_space_bytes',128<<20),('partial_project_space_bytes',(16<<20)+1),('partial_project_inodes',4),('fixed_write_error_replies',True),('fixed_write_error_replies',0),('real_kernel_write_continue_replies',8192)]:
+            bad=copy.deepcopy(good);bad['partial_copy'][k]=v
+            with self.assertRaises(AssertionError):validate_quota_copy_setup(bad)
+
+    def test_explicit_switch_resources_and_image_preserve_legacy_bounds(self):
+        self.assertEqual(nested_resources(False),{'profile':'','memory_mib':2048,'disk_bytes':2<<30,'cgroup_memory_max':3<<30})
+        self.assertEqual(nested_resources(True),{'profile':'quota-switch-v1','memory_mib':3072,'disk_bytes':4<<30,'cgroup_memory_max':4<<30})
+        for v in (1,None,'switch'):
+            with self.assertRaises(AssertionError):nested_resources(v)
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_switch=True)
+        self.assertIn('rw,nosuid,prjquota',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-switch >/dev/console 2>&1\n'))
+        for other in ('state_io','quota_probe','quota_driver','quota_snapshot','quota_unenforced','quota_state_io'):
+            with self.assertRaises(ValueError):init_scripts([],quota_switch=True,**{other:True})
+
+    def test_large_control_reply_is_opt_in_not_a_global_bound_change(self):
+        conn=JSONSocket.__new__(JSONSocket)
+        raw=json.dumps({'sample':'x'*70000}).encode()+b'\n';conn.file=io.BytesIO(raw)
+        with self.assertRaises(AssertionError):conn.read()
+        conn.max_frame=QUOTA_SWITCH_MAX_FRAME;conn.file=io.BytesIO(raw);self.assertEqual(len(conn.read()['sample']),70000)
+        conn.file=io.BytesIO(b'x'*(QUOTA_SWITCH_MAX_FRAME+1))
+        with self.assertRaises(AssertionError):conn.read()
+
+    def test_switch_setup_and_cold_recovery_require_every_explicit_boundary(self):
+        pre=('four_simultaneous_real_kvm_quota_guests','four_distinct_private_projects_and_shared_readonly_project_zero_inodes','independent_named_inode_accounting_before_benchmark','alpha_fourth429_with_spare_node_slot_beta_still_executes','node_fifth503_below_beta_tenant_quota','authentication401_and_cross_tenant404','old_key410_resources_absent_quota_zero_before_controlled_slot_reuse','same_uid_project_reused_only_as_fresh_ref_boot_and_workspace','beta_execution_and_data_survived_alpha_recycle','all_eight_projects_zero_and_active_catalog_pins_zero')
+        base=('genuine_l1_unassigned_template_built','l1_host_abi_checked','builder_two_independent_clones_checked','builder_runtime_reclaimed','ordinary_catalog_published_and_activated')
+        good={'fixed_node_capacity':4,'fixed_tenant_capacity':3,'fixed_uid_project_slots':8,'ordinary_production_no_test_observer':True,'genuine_l1_snapshot_setup':{**{k:True for k in base},'snapshot_memory_bytes':512<<20},'preflight':{k:True for k in pre}}
+        validate_quota_switch_setup(good)
+        for k in pre:
+            bad=copy.deepcopy(good);bad['preflight'][k]=False
+            with self.assertRaises(AssertionError):validate_quota_switch_setup(bad)
+        flags=('l1_boot_changed','two_exact_owners_policy_shared_backing_and_independent_quota_checked_before_daemon','two_old_execution_domains_absent','two_pins_retained_before_ordinary_recovery','old_sessions_closed_exec_and_create_keys410_no_old_job_resume','both_old_generations_destroyed_resources_absent','two_fresh_real_kvm_guest_uids_workspaces_and_boots_checked','all_eight_project_records_zero_and_active_template_pins_zero','controller_reaped_and_owned_cgroup_root_removed','no_assigned_guest_restored_or_exported')
+        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault','receipts_sampled_after_both_bindings_ready','two_shared_inode_link_counts_captured_consistently')
+        cp={'phase':'quota-enabled-two-tenant-switching',**{k:True for k in checkpoint}};validate_quota_switch_checkpoint(cp)
+        for k in checkpoint:
+            with self.assertRaises(AssertionError):validate_quota_switch_checkpoint(dict(cp,**{k:False}))
+        rec={'phase':'quota-enabled-two-tenant-switching' ,**{k:True for k in flags}};validate_quota_switch_recovery(rec)
+        for k in flags:
+            with self.assertRaises(AssertionError):validate_quota_switch_recovery(dict(rec,**{k:False}))
+            with self.assertRaises(KeyError):validate_quota_switch_recovery({a:b for a,b in rec.items() if a!=k})
+
+    def test_full_switch_validator_cannot_pass_fewer_idle_or_unmeasured_rows(self):
+        keys=('request_to_binding_response_ms','request_to_first_new_command_success_ms','request_to_old_host_stopped_observed_ms','request_to_old_durable_destroyed_observed_ms')
+        checkpoint=('real_nested_kvm','checkpoint_receipt_fsynced','two_live_tenant_sessions_and_running_old_jobs','distinct_private_projects_with_named_inode_accounting','two_active_template_pins_checked','ordinary_quota_ready_owners_saved_privately','checkpoint_after_measured_load_not_an_inflight_commit_fault','receipts_sampled_after_both_bindings_ready','two_shared_inode_link_counts_captured_consistently')
+        resource={k:0 for k in ('allocated','stop_queued','cleanup_queued','stop_running','cleanup_running','owned_cgroup_count','durable_owner_files','nontransactional_nonempty_quota_slots','nontransactional_quota_space_bytes','nontransactional_quota_inodes')};resource['l1_root_free_bytes']=1<<30
+        workers=[]
+        labels=('binding','first_new_command','old_host_stopped','old_durable_destroyed')
+        for tenant in ('alpha','beta'):
+            rows=[{'iteration':i+1,'session_ordinal':i//48+1,'completed':True,'busy_old_job_running_at_switch_request':True,'busy_old_guest_write_progress_checked':True,'old_job_earliest_timeout_budget_ms_at_switch_request':59000,'old_job_terminal':'HISTORY_DROPPED_AFTER_RECLAIM','workload_start_ms':i*1500,'workload_end_ms':i*1500+10,'switch_start_ms':i*1500+10,'switch_end_ms':i*1500+50,**{k:20 for k in keys},'server_phase_observations':{'measured':True}} for i in range(120)]
+            workers.append({'tenant':tenant,'samples':rows,'summary_ms':{label:{'count':120,'p50':20,'p95':20,'p99':20,'p100':20} for label in labels}})
+        good={'phase':'quota-enabled-two-tenant-switching','load':{'passed':True,'cycles_per_tenant':120,'minimum_paced_seconds':180,'fixed_run_budget_seconds':720,'duration_seconds':180.1,'busy_old_writer_each_switch':True,'no_operator_quota_sync_during_measured_switches':True,'same_initial_session_key_isolated_between_tenants':True,'workers':workers,'cross_tenant_overlapping_switch_interval_pairs':120,'resources':[dict(resource) for _ in range(3)],'checkpoint':{k:True for k in checkpoint}}}
+        validate_quota_switch_run(good)
+        for field,value in [('fixed_run_budget_seconds',600),('cycles_per_tenant',119),('duration_seconds',179),('cross_tenant_overlapping_switch_interval_pairs',0),('busy_old_writer_each_switch',False),('no_operator_quota_sync_during_measured_switches',False)]:
+            bad=copy.deepcopy(good);bad['load'][field]=value
+            with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        for field,value in [('completed',False),('busy_old_job_running_at_switch_request',False),('busy_old_guest_write_progress_checked',False),('old_job_terminal','TIMED_OUT'),('old_job_earliest_timeout_budget_ms_at_switch_request',20),('old_job_earliest_timeout_budget_ms_at_switch_request',float('nan')),('request_to_first_new_command_success_ms',float('nan'))]:
+            bad=copy.deepcopy(good);bad['load']['workers'][0]['samples'][10][field]=value
+            with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        bad=copy.deepcopy(good);bad['load']['workers'][0]['samples'].pop()
+        with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        bad=copy.deepcopy(good);bad['load']['resources'][-1]['nontransactional_quota_space_bytes']=4096
+        with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+        bad=copy.deepcopy(good);bad['load']['workers'][1]['summary_ms']['binding']['p99']=21
+        with self.assertRaises(AssertionError):validate_quota_switch_run(bad)
+
+    def test_listener_loss_requires_last_close_actual_enosys_and_retained_state(self):
+        common=('fixed_owned_thread_anchor_owner_checked','receipt_fsynced_before_target_set','last_listener_closed_without_notification_response','selected_quotactl_fd_kernel_exit_observed','target_set_not_continued_or_errno_emulated','quota_and_absent_namespace_checked_before_listener_close','durable_reclaiming_stopped_owner_and_admission503_rechecked_three_times','quota_unchanged_while_listener_absent','no_false_destroy_confirmation','listener_never_reattached_before_power_cut')
+        for phase,_ in LISTENER_PROFILES.values():
+            reserve=phase.startswith('reserve-')
+            good={'phase':phase,**{k:True for k in common},'selected_set_kernel_errno':38,'first_return_latch_seen':1,'prepare_refused500':reserve,'checkpoint_has_no_old_l2_vm':reserve,'old_real_kvm_uid_exec_quota_filters_checked':not reserve,'delete_acceptance_allowed_not_destroy_confirmation':not reserve}
+            validate_quota_listener_checkpoint(good,phase)
+            for k,v in good.items():
+                bad=dict(good);del bad[k]
+                with self.assertRaises(KeyError):validate_quota_listener_checkpoint(bad,phase)
+                values=(not v,0,'true') if type(v) is bool else ('running',) if k=='phase' else (0,False,-1,5,2)
+                for x in values:
+                    with self.assertRaises(AssertionError):validate_quota_listener_checkpoint(dict(good,**{k:x}),phase)
+            with self.assertRaises(AssertionError):validate_quota_listener_checkpoint(good,'untrusted')
+
+    def test_listener_cold_recovery_never_fabricates_old_reserve_guest(self):
+        common=('l1_boot_changed','exact_owner_bytes_policy_and_absent_namespace_before_daemon','unexecuted_set_quota_state_checked_before_daemon','old_durable_destroyed_resources_absent_key410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed','listener_not_recreated_for_recovery')
+        for phase,_ in LISTENER_PROFILES.values():
+            good={'phase':phase,**{k:True for k in common},'cold_quota_record_empty':phase.startswith('reserve-'),'old_real_guest_boot_changed':phase.startswith('release-')}
+            validate_quota_listener_recovery(good,phase)
+            for k,v in good.items():
+                bad=dict(good);del bad[k]
+                with self.assertRaises(KeyError):validate_quota_listener_recovery(bad,phase)
+                with self.assertRaises(AssertionError):validate_quota_listener_recovery(dict(good,**{k:('running' if k=='phase' else not v)}),phase)
+
+    def test_repeated_clear_requires_three_replies_and_distinct_post_set_attempts(self):
+        common=('test_only_seccomp_errno','fixed_child_thread_and_anchor_verified','durable_attempted_owner_before_injection','kernel_limits_and_zero_usage_checked_at_boundary','no_execution_namespace_at_injected_boundary','real_kernel_continue_not_emulated_success','durable_destroyed_resources_absent_key410','capacity_reused_fresh_real_kvm_guest_uid_exec_destroy','all_thread_caps_nnp_observer_and_ordinary_vmm_filters_checked','all_fixed_projects_cleared','owned_cgroup_root_removed')
+        repeat=('at_least_three_clear_error_replies_before_disarm','same_owner_namespace_and_kernel_record_checked_each_reply','clear_target_rearmed_each_cleanup_attempt','durable_reclaiming_ledger_checked_while_errors_armed')
+        good={k:True for k in ('test_only_syscall_errno_injection','ordinary_daemon_elf_unchanged','not_physical_media_fault','all_fixed_projects_cleared')};good.update(repeated_clear_minimum=3,all_fixed_syscall_cases=[])
+        for name in ('reserve-set-eio','reserve-read-erofs','reserve-sync-eio','clear-set-eio','clear-sync-erofs','clear-read-eio'):
+            r={'case':name,'continued_kernel_calls':20,'injected_calls':1 if name.startswith('reserve-') else 3,**{k:True for k in common}}
+            if name.startswith('reserve-'):r['prepare_refused500']=True
+            else:r.update({k:True for k in repeat},successful_set_continues_before_disarm=1 if name=='clear-set-eio' else 4,reclaiming_owner_and_capacity_retained_while_errno_armed=True,new_create_refused503_during_clear_failure=True)
+            good['all_fixed_syscall_cases'].append(r)
+        validate_quota_syscall_setup(good,require_repeated=True)
+        for v in (True,0,2,4):
+            with self.assertRaises(AssertionError):validate_quota_syscall_setup(dict(good,repeated_clear_minimum=v),require_repeated=True)
+        for i in range(3,6):
+            for k in repeat:
+                bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=False
+                with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad,require_repeated=True)
+            for k,v in [('injected_calls',2),('successful_set_continues_before_disarm',True),('successful_set_continues_before_disarm',2)]:
+                bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=v
+                with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad,require_repeated=True)
+        # Historical verifier defaults retain their original >=1 semantics.
+        old=copy.deepcopy(good);del old['repeated_clear_minimum']
+        for r in old['all_fixed_syscall_cases'][3:]:r['injected_calls']=1
+        validate_quota_syscall_setup(old)
+
+    def test_real_commit_eio_requires_direct_kernel_errno_and_retained_owner(self):
+        phase='reserve-quota-syncfs-real-eio'
+        flags=('checkpoint_receipt_fsynced_before_set','durable_attempted_owner_before_set','installed_limits_checked_before_fault','ordinary_qsync_returned_before_syncfs','notification_continued_no_errno_or_success_emulation','selected_syncfs_kernel_exit_observed','ordinary_prepare_eio_closed_counter_independent_of_state_io','private_metric_connection_open_before_fault_no_reconnect','create_refused500','no_false_ready_stop_destroy_confirmation','exact_owner_receipt_persisted_before_eio_for_cold_recheck','admission_new_create503','no_observer_quota_or_srv_reads_after_eio','own_mapper_error_retained_until_power_cut_no_rw_remount','no_l2_vm_born_at_checkpoint')
+        good={'phase':phase,**{k:True for k in flags},'fixed_project_zero_dirty_bytes':4<<20,'selected_syncfs_kernel_errno':5,'selected_syncfs_exit_observations':1}
+        validate_quota_commit_checkpoint(good,phase)
+        for key in good:
+            bad=dict(good);del bad[key]
+            with self.assertRaises(KeyError):validate_quota_commit_checkpoint(bad,phase)
+            values=(False,0,'true') if key in flags else ('running',) if key=='phase' else (False,0,-1,6)
+            for v in values:
+                with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(dict(good,**{key:v}),phase)
+        with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(good,'untrusted')
+
+    def test_release_commit_hold_requires_exact_ordinal_usage_and_fresh_guest_recovery(self):
+        flags=('checkpoint_receipt_fsynced_before_delete','old_real_kvm_guest_uid_exec_and_quota_checked','same_durable_owner_checked_at_release_boundary','namespace_and_cgroup_absent_before_suspend','ordinary_qsync_returned_before_selected_syncfs','notification_continued_into_real_kernel','actual_syncfs_syscall_D_filesystem_stack_not_seccomp','actual_kernel_hold_rechecked_three_times','durable_reclaiming_stopped_not_destroyed','capacity_retained_new_create503','no_quota_or_srv_reads_after_suspend','no_observer_sync_after_delete','mapper_still_suspended_until_power_cut')
+        recovery=('l1_boot_changed','attempted_owner_bytes_policy_and_absent_namespace_before_daemon','unreturned_commit_empty_or_known_limits_checked','no_assigned_guest_restore','old_durable_destroyed','old_resources_absent','old_key_refused410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed')
+        for phase,_ in COMMIT_PROFILES.values():
+            release=phase.startswith('release-')
+            rec={'phase':phase,**{k:True for k in recovery},'cold_quota_record_empty':False,'old_real_guest_boot_changed':release}
+            validate_quota_commit_recovery(rec,phase)
+            with self.assertRaises(AssertionError):validate_quota_commit_recovery(dict(rec,old_real_guest_boot_changed=not release),phase)
+            with self.assertRaises(KeyError):validate_quota_commit_recovery({k:v for k,v in rec.items() if k!='old_real_guest_boot_changed'},phase)
+            if not release:continue
+            post='postclear' in phase
+            good={'phase':phase,**{k:True for k in flags},'fixed_project_zero_dirty_bytes':4<<20,'selected_syncfs_ordinal':3 if post else 2,'quota_record_empty_before_suspend':post,'quota_space_before_suspend':0 if post else 4096,'quota_inodes_before_suspend':0 if post else 1}
+            validate_quota_commit_checkpoint(good,phase)
+            for key in good:
+                bad=dict(good);del bad[key]
+                with self.assertRaises(KeyError):validate_quota_commit_checkpoint(bad,phase)
+            for key in flags:
+                with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(dict(good,**{key:False}),phase)
+            for key,values in {'selected_syncfs_ordinal':(True,0,2 if post else 3),'quota_record_empty_before_suspend':(not post,0,1),'quota_space_before_suspend':(False,-1,1 if post else (193<<20)),'quota_inodes_before_suspend':(False,-1,1 if post else 129),'fixed_project_zero_dirty_bytes':(True,0,1)}.items():
+                for v in values:
+                    with self.assertRaises(AssertionError):validate_quota_commit_checkpoint(dict(good,**{key:v}),phase)
+
+    def test_quota_barrier_requires_actual_filesystem_stack_and_prefork_cold_recovery(self):
+        checkpoint=('checkpoint_receipt_fsynced_before_set','pre_fork_namespace_absent_before_suspend','durable_attempted_owner_before_set','installed_limits_checked_before_suspend','ordinary_qsync_returned_before_syncfs','notification_continued_into_real_kernel','actual_syncfs_syscall_D_filesystem_stack_not_seccomp','actual_kernel_hold_rechecked_three_times','no_create_ack_while_commit_held','capacity_retained_new_create503','no_quota_or_srv_reads_after_suspend','mapper_still_suspended_until_power_cut','no_l2_vm_born_at_checkpoint')
+        recovery=('l1_boot_changed','attempted_owner_bytes_policy_and_absent_namespace_before_daemon','unreturned_commit_empty_or_known_limits_checked','no_assigned_guest_restore','old_durable_destroyed','old_resources_absent','old_key_refused410','fresh_real_kvm_uid_exec_destroy_uninstrumented_launch','all_fixed_project_records_cleared','owned_cgroup_root_removed')
+        for fn,keys,extra in ((validate_quota_barrier_checkpoint,checkpoint,{'fixed_project_zero_dirty_bytes':4<<20}),(validate_quota_barrier_recovery,recovery,{'cold_quota_record_empty':True})):
+            good={'phase':'reserve-quota-syncfs-held',**{k:True for k in keys},**extra};fn(good)
+            for k in keys:
+                bad=dict(good);bad[k]=False
+                with self.assertRaises(AssertionError):fn(bad)
+                bad=dict(good);del bad[k]
+                with self.assertRaises(KeyError):fn(bad)
+            with self.assertRaises(AssertionError):fn(dict(good,phase='running'))
+            for k in extra:
+                with self.assertRaises(AssertionError):fn(dict(good,**{k:0}))
+
+    def test_quota_syscall_setup_requires_each_exact_errno_and_ordinary_recovery_proof(self):
+        common=('test_only_seccomp_errno','fixed_child_thread_and_anchor_verified','durable_attempted_owner_before_injection','kernel_limits_and_zero_usage_checked_at_boundary','no_execution_namespace_at_injected_boundary','real_kernel_continue_not_emulated_success','durable_destroyed_resources_absent_key410','capacity_reused_fresh_real_kvm_guest_uid_exec_destroy','all_thread_caps_nnp_observer_and_ordinary_vmm_filters_checked','all_fixed_projects_cleared','owned_cgroup_root_removed')
+        good={k:True for k in ('test_only_syscall_errno_injection','ordinary_daemon_elf_unchanged','not_physical_media_fault','all_fixed_projects_cleared')}
+        good['all_fixed_syscall_cases']=[]
+        for name in ('reserve-set-eio','reserve-read-erofs','reserve-sync-eio','clear-set-eio','clear-sync-erofs','clear-read-eio'):
+            r={'case':name,'injected_calls':1,'continued_kernel_calls':20,**{k:True for k in common}}
+            if name.startswith('reserve-'):r['prepare_refused500']=True
+            else:r.update(reclaiming_owner_and_capacity_retained_while_errno_armed=True,new_create_refused503_during_clear_failure=True)
+            good['all_fixed_syscall_cases'].append(r)
+        validate_quota_syscall_setup(good)
+        for i,r in enumerate(good['all_fixed_syscall_cases']):
+            for k,v in r.items():
+                if v is True:
+                    bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=False
+                    with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad)
+                    bad=copy.deepcopy(good);del bad['all_fixed_syscall_cases'][i][k]
+                    with self.assertRaises(KeyError):validate_quota_syscall_setup(bad)
+            for k in ('injected_calls','continued_kernel_calls'):
+                for value in (0,False,-1):
+                    bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][i][k]=value
+                    with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad)
+        for records in ([],good['all_fixed_syscall_cases'][:-1],list(reversed(good['all_fixed_syscall_cases']))):
+            with self.assertRaises(AssertionError):validate_quota_syscall_setup(dict(good,all_fixed_syscall_cases=records))
+        bad=copy.deepcopy(good);bad['all_fixed_syscall_cases'][0]['injected_calls']=2
+        with self.assertRaises(AssertionError):validate_quota_syscall_setup(bad)
+
+    def test_quota_clear_report_rejects_every_missing_boundary_or_recovery_proof(self):
+        checkpoint=('real_nested_kvm','guest_uid_checked','checkpoint_receipt_fsynced','two_simultaneous_ordinary_snapshot_clones','private_projects_distinct','catalog_pins_two_checked_before_barrier','ordinary_post_quota_sync_catalog_fd_observed','victim_quota_zero_namespace_absent_owner_retained','victim_durable_reclaiming_not_destroyed','zero_quota_did_not_release_capacity_503','keeper_real_vm_data_execution_survived','only_two_known_shared_links_removed','no_observer_quota_sync_after_clear_boundary','pid1_lock_retained_until_l1_power_cut')
+        recovery=('l1_boot_changed','old_durable_destroyed','old_resources_absent','old_key_refused_410','fresh_real_kvm_exec_destroy','fresh_guest_boot_changed','cleared_victim_quota_zero_before_daemon_recovery','both_durable_owners_and_two_pins_retained_across_cold_boot','keeper_quota_namespace_and_shared_content_checked_before_recovery','keeper_old_destroyed_resources_absent_key410','both_old_pins_released_active_template_unchanged','all_private_project_ids_cleared')
+        for function,keys in ((validate_quota_clear_checkpoint,checkpoint),(validate_quota_clear_recovery,recovery)):
+            good={'phase':'quota-cleared-owner-pinned',**{key:True for key in keys}}
+            function(good)
+            for key in keys:
+                bad=dict(good);bad[key]=False
+                with self.assertRaises(AssertionError):function(bad)
+                bad=dict(good);del bad[key]
+                with self.assertRaises(KeyError):function(bad)
+            with self.assertRaises(AssertionError):function(dict(good,phase='destroyed'))
+
+    def test_quota_io_profile_loads_quota_but_never_mounts_backing_bypassing_mapper(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_state_io=True)
+        self.assertNotIn('mount -t ext4',service)
+        self.assertIn('insmod /lib/fixture/quota_v2.ko',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-io >/dev/console 2>&1\n'))
+        for other in ('state_io','quota_probe','quota_driver','quota_snapshot','quota_unenforced'):
+            with self.assertRaises(ValueError):init_scripts([],quota_state_io=True,**{other:True})
+
+    def test_unenforced_profile_is_fresh_ext4_not_quotaoff_or_fake_kvm_acceptance(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_unenforced=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid /dev/vda /srv',service)
+        self.assertNotIn('prjquota',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-unenforced >/dev/console 2>&1\n'))
+        for other in ('state_io','quota_probe','quota_driver','quota_snapshot'):
+            with self.assertRaises(ValueError):init_scripts([],quota_unenforced=True,**{other:True})
+        good={key:True for key in ('ordinary_daemon','fresh_writable_ext4_without_project_enforcement','specific_enforcement_startup_rejection_checked','no_api_or_backend_ownership_or_generation_domain','fixed_child_reaped','no_quota_on_off_or_mount_policy_mutation')}
+        good['l2_vms_started']=0
+        validate_unenforced_setup(good)
+        variants=[{},dict(good,l2_vms_started=False),dict(good,l2_vms_started=1)]
+        for key,value in good.items():
+            if value is True:variants.append(dict(good,**{key:False}))
+        for bad in variants:
+            with self.assertRaises(AssertionError):validate_unenforced_setup(bad)
+
+    def test_negative_report_requires_every_case_and_no_false_success(self):
+        rows=[]
+        for name in ('cap','uuid','unknown','binding','block','inode'):
+            row={'case':name,'ordinary_daemon':True,'all_fixed_project_records_cleared':True,'owned_cgroup_root_removed':True}
+            if name in ('cap','uuid','unknown'):row.update(specific_startup_rejection_checked=True,no_api_socket_after_rejection=True)
+            if name=='unknown':row['unknown_record_unchanged_before_owned_fixture_cleanup']=True
+            if name=='binding':row['changed_policy_rejected_original_binding_unchanged']=True
+            if name in ('block','inode'):
+                for key in ('actual_prepare_edquot_closed_counter_checked','create_refused500','durable_destroyed_and_exact_resources_absent','old_create_key_refused410','same_binding_restart_destroyed_key410_checked','released_capacity_reused_second_edquot_cleaned','ordinary_closed_edquot_producer_counter_exact1'):row[key]=True
+                row.update(hard_bytes=(16<<20 if name=='block' else 192<<20),hard_inodes=(128 if name=='block' else 1))
+            rows.append(row)
+        good={'all_fixed_negative_projects_cleared':True,'positive_backend_not_yet_bound':True,'ordinary_daemon_negative_cases':rows}
+        validate_negative_setup(good)
+        variants=[]
+        for key in ('all_fixed_negative_projects_cleared','positive_backend_not_yet_bound'):
+            bad=copy.deepcopy(good);bad[key]=False;variants.append(bad)
+        bad=copy.deepcopy(good);bad['ordinary_daemon_negative_cases'].pop();variants.append(bad)
+        for index,row in enumerate(rows):
+            for key,value in row.items():
+                if value is True:
+                    bad=copy.deepcopy(good);bad['ordinary_daemon_negative_cases'][index][key]=False;variants.append(bad)
+        bad=copy.deepcopy(good);bad['ordinary_daemon_negative_cases'][-1]['hard_inodes']=2;variants.append(bad)
+        for bad in variants:
+            with self.assertRaises(AssertionError):validate_negative_setup(bad)
+
+    def test_snapshot_quota_profile_is_separate_from_cold_and_never_loads_on_l0(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_snapshot=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-snapshot >/dev/console 2>&1\n'))
+        for flags in ({'quota_snapshot':True,'quota_driver':True},{'quota_snapshot':True,'quota_probe':True},{'quota_snapshot':True,'state_io':True}):
+            with self.assertRaises(ValueError):init_scripts([],**flags)
+
+    def test_driver_quota_profile_loads_only_inside_owned_l1_and_is_exclusive(self):
+        _,service=init_scripts(['quota_tree.ko','quota_v2.ko'],quota_driver=True)
+        self.assertIn('mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv',service)
+        self.assertTrue(service.endswith('exec /usr/bin/xandbox-host-fixture -mode node-quota-driver >/dev/console 2>&1\n'))
+        for flags in ({'state_io':True,'quota_driver':True},{'quota_probe':True,'quota_driver':True}):
+            with self.assertRaises(ValueError):init_scripts([],**flags)
+
     def test_quota_format_uses_installed_e2fsprogs_extended_option_not_unknown_flag(self):
         self.assertEqual(quota_format_options(False),[])
         self.assertEqual(quota_format_options(True),['-O','project,quota','-E','quotatype=prjquota','-I','256','-b','4096'])

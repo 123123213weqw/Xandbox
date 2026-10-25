@@ -1,0 +1,471 @@
+{
+  "status": "partial_experimental_quota_two_tenant_busy_switch_and_stable_dual_session_cold_recovery_passed_not_final_PR_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "frozen_fixture_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
+  "source_archive_sha256": "56f4084ee7179da6dfbb763d14b67182acfe76d539ba8a49b1eadc011238d663",
+  "raw_reports_archive_sha256": "35230b582d88a80eb019560cf5d8704dfb6d5cd81b58fd1891f3b1f4383947e0",
+  "raw_archive_regular_members": 20,
+  "audit_transport": "Exact independently captured SSH stdout stored separately from raw tar; never represented as an original tar member. Read-only path audit, no cleanup actions.",
+  "production_changed": false,
+  "production_sources_equal_verified_revision": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+  "ordinary_guest_initrd_unchanged": true,
+  "warden_unchanged": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "faec35b1b1852dd0799b9c013ab72c7ea675a1e6120244f0204277ae4e40137b",
+    "daemon": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501",
+    "snapshot_builder": "ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd"
+  },
+  "explicit_resource_profile": {
+    "name": "quota-switch-v1",
+    "l1_ram_mib": 3072,
+    "l1_disk_bytes": 4294967296,
+    "outer_cgroup_memory_max": 4294967296,
+    "vcpus": 4,
+    "pids_max": 128,
+    "swap_max": 0,
+    "business_nics": 0,
+    "outer_hard_lifetime_seconds": 900,
+    "fixed_run_budget_seconds": 720,
+    "control_read_timeout_seconds": 770,
+    "control_reply_max_bytes": 2097152,
+    "maximum_resource_samples": 1452,
+    "legacy_2GiB_profile_unchanged": true,
+    "independent_qmp_memory_checked": true,
+    "l0_minimum_available_ram_bytes": 8589934592,
+    "l0_minimum_free_space_bytes": 12884901888
+  },
+  "fixed_service_policy": {
+    "node_capacity": 4,
+    "per_tenant_capacity": 3,
+    "uid_project_slots": 8,
+    "per_generation_hard_bytes": 201326592,
+    "per_generation_hard_inodes": 128,
+    "guest_memory_mib": 512,
+    "guest_vcpus": 2,
+    "guest_workspace_bytes": 134217728,
+    "not_global_production_node_admission": true
+  },
+  "setup": {
+    "fixed_node_capacity": 4,
+    "fixed_tenant_capacity": 3,
+    "fixed_uid_project_slots": 8,
+    "genuine_l1_snapshot_setup": {
+      "builder_runtime_reclaimed": true,
+      "builder_two_independent_clones_checked": true,
+      "genuine_l1_unassigned_template_built": true,
+      "l1_host_abi_checked": true,
+      "ordinary_catalog_published_and_activated": true,
+      "quota_snapshot_sharing": {
+        "all_private_project_records_cleared": true,
+        "last_pin_gc_removed_one_template": true,
+        "new_declaration_reuses_only_never_assigned_export": true,
+        "per_clone_charge_excludes_shared_inodes": true,
+        "pins_two_then_one_checked": true,
+        "private_projects_distinct": true,
+        "retired_backing_survived_first_clone_gc": true,
+        "shared_readonly_project_zero_inodes": true,
+        "simultaneous_ordinary_clones": 2,
+        "surviving_real_vm_data_exec_checked": true
+      },
+      "snapshot_memory_bytes": 536870912
+    },
+    "ordinary_production_no_test_observer": true,
+    "preflight": {
+      "all_eight_projects_zero_and_active_catalog_pins_zero": true,
+      "alpha_fourth429_with_spare_node_slot_beta_still_executes": true,
+      "authentication401_and_cross_tenant404": true,
+      "beta_execution_and_data_survived_alpha_recycle": true,
+      "four_distinct_private_projects_and_shared_readonly_project_zero_inodes": true,
+      "four_simultaneous_real_kvm_quota_guests": true,
+      "independent_named_inode_accounting_before_benchmark": true,
+      "node_fifth503_below_beta_tenant_quota": true,
+      "old_key410_resources_absent_quota_zero_before_controlled_slot_reuse": true,
+      "same_uid_project_reused_only_as_fresh_ref_boot_and_workspace": true
+    }
+  },
+  "load": {
+    "passed": true,
+    "cycles_per_tenant": 120,
+    "minimum_paced_seconds": 180,
+    "duration_seconds": 606.719829842,
+    "fixed_run_budget_seconds": 720,
+    "complete_rows": 240,
+    "resource_samples": 1203,
+    "cross_tenant_overlapping_switch_interval_pairs": 151,
+    "summary_ms": {
+      "alpha": {
+        "binding": {
+          "count": 120,
+          "p100": 1542.487,
+          "p50": 968.17,
+          "p95": 1397.247,
+          "p99": 1529.591
+        },
+        "first_new_command": {
+          "count": 120,
+          "p100": 1643.986,
+          "p50": 1033.209,
+          "p95": 1466.448,
+          "p99": 1640.659
+        },
+        "old_durable_destroyed": {
+          "count": 120,
+          "p100": 1714.822,
+          "p50": 1360.253,
+          "p95": 1615.621,
+          "p99": 1680.549
+        },
+        "old_host_stopped": {
+          "count": 120,
+          "p100": 1574.253,
+          "p50": 997.84,
+          "p95": 1368.302,
+          "p99": 1549.804
+        }
+      },
+      "beta": {
+        "binding": {
+          "count": 120,
+          "p100": 1718.069,
+          "p50": 966.559,
+          "p95": 1462.961,
+          "p99": 1616.93
+        },
+        "first_new_command": {
+          "count": 120,
+          "p100": 1835.831,
+          "p50": 1038.433,
+          "p95": 1507.839,
+          "p99": 1722.376
+        },
+        "old_durable_destroyed": {
+          "count": 120,
+          "p100": 1964.781,
+          "p50": 1348.298,
+          "p95": 1639.843,
+          "p99": 1848.372
+        },
+        "old_host_stopped": {
+          "count": 120,
+          "p100": 1588.968,
+          "p50": 985.486,
+          "p95": 1478.447,
+          "p99": 1587.375
+        }
+      }
+    },
+    "old_job_outcomes": {
+      "alpha": [
+        "HISTORY_DROPPED_AFTER_RECLAIM"
+      ],
+      "beta": [
+        "HISTORY_DROPPED_AFTER_RECLAIM"
+      ]
+    },
+    "actual_guest_write_progress_each_switch": true,
+    "actual_host_empty_before_earliest_possible_job_deadline_each_switch": true,
+    "all_complete_slow_and_failure_predecessor_rows_retained": true,
+    "closed_loop_not_fairness_open_loop_saturation_or_slo": true
+  },
+  "resource_views": {
+    "peaks": {
+      "observation_duration_ms": 194.859,
+      "allocated": 4,
+      "stop_queued": 0,
+      "cleanup_queued": 0,
+      "stop_running": 1,
+      "cleanup_running": 2,
+      "owned_cgroup_count": 4,
+      "durable_owner_files": 4,
+      "nontransactional_quota_space_bytes": 551686144,
+      "nontransactional_quota_inodes": 56,
+      "nontransactional_nonempty_quota_slots": 4,
+      "instance_parent_memory_current_bytes": 105504768,
+      "controller_rss_bytes": 16515072,
+      "controller_fd_count": 35
+    },
+    "minimum_l1_root_free_bytes": 2281750528,
+    "final": {
+      "elapsed_ms": 606716.573,
+      "observation_duration_ms": 2.911,
+      "allocated": 0,
+      "stop_queued": 0,
+      "cleanup_queued": 0,
+      "stop_running": 0,
+      "cleanup_running": 0,
+      "owned_cgroup_count": 0,
+      "durable_owner_files": 0,
+      "nontransactional_quota_space_bytes": 0,
+      "nontransactional_quota_inodes": 0,
+      "nontransactional_nonempty_quota_slots": 0,
+      "instance_parent_memory_current_bytes": 9072640,
+      "l1_root_free_bytes": 2833289216,
+      "controller_rss_bytes": 15949824,
+      "controller_fd_count": 10
+    },
+    "nontransactional_may_miss_peaks": true,
+    "not_unique_ram_or_sum_of_overlapping_views": true,
+    "no_operator_quota_sync_during_measured_switches": true,
+    "stable_preflight_and_crash_checkpoint_may_sync": true,
+    "post_drain_parent_memory_current_nonzero": true,
+    "residual_charge_scope": "At measured drain parent memory.current, controller RSS/FD remained nonzero while service/active catalog still existed. Page types not exported; no specific cache/leak causality or physical-RAM zero/secure-erasure claim. Later owned-parent removal/controller reap is a separate check."
+  },
+  "cold_recovery": {
+    "l1_boots": 2,
+    "checkpoint": {
+      "checkpoint_after_measured_load_not_an_inflight_commit_fault": true,
+      "checkpoint_receipt_fsynced": true,
+      "distinct_private_projects_with_named_inode_accounting": true,
+      "ordinary_quota_ready_owners_saved_privately": true,
+      "phase": "quota-enabled-two-tenant-switching",
+      "real_nested_kvm": true,
+      "receipts_sampled_after_both_bindings_ready": true,
+      "two_active_template_pins_checked": true,
+      "two_live_tenant_sessions_and_running_old_jobs": true,
+      "two_shared_inode_link_counts_captured_consistently": true
+    },
+    "recovery": {
+      "all_eight_project_records_zero_and_active_template_pins_zero": true,
+      "both_old_generations_destroyed_resources_absent": true,
+      "controller_reaped_and_owned_cgroup_root_removed": true,
+      "l1_boot_changed": true,
+      "no_assigned_guest_restored_or_exported": true,
+      "old_sessions_closed_exec_and_create_keys410_no_old_job_resume": true,
+      "phase": "quota-enabled-two-tenant-switching",
+      "two_exact_owners_policy_shared_backing_and_independent_quota_checked_before_daemon": true,
+      "two_fresh_real_kvm_guest_uids_workspaces_and_boots_checked": true,
+      "two_old_execution_domains_absent": true,
+      "two_pins_retained_before_ordinary_recovery": true
+    },
+    "private_receipt_semantic_version": 3,
+    "both_full_receipts_sampled_after_both_ready_and_pins2": true,
+    "shared_inode_identity_attributes_and_links_exact_equal": true,
+    "strict_unchanged_cold_link_comparison": true,
+    "scope": "Stable healthy postload checkpoint with two newly created tenant sessions and progressing RUNNING guest writers; not in-flight commit or physical L0 media failure. Same-disk second own-L1 boot, original actual HostABI/UNASSIGNED export, exact owners/quota/shared namespace/pins before ordinary unobserved daemon; old bindings closed/old keys410/no old job resume, fresh real guests and final eight-project/pin zero/reaped daemon."
+  },
+  "job_contract": "Public Job.ID shadows embedded Ref.ID; verify separate session envelope/path and job id/generation before reconstructing in-memory Ref. Second guest execution proves real writer progress, not merely controller RUNNING. Ordinary manager discards ephemeral history after durable DESTROYED: post-reclamation404 is explicitly HISTORY_DROPPED_AFTER_RECLAIM, never fabricated CANCELLED or standalone Stop proof. Independent host-empty before conservative earliest60s job deadline plus durable destruction/absent resources is mandatory; observed200 terminal must not be timeout or success0.",
+  "regression": {
+    "shared_harness_legacy_profiles": 11,
+    "passing_scopes": 12,
+    "passing_l1_execution_generations": 34,
+    "legacy_resource_bounds_preserved": true,
+    "native_full_race_count": 3,
+    "native_fixture_race_count": 10,
+    "native_and_fixture_vet": true,
+    "root_python_tests": 59,
+    "actual_cgo0_kernel_exec_filter_count": 3,
+    "darwin_full_race_count": 3,
+    "darwin_vet": true,
+    "darwin_compiled_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
+    "runner_exit_status": 0
+  },
+  "failed_predecessors": [
+    {
+      "report": "kvm-quota-switch-mixed-v1.json",
+      "source_revision": "fb836bf59b484167dfbf5de4629dbf6fa8850034",
+      "passed": false,
+      "source_archive_sha256": "19c9d8de0898ce28197c96414c48de8779ecf2dd3619421f16214a75efa4c769",
+      "private_raw_archive_sha256": "3eea7184b361b3db83ab9fcb89f98208fc93f1940b579f417b90b2df587ffd3c",
+      "l1_boots_completed": 1,
+      "cleanup_independently_checked": true,
+      "load_phase_passed": false
+    },
+    {
+      "report": "kvm-quota-switch-mixed-v2.json",
+      "source_revision": "5bda13804d22e29c3e21ca460e6aec548f6c948a",
+      "passed": false,
+      "source_archive_sha256": "c9b13875389d4c48331c1941646df1b3e58f1b2e98fa91f03012475e0d596a0b",
+      "private_raw_archive_sha256": "5b448dcc8dda348cfb213dda8e92c10603612ead1d79fb6f4623e46c9b1402b5",
+      "l1_boots_completed": 1,
+      "cleanup_independently_checked": true,
+      "load_phase_passed": false
+    },
+    {
+      "report": "kvm-quota-switch-mixed-v3.json",
+      "source_revision": "4653b08e5b80e2ed15be491849d8ad9427015295",
+      "passed": false,
+      "source_archive_sha256": "0131c8d72c1cba38bdce05d3320dd662f0db1da88364982bbc0c9684c5a8a20e",
+      "private_raw_archive_sha256": "2730e2805334b885d1ebd2b5ef9420d04542b9f795598c6f3d98b99411e2fc00",
+      "l1_boots_completed": 1,
+      "cleanup_independently_checked": true,
+      "load_phase_passed": false
+    },
+    {
+      "report": "kvm-quota-switch-mixed-v4.json",
+      "source_revision": "599a6de3cd4ff759ed6cfbb84f020689fac2cb77",
+      "passed": false,
+      "source_archive_sha256": "2441950182036f5d707058f2b94589521b1707317e191920ccd451090787be93",
+      "private_raw_archive_sha256": "63f9eae317251d74c760f8f67c3fe034cbb9d0b795182741d6b775d4703e7152",
+      "l1_boots_completed": 2,
+      "cleanup_independently_checked": true,
+      "load_phase_passed": true
+    }
+  ],
+  "failure_history": {
+    "v1": "Missing embedded sandbox ID on actual public Job wire; fixture initial binding assertion invalid. No completed rows.",
+    "v2": "Fixture incorrectly expected ephemeral job200 after durable reclamation; production intentionally discards history. Both first rows incomplete. Strong progress/deadline/reclamation prerequisites added, not fake job status.",
+    "v3": "239complete of240; last alpha replay/CAS canceled by600s whole-operation deadline at601.837s. Raised explicitly declared test budget720/control770/frame2MiB/samples1452 while retaining120each/min180/realwriter/guest60/pretimeoutStop/outer900. No SLO or splicing.",
+    "v4": "Full LOAD240 passed on599a at601.477s, then strict cold inode metadata failed. Found definite checkpoint-order bug: first receipt sampled before second clone creates another shared link. Specific old differing entry not exported, so sole actual cause not proved. Newversion3 captures BOTH receipts after both Ready/pins2, asserts exact shared metadata and retains strict cold comparison; private precise failure diagnostics added. No waiver of link-count drift.",
+    "v2_initial_launch": "Retained actual missing-script log, no source extraction/native/VM from that attempt; no unobserved exit code invented. Corrected distinct runner used exact source SHA/fresh handles.",
+    "no_failed_rows_spliced_into_success": true
+  },
+  "independent_cleanup": {
+    "passing_scopes": 12,
+    "passing_outer_l1_generations": 34,
+    "failed_scopes": 4,
+    "failed_outer_l1_generations": 5,
+    "total_scopes": 16,
+    "total_exact_owned_outer_generations_absent": 39,
+    "all_exact_roots_control_cgroup_parents_children_absent": true,
+    "read_only_no_cleanup_actions": true,
+    "quota_proof": "Actual kernel/namespace observations inside L1 before disk deletion. Outer absent paths do not prove failed cold-session project GC; only completed measured drain and successful current recovery assert their own zero records."
+  },
+  "not_completed": [
+    "Production global physical/unique-RAM/IO/catalog/ledger/journal/node preparation admission budgets; not all512MiB of each guest touched.",
+    "Sustained open-loop saturation, scheduler fairness, production tail SLO and independent operator acceptance.",
+    "Partial-copy Prepare, owner unlink/directory-fsync inside catalog lock, keeper/shared-pin and remaining persistence fault combinations.",
+    "Physical media erase/failure, production dual-supervisor failure, M1 archive/operator, M3 prewarm/initialization frames, M4 audit/backups, full M1-M4/final exact-head PR19 CI/merge/production readiness."
+  ],
+  "files": {
+    "kvm-quota-switch-clear-v5.json": {
+      "sha256": "3f4e7924e774b5575bcc5642a745e8eeac0c28ef2198d6b682da302963694fd2",
+      "bytes": 6924
+    },
+    "kvm-quota-switch-default-io-v5.json": {
+      "sha256": "a0f565ebdac4bbabb45629d5b138b775101fdc01db90c38271ec4126a24b9498",
+      "bytes": 10038
+    },
+    "kvm-quota-switch-eio-v5.json": {
+      "sha256": "a6c03f923f82f62127a2c6c25a743d306337a5414ac18f56a9f1b7f42d9f61b4",
+      "bytes": 6600
+    },
+    "kvm-quota-switch-io-v5.json": {
+      "sha256": "e8d83eb9b13f485742119118f04c9fbff20100d949a7a4d077c7d6efd23e94a4",
+      "bytes": 14788
+    },
+    "kvm-quota-switch-loss-release-v5.json": {
+      "sha256": "a9b43a7e5bcea87412f47425497be2abfc3eda4dd857483ab0f074648ff73867",
+      "bytes": 6473
+    },
+    "kvm-quota-switch-loss-reserve-v5.json": {
+      "sha256": "c25813a857d17079a9da2a7573c12f18fe302154584d1810ff2131de9bea0894",
+      "bytes": 6473
+    },
+    "kvm-quota-switch-mixed-v5.json": {
+      "sha256": "c5eda64d355b4ddcdd24ead9ae0574a61dbeb4b982d6c2ea4a47d64c1bfe3eb2",
+      "bytes": 778085
+    },
+    "kvm-quota-switch-postclear-v5.json": {
+      "sha256": "13e1aa97b7844a6d9c4ba051c09dc6a5c1922405d0ce732855f7a52c4773edb1",
+      "bytes": 6728
+    },
+    "kvm-quota-switch-preclear-v5.json": {
+      "sha256": "7bbc422b5dae1277d7242adc81f25879198501b6e0bafaa5416b23dc76b03185",
+      "bytes": 6724
+    },
+    "kvm-quota-switch-reserve-v5.json": {
+      "sha256": "b61986a1e3ac9ff41df68dab148be83b232e23ee76f53bfbe598764089bfcb40",
+      "bytes": 6134
+    },
+    "kvm-quota-switch-snapshot-v5.json": {
+      "sha256": "725189e99275a436beed6970a2deb3e8b76429391e8c8a1c97b69252656b6842",
+      "bytes": 9124
+    },
+    "kvm-quota-switch-syscalls-v5.json": {
+      "sha256": "7b3009897933c2f0bce38afa5d2125ee16e0db4978567b10ce42f683164d56c3",
+      "bytes": 13559
+    },
+    "quota-switch-native-race-v5.txt": {
+      "sha256": "6d35be299f5a7f0f2b0a769162c195a20ab81f6197d491fa5a45c1d682ee42b4",
+      "bytes": 1639
+    },
+    "quota-switch-fixture-native-race-v5.txt": {
+      "sha256": "bf3315ad8a4e9808b1bcb2ecac0fd94717eefac22587839f922b315179a67e30",
+      "bytes": 70
+    },
+    "quota-switch-cgo0-kernel-filter-v5.txt": {
+      "sha256": "166eed33fd65735fbfaa62cca016bbd2eb2fc6d1154b3ad5580fe69beeb4827c",
+      "bytes": 846
+    },
+    "quota-switch-pipeline-v5.txt": {
+      "sha256": "e8d96c31f63c0e021bfe36ae133bba85180add98ab41b91ee63a927c22a3050a",
+      "bytes": 2264
+    },
+    "quota-switch-native-artifacts-v5.txt": {
+      "sha256": "44676db30c0c607d5fd556cb0ab821fe2973744d4a6f19afc1bafe9f10940705",
+      "bytes": 487
+    },
+    "quota-switch-independent-cleanup-v5.txt": {
+      "sha256": "42037f304a19bf2efd1291385ece8941a6844eea6c4d3e0ff484edc7dffbdaf7",
+      "bytes": 1537
+    },
+    "quota-switch-final-darwin-race-v5.txt": {
+      "sha256": "3ed700f24b98c75ce0a11c6617ad4d225e846f15974998e516a72bf9bf0a97c0",
+      "bytes": 1531
+    },
+    "kvm-quota-switch-mixed-v1.json": {
+      "sha256": "cf75f4ab60837fdf930c5d416e0afc89932868753ebe2a46882ab30680e6df65",
+      "bytes": 6856
+    },
+    "quota-switch-failed-v1-audit.txt": {
+      "sha256": "591008bf0c0782a854dbee518a877285ef95c4088d744ea0adfd5939130a3b50",
+      "bytes": 271
+    },
+    "kvm-quota-switch-mixed-v2.json": {
+      "sha256": "3e4f1c245a6ab3f42c87529758c762bd2ffa0f0ee8131dfedf5ef257f2e38a57",
+      "bytes": 9470
+    },
+    "quota-switch-failed-v2-audit.txt": {
+      "sha256": "b8c0851ff55ee7af46bea7822b3811a797fb305f41f01e4fac3c135e15fd07a5",
+      "bytes": 230
+    },
+    "kvm-quota-switch-mixed-v3.json": {
+      "sha256": "4733b0b2614a379794701e0231e7d4ef475e7c20c1314f44c2ee4d30f6c0cf5a",
+      "bytes": 768398
+    },
+    "quota-switch-failed-v3-audit.txt": {
+      "sha256": "0039f0557d981a5a2c26e839daad103c21da0df6d6bd251ac85d269c2231fd41",
+      "bytes": 230
+    },
+    "kvm-quota-switch-mixed-v4.json": {
+      "sha256": "b599d77a691a19dc75352425e3b75a55f2946467df39bdd828e5c78aa6d3a8d6",
+      "bytes": 771779
+    },
+    "quota-switch-failed-v4-audit.txt": {
+      "sha256": "82c6661f3c30e3ceebb99be549113917dbdc21e9aefcc09cc27d6b83dc34375d",
+      "bytes": 231
+    },
+    "quota-switch-launch-failure-v2.txt": {
+      "sha256": "0f3519babf4d886e6984a54f46d849a1c1c948aab5ac022a58234b5feef48e19",
+      "bytes": 63
+    },
+    "quota-switch-v4-load-only-verified.txt": {
+      "sha256": "c39d19f3907c0af1e142727e1cb6a8255c74765c7ab6b23bf190fd578987c550",
+      "bytes": 261
+    }
+  },
+  "offline_verifier_input_correction": {
+    "legacy_asset_pin_index": "docs/validation/kvm-quota-negative-v3.json",
+    "initial_private_index_filename_reference": "nonexistent kvm-quota-negative-v5.json after a mechanical suffix replacement",
+    "fixed_to_existing_historical_index": true,
+    "raw_reports_changed": false,
+    "predicate_thresholds_changed": false,
+    "hardware_rerun_for_this_bookkeeping_error": false
+  }
+}

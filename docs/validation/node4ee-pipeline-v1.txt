@@ -1,0 +1,28 @@
+work/runtime4ee-source-v1.tar.gz: 成功
+work/run-runtime4ee-v1.sh: 成功
+Exact archived frozen ab048ed source files unchanged: 774
+bin/builder-runtime4ee-v1: 成功
+bin/fixture-runtime4ee-v1: 成功
+bin/sandboxd-runtime4ee-v1: 成功
+bin/xandbox-node-runtime4ee-v1: 成功
+bin/xandbox-template-runtime4ee-v1: 成功
+bin/xandbox-warden-runtime4ee-v1: 成功
+bin/firecracker-runtime4ee-v1.test: 成功
+bin/session-runtime4ee-v1.test: 成功
+bin/runtime4ee-smoke-v1/sandboxd: 成功
+/srv/xb-template-cv3/workspace.ext4: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+FROZEN_SOURCE=ab048ed65b12fc806cba9d16eecd1c830c37fa93; REUSED exact8 ab native/cross + race3/vet/fixture10/Python95/filter3/mock6 from successful runtime4ee run; not falsely rerun here
+stage: NEW4ee fixed nested admission
+49695 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: NEW4ee fixed nested owner
+49695 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: NEW4ee fixed nested inflight
+49695 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: NEW4ee fixed nested partial
+49695 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+COMPLETE NEW4ee four remaining node/copy scopes; schema3 space + prepare entry/cancel hardware trace and owned private copy/owner windows. NOT full node resource/RAM/fairness/operator/Goal or production acceptance.

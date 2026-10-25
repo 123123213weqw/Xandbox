@@ -26,7 +26,8 @@ jobs:
           - os: macos-14
             go: 1.27.x
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    # Measured 77-root crash suite: retain whole-package race x3, not a runtime SLO.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,21 +45,37 @@ jobs:
       - name: Race and failure tests under private umask
         run: |
           umask 077
-          go test -race -count=3 ./...
+          go test -race -timeout=20m -count=3 ./...
+      - name: Verify inherited quota filter in CGO-free child processes
+        if: runner.os == 'Linux'
+        run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -count=3 -run 'TestQuota' ./internal/warden
       - name: Build and process smoke test
         run: make smoke
       - name: Test opt-in nested host fixture only on Linux
         if: runner.os == 'Linux'
         run: go test -tags=xandbox_host_fixture -race -count=3 ./cmd/xandbox-host-fixture
+      - name: Test opt-in owned systemd deployment helper only on Linux
+        if: runner.os == 'Linux'
+        run: go test -tags=xandbox_deploy_fixture -race -count=3 ./cmd/xandbox-deploy-fixture
+      - name: Test opt-in owned initial installer PKI helper only on Linux
+        if: runner.os == 'Linux'
+        run: go test -tags=xandbox_install_fixture -race -count=3 ./cmd/xandbox-install-fixture
+      - name: Test opt-in owned managed policy PKI producer only on Linux
+        if: runner.os == 'Linux'
+        run: go test -tags=xandbox_managed_fixture -race -count=3 ./cmd/xandbox-managed-fixture
       - name: Python harness syntax and guest image extraction safety
         run: |
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py
           python3 -m unittest discover -s scripts -p test_guest_fault_fixture.py
+          python3 -m unittest discover -s scripts -p test_process_exit.py
           python3 -m py_compile scripts/kvm_mixed_load.py scripts/kvm_resources.py
           python3 -m py_compile scripts/kvm_storage.py scripts/kvm_storage_faults.py
           python3 -m py_compile scripts/kvm_io_probe.py
           python3 -m py_compile scripts/build_nested_host.py scripts/kvm_nested_host.py
+          python3 -m py_compile scripts/build_systemd_host.py scripts/systemd_delegate_probe.py scripts/kvm_systemd_host.py scripts/build_systemd_deployment.py scripts/systemd_deployment_guest.py scripts/build_systemd_ingress.py scripts/systemd_ingress_guest.py scripts/build_systemd_readiness.py scripts/systemd_readiness_guest.py scripts/readiness_fixture_gate.py scripts/systemd_drain_probe.py scripts/build_systemd_release.py scripts/systemd_release_guest.py scripts/process_exit.py
+          python3 -m py_compile scripts/build_systemd_install.py scripts/systemd_install_guest.py scripts/install_fixture_trace.py
+          python3 -m py_compile scripts/build_systemd_managed.py scripts/systemd_managed_guest.py scripts/managed_fixture_trace.py
           python3 -m unittest discover -s scripts -p 'test_kvm_*.py'
 
   linux-build:
@@ -76,16 +93,29 @@ jobs:
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_guest_fixture -trimpath -o /tmp/xandbox-fixture-observer ./cmd/xandbox-fixture-observer
       - name: Compile opt-in nested host fixture
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_host_fixture -trimpath -o /tmp/xandbox-host-fixture ./cmd/xandbox-host-fixture
+      - name: Compile opt-in owned systemd deployment helper
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_deploy_fixture -trimpath -o /tmp/xandbox-deploy-fixture ./cmd/xandbox-deploy-fixture
+      - name: Compile opt-in owned initial installer fixture helper
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_install_fixture -trimpath -o /tmp/xandbox-install-fixture ./cmd/xandbox-install-fixture
+      - name: Compile opt-in owned managed policy fixture helper
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_managed_fixture -trimpath -o /tmp/xandbox-managed-fixture ./cmd/xandbox-managed-fixture
       - name: Build Linux amd64 and arm64
         run: |
           for arch in amd64 arm64; do
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxd-$arch" ./cmd/sandboxd
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxctl-$arch" ./cmd/sandboxctl
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-node-$arch" ./cmd/xandbox-node
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-launch-$arch" ./cmd/xandbox-launch
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-ingress-launch-$arch" ./cmd/xandbox-ingress-launch
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-ready-$arch" ./cmd/xandbox-ready
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-release-$arch" ./cmd/xandbox-release
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-install-$arch" ./cmd/xandbox-install
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-keygen-$arch" ./cmd/xandbox-keygen
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-agent-$arch" ./cmd/xandbox-agent
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-warden-$arch" ./cmd/xandbox-warden
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-guestctl-$arch" ./cmd/xandbox-guestctl
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-template-$arch" ./cmd/xandbox-template
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-gateway-$arch" ./cmd/xandbox-gateway
           done
 
   vulnerability-scan:
@@ -101,3 +131,23 @@ jobs:
           cache: false
       - name: Scan reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  secret-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify fail-closed secret gate unit controls
+        run: python3 -m unittest discover -s scripts -p test_secret_scan.py
+      - name: Install hash-pinned scanner into private exclusive directory
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/xandbox-secret-tools"
+          python3 scripts/install_secret_scanner.py --destination "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"
+      - name: Verify actual positive, deleted-history, merge and redaction controls
+        run: python3 scripts/secret_scan_smoke.py --scanner "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"
+      - name: Scan all reachable non-shallow history without publishing raw findings
+        run: python3 scripts/secret_scan.py --scanner "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"

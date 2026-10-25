@@ -28,6 +28,7 @@ type route struct {
 	Permit   *sandbox.Admission
 }
 type attempt struct {
+	ticket            *sandbox.CreationTicket
 	key, spec         string
 	done              chan struct{}
 	index             int
@@ -85,8 +86,14 @@ func New(core *sandbox.Manager, store Store, opts Options) (*Broker, error) {
 	if opts.MaxSessions < 1 || opts.MaxSessions > MaxRecords || opts.MaxTenantSessions < 1 || opts.MaxTenantSessions > opts.MaxSessions || opts.MaxAttempts < 1 || opts.MaxAttempts > MaxHistory || opts.RetryInterval < time.Millisecond {
 		return nil, errors.New("invalid session bounds")
 	}
+	if err := core.CheckResourceAdmission(sandbox.AdmissionLimits{MaxSessions: opts.MaxSessions}); err != nil {
+		return nil, err
+	}
 	rows, err := store.Load()
 	if err != nil {
+		return nil, err
+	}
+	if err := core.CheckResourceAdmission(sandbox.AdmissionLimits{RetainedSessions: len(rows)}); err != nil {
 		return nil, err
 	}
 	if len(rows) > MaxRecords {
@@ -271,9 +278,16 @@ func (b *Broker) Open(ctx context.Context, owner sandbox.Owner, key string, req 
 	a := &attempt{key: kh, spec: sh, index: 0, done: make(chan struct{}), startedNS: start}
 	e.attempts[kh] = a
 	e.busy = true
-	b.records[id], b.keys[owner.TenantID+"\x00"+kh] = e, e
-	b.metricRecords.Add(1)
-	b.tenantCounts[owner.TenantID]++
+	err = b.core.ReserveSessionAttempt(func(ticket *sandbox.CreationTicket) {
+		a.ticket = ticket
+		b.records[id], b.keys[owner.TenantID+"\x00"+kh] = e, e
+		b.metricRecords.Add(1)
+		b.tenantCounts[owner.TenantID]++
+	})
+	if err != nil {
+		b.mu.Unlock()
+		return Result{}, err
+	}
 	b.mu.Unlock()
 	defer b.finish(e, a)
 	return b.mutate(ctx, owner, e, a, req)
@@ -333,11 +347,18 @@ func (b *Broker) Switch(ctx context.Context, owner sandbox.Owner, id, key string
 		return Result{}, ErrHistory
 	}
 	a := &attempt{key: kh, spec: sh, index: len(e.record.Attempts), done: make(chan struct{}), startedNS: start}
-	e.record.Attempts = append(e.record.Attempts, Attempt{KeyHash: kh, SpecHash: sh, ExpectedRevision: req.ExpectedRevision, ResultRevision: req.ExpectedRevision + 1, From: e.record.Current, State: Preparing, StartedAt: time.Now().UTC()})
-	e.record.State = Preparing
-	e.record.UpdatedAt = time.Now().UTC()
-	e.attempts[kh] = a
-	e.busy = true
+	err = b.core.ReserveSessionAttempt(func(ticket *sandbox.CreationTicket) {
+		a.ticket = ticket
+		e.record.Attempts = append(e.record.Attempts, Attempt{KeyHash: kh, SpecHash: sh, ExpectedRevision: req.ExpectedRevision, ResultRevision: req.ExpectedRevision + 1, From: e.record.Current, State: Preparing, StartedAt: time.Now().UTC()})
+		e.record.State = Preparing
+		e.record.UpdatedAt = time.Now().UTC()
+		e.attempts[kh] = a
+		e.busy = true
+	})
+	if err != nil {
+		e.mu.Unlock()
+		return Result{}, err
+	}
 	e.mu.Unlock()
 	defer b.finish(e, a)
 	return b.mutate(ctx, owner, e, a, req.Create)
@@ -389,6 +410,7 @@ func (b *Broker) persist(e *entry, r Record) error {
 }
 func (b *Broker) copy(e *entry) Record { e.mu.Lock(); defer e.mu.Unlock(); return clone(e.record) }
 func (b *Broker) finish(e *entry, a *attempt) {
+	a.ticket.Release()
 	e.mu.Lock()
 	e.busy = false
 	close(a.done)
@@ -519,7 +541,7 @@ func (b *Broker) mutate(ctx context.Context, owner sandbox.Owner, e *entry, a *a
 	// tenant create cannot preoccupy this candidate with a previously used VM.
 	sum := sha256.Sum256([]byte(r.ID + "\x00" + a.key))
 	vmKey := "session-" + hex.EncodeToString(sum[:])
-	candidate, err := b.core.CreateManagedScoped(opCtx, owner, vmKey, req, permit, func(ref sandbox.Ref) { b.capture(e, a, opCtx, ref) })
+	candidate, err := b.core.CreateReservedManagedScoped(opCtx, owner, vmKey, req, permit, func(ref sandbox.Ref) { b.capture(e, a, opCtx, ref) }, a.ticket)
 	if err != nil {
 		return b.abort(e, a, err)
 	}

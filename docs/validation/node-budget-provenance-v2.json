@@ -1,0 +1,230 @@
+{
+  "status": "schema3_node_envelope_admission_and_healthy_cold_finite_gate_passed_not_complete_node_pressure_or_production_acceptance",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+  "source_archive_sha256": "40117f5bc29a76df2b9993cbb1f828c6f9fb0e03b87f7e9bdd63c5d9bb04eafc",
+  "raw_reports_archive_sha256": "3e9f5272865e2668155c2620d3cb11baed3262c22cc4b119d5f799ae49ff6b5e",
+  "raw_archive_regular_members": 15,
+  "production_changed": true,
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_cgo_enabled": false,
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_and_independent_cross_builds_exact": true,
+  "artifacts_sha256": {
+    "fixture": "8fbd839984d424c28459ce28af92f4a7cc48e2af9abb9f6524fe474dbe20727a",
+    "daemon": "3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407"
+  },
+  "independent_cross_and_darwin_source": "8b951bb880cfcbf9cfb5d6115d5d2c56029a9717",
+  "independent_cross_darwin_and_final_source_equal_paths": [
+    "cmd/",
+    "internal/",
+    "go.mod",
+    "go.sum",
+    ".github/"
+  ],
+  "source_equality_note": "V2 changes only Python producer CPU/pids helper and its assertions. Darwin log retains actually executed8b source; not rewritten to pretend a2e run. Native root Python72 executes final2e.",
+  "production_design": {
+    "schema": 3,
+    "legacy_schema1_2": "Explicit experimental compatibility only; nil Node omitempty keeps old JSON/binding digests. No automatic migration or budget rebinding.",
+    "policy_binding": "Node policy is immutable original config/registry/catalog binding. Complete frontend MaxInstances/MaxRecords/MaxSessions match before import; recovered inventories checked before mutation. Registry owner capacity retained until durable release, even failed unlink-directory fsync.",
+    "kernel_envelope": "Root only control/instances, actual controller/publisher in control; exact root memory/swap/pids/CPU/IO and control memory/swap/pids/oomgroup readbacks. Ancestor and instances capacity, actual CPU affinity/physical RAM, root-owned FD anchors/inode identity/ext4/quota/IO restrictions checked. No shared host setup performed by daemon.",
+    "planning": "All allocated per-generation ceilings plus control planning/catalog potential cache/preparation/metadata/disk/inodes, conservative overlaps. Not unique RAM/PSS/billing or dedicated CPU performance guarantee.",
+    "disk": "Full managed allocation plus same full-free reserve plus bounded external allocations/minimum free. Admission/capacity rule, NOT a node-wide ext4 project hard quota. External assets/export/logs must be operator-bounded; no guarantee against concurrent external consumption or media faults.",
+    "prepare": "Context-aware bounded staging permits, queued generations count allocated. Stop/Cleanup bypass permits and free-space admission. Startup checks capacity/identity but not free headroom so low space alone does not bar cleanup; immutable policy drift still refuses restart until operator restores exact limits."
+  },
+  "new_fixture_policy": {
+    "launch_profile": "node-budget-v1",
+    "l1_ram_mib": 8192,
+    "l1_disk_bytes": 12884901888,
+    "outer_cgroup_memory_max": 10737418240,
+    "vcpus": 8,
+    "pids_max": 256,
+    "swap_max": 0,
+    "business_nics": 0,
+    "outer_hard_seconds": 900,
+    "l0_minimum_available_ram_bytes": 34359738368,
+    "l0_minimum_free_space_bytes": 25769803776,
+    "node_instances": 4,
+    "node_records": 1024,
+    "node_sessions": 32,
+    "prepare_workers": 1,
+    "node_memory_max": 7516192768,
+    "control_memory_max": 1073741824,
+    "node_pids_max": 384,
+    "control_pids_max": 128,
+    "host_memory_reserve": 536870912,
+    "node_cpu_quota_us": 800000,
+    "cpu_period_us": 100000,
+    "node_io_bytes_per_second": 268435456,
+    "node_io_operations_per_second": 8192,
+    "node_disk_budget": 10737418240,
+    "node_inode_budget": 100000,
+    "external_disk_bytes": 2147483648,
+    "external_inodes": 2048,
+    "min_free_bytes": 268435456,
+    "min_free_inodes": 2048,
+    "uid_project_slots": 4,
+    "private_hard_bytes": 201326592,
+    "private_hard_inodes": 128,
+    "snapshot": false,
+    "old_2_and_3_gib_profiles_unchanged": true,
+    "larger_profile_is_not_speedup_evidence": true
+  },
+  "actual_new_case": {
+    "count": 1,
+    "l1_boots": 2,
+    "checkpoint": {
+      "checkpoint_receipt_fsynced": true,
+      "controller_memory_max_bytes": 1073741824,
+      "failed_prepare_key410_and_same_policy_restored_before_fresh_guest": true,
+      "fifth_create503_then_full_quota_reclaim_checked": true,
+      "four_simultaneous_actual_kvm_guests_uid_data_and_filters_checked": true,
+      "guest_memory_touched_bytes_each": 8388608,
+      "healthy_synced_checkpoint_not_inflight_metadata_fault": true,
+      "node_cpu_quota_us": 800000,
+      "node_io_bytes_per_second": 268435456,
+      "node_io_operations_per_second": 8192,
+      "node_memory_max_bytes": 7516192768,
+      "node_pids_max": 384,
+      "node_schema3_exact_frontend_counts_and_parent_control_placement_enforced": true,
+      "parent_limit_drift_refused_new_preparation_without_fallback": true,
+      "prepare_workers": 1,
+      "real_nested_kvm": true,
+      "stop_cleanup_and_existing_exec_continue_during_stricter_parent_drift": true,
+      "wrong_limits_and_wrong_control_subtree_rejected_before_binding_and_api": true
+    },
+    "recovery": {
+      "all_four_projects_zero_controller_reaped_entire_node_subtree_removed": true,
+      "exact_node_policy_and_owner_quota_metadata_checked_before_daemon": true,
+      "fresh_actual_guest_uid_boot_workspace_checked": true,
+      "l1_boot_changed": true,
+      "no_assigned_guest_restore_and_no_node_policy_retargeted": true,
+      "old_execution_absent_and_ordinary_recovery_destroyed_resources_absent": true,
+      "old_key410_all_four_projects_zero_before_reuse": true
+    },
+    "outer_cut_to_cgroup_empty_ms": 88.638,
+    "observation_scope": "N1 outer L1 execution-domain loss, not production destroy latency/media power/SLO. Healthy synced checkpoint, NOT in-flight metadata-fsync fault.",
+    "four_guests_scope": "Four real KVM guests checked UID/data/boot/filter with8MiB memory touched each, NOT512MiB saturation. Fifth503 then exact durable reclaim. Parent memory.max tightened4KiB only with safe headroom, rejecting Prepare without fallback; Stop/Cleanup/existing Exec continue during drift.",
+    "cold_scope": "Exact unchanged policy/known owner/actual namespace/project quota checked before ordinary uninstrumented daemon. OldDestroyed/key410/all4q0 before reuse, fresh actual guest boot/UID/clean workspace; final entire node subtree/controller gone. No assigned guest restore."
+  },
+  "failed_predecessor": {
+    "source": "8b951bb880cfcbf9cfb5d6115d5d2c56029a9717",
+    "archive_sha256": "fe6fd3da01277a644811aaf70f1d10e53b392d993f6c14708c4e62562561abc0",
+    "raw_report": "kvm-node-budget-node-failed-v1.json",
+    "passed": false,
+    "l1_boots": 0,
+    "attempted_outer_groups": 1,
+    "diagnosis": "Owned launcher strictly required newCPU8/pids256 but Python producer still set oldCPU4/pids128; rejected before QEMU launch. Fix producer, NOT Go guard. No KVM/cold/node runtime acceptance from this failed case. Raw planned resource/limitations fields including QMP wording are not evidence those stages ran.",
+    "cleanup": "Independent exact root/control/parent/attempted outer group/runner absence, read-only. Attempted group is NOT an execution generation."
+  },
+  "related_regressions": {
+    "owner_unlink_pending_directory_commit_l1_boots": 2,
+    "unsynced_partial_copy_l1_boots": 2,
+    "stable_partial_EIO_l1_boots": 1,
+    "genuine_L1_snapshot_cold_l1_boots": 4,
+    "clear_owner_pin_l1_boots": 2,
+    "six_syscall_errno_cold_l1_boots": 4,
+    "native_full_race_count": 3,
+    "native_fixture_race_count": 10,
+    "native_and_fixture_vet": true,
+    "root_python_tests": 72,
+    "actual_cgo0_kernel_exec_filter_count": 3,
+    "darwin_full_race_count": 3,
+    "darwin_vet": true,
+    "new_source_requalification": "Full DEFAULT and quota240/dual-cold/failure submatrices have separately named reports, not historical522 certification. This foundation manifest alone does not attest their completion."
+  },
+  "independent_cleanup": {
+    "passing_scopes": 7,
+    "passing_outer_execution_generations_absent": 17,
+    "failed_scopes": 1,
+    "failed_outer_execution_generations": 0,
+    "failed_attempted_group_absent": 1,
+    "total_fixture_scopes": 8,
+    "total_outer_execution_generations": 17,
+    "read_only_no_cleanup_actions": true,
+    "not_quota_inference_from_deleted_disk": true
+  },
+  "private_data_boundary": "Whitelist15 regular raw members. Exact authenticated audit stdout captured separately. Private L1 receipt, cut receipts, controller/inner consoles, paths/identities, images and credentials excluded. No quota/namespace inference from deleting outer images.",
+  "not_completed": [
+    "Actual schema3 snapshot path and full node-pressure/ancestor/free-space failure matrix; concurrency/permitted copies hardware trace.",
+    "Unique-page attribution/RAM billing, open-loop/fairness/long-duration resource boundedness, bounded operator log/export management.",
+    "Other persistence windows/durable replacement for slow catalog-lock commits; dual-supervisor/physical media loss/secure erase.",
+    "Full M1-M4, operator acceptance, production SLO, PR19merge/mainarchive/Goal completion."
+  ],
+  "files": {
+    "kvm-node-budget-node-v2.json": {
+      "sha256": "9ff6148ffb67ad0437ccf5b793efac1b92a6761bb5e278bd49aff91974bc2903",
+      "bytes": 7575
+    },
+    "kvm-node-budget-owner-v2.json": {
+      "sha256": "fe927a2ad3e06f50dce791100a410d6e66a4e8f4960e1e153df5ce0eb3cf2068",
+      "bytes": 9743
+    },
+    "kvm-node-budget-inflight-v2.json": {
+      "sha256": "69816d355d62d93bd26ef56fae9e627f4b434f9fec718d91ca4e5e4b8767954b",
+      "bytes": 8833
+    },
+    "kvm-node-budget-partial-v2.json": {
+      "sha256": "677757e53c2d84eecaa729c6ee48514c24c0af313a322978c9dd013ab6280cda",
+      "bytes": 8636
+    },
+    "kvm-node-budget-snapshot-v2.json": {
+      "sha256": "b116e71385e0fd5d618056c241e84110eeec9134fd729b15002f00a295e474f7",
+      "bytes": 9264
+    },
+    "kvm-node-budget-clear-v2.json": {
+      "sha256": "d7b1587910dd66dcb5257dbf9e460c268d60ac58a04fb5ff00255d8a09b2b56e",
+      "bytes": 7065
+    },
+    "kvm-node-budget-syscalls-v2.json": {
+      "sha256": "4b83a0ef38eb1796e91697c2ebc48efc247ca0cb89fc947182ed6c5248297ac7",
+      "bytes": 13702
+    },
+    "kvm-node-budget-node-failed-v1.json": {
+      "sha256": "4e385ff15912d53b54706f2af671693b82689e12de8068f765f416915c8eb309",
+      "bytes": 4967
+    },
+    "node-budget-native-race-v2.txt": {
+      "sha256": "9681ae163ba8c5bef8da2acb908192235a70b66803d82391076333f92b867deb",
+      "bytes": 1639
+    },
+    "node-budget-fixture-native-race-v2.txt": {
+      "sha256": "a9d9652a86d490a3aecba7432471ff84f9b5226d2e8b6657f8e263840eb959fe",
+      "bytes": 70
+    },
+    "node-budget-cgo0-kernel-filter-v2.txt": {
+      "sha256": "e4a01480b7091388774ce036601f3ec27d30fa26feec22045207f216f39e0121",
+      "bytes": 846
+    },
+    "node-budget-native-artifacts-v2.txt": {
+      "sha256": "cadbe0b5d3cb868c94e83ae8cb3d6cd8b26fd014b606eede3c7e8778553fc446",
+      "bytes": 482
+    },
+    "node-budget-pipeline-v2.txt": {
+      "sha256": "5ecd36eb135dff41a6c732e891292ce06e8a072bba667a49f8714cf44a905abd",
+      "bytes": 1805
+    },
+    "node-budget-independent-cleanup-v2.txt": {
+      "sha256": "6408417ca4bc0a418b636e4b24783fcec6e1a9dfed8903a3f275c26850dede62",
+      "bytes": 1092
+    },
+    "node-budget-go-equal-darwin-race-v1.txt": {
+      "sha256": "0d1e8e6325de948a9edac4e717b5f791cd8647b7983c816a7a49237f3e021079",
+      "bytes": 1531
+    },
+    "node-budget-failed-independent-cleanup-v1.txt": {
+      "sha256": "181c180b00f9f2ea6bbad480d0ca8edcaf184d0bcd4b56b9f76fac9cab79246b",
+      "bytes": 439
+    }
+  }
+}

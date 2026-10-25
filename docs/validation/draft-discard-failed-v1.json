@@ -1,0 +1,39 @@
+{
+  "actual_l1_boots": 1,
+  "archive_sha256": "fcaaf8bc2cded57c5c78f728817ee3fadb0c9cf6ceeff0b851474cb106ae05c4",
+  "correction_required": "Observe the intentionally stopped window through authenticated controller UDS guest API; preserve recovered-ingress TLS/Stop tail and all budgets",
+  "earlier_hardware_reports_not_resigned": true,
+  "failed_phase": "managed-draft-discard: TLS busy observer invoked after intentionally stopped ingress",
+  "failure_type": "ConnectionRefusedError",
+  "full_case_or_cold_tail_accepted": false,
+  "goal_complete": false,
+  "harness_source": "36a11e3ad0496d19c0eb901f2b867dd8fcdc8953",
+  "independent_cleanup": {
+    "all_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "owned_outer_generations_absent": 1,
+    "read_only": true,
+    "receipt_sha256": "fbe606aebc3c8828304b2956d01d5d2959d30b38055210630a686ee93a50eb1f",
+    "runner_absent": true
+  },
+  "original_terminal": 1,
+  "production_discard_path_not_reported_as_failed": true,
+  "production_ready": false,
+  "raw_sha256": {
+    "work/managed-draft-discard-v1-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8",
+    "work/managed-draft-discard-v1-assets.json": "48b048f41f42a798e96863290ffc2a946c541700b971b371eb2e43dddd7e91ca",
+    "work/managed-draft-discard-v1-private/final-private-console.log": "899c5b294a0e5685de688d95ef8f9069b1b6d0d52bd23066de7c2e4c97e644f4",
+    "work/managed-draft-discard-v1-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+    "work/managed-draft-discard-v1-private/resource-receipt.json": "fbe606aebc3c8828304b2956d01d5d2959d30b38055210630a686ee93a50eb1f",
+    "work/managed-draft-discard-v1-report.json": "fb0f7798384db57a660721aabeb92bafce299cd9dc5ac594309ede1de13a9ff6",
+    "work/managed-draft-discard-v1-root-pure.log": "84659db56808c1cf6d59961e9acee340be04ccc8341f7728289598320622a755",
+    "work/managed-draft-discard-v1.status": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "work/run-managed-draft-discard-v1.sh": "2eb12f8a721a758f04d6a73fdc4bd10158bcc61710fd584dfbbbb98ee0bbfcff"
+  },
+  "root_pure_skipped": 0,
+  "root_pure_tests": 268,
+  "runner_sha256": "2eb12f8a721a758f04d6a73fdc4bd10158bcc61710fd584dfbbbb98ee0bbfcff",
+  "runtime_go_source": "df679bb868f8fbab68b9b7563b9aee5824ea771e",
+  "schema_version": 1,
+  "scope": "FAILED first new draft-discard owned-L1 attempt; not acceptance"
+}

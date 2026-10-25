@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "production_ready": false,
+  "goal_complete": false,
+  "source_revision": "7fc305dcd098e1d39252a29e48eae64cf03fc98b",
+  "source_archive_sha256": "9b99bb7a0190b213f299bc3a559277d2ceecafb0e17e44d5143dcd5ea693d120",
+  "red_source_revision": "191f024d5264747c579b0c2bfa6d0fac74fc9aa2",
+  "red_source_archive_sha256": "4f45f1d8c8c5ca984932a46c91104a7f73bb52beb2ba006381e6afd3416ab231",
+  "red_original_log_sha256": "b5caf127bf253a83508ce8bfd09a4d44f66c1048cb0859c997a5448ea49f9603",
+  "old_d163_actual_readonly_rejected": true,
+  "new_elf_actual_readonly_accepted_count": 3,
+  "old_pin_actual_new_elf_rejection_before_update": true,
+  "new_pin_actual_old_elf_rejection_after_update": true,
+  "new_elf_sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+  "old_elf_sha256": "d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26",
+  "artifacts_sha256": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "xandbox-launch": "26f35a3df792fb4044b559d8dcbd4e74933105281d24c8f0b0666eb53415588e",
+    "fixture": "320109a433802b3d415f2dc1e6b179c60234af81d720999fa4408d18ee9f9c53",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "nine_other_artifacts_byte_equal_to_prior_native": true,
+  "objdump": {
+    "version": 1,
+    "go_toolchain": "go1.27.3",
+    "target": "linux/amd64 static ELF",
+    "exact_elf_sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "actual_objdump_sha256": "1b4776234f51eb43159143fc0f15c3047c0efcfb18c420fa9b05deb71dad31e4",
+    "all_nine_addresses_and_whole_instruction_bytes_match_existing_offsets": true,
+    "points": [
+      {
+        "point": "enter",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+        "address": "0x748012",
+        "opcode": "4889842480000000",
+        "register": "ax",
+        "objdump_asm": "MOVQ AX, 0x80(SP)"
+      },
+      {
+        "point": "selected",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+        "address": "0x748085",
+        "opcode": "4885c0",
+        "register": "ax",
+        "objdump_asm": "TESTQ AX, AX"
+      },
+      {
+        "point": "ok",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+        "address": "0x7480d5",
+        "opcode": "31c0",
+        "register": "ax",
+        "objdump_asm": "XORL AX, AX"
+      },
+      {
+        "point": "cancel",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+        "address": "0x7480f5",
+        "opcode": "4883c470",
+        "register": "ax",
+        "objdump_asm": "ADDQ $0x70, SP"
+      },
+      {
+        "point": "race_release",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+        "address": "0x7480c5",
+        "opcode": "488b442438",
+        "register": "ax",
+        "objdump_asm": "MOVQ 0x38(SP), AX"
+      },
+      {
+        "point": "node_ok",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+        "address": "0x745a35",
+        "opcode": "31c0",
+        "register": "ax",
+        "objdump_asm": "XORL AX, AX"
+      },
+      {
+        "point": "node_reject_release",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+        "address": "0x745a25",
+        "opcode": "488b442418",
+        "register": "ax",
+        "objdump_asm": "MOVQ 0x18(SP), AX"
+      },
+      {
+        "point": "release",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+        "address": "0x751df2",
+        "opcode": "488b01",
+        "register": "cx",
+        "objdump_asm": "MOVQ 0(CX), AX"
+      },
+      {
+        "point": "released",
+        "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+        "address": "0x751dfc",
+        "opcode": "4883c410",
+        "register": "ax",
+        "objdump_asm": "ADDQ $0x10, SP"
+      }
+    ],
+    "live_trace_executed": false
+  },
+  "native_controls": {
+    "toolchain": "go1.27.3 linux/amd64",
+    "full_go_race_count": 3,
+    "full_fixture_race_count": 3,
+    "both_vet_passed": true,
+    "kernel_filter_count": 3,
+    "python_tests": 152,
+    "python_skips": 0,
+    "cross_native_ten_artifacts_equal": true,
+    "runner_absent": true
+  },
+  "native_log_sha256": {
+    "fiveb-calibration-v1.pipeline.log": "2798012d271faf11d1983afe43d6e5e08cd525c5ed72d19732aefbb2a9cc0411",
+    "fiveb-calibration-race-v1.log": "0d856c4ca1f59ead1dc04fb307594c55f7f3b20327273a9f859146526685adcc",
+    "fiveb-calibration-vet-v1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fiveb-calibration-fixture-v1.log": "8822ab38ff8099b1732cccfc4e1b7bbe149462d0672a012149d81e8641068ad0",
+    "fiveb-calibration-fixture-vet-v1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fiveb-calibration-filter-v1.log": "e756a8b5057772907f24e353a783372bf86c75553d0121600d479c3d65d6fa25",
+    "fiveb-calibration-python-v1.log": "a40d85d72b2741ef063034a161e3f55b6eaa9bb8333e1d8c53546a6ccbace0ba",
+    "fiveb-calibration-old-elf-v1.log": "b5caf127bf253a83508ce8bfd09a4d44f66c1048cb0859c997a5448ea49f9603",
+    "fiveb-probe-red-v1.log": "b5caf127bf253a83508ce8bfd09a4d44f66c1048cb0859c997a5448ea49f9603",
+    "fiveb-calibration-native-v1.sha256": "bef386ff483f8539cf6402b2ac986178a9d087c79c9bd585f7f25b96be1fcdfd"
+  },
+  "live_trace_acceptance": false,
+  "limitations": [
+    "Offline ELF read and exact instruction/symbol checks only, never a live tracing/VM/cancellation/pressure claim.",
+    "The new ordinary daemon runtime25/boundary10 and this new fixture live L1 qualification are separately required.",
+    "Historical d163 reports and their verifier sources remain bound to the old ELF; no historical rows retagged.",
+    "Raw private console, resource identities, receipts and runtime state are not published."
+  ]
+}

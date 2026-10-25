@@ -1,0 +1,28 @@
+{
+  "actually_executed_read_only": true,
+  "current_runner_terminal_exit": 0,
+  "current_and_previous_runner_absent": true,
+  "no_supplemental_cleanup": true,
+  "scopes": [
+    {
+      "mode": "pre",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "mode": "post",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "mode": "tls",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    },
+    {
+      "mode": "budget",
+      "outer_generations_absent": 2,
+      "exact_root_control_parent_and_all_generations_absent": true
+    }
+  ]
+}

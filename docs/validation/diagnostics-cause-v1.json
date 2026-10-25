@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+  "source_archive_sha256": "15e2d63d628778f85481871b96742d702d98e8c76ff2a7fd9ff4eda6dd34f325",
+  "production_ready": false,
+  "goal_complete": false,
+  "artifacts_sha256": {
+    "sandboxd": "d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "fixture": "98ae70a957dafa8074d7d0e75f9f13cb429b99a37f88cd260ddf87078d4e8af7",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "gates": {
+    "linux_go": "1.27.3",
+    "full_race_repetitions": 3,
+    "vet": true,
+    "fixture_race_repetitions": 10,
+    "five_fixed_regression_tests_race_repetitions": 100,
+    "kernel_quota_filter_repetitions": 3,
+    "root_python_tests": 116,
+    "root_python_skipped": 0,
+    "process_suites": 7,
+    "native_cross_equal_artifacts": 9,
+    "darwin_full_race_repetitions": 3,
+    "darwin_vet": true
+  },
+  "hardware": {
+    "nested_scopes": [
+      {
+        "case": "negative",
+        "l1_boots": 4,
+        "reported_cases": 3,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "260ddb7e5e01d1c125231cbb715e0f0570e5a42b926d549b8fd450beeb4999cf"
+      },
+      {
+        "case": "unenforced",
+        "l1_boots": 1,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "2df00ea06961153e3b47af2fa82ab8c09d8c4f38b941147e1c9615a3fe1e86a3"
+      },
+      {
+        "case": "eio",
+        "l1_boots": 2,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "0dedb7cd86daa2bcfd26abf184c54de4a18ceff5c0709ab3957ceb6a195d71c9"
+      },
+      {
+        "case": "partial",
+        "l1_boots": 1,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "809c530e3ccc4d26b53560066da79f27b100a13f937e76e64a0dcdae3d9f6711"
+      },
+      {
+        "case": "budget",
+        "l1_boots": 2,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "9080a80091738ab03fdec09b70936e22a0cbfdce110788e91070761ab561e33b"
+      },
+      {
+        "case": "prepare",
+        "l1_boots": 2,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "57221788d4c79f5901765354cec9d40a66b857ca00093e3460fd9efc476d5729"
+      },
+      {
+        "case": "data",
+        "l1_boots": 2,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "0ea00a64ca1b528fba3dda13e234bd1ae433b7e41507f52a63d599ac04fc8b1c"
+      },
+      {
+        "case": "header",
+        "l1_boots": 2,
+        "reported_cases": 1,
+        "passed": true,
+        "independent_exact_resource_absence_checked": true,
+        "report_sha256": "2f33718fe122f1f63a8352eced9dd63312c5c53f31d9af4a3040cfff4c737984"
+      }
+    ],
+    "nested_l1_boots": 16,
+    "storage_scopes": [
+      {
+        "case": "enospc",
+        "fault_recovery_pairs": 4,
+        "experimental_host_stop_guard_ms": 1500,
+        "maximum_observed_host_stop_ms": 43.778,
+        "closed_diagnostic_visibility_counts": {
+          "closed_errno_stderr": 0,
+          "no_inherited_output": 4
+        },
+        "actual_errno_probed_before_and_after_restart": true,
+        "original_authority_inode_mode_bytes_unchanged": true,
+        "same_binary_config_recovery_after_only_fault_release": true,
+        "causal_inference_not_a_durable_error_audit": true,
+        "independent_exact_resources_and_loop_binding_absence_checked": true,
+        "report_sha256": "6be5417bbb2abaa9bf4623b22decae748a823d448a51917bc931797ca2161079"
+      },
+      {
+        "case": "readonly",
+        "fault_recovery_pairs": 2,
+        "experimental_host_stop_guard_ms": 1500,
+        "maximum_observed_host_stop_ms": 49.457,
+        "closed_diagnostic_visibility_counts": {
+          "closed_errno_stderr": 0,
+          "no_inherited_output": 2
+        },
+        "actual_errno_probed_before_and_after_restart": true,
+        "original_authority_inode_mode_bytes_unchanged": true,
+        "same_binary_config_recovery_after_only_fault_release": true,
+        "causal_inference_not_a_durable_error_audit": true,
+        "independent_exact_resources_and_loop_binding_absence_checked": true,
+        "report_sha256": "d94739514d1ff6cd54136d9c39f30db0c28cb39798e3d9dfc95677d3a4baca3b"
+      },
+      {
+        "case": "io-enospc",
+        "fault_recovery_pairs": 4,
+        "experimental_host_stop_guard_ms": 1500,
+        "maximum_observed_host_stop_ms": 47.737,
+        "closed_diagnostic_visibility_counts": {
+          "closed_errno_stderr": 0,
+          "no_inherited_output": 4
+        },
+        "actual_errno_probed_before_and_after_restart": true,
+        "original_authority_inode_mode_bytes_unchanged": true,
+        "same_binary_config_recovery_after_only_fault_release": true,
+        "causal_inference_not_a_durable_error_audit": true,
+        "independent_exact_resources_and_loop_binding_absence_checked": true,
+        "report_sha256": "78cbdee1c60240ae2b253746cb1bbd233ad34369d02a06c6f513345b20efd508"
+      },
+      {
+        "case": "io-readonly",
+        "fault_recovery_pairs": 2,
+        "experimental_host_stop_guard_ms": 1500,
+        "maximum_observed_host_stop_ms": 42.13,
+        "closed_diagnostic_visibility_counts": {
+          "closed_errno_stderr": 0,
+          "no_inherited_output": 2
+        },
+        "actual_errno_probed_before_and_after_restart": true,
+        "original_authority_inode_mode_bytes_unchanged": true,
+        "same_binary_config_recovery_after_only_fault_release": true,
+        "causal_inference_not_a_durable_error_audit": true,
+        "independent_exact_resources_and_loop_binding_absence_checked": true,
+        "report_sha256": "7b87295c945a896651992de277e5f2b9b3999e5a986e8375c2bc2a0d516f6806"
+      }
+    ],
+    "real_kernel_syncfs_eio_and_preopened_no_reconnect_metric_observed": true,
+    "partial_copy_write_eio_is_test_injection_not_physical_fault": true,
+    "edquot_process_local_exact1_on_each_first_and_restarted_case": true,
+    "log_data_and_header_windows_observed_with_other80_counter": true,
+    "stop_and_full_reclaim_observed_separately": true,
+    "all_three_test_runners_reaped": true,
+    "supplemental_cleanup_used": false
+  },
+  "prepare_probe_calibration": {
+    "old_daemon_sha256": "29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c",
+    "new_daemon_sha256": "d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26",
+    "whole_symbols": 3,
+    "normalized_instructions": 132,
+    "instruction_entry_probes": 9,
+    "source_relative_lines_and_instruction_lengths_matched": true,
+    "driver_source_anchor_delta_lines": 1,
+    "actual_new_elf_calibration_and_cancel_trace_passed": true
+  },
+  "raw_provenance": {
+    "hardware_15_files_archive_sha256": "672aafbed44a86802f3bd60db5e3cfcccc7b10496baf82f7c6be12dbf29d83b0",
+    "native_12_files_archive_sha256": "8999c3d09051744f6068bf25c862f607594d3b8ca665430df04bff36ff9b1d4c",
+    "preserved_failed_native_7_files_archive_sha256": "f417678929630a2cacb46bb940c3f0e04ae57112744e0dec0ab03938c64601f6",
+    "raw_material_kept_private": true,
+    "publisher_rejected_known_report_mutants": 72
+  },
+  "preserved_failures": [
+    {
+      "source_revision": "cec5bca3311ded16de7d7857df49648bc108fda3",
+      "stage": "native_fixture_tests",
+      "hardware_started": false,
+      "correction": "Accept closed-pipe deadline result while still requiring peer EOF; check full fixed argv including metrics."
+    },
+    {
+      "source_revision": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "stage": "post_native_asset_validation",
+      "hardware_started": false,
+      "correction": "An accidental v10-to-v20 script path rename was rejected before KVM; use the original SHA-checked v10 asset without source or budget changes."
+    }
+  ],
+  "source_ci": [
+    {
+      "id": 40033686557,
+      "event": "pull_request",
+      "head_sha": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "successful_jobs": 5,
+      "url": "https://github.com/123123213weqw/Xandbox/actions/runs/40033686557"
+    },
+    {
+      "id": 40033682366,
+      "event": "push",
+      "head_sha": "b462946facfc9619b1ab9e79841018e5ef572b28",
+      "successful_jobs": 5,
+      "url": "https://github.com/123123213weqw/Xandbox/actions/runs/40033682366"
+    }
+  ],
+  "limitations": [
+    "This is a finite cause-class regression set, not complete production qualification.",
+    "Counters are independent process-local producer observations before enqueue, not durable records, accepted-operation acknowledgments or root-cause certificates.",
+    "Faulted restart cause is an inference from controlled errno probes, unchanged authority and same-input recovery, not a persisted error audit.",
+    "A notification-held syscall and an injected WRITE errno are not physical media or filesystem-D fault evidence.",
+    "N1 per-case host-stop guards and separate reclaim observations are not a latency SLO or demonstrated speedup.",
+    "Full DEFAULT, quota240, dual-cold, remaining failure, operator/session, TLS+metadata and operational acceptance remain incomplete.",
+    "No historical manifest was retagged to certify the new ordinary ELF."
+  ]
+}

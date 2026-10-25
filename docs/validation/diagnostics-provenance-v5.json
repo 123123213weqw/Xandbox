@@ -1,0 +1,475 @@
+{
+  "status": "finite_two_real_logger_fsync_windows_and_four_shared_node_regressions_passed_not_full_service_qualification",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_m4": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source_revision": "0482ce2bb87d164baf8edd111a4a4a1e6b03f2e6",
+  "source_archive": {
+    "name": "diagnostics-held-source-v5.tar.gz",
+    "sha256": "e2aba01a19135fe8665df2ae1c1d2c05639e0fdb2e9fc1f180401af5a4d5e6c4",
+    "bytes": 1988478
+  },
+  "changed_inputs": {
+    "Makefile": {
+      "sha256": "00766052adb5ad1f2c5bc9042b7926d0c810c6a3f58acb44024ddc4b9b1f697f",
+      "bytes": 1505
+    },
+    "README.md": {
+      "sha256": "3a57f1de29800af7dd8eee9ba22027f16d132fc6ea88e268df4f1a99a75056e4",
+      "bytes": 27038
+    },
+    "cmd/sandboxd/diagnostics_test.go": {
+      "sha256": "e38b83b140d6f90985824925a0059f071f5f90ca0e3e0676b9f88ead9621de5d",
+      "bytes": 1023
+    },
+    "cmd/sandboxd/main.go": {
+      "sha256": "1b019223987493523aac5e7b2b110063328bf99cf6ec0943086b963a844fbb1f",
+      "bytes": 14693
+    },
+    "cmd/xandbox-host-fixture/node_diagnostics_linux.go": {
+      "sha256": "dcdd30fd8f672ec0f0d24519540e1a37f900669df6ed896130c21adc232aa78e",
+      "bytes": 26035
+    },
+    "cmd/xandbox-host-fixture/node_diagnostics_linux_test.go": {
+      "sha256": "65ed161f0f8f0bc96e4e334d66185f75d54fb1246b52a96af977b9366d620a18",
+      "bytes": 8895
+    },
+    "cmd/xandbox-host-fixture/node_diagnostics_notify_linux.go": {
+      "sha256": "d018514d28890cd4327075858caf05178f8fb258e80208c8ffa6bd8b9b77799d",
+      "bytes": 13371
+    },
+    "cmd/xandbox-host-fixture/node_linux.go": {
+      "sha256": "2ee4eee9330bfa1451ead3d83d7d6c7d6db6f73c94e6ad6e9b2ae1af9dab0920",
+      "bytes": 27847
+    },
+    "cmd/xandbox-host-fixture/node_operator_shutdown_linux.go": {
+      "sha256": "105710c43cd938e1ce2621ee1de722faac64bf25167670d8bd3d395ff17425c3",
+      "bytes": 15798
+    },
+    "cmd/xandbox-host-fixture/node_operator_shutdown_linux_test.go": {
+      "sha256": "5b4f437ed17747b512776a68fafa7efeaba17d7a3246fc82481a551d0e4adc38",
+      "bytes": 6289
+    },
+    "cmd/xandbox-host-fixture/node_operator_shutdown_notify_linux.go": {
+      "sha256": "0172a92d18082c715b9b7762353b17b94dfdb0a69bea549a162e7e0c91c1b28e",
+      "bytes": 9721
+    },
+    "cmd/xandbox-host-fixture/node_prepare_trace_linux.go": {
+      "sha256": "7efd1169017c224a9a11a9ea5566e14fa92623bcb8facd8b29c4bac7f676c75f",
+      "bytes": 19870
+    },
+    "cmd/xandbox-node/main.go": {
+      "sha256": "7a29e326b070ccee2322720c18433e9e71cb0138a1a8bfe9793e56b90255ac73",
+      "bytes": 3608
+    },
+    "cmd/xandbox-node/main_test.go": {
+      "sha256": "cc5b1100168bb83acf6a8bfa40bb5b0a1c26ed9ec201add8cf1c5d10f4b0fdca",
+      "bytes": 4458
+    },
+    "docs/DIAGNOSTICS.md": {
+      "sha256": "944aea4f7f0525351680496e9a9165e6bbbaf86c658a203d1e14d73ed9cc357d",
+      "bytes": 5718
+    },
+    "internal/diagnostics/event.go": {
+      "sha256": "b4688717254a83a24f9c42ec117eeeaba6d0eaad18c3688dba3ca022f338b064",
+      "bytes": 7373
+    },
+    "internal/diagnostics/event_test.go": {
+      "sha256": "ad7277e536a06a1cf6411fc979c8c33db6355738e25320f3084ef7e7d32aea35",
+      "bytes": 5550
+    },
+    "internal/diagnostics/ring_other.go": {
+      "sha256": "700e7950fd585d30038345f107bc6ba2317f5e214b7eae4549aa5b5473219a60",
+      "bytes": 255
+    },
+    "internal/diagnostics/ring_unix.go": {
+      "sha256": "5f2ca10309acf6ad980270a05d85ea4a8922b9e213664bdcb49927ec84ebfa72",
+      "bytes": 9360
+    },
+    "internal/diagnostics/ring_unix_test.go": {
+      "sha256": "ea722e486a0df6ed99571e96c81c7dddaa444d6f922ffacd370e9ccc1ae53464",
+      "bytes": 9979
+    },
+    "internal/telemetry/registry.go": {
+      "sha256": "1a3fc81b1dc6299baa876be35fd6af99da01d97ff7c4e5c00f9810892c7f5901",
+      "bytes": 4833
+    },
+    "internal/telemetry/registry_test.go": {
+      "sha256": "5016a72c5b7efd649a5183c0b89e4b6b834e02d3471dbb196fe4290afc61ac09",
+      "bytes": 3178
+    },
+    "scripts/diagnostics_smoke.py": {
+      "sha256": "f177067f78a38fa3796ed8102b601ceab91138eb5b22f9a26debdd4a06fe25ea",
+      "bytes": 9211
+    },
+    "scripts/kvm_nested_host.py": {
+      "sha256": "63ade304131b83e12b785f487dadc1de5e8bb3ea871bed9f390da1dd1f53f498",
+      "bytes": 116442
+    },
+    "scripts/test_kvm_diagnostics.py": {
+      "sha256": "7711e1f57611cb092b855c2515e5b513b2fcd1fc330d59095cb3ad72d606da8d",
+      "bytes": 3390
+    },
+    "scripts/test_kvm_node_prepare_cancel.py": {
+      "sha256": "a8278c59af27eded86cee7e0bec3a2f2084418e831f7223c6707621b19b82353",
+      "bytes": 4219
+    },
+    "scripts/test_kvm_node_snapshot.py": {
+      "sha256": "d608cdd5124b7a449872e945dad2dcbc65e04e32bd202ffa50cacc8781178003",
+      "bytes": 4931
+    },
+    "go.mod": {
+      "sha256": "f71439d7c2332632fc2c35b694ff6b98a1a0af35307517fd1936f804c87a2810",
+      "bytes": 261
+    },
+    "go.sum": {
+      "sha256": "eae41579a1200dd75cc394a61944d2255153c015e23227fde325e8c5b700d2dd",
+      "bytes": 968
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "2fc057fcff142bb51f4baf75ad655c953e29315f614146a9f6347b9dd6b72f22",
+      "bytes": 4831
+    }
+  },
+  "changed_production_inputs": {
+    "cmd/sandboxd/main.go": {
+      "sha256": "1b019223987493523aac5e7b2b110063328bf99cf6ec0943086b963a844fbb1f",
+      "bytes": 14693
+    },
+    "cmd/xandbox-node/main.go": {
+      "sha256": "7a29e326b070ccee2322720c18433e9e71cb0138a1a8bfe9793e56b90255ac73",
+      "bytes": 3608
+    },
+    "internal/diagnostics/event.go": {
+      "sha256": "b4688717254a83a24f9c42ec117eeeaba6d0eaad18c3688dba3ca022f338b064",
+      "bytes": 7373
+    },
+    "internal/diagnostics/ring_other.go": {
+      "sha256": "700e7950fd585d30038345f107bc6ba2317f5e214b7eae4549aa5b5473219a60",
+      "bytes": 255
+    },
+    "internal/diagnostics/ring_unix.go": {
+      "sha256": "5f2ca10309acf6ad980270a05d85ea4a8922b9e213664bdcb49927ec84ebfa72",
+      "bytes": 9360
+    },
+    "internal/telemetry/registry.go": {
+      "sha256": "1a3fc81b1dc6299baa876be35fd6af99da01d97ff7c4e5c00f9810892c7f5901",
+      "bytes": 4833
+    }
+  },
+  "go_mod_sum_workflow_unchanged": true,
+  "publication_documents": {
+    "README.md": {
+      "sha256": "49115cdd8a8de46c24166aec1e669257257ece6e462ddbabda19a813913536d1",
+      "bytes": 27090
+    },
+    "docs/DIAGNOSTICS.md": {
+      "sha256": "79c85a65121a9207f3fab9d2d40c8fbb4f67a3234378a887bad6daafe512d0b4",
+      "bytes": 10441
+    },
+    "docs/PRODUCTION.md": {
+      "sha256": "ecfd3e8c7273693967f2c4ac24a8e6a21377896818058ff26cb57d92572b7f18",
+      "bytes": 16461
+    }
+  },
+  "ordinary_artifacts_same_as_prior6f_not_old_public4ee_555b": true,
+  "native_artifacts_sha256": {
+    "sandboxd": "29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c",
+    "xandbox-template": "9eb842a477f84e039f57149f4e39291984dfa6f693eaf9fe10e319d696dd8416",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "4579a79565dd8336abfb5c486c4aa03654b529ebbde3f9afa74e3e00ebc63232",
+    "xandbox-gateway": "46d3f9a57cab373761f72e1d339dbf9f4dbb91dcb5281e5f4f499857f63c7aeb",
+    "fixture": "9ecc86e32dfbc48d8b388e2bdae71e0c2f024a6c5e9aae625e73ea5cac708922",
+    "builder": "4d5d4f6e115b90a5c66f158fbc6996a0b714ac84ddb5e9fe80ad36a685f1608d",
+    "firecracker.test": "8fe091449ea3e4f41964d8b1f26992dd5cb1594d473ef58129590a978d7a61c4",
+    "session.test": "96238f0d9519469db4381d0db01916b4ca5468b7751c6ddb615fe094586fa04b"
+  },
+  "fixed_logical_budgets": {
+    "queue": 64,
+    "retained_records": 128,
+    "record_bytes": 128,
+    "ring_logical_bytes": 16768,
+    "writer_inflight_records": 1,
+    "shutdown_wait_ms": 250,
+    "physical_allocation_quota_or_syscall_deadline": false
+  },
+  "actual_frozen_gates": {
+    "source_revision": "0482ce2bb87d164baf8edd111a4a4a1e6b03f2e6",
+    "production_ready": false,
+    "linux_full_race_repetitions": 3,
+    "linux_vet": true,
+    "fixture_race_repetitions": 10,
+    "fixture_vet": true,
+    "specific_closed_session_baseline_race_repetitions": 100,
+    "root_python_tests": 114,
+    "root_python_skips": 0,
+    "cgo0_kernel_quota_repetitions": 3,
+    "mock_process_suites": 7,
+    "actual_mock_full_undrained_pipe_restarts": 45,
+    "independent_cross_native_artifacts_equal": 9,
+    "native_artifacts_sha256": {
+      "sandboxd": "29fe145ac4916603fbfcbd9d1cce5d2930a2a20b3305a425acd0b1593b9af93c",
+      "xandbox-template": "9eb842a477f84e039f57149f4e39291984dfa6f693eaf9fe10e319d696dd8416",
+      "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "xandbox-node": "4579a79565dd8336abfb5c486c4aa03654b529ebbde3f9afa74e3e00ebc63232",
+      "xandbox-gateway": "46d3f9a57cab373761f72e1d339dbf9f4dbb91dcb5281e5f4f499857f63c7aeb",
+      "fixture": "9ecc86e32dfbc48d8b388e2bdae71e0c2f024a6c5e9aae625e73ea5cac708922",
+      "builder": "4d5d4f6e115b90a5c66f158fbc6996a0b714ac84ddb5e9fe80ad36a685f1608d",
+      "firecracker.test": "8fe091449ea3e4f41964d8b1f26992dd5cb1594d473ef58129590a978d7a61c4",
+      "session.test": "96238f0d9519469db4381d0db01916b4ca5468b7751c6ddb615fe094586fa04b"
+    },
+    "native_toolchain": "go1.27.3 linux/amd64",
+    "trimpath": true,
+    "buildvcs": false,
+    "hardware_scopes": 6,
+    "outer_boots": 12,
+    "full_changed_elf_default_io_quota240_tls_trace_or_goal_acceptance": false
+  },
+  "new_actual_hardware": {
+    "scopes": 6,
+    "outer_boots": 12,
+    "logger_fsync_fault_scopes": 2,
+    "normal_writer_shared_node_regression_scopes": 4,
+    "failed_hardware_runs_current_source": 0,
+    "earlier_failed_hardware_and_unit_runs_preserved": true
+  },
+  "pressure_sample_boundary": "Before SIGTERM:80 actual failed Prepare calls plus startup event; enqueued66, written1, queued64, dropped15. One failed record in flight. Later shutdown drops are not asserted equal to this earlier sample. Queue acceptance and visible header are not audit durability ACKs.",
+  "cold_visibility_boundary": "Record-data never writes header5, so cold committed prefix4. Header-publish has completed checked data Sync, but selected header Sync is unACKed: cold may validly observe4 or5. Actual current experiment observed5. Ordinary unfiltered validated writer continues without reset/repair.",
+  "fault_boundary": "Only source-bound ordinary root TGID/start/ELF inode/control; fixed FSYNC+EXIT_GROUP inherited test observer. Target ring FSYNC receives no response, only actual EXIT_GROUP1 is continued. Known process really reaped, both IDs ENOENT with listener still open. Not a filesystem D, media fault or security-policy implementation.",
+  "lifecycle_boundary": "Two real guests: raw accepted writer progresses and session route stays intact while ring FSYNC is held and queue full. Ordinary Delete/revoke stops execution and separately durable private GC/quota0 before log resolution. Inputs change only owned L1 kernel/initrd/workspace modes, restore original0444/unchanged bytes; no authority patch. Cleanup/receipt may sync filesystem, not an unsynced-media cut.",
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "current_runner_terminal_exit": 0,
+    "current_and_three_previous_runners_absent": true,
+    "no_supplemental_cleanup": true,
+    "scopes": [
+      {
+        "mode": "data",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "header",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "shutdown",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "ticket",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "pre",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "post",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      }
+    ]
+  },
+  "preserved_failures": {
+    "first_hardware_source": "d3e222354d4744d87af32ddbfb0b8e535bb11fd4",
+    "first_hardware_archive_sha256": "a8b1658777180a14a7d3686bce07a61fc5ecdeb17e8508de66668b31cca649ae",
+    "first_hardware_accepted": false,
+    "first_hardware_exit": 1,
+    "first_hardware_exact_one_generation_absent_no_supplemental_cleanup": true,
+    "first_failure": "Test compared a pre-SIGTERM authority digest to the later contender, incorrectly attributing normal closed-session shutdown UpdatedAt rewrite to that separate refused process.",
+    "correction_commit": "06b33b0fb77d5865dd65b4e80f20b036d4e88b44",
+    "subsequent_unit_source": "86a36d1f9e202132445e59e5f63d0a89e49b7b8f",
+    "subsequent_unit_archive_sha256": "ded7217c8d82a2365679fc944eabe7c7c591227b7a4993c7d19e0733f3e52a5a",
+    "subsequent_unit_failed_before_any_kvm": true,
+    "unit_failure": "The new regression used startup Load concurrently with a live session writer; startup orphan collection raced the unit temporary file.",
+    "unit_correction_commit": "0482ce2bb87d164baf8edd111a4a4a1e6b03f2e6",
+    "unit_correction": "Read only the exact named session file, without startup Load, then compare the completed normal final write.",
+    "current_native_regression_repetitions": 100,
+    "hold_budget_ms_unchanged": 20000,
+    "queue_capacity_unchanged": 64,
+    "producer_count_current": 80,
+    "producer_count_not_reduced_after_first_hardware_observation": true,
+    "no_failed_run_retagged_as_passing": true
+  },
+  "private_raw_archive": {
+    "name": "diagnostics-held-reports-v5.tar.gz",
+    "sha256": "f3666167ce9ce24c81895adf5f98ebd4e977fb15bcfbd02b5c86716190278c02",
+    "bytes": 12408,
+    "regular_members": 18
+  },
+  "private_raw_members": {
+    "kvm-diagnostics-held-data-v5.json": {
+      "sha256": "49d930a520a4d0e695bec186073f7119c7dd58b5e6a27939ec0a4759c6786264",
+      "bytes": 9221
+    },
+    "kvm-diagnostics-held-header-v5.json": {
+      "sha256": "7e7ca232e83b9db035b9009ce3e7bf5de9b88aae2daf4c87087479b07d16adc6",
+      "bytes": 9239
+    },
+    "kvm-diagnostics-held-shutdown-v5.json": {
+      "sha256": "d790661da26a7b54263d7e192fffc67cf743fdfcfdaca5390c6305e5e0db7499",
+      "bytes": 8509
+    },
+    "kvm-diagnostics-held-ticket-v5.json": {
+      "sha256": "cc1000be1a20e86bb707a3df7620d60c7512e1eac081664f59c2ed06bb716b07",
+      "bytes": 7997
+    },
+    "kvm-diagnostics-held-pre-v5.json": {
+      "sha256": "aceaaace5478252f93bbad45f5f75e88079c2b8c56ecfdb60008225d28cdb931",
+      "bytes": 8835
+    },
+    "kvm-diagnostics-held-post-v5.json": {
+      "sha256": "1533bcac788ddf3fdc8ba5e17f72655bf8d7680752cb2569ea25175c8c572921",
+      "bytes": 8848
+    },
+    "diagnostics-held-race-v5.log": {
+      "sha256": "3eddb665896b6e750c04608b208c1a63bd84295b1daa7e8d753b8b6a5cee54f5",
+      "bytes": 1970
+    },
+    "diagnostics-held-vet-v5.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "diagnostics-held-baseline-v5.log": {
+      "sha256": "bad2cd8b7a5c7bdd482c0a1c74bed60f2ed870f88370235262ec16ca04c0adc7",
+      "bytes": 70
+    },
+    "diagnostics-held-fixture-v5.log": {
+      "sha256": "69948f85eadf6f233f76d2852ffc72f43be74301f7c26e848e0bfa5e13dcce06",
+      "bytes": 70
+    },
+    "diagnostics-held-fixture-vet-v5.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "diagnostics-held-filter-v5.log": {
+      "sha256": "e4a01480b7091388774ce036601f3ec27d30fa26feec22045207f216f39e0121",
+      "bytes": 846
+    },
+    "diagnostics-held-python-v5.log": {
+      "sha256": "f4ac6274d0d857d2a9b91447bda2263826d00cfd42024cd42adf919433d1ecd4",
+      "bytes": 214
+    },
+    "diagnostics-held-smoke-v5.log": {
+      "sha256": "d620433120e91d7d5184d87dbf6bb6a6027986fee4096c18155deb2685d107bd",
+      "bytes": 7634
+    },
+    "diagnostics-held-v5.status": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "diagnostics-held-v5.pipeline.log": {
+      "sha256": "6166b18f668a1696922d6a7e7f19beefb746a0d0a6125e0a424a7c0eed075a95",
+      "bytes": 1424
+    },
+    "diagnostics-held-artifacts-v5.sha256": {
+      "sha256": "bd3d80ea851120f5ea1daa517160c6aae8d9377cbf217c76bed17483dfc314b4",
+      "bytes": 710
+    },
+    "run-diagnostics-held-v5.sh": {
+      "sha256": "eaa3b079dc4f5985edb21a040756175416b3c9e50d8137fca4bcead7f8f37c83",
+      "bytes": 5042
+    }
+  },
+  "offline_verifier": {
+    "actually_executed": true,
+    "negative_mutations_rejected": 130,
+    "script_sha256": "1e63a24b06979461b4dcaf8c2a87081dc80a883a7b716b9d072969e3c89d6675",
+    "source_native_cross_archives_gates_resources_types_privacy_and_history_bound": true
+  },
+  "unchanged_historical_manifests": {
+    "runtime4ee-provenance-v1.json": {
+      "sha256": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+      "bytes": 19942
+    },
+    "node-budget-provenance-v2.json": {
+      "sha256": "3631506494adc4ec7ffae2db915b2205d9b5940d962bef7f06453b2f5875de5d",
+      "bytes": 12566
+    },
+    "operator-store-provenance-v1.json": {
+      "sha256": "0d6edce5036415afd72402afc6247c821b9938cf5ce097f9b8e68f6426eb200e",
+      "bytes": 8736
+    },
+    "node-operator-provenance-v4b.json": {
+      "sha256": "239715994379cc7940a869374b7057ffd8353123212c20a21191355bb156a5e8",
+      "bytes": 13841
+    },
+    "session-ticket-provenance-v2.json": {
+      "sha256": "ac87bf851705024898455d63ede87784016ad09f49d2039519c8c0266522c01d",
+      "bytes": 14221
+    },
+    "operator-shutdown-provenance-v3.json": {
+      "sha256": "028d911010f71752c22bc75cf37476c90a02d0a3cedcc4fc5ee9974ff2276170",
+      "bytes": 17626
+    },
+    "tls-gateway-provenance-v3.json": {
+      "sha256": "d9eb8a913cef6c282d31c3b7b5a26b11fdea29ee68595ace8d2adf4ba205237a",
+      "bytes": 25781
+    },
+    "tls-gateway-bootstrap-provenance-v4.json": {
+      "sha256": "508b104439081029e67a2a0478c190b643d0085ba533036aac98b7e942d5609e",
+      "bytes": 13509
+    },
+    "tls-policy-provenance-v1.json": {
+      "sha256": "667c3ffd13310144847883cf8a306fe0e6b156252d3ed6e5fe98ab0bd5b5eb62",
+      "bytes": 16892
+    },
+    "policy-metadata-provenance-v1.json": {
+      "sha256": "e3b1b66fc2fb367a119efcfcba58aee573127f9858aea67ded2002ad2f458bc5",
+      "bytes": 20336
+    }
+  },
+  "limitations": [
+    "Best effort bounded diagnostics, NOT durable per-tenant operation audit, reliable billing/security authority, global disk/RAM quota or an fsync cancellation guarantee.",
+    "Six finite owned-L1 cases, N1 per selected window, separate timing origins and sampling/readback; no open-loop/fairness/saturation/percentile or production SLO claim.",
+    "Current29fe daemon/template9eb8/node4579/gateway46d3/builder4d5d still need full DEFAULT/IO/quota240/dual-cold/failure/actual prepare trace/TLS+metadata requalification. Old4ee/555b reports do not certify these new ELFs.",
+    "Legacy negative tests parsing raw stderr need closed cause-specific observations or independent actual fault/state proof, without restoring raw error leakage or accepting unrelated failures.",
+    "Reliable audit, operator/systemd/recovery, PKI/backend authority lifecycle, resource/RAM pressure, long open-loop load, backups/upgrades/rollback and the remaining full Goal remain incomplete. PR stays DRAFT."
+  ],
+  "publication": {
+    "six_hardware_reports_copied_byte_exact": true,
+    "raw_archives_and_console_keys_receipts_images_not_public": true,
+    "no_runtime_ids_paths_or_credentials_exported": true
+  },
+  "public_inputs": {
+    "kvm-diagnostics-data-v5.json": {
+      "sha256": "49d930a520a4d0e695bec186073f7119c7dd58b5e6a27939ec0a4759c6786264",
+      "bytes": 9221
+    },
+    "kvm-diagnostics-header-v5.json": {
+      "sha256": "7e7ca232e83b9db035b9009ce3e7bf5de9b88aae2daf4c87087479b07d16adc6",
+      "bytes": 9239
+    },
+    "kvm-diagnostics-shutdown-v5.json": {
+      "sha256": "d790661da26a7b54263d7e192fffc67cf743fdfcfdaca5390c6305e5e0db7499",
+      "bytes": 8509
+    },
+    "kvm-diagnostics-ticket-v5.json": {
+      "sha256": "cc1000be1a20e86bb707a3df7620d60c7512e1eac081664f59c2ed06bb716b07",
+      "bytes": 7997
+    },
+    "kvm-diagnostics-pre-v5.json": {
+      "sha256": "aceaaace5478252f93bbad45f5f75e88079c2b8c56ecfdb60008225d28cdb931",
+      "bytes": 8835
+    },
+    "kvm-diagnostics-post-v5.json": {
+      "sha256": "1533bcac788ddf3fdc8ba5e17f72655bf8d7680752cb2569ea25175c8c572921",
+      "bytes": 8848
+    },
+    "diagnostics-native-gates-v5.json": {
+      "sha256": "3e7609c0917a40619f13fe728a939bbcf92aca959fffd72eac47b1b78e7ced19",
+      "bytes": 1526
+    },
+    "diagnostics-preserved-failures-v5.json": {
+      "sha256": "c9887a5489c3e3a373934edfbb91778577df51068e6b9f9d25a84b612976bae2",
+      "bytes": 1437
+    }
+  }
+}

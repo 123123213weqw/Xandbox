@@ -1,0 +1,16 @@
+{
+  "kind": "offline_verifier_correction_not_hardware_failure",
+  "exception": "KeyError: quota_charge_after_cold_boot_bytes",
+  "initial_verifier_sha256": "9380b687f3af42ef8378acf6ce6656d2699a81152342cc2803701fa2022a29e1",
+  "initial_stdout_sha256": "33e00b0017ac475fb6cb0adcaefbad1012a6c92a9070956a708e848d350032f9",
+  "cause": "Private verifier applied live-owner cold fields to quota state-IO hang cases. Frozen fixture first resumes mapper, waits actual Destroyed, checks quota all clear, and saves Phase destroyed receipt; cold recovery correctly has no live charge/PID fields. EIO cases retain exact owner until cold and still require recovered-charge checks.",
+  "correction": "Validate live pre-fault charge hard bounds/shape, require hang completed allclear and absence of fabricated live recovery fields; retain cold charge/receipt/identity validation for live/EIO cases.",
+  "source_and_hardware_acceptance_unchanged": true,
+  "raw_reports_unchanged": true,
+  "hardware_rerun": false,
+  "hardware_runner_exit_status": 0,
+  "additional_live_negative_tests": 8,
+  "predeclared_allocation_negative_tests_retained": 136,
+  "not_physical_failure_or_false_hardware_predecessor": true,
+  "corrected_verifier_sha256": "ff18f45e5131eed490939d3c5ad95550cb3fae4e056bdafe39c81f9eae69beb8"
+}

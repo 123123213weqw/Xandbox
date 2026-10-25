@@ -1,0 +1,240 @@
+{
+  "status": "PENDING full quota-switch/cold acceptance; frozen599a LOAD phase passed240 but WHOLE PROFILE FALSE",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "latest_observed_runtime_source": "599a6de3cd4ff759ed6cfbb84f020689fac2cb77",
+  "latest_observed_whole_profile_passed": false,
+  "frozen_next_source": "3f9c4b07e85f756c15b721bbd3554ffadbd09ddc",
+  "frozen_next_source_archive_sha256": "56f4084ee7179da6dfbb763d14b67182acfe76d539ba8a49b1eadc011238d663",
+  "production_changed": false,
+  "production_sources_equal_verified_revision": "a57f703d0c5ec9d3440430c573690df2856d39ae",
+  "ordinary_daemon_sha256": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+  "artifacts_sha256": {
+    "fixture": "40712381d68784af208da9c98487403ee65f715eccb715a26bd2a0e363fee00c",
+    "daemon": "522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407",
+    "admin": "7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501",
+    "snapshot_builder": "ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd"
+  },
+  "failed_predecessor_index": "quota-switch-pending-provenance-v4.json",
+  "failed_prior_three_sources": [
+    {
+      "version": "v1",
+      "source_revision": "fb836bf59b484167dfbf5de4629dbf6fa8850034",
+      "report": "kvm-quota-switch-mixed-v1.json",
+      "passed": false,
+      "source_archive_sha256": "19c9d8de0898ce28197c96414c48de8779ecf2dd3619421f16214a75efa4c769",
+      "private_raw_archive_sha256": "3eea7184b361b3db83ab9fcb89f98208fc93f1940b579f417b90b2df587ffd3c",
+      "duration_seconds": 5.859808383,
+      "completed_rows_per_tenant": {
+        "alpha": 0,
+        "beta": 0
+      },
+      "total_rows_per_tenant": {
+        "alpha": 0,
+        "beta": 0
+      },
+      "resource_samples": 1,
+      "outer_cleanup_independently_checked": true,
+      "l1_execution_generations": 1
+    },
+    {
+      "version": "v2",
+      "source_revision": "5bda13804d22e29c3e21ca460e6aec548f6c948a",
+      "report": "kvm-quota-switch-mixed-v2.json",
+      "passed": false,
+      "source_archive_sha256": "c9b13875389d4c48331c1941646df1b3e58f1b2e98fa91f03012475e0d596a0b",
+      "private_raw_archive_sha256": "5b448dcc8dda348cfb213dda8e92c10603612ead1d79fb6f4623e46c9b1402b5",
+      "duration_seconds": 7.981799363,
+      "completed_rows_per_tenant": {
+        "alpha": 0,
+        "beta": 0
+      },
+      "total_rows_per_tenant": {
+        "alpha": 1,
+        "beta": 1
+      },
+      "resource_samples": 4,
+      "outer_cleanup_independently_checked": true,
+      "l1_execution_generations": 1
+    },
+    {
+      "version": "v3",
+      "source_revision": "4653b08e5b80e2ed15be491849d8ad9427015295",
+      "report": "kvm-quota-switch-mixed-v3.json",
+      "passed": false,
+      "source_archive_sha256": "0131c8d72c1cba38bdce05d3320dd662f0db1da88364982bbc0c9684c5a8a20e",
+      "private_raw_archive_sha256": "2730e2805334b885d1ebd2b5ef9420d04542b9f795598c6f3d98b99411e2fc00",
+      "duration_seconds": 601.836897505,
+      "completed_rows_per_tenant": {
+        "alpha": 119,
+        "beta": 120
+      },
+      "total_rows_per_tenant": {
+        "alpha": 120,
+        "beta": 120
+      },
+      "resource_samples": 1189,
+      "outer_cleanup_independently_checked": true,
+      "l1_execution_generations": 1
+    }
+  ],
+  "latest_failed_raw_archive_sha256": "63f9eae317251d74c760f8f67c3fe034cbb9d0b795182741d6b775d4703e7152",
+  "latest_source_archive_sha256": "2441950182036f5d707058f2b94589521b1707317e191920ccd451090787be93",
+  "load_only": {
+    "passed": true,
+    "cycles_per_tenant": 120,
+    "duration_seconds": 601.476782212,
+    "resource_samples": 1193,
+    "overlapping_switch_intervals": 151,
+    "fixed_run_budget_seconds": 720,
+    "all240_complete": true,
+    "all_rows_retained": true,
+    "independent_quantiles_recomputed": true,
+    "guest_write_progress_and_pre_timeout_actual_host_stop_each_switch": true,
+    "final_measured_gauges_owners_cgroups_and_all_eight_projects_zero": true,
+    "summary_ms": {
+      "alpha": {
+        "binding": {
+          "count": 120,
+          "p100": 1485.353,
+          "p50": 969.591,
+          "p95": 1316.575,
+          "p99": 1445.53
+        },
+        "first_new_command": {
+          "count": 120,
+          "p100": 1571.554,
+          "p50": 1039.815,
+          "p95": 1441.675,
+          "p99": 1532.052
+        },
+        "old_durable_destroyed": {
+          "count": 120,
+          "p100": 1727.97,
+          "p50": 1352.659,
+          "p95": 1571.851,
+          "p99": 1620.412
+        },
+        "old_host_stopped": {
+          "count": 120,
+          "p100": 1506.72,
+          "p50": 995.777,
+          "p95": 1317.01,
+          "p99": 1472.247
+        }
+      },
+      "beta": {
+        "binding": {
+          "count": 120,
+          "p100": 1528.618,
+          "p50": 967.196,
+          "p95": 1408.124,
+          "p99": 1503.459
+        },
+        "first_new_command": {
+          "count": 120,
+          "p100": 1593.938,
+          "p50": 1031.881,
+          "p95": 1493.65,
+          "p99": 1582.942
+        },
+        "old_durable_destroyed": {
+          "count": 120,
+          "p100": 1928.746,
+          "p50": 1354.753,
+          "p95": 1635.054,
+          "p99": 1894.083
+        },
+        "old_host_stopped": {
+          "count": 120,
+          "p100": 1546.179,
+          "p50": 986.463,
+          "p95": 1436.606,
+          "p99": 1520.287
+        }
+      }
+    },
+    "scope": "Measured window only. Preflight actualfour Ready KVM/auth/tenant/global/backing/strictslotreuse passed. Stable postload checkpoint entered, but subsequent cold recovery failed; NOT full profile acceptance, every fault window, fairness, open-loop saturation, unique RAM/node budget or SLO."
+  },
+  "cold_failure": {
+    "actual_ready_l1_boots": 2,
+    "checkpoint": {
+      "checkpoint_after_measured_load_not_an_inflight_commit_fault": true,
+      "checkpoint_receipt_fsynced": true,
+      "distinct_private_projects_with_named_inode_accounting": true,
+      "ordinary_quota_ready_owners_saved_privately": true,
+      "phase": "quota-enabled-two-tenant-switching",
+      "real_nested_kvm": true,
+      "two_active_template_pins_checked": true,
+      "two_live_tenant_sessions_and_running_old_jobs": true
+    },
+    "reported_error_class": "persistent inode logical metadata changed",
+    "original_specific_entry_and_field_not_exported": true,
+    "no_claim_only_cause_is_proven": true,
+    "source_defect_found": "First clone quota/inode baseline was saved before creating second clone. Ordinary second shared clone changes backing link counts, so this is not a stable two-live-clone comparison baseline. New receipt version3 resamples BOTH complete receipts after both Ready/pins2, demands identical shared inode metadata/link counts, then preserves strict unchanged cold validation.",
+    "strict_link_comparison_not_relaxed": true,
+    "new_checkpoint_flags_required": true,
+    "new_private_failure_field_diagnostics": true,
+    "ordinary_daemon_unmodified": true,
+    "new_source_runtime_result_pending": true,
+    "no_failed_rows_spliced_into_next_run": true
+  },
+  "native_checks_scope": "Frozen599a fullrace3/vet, fixturerace10/vet, rootPython59, actual CGO0 kernel/exec filter3, Darwinfullrace3/vet and allfive native/cross artifact matches passed. Next3f9c cross compile/vet and localPython59 passed before native/full-runtime retest; no unobserved next result claimed.",
+  "independent_cleanup": {
+    "latest_failed_scopes": 1,
+    "latest_exact_owned_outer_generations_absent": 2,
+    "all_failed_scopes_so_far": 4,
+    "all_failed_exact_owned_generations_absent": 5,
+    "read_only_no_cleanup_actions": true,
+    "all_exact_owned_roots_control_cgroup_parents_children_absent": true,
+    "not_inferred_failed_cold_quota_zero": "Measured drain actually checked zero before creating new crash sessions. Last cold attempt failed before ordinary daemon recovery, so do not claim those crash-session quotas cleared; outer deletion is not independent per-project durable reclamation proof."
+  },
+  "remaining": [
+    "New3f9 full240/stable dual-session cold recovery and old11 shared-harness regressions; whole-profile runtime still pending.",
+    "Partial-copy/owner unlink/directory-fsync/shared-pin combinations and remaining persistence windows.",
+    "Global physical/unique-RAM/IO/catalog/ledger node admission, sustained open-loop/fairness/production SLO, independent operator and fullM1-M4 acceptance."
+  ],
+  "files": {
+    "kvm-quota-switch-mixed-v4.json": {
+      "sha256": "b599d77a691a19dc75352425e3b75a55f2946467df39bdd828e5c78aa6d3a8d6",
+      "bytes": 771779
+    },
+    "quota-switch-failed-v4-audit.txt": {
+      "sha256": "82c6661f3c30e3ceebb99be549113917dbdc21e9aefcc09cc27d6b83dc34375d",
+      "bytes": 231
+    },
+    "quota-switch-v4-load-only-verified.txt": {
+      "sha256": "c39d19f3907c0af1e142727e1cb6a8255c74765c7ab6b23bf190fd578987c550",
+      "bytes": 261
+    },
+    "quota-switch-native-race-v4.txt": {
+      "sha256": "c0d95e49a3b6caa0b4933defab6f3146be60625d92449af339a073c853fcc48b",
+      "bytes": 1639
+    },
+    "quota-switch-fixture-native-race-v4.txt": {
+      "sha256": "e863c4fdc29e7d8571d02aa97e5ea6b65257fd4032e5ce44c78d459f7390f1f1",
+      "bytes": 70
+    },
+    "quota-switch-cgo0-kernel-filter-v4.txt": {
+      "sha256": "e38b3e50cc57a853da01a1898d9958ffc996158a93092e90cf24d815bbfb5b39",
+      "bytes": 846
+    },
+    "quota-switch-native-artifacts-v4.txt": {
+      "sha256": "361c62ce3cecf8d07a56002edbc809edb7cd1fa77dc993aa38d1c22ac13f6548",
+      "bytes": 487
+    },
+    "quota-switch-final-darwin-race-v4.txt": {
+      "sha256": "95fe856b7a2608a2c8db9eb251a9c19d742135188999091b6afd1afab1d5b5b0",
+      "bytes": 1531
+    }
+  }
+}

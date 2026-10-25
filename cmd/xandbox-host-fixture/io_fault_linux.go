@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"golang.org/x/sys/unix"
 )
@@ -149,6 +151,9 @@ func (n *node) ioFault(ctx context.Context, m *stateMapper, phase string) (resul
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
+	if n.quotaStateIO && (!n.quotaDriver || n.quotaSnapshot || n.mapper != m) {
+		return nil, errors.New("fixed quota IO mapper/profile required")
+	}
 	if e := m.verify("linear", false); e != nil {
 		return nil, e
 	}
@@ -190,6 +195,22 @@ func (n *node) ioFault(ctx context.Context, m *stateMapper, phase string) (resul
 	receipt := nodeReceipt{Phase: phase, Ref: r.Ref, Key: key, L1Boot: n.boot, L2Boot: strings.TrimSpace(boot.Stdout)}
 	if e = privateWrite("/srv/fixture/receipt.json", receipt); e != nil {
 		return nil, e
+	}
+	var quotaOwner []byte
+	var quotaObserved map[string]any
+	if n.quotaStateIO {
+		qr, observed, e := n.observeDriverQuota(r.Ref, "running", m)
+		if e != nil {
+			return nil, e
+		}
+		if e = privateWrite("/srv/fixture/driver-quota-receipt.json", qr); e != nil {
+			return nil, e
+		}
+		quotaOwner, e = privatefile.Read("/srv/state/firecracker/"+r.ID+r.Generation+".json", 2048)
+		if e != nil {
+			return nil, e
+		}
+		quotaObserved = observed
 	}
 	disk, e := os.Open("/srv")
 	if e != nil {
@@ -254,6 +275,12 @@ func (n *node) ioFault(ctx context.Context, m *stateMapper, phase string) (resul
 		probe <- e
 	}()
 	result = map[string]any{"phase": phase, "real_nested_kvm": true, "guest_uid_checked": true, "checkpoint_receipt_fsynced": true, "whole_state_mapper_verified": true}
+	for k, v := range quotaObserved {
+		result[k] = v
+	}
+	if n.quotaStateIO {
+		result["quota_mapped_mount_and_policy_checked_before_fault"] = true
+	}
 	if hung {
 		select {
 		case <-probe:
@@ -419,6 +446,33 @@ func (n *node) ioFault(ctx context.Context, m *stateMapper, phase string) (resul
 			return nil, errors.New("EIO produced false durable stop/destruction")
 		}
 		result["no_false_durable_stop_or_destroy_ack"] = true
+	}
+	if n.quotaStateIO {
+		if hung {
+			if e = waitNode(ctx, func() (bool, error) {
+				var record sandbox.Record
+				e := n.api.Do(ctx, "GET", nodePath(r.Ref), nil, &record)
+				return e == nil && record.State == sandbox.Destroyed, e
+			}); e != nil {
+				return nil, e
+			}
+			if e = n.clean(r.Ref); e != nil {
+				return nil, e
+			}
+			if e = driverQuotaAllClearOn(m); e != nil {
+				return nil, e
+			}
+			if e = privateWrite("/srv/fixture/driver-quota-receipt.json", driverQuotaReceipt{Phase: "destroyed"}); e != nil {
+				return nil, e
+			}
+			result["quota_and_ownership_released_only_after_io_resumed"] = true
+		} else {
+			after, e := privatefile.Read("/srv/state/firecracker/"+r.ID+r.Generation+".json", 2048)
+			if e != nil || !bytes.Equal(after, quotaOwner) {
+				return nil, errors.New("EIO prematurely changed quota ownership")
+			}
+			result["quota_owner_retained_until_cold_recovery"] = true
+		}
 	}
 	result["underlying_mapper_restored_linear"] = true
 	return result, nil

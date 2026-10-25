@@ -1,0 +1,40 @@
+work/quota-barrier-source-v1.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/tagrace10/tagvet/rootPython47/CGO0 kernel filter proof
+...............................................
+----------------------------------------------------------------------
+Ran 47 tests in 0.051s
+
+OK
+bin/sandboxd-quota-barrier-v1: 成功
+bin/xandbox-template-quota-barrier-v1: 成功
+bin/xandbox-warden-quota-barrier-v1: 成功
+bin/fixture-quota-barrier-v1: 成功
+bin/builder-quota-barrier-v1: 成功
+522da68e9dce255ab82cfd1adb8c2fc7eb394a9f110c0bcff5ff415ec30a9a6d  bin/sandboxd-quota-barrier-v1
+7fb8d638c492f6f2b8c23f432ec39582fdf26c5723b9d65c22eca60ee15eb501  bin/xandbox-template-quota-barrier-v1
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-quota-barrier-v1
+23e4badee4ad6c335b825ba573cde6a5edadfd4c3ccc8189802c14cd3e899548  bin/fixture-quota-barrier-v1
+ca59c81cc0cee77bed00ac74cfeb05edd6ccf2347751745016f5684ac40f4ddd  bin/builder-quota-barrier-v1
+stage: old unmodified Q_SYNC-only daemon must fail barrier test
+bin/sandboxd-quota-syscall-v1: 成功
+OLD_NEGATIVE_EXPECTED_FAIL1: Q_SYNC-only ordinary Prepare completed without quota syncfs barrier; raw failed report retained
+stage: new explicit filesystem barrier actual kernel D and owned L1 power cut
+46719 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: six fixed quota syscall errno plus normal cold3 regression
+46719 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: exact post-clear owner-pin crash regression
+46719 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage: normal snapshot shared2/cold3 regression
+46719 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: quota whole-state IO4 regression
+46719 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+stage: default nil-quota IO4 regression
+46589 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+quota filesystem commit barrier partial gate passed; full new-native matrix and remaining windows still required

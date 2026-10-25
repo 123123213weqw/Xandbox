@@ -1,0 +1,23 @@
+work/session-ticket-source-v2.tar.gz: 成功
+FROZEN_SOURCE=98e957661f18344a8482692828b6305a0d28bea3 archive884317cb TESTonly source; ordinary4ee unchanged
+stage native full race3/vet/fixture race10/vet/Python99/kernelfilter3
+stage native6 and independent cross equality
+bin/sandboxd-session-ticket-v2: 成功
+bin/xandbox-template-session-ticket-v2: 成功
+bin/xandbox-warden-session-ticket-v2: 成功
+bin/xandbox-node-session-ticket-v2: 成功
+bin/fixture-session-ticket-v2: 成功
+bin/builder-session-ticket-v2: 成功
+bin/session-ticket-smoke-v2/sandboxd: 成功
+/srv/xb-template-cv3/workspace.ext4: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage actual initial session pre-Core journal held across ACK drain, then one-shot accepted ticket and cold truth
+49927 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage shared observer regression actual ordinary FileStore pre-rename single TEST EIO
+49927 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+stage shared observer regression actual ordinary FileStore post-admission-directory single TEST EIO
+49927 块
+{"passed": true, "cases": 1, "cleanup_confirmed": true}
+COMPLETE actual pre-Core session ticket across ACK drain and two shared observer regressions, all original4ee; NOT unresolved shutdown writer/all Goal or production acceptance

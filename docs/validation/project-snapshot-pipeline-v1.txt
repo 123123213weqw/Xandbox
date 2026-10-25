@@ -1,0 +1,31 @@
+work/project-snapshot-source-v1.tar.gz: 成功
+work/m2-initrd-v10.cpio.gz: 成功
+stage: native full race3/vet/tagrace10/tagvet/rootPython41/CGO0 kernel filter proof
+.........................................
+----------------------------------------------------------------------
+Ran 41 tests in 0.027s
+
+OK
+bin/sandboxd-project-snapshot-v1: 成功
+bin/xandbox-template-project-snapshot-v1: 成功
+bin/xandbox-warden-project-snapshot-v1: 成功
+bin/fixture-project-snapshot-v1: 成功
+bin/builder-project-snapshot-v1: 成功
+ab547783c9c9ba3651c4b6a0f8c6ca78803a31c0a1809eef97c8aa7284878cb6  bin/sandboxd-project-snapshot-v1
+ace686422ffad4bc987d7a32f7b845a364022ff57900be7766fe7ac66a4824da  bin/xandbox-template-project-snapshot-v1
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-project-snapshot-v1
+3ff103ca69aa52908e1ed6439dea4147e89006ad58be3645c7742e4d53cefdbe  bin/fixture-project-snapshot-v1
+882704f757dc756c8d577f39dde8785c29272712f2ab3eb366cb4d262943dc67  bin/builder-project-snapshot-v1
+stage: genuine L1 snapshot builder + ordinary quota shared clones + coldboot3
+46061 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new lock-fix ordinary cold driver quota lifecycle3
+46061 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new lock-fix default power3 regression
+45931 块
+{"passed": true, "cases": 3, "cleanup_confirmed": true}
+stage: new lock-fix default EIO/held-fsync4 regression
+45931 块
+{"passed": true, "cases": 4, "cleanup_confirmed": true}
+snapshot quota partial gate passed; full negative/fault/default runtime matrix still required

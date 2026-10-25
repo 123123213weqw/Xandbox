@@ -1,0 +1,8 @@
+inflight all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+partial all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 1
+snapshot all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 4
+clear all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 2
+syscalls all_exact_owned_roots_control_cgroup_parents_children_absent True outer_execution_generations 4
+ALL5 partial-copy cut and related fixture scopes,13 outer generations independently absent; read-only audit, no cleanup actions.
+Private outer-L0 cut receipt retained0600 and excluded from public report; no receipt contents printed.
+Actual quota/namespace/pins were read inside L1 before owned disk deletion, not inferred from this final path audit.

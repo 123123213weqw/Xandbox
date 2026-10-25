@@ -1,0 +1,621 @@
+{
+  "version": 1,
+  "scope": "three_independent_limited_managed_supersession_repeat_visible_recovery_and_ordinary_hot_rotation_root_cli_tls_kvm_cold_cases_not_full_production_acceptance",
+  "harness_source_revision": "89749673c02df49bf3df884c3196c18b6b38d53a",
+  "runtime_go_source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+  "opt_in_producer_source_revision": "0ba79e12f1ca369f9372c3f87791715341ccf3b2",
+  "all_cmd_internal_mod_sum_unchanged_from_current_native_qualification": true,
+  "native_software_evidence": "managed-policy-material-native-v2.json",
+  "native_artifacts": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "6fbda0367f167d08337c495bd18d4bc7bdf4728f9a788440e0dc629b16120f92",
+    "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+    "xandbox-ingress-launch": "c5c9af860cd974536a999e3f4026cc1f89d606fd9826fc3a31c230918b2cb3da",
+    "xandbox-ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+    "deploy-helper": "1455c7989fa1f515febfe88cd338ef93bae0ff121f867f89c7436183c0ce9785",
+    "fixture": "521d36780f6a14913e2d2817e80144fce5c4d6c0af75b7c39edb6a9ce6611756",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568",
+    "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "releasestore.test": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3",
+    "xandbox-install": "8cb295e8d762597116862cd18dbd1723daa67538be31a35c6cf0122b9b8d284b",
+    "installtxn.test": "9658f1c515bf7b597b85297323bc36794edb93ca3b0feee23dfc04eb8fafc641",
+    "setup": "b6dc5fa2ccd12818ed0e8491a15c0b92a86e70242d8bb6b5c44c661390d8e0db",
+    "setup.test": "83c1709648888f95f00ef7d938825f024ab93033becfc1950ccb87e1d368f1b2",
+    "gateway.test": "6e36d7987cbc2acae7447c8807fc37bd68739ceceaafe3454c1e680171450492",
+    "policycontrol.test": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+    "managed-setup": "98d7d6093c18dadf5da13bf009beec5925ba23b0f42b795693f09ffc5ef66b3b",
+    "managed-setup.test": "1bb1e738e2c527fe6068f68f3c83ba8e9a42b5e5fb9002c63296e9abc06bb746"
+  },
+  "deployment_assets_sha256": {
+    "daemon": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "gateway": "6fbda0367f167d08337c495bd18d4bc7bdf4728f9a788440e0dc629b16120f92",
+    "ingress": "c5c9af860cd974536a999e3f4026cc1f89d606fd9826fc3a31c230918b2cb3da",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "install": "8cb295e8d762597116862cd18dbd1723daa67538be31a35c6cf0122b9b8d284b",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "launcher": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+    "node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+    "release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "setup": "98d7d6093c18dadf5da13bf009beec5925ba23b0f42b795693f09ffc5ef66b3b",
+    "template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954"
+  },
+  "harness_files_sha256": {
+    "build_systemd_host.py": "8b686977d4a3ba7ab944c02e05be7b06bc3ec973573037a1618f499f891ec056",
+    "systemd_delegate_probe.py": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+    "systemd_host_assets.json": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+    "kvm_systemd_host.py": "03132f981835dc797014d845a3305e68842690193d2d8f28907b81bde9d4c746",
+    "nested_host_assets.json": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925",
+    "build_systemd_install.py": "6ba907f468195226b64295aea9637c5e674515a9ae53009a0696332d14a57b1d",
+    "build_systemd_deployment.py": "b318954ccb17e93a7666730d4704d34fa0e736cf9626a8331f8b08d7cc3af51d",
+    "build_systemd_managed.py": "914cd3ca13164dfaa0ceaf4ab81f63935d46322372e06375170a875587f5392b",
+    "systemd_managed_guest.py": "a1f0c3de059ffde016e700f44997c4743eaa7bfc14dff48af5e05e16d4cc231d",
+    "managed_fixture_trace.py": "bc56eba8238447cc8f03cfd2d9f158ff942714280451eb914a60d4c974bb3cf6",
+    "systemd_install_guest.py": "b89d3223fe0db0be444ac397b6364633bb99dfa4f299af8dbeff5f7047abef58",
+    "install_fixture_trace.py": "885463d8fd8a7ca7fa727649aafa680166728e78214324f997b55a895d8942a9",
+    "systemd_deployment_guest.py": "58c625a27ec0bf4bd8e78d86ce5876943f1e1beb9c74921ce770b21991a7b327",
+    "systemd_ingress_guest.py": "8049a2fc03f26a355d1c1d4097418d368f8bc240f4b1b74ba6e4bcb1a6de0b87",
+    "systemd_drain_probe.py": "6b15f7f084d6e28200cbf54128e241b6a7a85ae168f914af93493709cb3c1ee1"
+  },
+  "pure_controls": {
+    "linux_tests": 261,
+    "linux_skips": 0,
+    "linux_log_sha256": "00bde446f3e99a09fed83238b7d2ea09830f4427070be016c6682f5911275190",
+    "mac_tests": 261,
+    "mac_platform_skips": 5,
+    "mac_log_sha256": "f0411efab0240f252a48a2a4527b677e1a1efa1f574584c723b28a624f295998"
+  },
+  "cases": {
+    "supersession-repeat": {
+      "original_terminal": 0,
+      "source_archive_sha256": "64359b06441a379ce8c1173c66ed390796721126c1b2a37f27c616fb92c113e4",
+      "runner_sha256": "f36e8e217555471b24c6aacf67f8c71143fe2bfff2af0267178d21815688db23",
+      "l1_boots": 2,
+      "actual_complete_typed_case_qualified": true,
+      "closed_operations": [
+        {
+          "boot": 1,
+          "managed-probe": {
+            "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+            "immutable_backend_auth_base_self_and_release": true,
+            "initial_capless_pending_gate_observation_preserved": true,
+            "maintenance_case": "supersession-repeat",
+            "managed_v2_exact_root_cli_and_24_target_commit": true,
+            "not_full_production_or_full_supersession_matrix_acceptance": true
+          },
+          "managed-checkpoint": {
+            "actual_supersession_a_killed_before_publication_source_and_proposal_data_lost": true,
+            "actual_supersession_b_settled_a_without_ack_and_consumed2_only_once": true,
+            "cold_checkpoint_same_busy_execution_continues_drained": true,
+            "drain_exact_retry_and_bad_cas_and_tenant_admin_refused": true,
+            "drained_stop_gc_and_quota_release": true,
+            "durable_drain_checkpoint_fsynced": true,
+            "durable_reclaim_observed_ms": 374.933366,
+            "entire_drain_commit_unchanged_across_maintenance": true,
+            "explicit_warm_root_resume_and_denied_keys_reusable": true,
+            "four_simultaneous_real_tls_kvm_guests_and_owner_refusals": true,
+            "fresh_policy3_tls_and_new_key_accepted_after_expected_401_close": true,
+            "maintenance_case": "supersession-repeat",
+            "managed_raw_exec_refused_and_versioned_session_exec_used": true,
+            "old_key_refused_on_existing_policy3_tls_transport_and_closed": true,
+            "ordinary_2_to_3_hot_rotation_old_token_refused_on_original_tls2_transport": true,
+            "ordinary_original_disk_checkpoint_fsynced": true,
+            "physical_stop_distinct_from_durable_reclaim_and_capacity": true,
+            "raw_session_switch_denied_without_metadata_growth": true,
+            "real_existing_session_and_writer_continue_while_drained": true,
+            "same_main_four_vmm_incarnations_boots_and_busy_writer_continue": true,
+            "source_absent_reconcile_and_bad_cas_no_service_restart": true,
+            "stop_observed_ms": 111.942668,
+            "unconsumed_file_and_runtime1_old_proposal2_expired_and_source_absent": true,
+            "warm_auto_restart_preserved_entire_drain_commit": true
+          }
+        },
+        {
+          "boot": 2,
+          "managed-probe": {
+            "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+            "immutable_backend_auth_base_self_and_release": true,
+            "initial_capless_pending_gate_observation_preserved": true,
+            "maintenance_case": "supersession-repeat",
+            "managed_v2_exact_root_cli_and_24_target_commit": true,
+            "not_full_production_or_full_supersession_matrix_acceptance": true
+          },
+          "managed-recover": {
+            "all_four_kernel_projects_and_private_generations_released": true,
+            "automatic_cold_tls_epoch3_no_operator_activation": true,
+            "cold_automatic_health_up_admission_remains_drained": true,
+            "cold_denied_raw_session_keys_reused_real_pristine_guests": true,
+            "cold_original_epoch_revision_request_preserved": true,
+            "cold_stale_cas_and_tenant_admin_refused": true,
+            "explicit_cold_root_resume_one_revision_exact_retry": true,
+            "installed_epoch3_and_source_absence_preserved": true,
+            "maintenance_case": "supersession-repeat",
+            "manager_clean_stop_removed_both_units_and_inputs": true,
+            "old_guest_recovered_and_quota_zero_while_drained": true,
+            "old_guest_recovered_no_implicit_resume_and_old_key_refused": true,
+            "original_disk_new_boot_same_machine": true
+          }
+        }
+      ],
+      "raw_evidence_sha256": {
+        "work/managed-new-case-supersession-repeat-v3.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "work/managed-new-case-supersession-repeat-v3-private/resource-receipt.json": "d5937e058c050fc5c41cdb432e42f0c21103c6287f17c0db8d8b5d9262508fc9",
+        "work/managed-new-case-supersession-repeat-v3-report.json": "36e5d58108d1b52ca014af1c2ce17927b8ee12dc558daaa96777fa46986b7b27",
+        "work/managed-new-case-supersession-repeat-v3-private/console-1.log": "5ba8b20ace40888203bb54c65447ac7c67f34e15cb79343f6d669bbda46a27e7",
+        "work/managed-new-case-supersession-repeat-v3-private/private-cgroup-1.json": "fa83d5a82ff1821dcf824487f57efe4bde7c51ca157322cdd3ec952d5d7b5a68",
+        "work/managed-new-case-supersession-repeat-v3-private/final-private-console.log": "bfa79313fb0e1d939321a79dd9b437490d72ad2109b645e68918767e0f1c5e45",
+        "work/managed-new-case-supersession-repeat-v3-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+        "work/managed-new-case-supersession-repeat-v3-private/launcher-2.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+        "work/run-managed-new-case-supersession-repeat-v3.sh": "f36e8e217555471b24c6aacf67f8c71143fe2bfff2af0267178d21815688db23",
+        "work/managed-new-case-supersession-repeat-v3-assets.json": "6baec9ae7c3021cd0fe9d76ef1a06a3ac9f50994add6a982b4ae698d3ff40127",
+        "work/managed-new-case-supersession-repeat-v3-root-pure.log": "cbdffdb54e8b0158cc78798863d6722b4095bc9969352fe34974f412aeae196d",
+        "work/managed-new-case-supersession-repeat-v3-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+      },
+      "independent_audit": {
+        "read_only": true,
+        "runner_absent": true,
+        "owned_outer_generations_absent": 2,
+        "all_declared_paths_absent": true,
+        "no_supplemental_cleanup": true,
+        "receipt_sha256": "d5937e058c050fc5c41cdb432e42f0c21103c6287f17c0db8d8b5d9262508fc9"
+      },
+      "stop_observed_ms_n1": 111.942668,
+      "durable_reclaim_observed_ms_n1": 374.933366,
+      "bounded_private_phase_observations": [
+        {
+          "event": "status",
+          "seconds": 1.370351
+        },
+        {
+          "event": "reconcile",
+          "seconds": 3.227546
+        },
+        {
+          "event": "status",
+          "seconds": 1.420218
+        },
+        {
+          "event": "status",
+          "seconds": 1.417477
+        },
+        {
+          "event": "status",
+          "seconds": 1.383717
+        },
+        {
+          "event": "rotation-proposal",
+          "seconds": 2.662085
+        },
+        {
+          "event": "supersession-proposal",
+          "seconds": 6.556287
+        },
+        {
+          "event": "verify",
+          "seconds": 0.017921
+        },
+        {
+          "event": "reconfigure",
+          "seconds": 0.087778
+        },
+        {
+          "event": "replace-pending-policy",
+          "seconds": 6.196376
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.763535
+        },
+        {
+          "event": "reconfigure",
+          "seconds": 5.764545
+        },
+        {
+          "owner_present": true,
+          "phase": "after-continuity",
+          "sandbox_ttl_remaining_ms": 199385.574,
+          "writer_age_ms": 26111.186
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.728525
+        },
+        {
+          "event": "recover-policy",
+          "seconds": 0.092093
+        },
+        {
+          "owner_present": true,
+          "phase": "after-sourcefree-cas",
+          "sandbox_ttl_remaining_ms": 196156.8,
+          "writer_age_ms": 29339.808
+        },
+        {
+          "owner_present": true,
+          "phase": "before-stop",
+          "sandbox_ttl_remaining_ms": 195748.026,
+          "writer_age_ms": 29748.658
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.793854
+        },
+        {
+          "event": "status",
+          "seconds": 1.341831
+        }
+      ],
+      "all_four_vmm_and_actual_busy_writer_rechecked_immediately_before_stop": true,
+      "no_supplemental_cleanup": true,
+      "l0_boot_unchanged": true
+    },
+    "supersession-visible-recovery": {
+      "original_terminal": 0,
+      "source_archive_sha256": "64359b06441a379ce8c1173c66ed390796721126c1b2a37f27c616fb92c113e4",
+      "runner_sha256": "9e20c6ac01a1005659be0b2c9e615ca63b896104865d44ba40d6f0969c220e61",
+      "l1_boots": 2,
+      "actual_complete_typed_case_qualified": true,
+      "closed_operations": [
+        {
+          "boot": 1,
+          "managed-probe": {
+            "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+            "immutable_backend_auth_base_self_and_release": true,
+            "initial_capless_pending_gate_observation_preserved": true,
+            "maintenance_case": "supersession-visible-recovery",
+            "managed_v2_exact_root_cli_and_24_target_commit": true,
+            "not_full_production_or_full_supersession_matrix_acceptance": true
+          },
+          "managed-checkpoint": {
+            "actual_recovery3_advanced_installed2_then_new_child_ack": true,
+            "actual_replace_refused_reuse_of_published2": true,
+            "actual_supersession2_fsynced_before_ingress_start_no_ack": true,
+            "cold_checkpoint_same_busy_execution_continues_drained": true,
+            "drain_exact_retry_and_bad_cas_and_tenant_admin_refused": true,
+            "drained_stop_gc_and_quota_release": true,
+            "durable_drain_checkpoint_fsynced": true,
+            "durable_reclaim_observed_ms": 389.253854,
+            "entire_drain_commit_unchanged_across_maintenance": true,
+            "explicit_warm_root_resume_and_denied_keys_reusable": true,
+            "four_simultaneous_real_tls_kvm_guests_and_owner_refusals": true,
+            "fresh_policy3_tls_and_new_key_accepted_after_expected_401_close": true,
+            "maintenance_case": "supersession-visible-recovery",
+            "managed_raw_exec_refused_and_versioned_session_exec_used": true,
+            "old_key_refused_on_existing_policy3_tls_transport_and_closed": true,
+            "ordinary_original_disk_checkpoint_fsynced": true,
+            "physical_stop_distinct_from_durable_reclaim_and_capacity": true,
+            "raw_session_switch_denied_without_metadata_growth": true,
+            "real_existing_session_and_writer_continue_while_drained": true,
+            "same_main_four_vmm_incarnations_boots_and_busy_writer_continue": true,
+            "source_absent_reconcile_and_bad_cas_no_service_restart": true,
+            "stop_observed_ms": 117.35142,
+            "warm_auto_restart_preserved_entire_drain_commit": true
+          }
+        },
+        {
+          "boot": 2,
+          "managed-probe": {
+            "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+            "immutable_backend_auth_base_self_and_release": true,
+            "initial_capless_pending_gate_observation_preserved": true,
+            "maintenance_case": "supersession-visible-recovery",
+            "managed_v2_exact_root_cli_and_24_target_commit": true,
+            "not_full_production_or_full_supersession_matrix_acceptance": true
+          },
+          "managed-recover": {
+            "all_four_kernel_projects_and_private_generations_released": true,
+            "automatic_cold_tls_epoch3_no_operator_activation": true,
+            "cold_automatic_health_up_admission_remains_drained": true,
+            "cold_denied_raw_session_keys_reused_real_pristine_guests": true,
+            "cold_original_epoch_revision_request_preserved": true,
+            "cold_stale_cas_and_tenant_admin_refused": true,
+            "explicit_cold_root_resume_one_revision_exact_retry": true,
+            "installed_epoch3_and_source_absence_preserved": true,
+            "maintenance_case": "supersession-visible-recovery",
+            "manager_clean_stop_removed_both_units_and_inputs": true,
+            "old_guest_recovered_and_quota_zero_while_drained": true,
+            "old_guest_recovered_no_implicit_resume_and_old_key_refused": true,
+            "original_disk_new_boot_same_machine": true
+          }
+        }
+      ],
+      "raw_evidence_sha256": {
+        "work/managed-new-case-supersession-visible-recovery-v3.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "work/managed-new-case-supersession-visible-recovery-v3-private/resource-receipt.json": "f9694e1335692684a70da67959a5700f3ab4438bf5a0e3e62303d856d81d482f",
+        "work/managed-new-case-supersession-visible-recovery-v3-report.json": "e0fe71ef36cebb5e0f756cab3d7b8f51814662e74acf129143f2c2c25deb2e01",
+        "work/managed-new-case-supersession-visible-recovery-v3-private/console-1.log": "1bb65bc870ca63e07a2e5606b3b4abb2677742815f17eb3bcf908a91ea53d215",
+        "work/managed-new-case-supersession-visible-recovery-v3-private/private-cgroup-1.json": "c7ac927c1b838697039d9c7f9274dbd9667b981a5f7a6c066fa30fa7b3ae39c8",
+        "work/managed-new-case-supersession-visible-recovery-v3-private/final-private-console.log": "a4e16f59062c9dea29b455dff6e77adf447fb4f9502750769979e2eeef78395f",
+        "work/managed-new-case-supersession-visible-recovery-v3-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+        "work/managed-new-case-supersession-visible-recovery-v3-private/launcher-2.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+        "work/run-managed-new-case-supersession-visible-recovery-v3.sh": "9e20c6ac01a1005659be0b2c9e615ca63b896104865d44ba40d6f0969c220e61",
+        "work/managed-new-case-supersession-visible-recovery-v3-assets.json": "6baec9ae7c3021cd0fe9d76ef1a06a3ac9f50994add6a982b4ae698d3ff40127",
+        "work/managed-new-case-supersession-visible-recovery-v3-root-pure.log": "1b3164559de31f34dd12f152c73f6e590266bef75c074b08d4e719185fe397a1",
+        "work/managed-new-case-supersession-visible-recovery-v3-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+      },
+      "independent_audit": {
+        "read_only": true,
+        "runner_absent": true,
+        "owned_outer_generations_absent": 2,
+        "all_declared_paths_absent": true,
+        "no_supplemental_cleanup": true,
+        "receipt_sha256": "f9694e1335692684a70da67959a5700f3ab4438bf5a0e3e62303d856d81d482f"
+      },
+      "stop_observed_ms_n1": 117.35142,
+      "durable_reclaim_observed_ms_n1": 389.253854,
+      "bounded_private_phase_observations": [
+        {
+          "event": "status",
+          "seconds": 1.415717
+        },
+        {
+          "event": "reconcile",
+          "seconds": 3.378709
+        },
+        {
+          "event": "status",
+          "seconds": 1.390966
+        },
+        {
+          "event": "status",
+          "seconds": 1.417903
+        },
+        {
+          "event": "status",
+          "seconds": 1.395159
+        },
+        {
+          "event": "rotation-proposal",
+          "seconds": 2.412632
+        },
+        {
+          "event": "supersession-visible",
+          "seconds": 5.203055
+        },
+        {
+          "event": "replace-pending-policy",
+          "seconds": 0.090203
+        },
+        {
+          "event": "recover-policy",
+          "seconds": 6.304381
+        },
+        {
+          "owner_present": true,
+          "phase": "after-continuity",
+          "sandbox_ttl_remaining_ms": 210514.716,
+          "writer_age_ms": 15327.373
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.820866
+        },
+        {
+          "event": "recover-policy",
+          "seconds": 0.07345
+        },
+        {
+          "owner_present": true,
+          "phase": "after-sourcefree-cas",
+          "sandbox_ttl_remaining_ms": 207219.158,
+          "writer_age_ms": 18622.934
+        },
+        {
+          "owner_present": true,
+          "phase": "before-stop",
+          "sandbox_ttl_remaining_ms": 206718.151,
+          "writer_age_ms": 19123.926
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.80449
+        },
+        {
+          "event": "status",
+          "seconds": 1.433641
+        }
+      ],
+      "all_four_vmm_and_actual_busy_writer_rechecked_immediately_before_stop": true,
+      "no_supplemental_cleanup": true,
+      "l0_boot_unchanged": true
+    },
+    "hot-rotation": {
+      "original_terminal": 0,
+      "source_archive_sha256": "64359b06441a379ce8c1173c66ed390796721126c1b2a37f27c616fb92c113e4",
+      "runner_sha256": "ab104c183f2a5c9fedf7046bc3b67969292a02b2d74380bad91ec4b22e38fc17",
+      "l1_boots": 2,
+      "actual_complete_typed_case_qualified": true,
+      "closed_operations": [
+        {
+          "boot": 1,
+          "managed-probe": {
+            "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+            "immutable_backend_auth_base_self_and_release": true,
+            "initial_capless_pending_gate_observation_preserved": true,
+            "maintenance_case": "hot-rotation",
+            "managed_v2_exact_root_cli_and_24_target_commit": true,
+            "not_full_production_or_full_supersession_matrix_acceptance": true
+          },
+          "managed-checkpoint": {
+            "both_normal_rotations_kept_ingress_and_main_incarnations": true,
+            "cold_checkpoint_same_busy_execution_continues_drained": true,
+            "drain_exact_retry_and_bad_cas_and_tenant_admin_refused": true,
+            "drained_stop_gc_and_quota_release": true,
+            "durable_drain_checkpoint_fsynced": true,
+            "durable_reclaim_observed_ms": 393.514683,
+            "entire_drain_commit_unchanged_across_maintenance": true,
+            "explicit_warm_root_resume_and_denied_keys_reusable": true,
+            "four_simultaneous_real_tls_kvm_guests_and_owner_refusals": true,
+            "fresh_policy3_tls_and_new_key_accepted_after_expected_401_close": true,
+            "maintenance_case": "hot-rotation",
+            "managed_raw_exec_refused_and_versioned_session_exec_used": true,
+            "normal_1_to_2_rotation_retained_original_tls1_transport": true,
+            "normal_2_to_3_rotation_retained_original_tls2_transport": true,
+            "old_key_refused_on_existing_policy3_tls_transport_and_closed": true,
+            "ordinary_original_disk_checkpoint_fsynced": true,
+            "physical_stop_distinct_from_durable_reclaim_and_capacity": true,
+            "raw_session_switch_denied_without_metadata_growth": true,
+            "real_existing_session_and_writer_continue_while_drained": true,
+            "same_main_four_vmm_incarnations_boots_and_busy_writer_continue": true,
+            "source_absent_reconcile_and_bad_cas_no_service_restart": true,
+            "stop_observed_ms": 117.584336,
+            "warm_auto_restart_preserved_entire_drain_commit": true
+          }
+        },
+        {
+          "boot": 2,
+          "managed-probe": {
+            "automatic_tls_child_caps_placement_budgets_and_epoch": true,
+            "immutable_backend_auth_base_self_and_release": true,
+            "initial_capless_pending_gate_observation_preserved": true,
+            "maintenance_case": "hot-rotation",
+            "managed_v2_exact_root_cli_and_24_target_commit": true,
+            "not_full_production_or_full_supersession_matrix_acceptance": true
+          },
+          "managed-recover": {
+            "all_four_kernel_projects_and_private_generations_released": true,
+            "automatic_cold_tls_epoch3_no_operator_activation": true,
+            "cold_automatic_health_up_admission_remains_drained": true,
+            "cold_denied_raw_session_keys_reused_real_pristine_guests": true,
+            "cold_original_epoch_revision_request_preserved": true,
+            "cold_stale_cas_and_tenant_admin_refused": true,
+            "explicit_cold_root_resume_one_revision_exact_retry": true,
+            "installed_epoch3_and_source_absence_preserved": true,
+            "maintenance_case": "hot-rotation",
+            "manager_clean_stop_removed_both_units_and_inputs": true,
+            "old_guest_recovered_and_quota_zero_while_drained": true,
+            "old_guest_recovered_no_implicit_resume_and_old_key_refused": true,
+            "original_disk_new_boot_same_machine": true
+          }
+        }
+      ],
+      "raw_evidence_sha256": {
+        "work/managed-new-case-hot-rotation-v3.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "work/managed-new-case-hot-rotation-v3-private/resource-receipt.json": "95d1510703f0bf9c05b4dc457a475caff5435b7f49ca9f57ba3aada73a229184",
+        "work/managed-new-case-hot-rotation-v3-report.json": "3b010a8d913ab51619494c4f68d49302c75470c8126272c866b88facfbcc4e18",
+        "work/managed-new-case-hot-rotation-v3-private/console-1.log": "ace54254fd4c28dd414d40c301e238759b34277014c3010d83dbca8f590b4261",
+        "work/managed-new-case-hot-rotation-v3-private/private-cgroup-1.json": "992d67d7122714c95708764beda83d0d15a4041eba9f4b1234444ed2ec33f732",
+        "work/managed-new-case-hot-rotation-v3-private/final-private-console.log": "dd2567d5ad1a779799c7d70b1be95691160692f05153ddb8274b29a453174b4a",
+        "work/managed-new-case-hot-rotation-v3-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+        "work/managed-new-case-hot-rotation-v3-private/launcher-2.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+        "work/run-managed-new-case-hot-rotation-v3.sh": "ab104c183f2a5c9fedf7046bc3b67969292a02b2d74380bad91ec4b22e38fc17",
+        "work/managed-new-case-hot-rotation-v3-assets.json": "6baec9ae7c3021cd0fe9d76ef1a06a3ac9f50994add6a982b4ae698d3ff40127",
+        "work/managed-new-case-hot-rotation-v3-root-pure.log": "1b3164559de31f34dd12f152c73f6e590266bef75c074b08d4e719185fe397a1",
+        "work/managed-new-case-hot-rotation-v3-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+      },
+      "independent_audit": {
+        "read_only": true,
+        "runner_absent": true,
+        "owned_outer_generations_absent": 2,
+        "all_declared_paths_absent": true,
+        "no_supplemental_cleanup": true,
+        "receipt_sha256": "95d1510703f0bf9c05b4dc457a475caff5435b7f49ca9f57ba3aada73a229184"
+      },
+      "stop_observed_ms_n1": 117.584336,
+      "durable_reclaim_observed_ms_n1": 393.514683,
+      "bounded_private_phase_observations": [
+        {
+          "event": "status",
+          "seconds": 1.432233
+        },
+        {
+          "event": "reconcile",
+          "seconds": 3.411156
+        },
+        {
+          "event": "status",
+          "seconds": 1.373971
+        },
+        {
+          "event": "status",
+          "seconds": 1.329205
+        },
+        {
+          "event": "status",
+          "seconds": 1.287967
+        },
+        {
+          "event": "reconfigure",
+          "seconds": 5.855802
+        },
+        {
+          "event": "reconfigure",
+          "seconds": 5.912433
+        },
+        {
+          "owner_present": true,
+          "phase": "after-continuity",
+          "sandbox_ttl_remaining_ms": 268353.724,
+          "writer_age_ms": 16554.228
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.840475
+        },
+        {
+          "event": "recover-policy",
+          "seconds": 0.092955
+        },
+        {
+          "owner_present": true,
+          "phase": "after-sourcefree-cas",
+          "sandbox_ttl_remaining_ms": 265002.174,
+          "writer_age_ms": 19905.782
+        },
+        {
+          "owner_present": true,
+          "phase": "before-stop",
+          "sandbox_ttl_remaining_ms": 264490.918,
+          "writer_age_ms": 20416.982
+        },
+        {
+          "event": "reconcile",
+          "seconds": 2.796608
+        },
+        {
+          "event": "status",
+          "seconds": 1.579456
+        }
+      ],
+      "all_four_vmm_and_actual_busy_writer_rechecked_immediately_before_stop": true,
+      "no_supplemental_cleanup": true,
+      "l0_boot_unchanged": true
+    }
+  },
+  "accepted_new_scopes": 3,
+  "accepted_l1_boots": 6,
+  "accepted_outer_generations_independently_absent": 6,
+  "earlier_failed_scope": "managed-policy-supersession-repeat-failed-v1.json",
+  "earlier_diagnostic_success_not_resigned": "managed-policy-supersession-repeat-observed-v2.json",
+  "earlier_failure_cause_not_retroactively_proved": true,
+  "earlier_public_validation_files_byte_unchanged": 634,
+  "limits": {
+    "l1_memory_mib": 16384,
+    "l1_disk_bytes": 25769803776,
+    "sandbox_ttl_ms": 300000,
+    "busy_execution_ms": 45000,
+    "own_child_trace_seconds": 60,
+    "resources_and_runtime_deadlines_unchanged": true
+  },
+  "limitations": {
+    "named_cases_not_full_supersession_cut_matrix": true,
+    "fixture_known_data_loss_not_media_fault_or_memory_erasure": true,
+    "old_token_refusal_uses_original_transport_but_401_intentionally_closes": true,
+    "trace_sample_timings_not_production_latency_or_slo": true,
+    "healthy_fsynced_original_disk_cold_not_inflight_power_or_media_fault": true,
+    "partial_declaration_lost_source_liveness_gap_resolved": false,
+    "self_upgrade_rollback_catalog_backup_authority_migration_retention_saturation_full_runtime_matrix_accepted": false,
+    "stop_and_reclaim_distinct_n1_not_slo_or_secure_media_erase": true,
+    "production_ready": false,
+    "goal_complete": false
+  }
+}

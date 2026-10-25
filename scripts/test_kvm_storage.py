@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from kvm_storage import BoundedExt4, require_private_namespace
-from kvm_storage_faults import validate_host_stop_guard
+from kvm_storage_faults import validate_host_stop_guard, validate_failed_fault_restart, no_unix_listener
 
 
 class BoundedStorageTests(unittest.TestCase):
@@ -115,3 +115,28 @@ class BoundedStorageTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class ClosedStorageRestartTests(unittest.TestCase):
+    def test_expected_errno_and_no_output_are_not_durable_log_ack(self):
+        for code, line in ((errno.EROFS, b'sandboxd: read-only file system\n'),
+                           (errno.ENOSPC, b'sandboxd: no space left on device\n')):
+            probe={'errno':code,'phase':'open'}
+            self.assertEqual(validate_failed_fault_restart(1,b'',line,code,probe,probe),'closed_errno_stderr')
+            self.assertEqual(validate_failed_fault_restart(1,b'',b'',code,probe,probe),'no_inherited_output')
+            for exit_code, out, error in ((0,b'',line),(-9,b'',line),(2,b'',line),(1,b'secret',line),
+                                          (1,b'',b'sandboxd: configuration or bootstrap failure\n'),
+                                          (1,b'',b'private raw path: '+line)):
+                with self.assertRaises(AssertionError):validate_failed_fault_restart(exit_code,out,error,code,probe,probe)
+            for bad in ({'errno':errno.EIO,'phase':'open'}, {'errno':True,'phase':'open'},
+                        {'errno':code,'phase':'unknown'}, {'errno':code,'phase':'open','unrecognized':1}):
+                with self.assertRaises(AssertionError):validate_failed_fault_restart(1,b'',b'',code,probe,bad)
+    def test_live_socket_is_not_absence_and_unrelated_errno_does_not_pass(self):
+        import socket
+        with tempfile.TemporaryDirectory() as root:
+            path=Path(root)/'s';self.assertTrue(no_unix_listener(path))
+            s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+            try:
+                s.bind(str(path));s.listen(1)
+                with self.assertRaises(AssertionError):no_unix_listener(path)
+            finally:s.close()
+            self.assertTrue(no_unix_listener(path))

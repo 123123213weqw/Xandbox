@@ -1,0 +1,1 @@
+{"derivation": "Only exact fixed diagnostic line selected from bounded private console; other content excluded. Original console is not a public file or a raw archive member.", "input_private_console_sha256": "5a8423a702c44c1d16618bc64757667742a19257285751b4c629ba74fde1d2e0", "input_bytes": 200, "selected_diagnostic": "private node step failure: unexpected fixture journal entry"}

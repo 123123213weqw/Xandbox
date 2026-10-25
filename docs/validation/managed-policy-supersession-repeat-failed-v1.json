@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "scope": "preserved_first_failed_unconsumed_supersession_repeat_original_not_hardware_acceptance",
+  "harness_source_revision": "8e2f9264aef289f2fa9bfc64e2d28952d69dc3da",
+  "runtime_go_source_revision": "9db960370be20ad7c2570698e265c3b092eb9562",
+  "producer_native_source_revision": "0ba79e12f1ca369f9372c3f87791715341ccf3b2",
+  "source_archive_sha256": "38f7e14aba1b88206058dc784ff45b959300b1102e20eb84c44770ca09f1f106",
+  "runner_sha256": "e4042fdfab08488e46ce191a75580c7583b392bce3a967a816cd65073820ea06",
+  "original_terminal": 1,
+  "passed": false,
+  "l1_boots": 1,
+  "failed_stage": "managed-stop-reclaim",
+  "observation": "Backend owner record was absent when the Stop/reclaim helper attempted to load it; failure occurred before that helper issued the Stop API request.",
+  "cause_proven": false,
+  "no_ttl_or_execution_timeout_or_production_bug_attribution": true,
+  "all23_current_native_artifacts_reverified_before_launch": true,
+  "linux_python_pure_tests": 257,
+  "linux_python_skips": 0,
+  "independent_audit": {
+    "read_only": true,
+    "runner_absent": true,
+    "owned_outer_generations_absent": 1,
+    "all_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "receipt_sha256": "715966413611482d220621a93a36734250e479b56f0c69c22bea446a06f65cf5"
+  },
+  "raw_sha256": {
+    "work/managed-new-case-supersession-repeat-v1.status": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "work/managed-new-case-supersession-repeat-v1-private/resource-receipt.json": "715966413611482d220621a93a36734250e479b56f0c69c22bea446a06f65cf5",
+    "work/managed-new-case-supersession-repeat-v1-report.json": "0f47a3a7d36e92ef606eb7234f096e77de52026fd0b7183fb62fdc88d267b246",
+    "work/managed-new-case-supersession-repeat-v1-private/final-private-console.log": "9639698992b9d3947c78e7412afc02fd64fc1a2dee2521e8ac7f536801317c24",
+    "work/managed-new-case-supersession-repeat-v1-private/launcher-1.log": "9cf764e4f0ea2201794ec05c05eac119d4d8d5af5418b1ba5ff2d55c4435c113",
+    "work/run-managed-new-case-supersession-repeat-v1.sh": "e4042fdfab08488e46ce191a75580c7583b392bce3a967a816cd65073820ea06",
+    "work/managed-new-case-supersession-repeat-v1-assets.json": "6baec9ae7c3021cd0fe9d76ef1a06a3ac9f50994add6a982b4ae698d3ff40127",
+    "work/managed-new-case-supersession-repeat-v1-root-pure.log": "73cbe9ce9dbfd70a0a4192ec91d2b759643eee84ee96c154e10754a5664a43d4",
+    "work/managed-new-case-supersession-repeat-v1-23-programs.log": "f9078d3fd3af43d86a3c348efd3eeb1fc4e8e0cef00671147c2f7038c9a94bd8"
+  },
+  "complete_case_accepted": false,
+  "stop_or_reclaim_timings_accepted": false,
+  "cold_accepted": false,
+  "production_ready": false,
+  "goal_complete": false
+}

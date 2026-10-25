@@ -1,0 +1,5 @@
+3ea1e247d0d32ede5ac0f33fb1284bbeb367f9717c49f06a08a7733d22af2af2  bin/sandboxd-node-snapshot-v2
+19bbd460b8cd526f55fe0fe892985c593b47f3f102f0e071f35e7c7cf071d613  bin/xandbox-template-node-snapshot-v2
+b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0  bin/xandbox-warden-node-snapshot-v2
+597b0d5990f37cd53034046a150c1b50b6c910047b546406ed4d7dbe1c66a5ce  bin/fixture-node-snapshot-v2
+243dedf173271f269391a84375c561409082bba3ddcde6f09143646ba10f3a62  bin/builder-node-snapshot-v2

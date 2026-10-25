@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "production_ready": false,
+  "goal_complete": false,
+  "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0",
+  "full_runtime25_complete": false,
+  "runtime_batch_still_pending": true,
+  "ordinary_daemon_sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+  "original_reports_sha256": {
+    "kvm-fiveb-runtime-default-cold-v1.json": {
+      "bytes": 13615,
+      "sha256": "659bd7359e42d503fd1e79bdaf879e0848af1afa6f2e06c9d6a301987221bf2a"
+    },
+    "kvm-fiveb-runtime-default-cold-v1-queue.json": {
+      "bytes": 1081,
+      "sha256": "cc167e6ea30347a5fc8a4114dfe0b2fa8521901a9cf1e7cb76b4b9466b5edba2"
+    },
+    "kvm-fiveb-runtime-default-cold-v1-session.json": {
+      "bytes": 1112,
+      "sha256": "a8fa6722a76c8b387d1ad582a0468fb489f229b84fd78119494914bdd80c2fcf"
+    }
+  },
+  "checks": {
+    "cold_driver": 30,
+    "queue_expansion": 9,
+    "session_expansion": 9,
+    "closed_loop_switches": 5,
+    "legacy_drained_import_and_explicit_cas_resume": true
+  },
+  "independent_read_only_audit": {
+    "actually_read_only": true,
+    "cold_scope_declared_paths_absent": true,
+    "no_supplemental_cleanup": true,
+    "full_runtime_batch_complete_claim": false
+  },
+  "limitations": [
+    "Only the first completed scope of the new25 runtime batch; no complete25/boundary10 claim.",
+    "Five finite cold-path switch loops are not percentile, open-loop, speedup or production SLO evidence.",
+    "Raw reports/console/receipt identities remain private; original source and ELF bindings retained."
+  ]
+}

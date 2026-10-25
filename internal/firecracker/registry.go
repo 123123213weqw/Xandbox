@@ -18,6 +18,8 @@ import (
 type ownership struct {
 	Version                 int         `json:"version"`
 	Ref                     sandbox.Ref `json:"ref"`
+	QuotaAttempted          bool        `json:"quota_attempted,omitempty"`
+	ProjectID               uint32      `json:"project_id,omitempty"`
 	UID                     int         `json:"uid"`
 	TemplateID              string      `json:"template_id,omitempty"`
 	InitializationAttempted bool        `json:"initialization_attempted,omitempty"`
@@ -31,6 +33,7 @@ type registry struct {
 	mu            sync.RWMutex
 	persist       func(string, any) error
 	syncDirectory func(string) error
+	beforeRelease func(ownership) error // Installed once before workers start; no memory lock across quota I/O.
 	dir           string
 	cfg           Config
 	catalog       *catalog
@@ -65,7 +68,7 @@ func newRegistry(dir string, cfg Config, records []sandbox.Record) (*registry, e
 		}
 		have, _ := json.Marshal(old)
 		if !bytes.Equal(have, want) {
-			return nil, errors.New("backend binding changed; explicit offline migration is required")
+			return nil, ErrBackendBinding
 		}
 	}
 	r := &registry{dir: dir, cfg: cfg, owners: make(map[string]ownership), persist: durableJSON, syncDirectory: syncDir}
@@ -144,6 +147,10 @@ func (r *registry) reserveOwner(ref sandbox.Ref, template string) (ownership, er
 		r.mu.Unlock()
 		return ownership{}, errors.New("generation already has ownership; cannot prepare again")
 	}
+	if r.cfg.Node != nil && len(r.owners) >= r.cfg.Node.MaxInstances {
+		r.mu.Unlock()
+		return ownership{}, sandbox.ErrCapacity
+	}
 	used := make(map[int]bool)
 	for _, owner := range r.owners {
 		used[owner.UID] = true
@@ -156,6 +163,10 @@ func (r *registry) reserveOwner(ref sandbox.Ref, template string) (ownership, er
 		if template != "" {
 			owner.Version = 2
 			owner.TemplateID = template
+		}
+		if project, ok := r.cfg.projectForUID(uid); ok {
+			owner.Version += 2
+			owner.ProjectID = project
 		}
 		// Keep the reservation even if fsync reports failure after rename.
 		r.owners[k] = owner
@@ -171,12 +182,43 @@ func (r *registry) reserveOwner(ref sandbox.Ref, template string) (ownership, er
 
 func (r *registry) release(k string) error { return r.releaseContext(context.Background(), k) }
 func (r *registry) releaseContext(ctx context.Context, k string) error {
-	if r.catalog == nil {
-		return r.releaseOwner(k)
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	return r.catalog.withLock(ctx, func() error { return r.releaseOwner(k) })
+	var quotaProof *ownership
+	if r.cfg.Quota != nil {
+		r.mu.RLock()
+		o, exists := r.owners[k]
+		r.mu.RUnlock()
+		if !exists || !validOwnership(o, r.cfg) || r.beforeRelease == nil {
+			return errors.New("quota ownership cannot be released without zero-usage proof")
+		}
+		// Slow quota I/O must not hold the catalog's inter-process pin lock.
+		// The exact durable owner (and hence pin, UID and project) stays in
+		// place until the short, serialized ownership deletion below succeeds.
+		if err := r.beforeRelease(o); err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		quotaProof = &o
+	}
+	if r.catalog == nil {
+		return r.releaseOwner(k, quotaProof)
+	}
+	return r.catalog.withLock(ctx, func() error { return r.releaseOwner(k, quotaProof) })
 }
-func (r *registry) releaseOwner(k string) error {
+func (r *registry) releaseOwner(k string, quotaProof *ownership) error {
+	if r.cfg.Quota != nil {
+		r.mu.RLock()
+		o, exists := r.owners[k]
+		r.mu.RUnlock()
+		if !exists || quotaProof == nil || o != *quotaProof || !validOwnership(o, r.cfg) {
+			return errors.New("quota ownership changed or its release proof is missing")
+		}
+	}
+
 	if err := os.Remove(filepath.Join(r.dir, k+".json")); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -232,10 +274,26 @@ func syncDir(path string) error {
 }
 
 func validOwnership(o ownership, cfg Config) bool {
-	if cfg.Snapshot == nil {
-		return o.Version == 1 && o.TemplateID == "" && !o.InitializationAttempted
+	want := 1
+	if cfg.Snapshot != nil {
+		want = 2
 	}
-	return o.Version == 2 && hex64.MatchString(o.TemplateID)
+	if cfg.Quota != nil {
+		want += 2
+		project, ok := cfg.projectForUID(o.UID)
+		if !ok || o.ProjectID != project || (o.InitializationAttempted && !o.QuotaAttempted) {
+			return false
+		}
+	} else if o.ProjectID != 0 || o.QuotaAttempted {
+		return false
+	}
+	if o.Version != want {
+		return false
+	}
+	if cfg.Snapshot == nil {
+		return o.TemplateID == "" && !o.InitializationAttempted
+	}
+	return hex64.MatchString(o.TemplateID)
 }
 
 // This durable attempt fence is written before any entropy/identity request.
@@ -247,7 +305,7 @@ func (r *registry) markInitialization(ctx context.Context, k string) error {
 	return r.catalog.withLock(ctx, func() error {
 		r.mu.Lock()
 		o, ok := r.owners[k]
-		if !ok || o.Version != 2 || o.InitializationAttempted {
+		if !ok || !snapshotOwnership(o) || o.InitializationAttempted || (r.cfg.Quota != nil && !o.QuotaAttempted) {
 			r.mu.Unlock()
 			return errors.New("initialization attempt already consumed or unowned")
 		}
@@ -256,4 +314,20 @@ func (r *registry) markInitialization(ctx context.Context, k string) error {
 		r.mu.Unlock()
 		return r.persist(filepath.Join(r.dir, k+".json"), o)
 	})
+}
+
+// markQuotaAttempt durably claims the right to set limits for this owner. A
+// pre-attempt owner can only own an empty quota record; recovery must not clear
+// a nonempty record merely because an unused UID slot was reserved.
+func (r *registry) markQuotaAttempt(k string) error {
+	r.mu.Lock()
+	o, ok := r.owners[k]
+	if !ok || r.cfg.Quota == nil || !validOwnership(o, r.cfg) || o.QuotaAttempted {
+		r.mu.Unlock()
+		return errors.New("quota attempt is unowned or already consumed")
+	}
+	o.QuotaAttempted = true
+	r.owners[k] = o
+	r.mu.Unlock()
+	return r.persist(filepath.Join(r.dir, k+".json"), o)
 }

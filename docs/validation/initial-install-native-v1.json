@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "scope": "initial installer nonprivileged unit/filesystem/model controls, not root PID1/KVM acceptance",
+  "source_revision": "4167804f75f6daf0169d22f5cb9b9f1cdf75c110",
+  "source_archive_sha256": "e263561597c9c6fa3d9ed9c90eda36cfeb959203ea6eb45dc2896de304144d04",
+  "toolchain": "go1.27.3",
+  "linux_native": {
+    "full_race_count": 3,
+    "vet": true,
+    "returned_error_persistence_boundaries": 85,
+    "abrupt_test_process_death_boundaries": 8,
+    "abrupt_process_count": 3,
+    "independent_processes_per_contention_case": 4,
+    "same_and_competing_request_cases": true,
+    "real_ephemeral_tls_and_ordinary_policy_validation": true,
+    "retained_release_static_elf_and_permanent_lock_controls": true,
+    "fixture_and_deploy_helper_race_count": 3,
+    "cgo_free_quota_filter_count": 3,
+    "python_tests": 219,
+    "python_skips": 0,
+    "runner_absent": true
+  },
+  "macos": {
+    "full_race_count": 3,
+    "vet": true,
+    "python_tests": 219,
+    "python_skips": 5
+  },
+  "artifact_checks": {
+    "old_fifteen_actually_rebuilt_byte_equal": true,
+    "new_installer_and_test_native_cross_equal": true,
+    "linux_amd64_and_arm64_cross_builds": true,
+    "artifacts_sha256": {
+      "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+      "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+      "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+      "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+      "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+      "xandbox-ingress-launch": "3da0c06a0f440b73a438280de0b2d4f93ee5457d28bc7b16e611de114ae5be8a",
+      "xandbox-ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+      "deploy-helper": "897afa0e619f6e634df74d1f65b884afb3b4d1d6e5c6cabd93efc0123a66cf6e",
+      "fixture": "bac82851ad34af5e4c5c4bffac909095986ac1679f2b802d1ad98ce6f10ae988",
+      "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+      "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+      "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568",
+      "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+      "releasestore.test": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3",
+      "xandbox-install": "e7f5dca697e04aa54a009bca5d742d5e7f311e4fd90024dfd62d1d62c4a82b86",
+      "installtxn.test": "0701ec5089a84b0c73fba0fcd8a2d8737a470988c21a010f424aef1078a6b94d"
+    }
+  },
+  "failed_predecessor": {
+    "source_archive_sha256": "ca7620bd8621badcd530747cf0c8012881c0b58fe4607b5d0d7e70a117b0de44",
+    "exit_status": 1,
+    "controls_log_sha256": "ee88bbd74c7eed0f59a8ee5f6b5d45da412f223ea5a2c46c5d3ae2a45dce3d37",
+    "cause": "Go TempDir cleanup could not remove its own sealed 0555 child-root; not a passed test suite",
+    "correction": "test-only anchored cleanup restores its own child-root to 0700 after assertions; production remains 0555",
+    "own_leftover_tempdirs_removed": 270,
+    "not_service_gc_evidence": true
+  },
+  "raw_log_sha256": {
+    "installtxn-native-v1.status": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "run-installtxn-native-v1.sh": "d2fd37b8918dae4108fb8268f51529762b46522cd7bc23e01aa1316b4ae0c502",
+    "installtxn-native-v1.pipeline.log": "73aee22022bacb3316e54d85bc938be76d54f4d3f8b03aee1dee184b8d54851d",
+    "installtxn-native-full-race-v1.log": "a22b97d0162304799c1a3ac8ff877d8e02e3b4a1cb1131542ad51bb9b4afb2e2",
+    "installtxn-native-controls-v1.log": "1df556cc46070013ca974c01d623b3e91942e08a6dc741b701237a25e4f8dcf7",
+    "installtxn-native-vet-v1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "installtxn-native-fixture-v1.log": "73a435013abced7afa1e8d2859e6959f2efd5c115a28634dd43d939b91a583b1",
+    "installtxn-native-helper-v1.log": "51879cbe50ab1ba9d342eaad5a10750ae8dca9b1239bc2c1c05b9525d9fc1d53",
+    "installtxn-native-quota-v1.log": "aa12b6cc8e8df45e04d738cbcde4091a5de07fe4f8d0ec73755dae1a3713ee1f",
+    "installtxn-native-python-v1.log": "da0ab2304acfcb72041029d3d67d5a172de533558a16573993a9c57714eeb98f",
+    "installtxn-fifteen-old-bytes-v1.log": "7136daf3c7d104f6068844690b88d88f60e00154efc8d73368936b0505cbecd4",
+    "installtxn-native-v1.sha256": "f93c0cfa401dbff097a53eabcb7731fea73b85ccf4ef59e0d991bf5460f5b076"
+  },
+  "prior_public_proofs_unchanged": {
+    "docs/validation/release-publisher-kvm-v1.json": "da8da5ec61bd694e0a536d683610baa33d430e692f5aa260ecec5037d83b6f9b",
+    "docs/validation/release-store-native-v1.json": "11ea7ffa0c1afe7ac4baaadd944a16d4e929ebba36e5f91a1c92256a084cb516",
+    "docs/validation/readiness-drain-v1.json": "a75b68e958421ce27366fca6fcc6c3fcd34b69fd7ac7233207c87b59758e3928",
+    "docs/validation/service-readiness-v1.json": "fc4b03fb8af1c60c0503197b6ea3a22fe3c617c16d904f080bf354072e2c2fac",
+    "docs/validation/diagnostic-cycle-observability-v1.json": "6f0efd5a06b46b57483b96f7bd0dc9249a2472386bb71cdf1a8260e003fa21be",
+    "docs/validation/systemd-ingress-tls-v1.json": "c5d5ccfab3363c489ae4ae4fd758340f841518298888f78f9a973bcca20c062b"
+  },
+  "acceptance": {
+    "new_root_cli": false,
+    "systemd_cap0_startup_gate": false,
+    "new_installer_tls_kvm": false,
+    "new_installer_original_disk_cold_boot": false,
+    "upgrade_rollback_reconfiguration_backup_catalog": false,
+    "production_ready": false,
+    "goal_complete": false
+  }
+}

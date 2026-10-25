@@ -1,0 +1,4 @@
+work/quota-negative-source-v2.tar.gz: 成功
+sha256sum: work/m2-initrd-v20.cpio.gz: 没有那个文件或目录
+work/m2-initrd-v20.cpio.gz: 打开或读取失败
+sha256sum: 警告：1 个列出的文件无法读取

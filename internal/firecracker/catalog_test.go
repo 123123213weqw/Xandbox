@@ -20,6 +20,9 @@ import (
 // Unit tests use 1MiB synthetic files and bypass the production Config validator
 // (which permits only512MiB/2vCPU). These do NOT represent runnable VM snapshots.
 func catalogFixture(t *testing.T) (*registry, SnapshotManifest, string, string) {
+	return catalogFixtureQuota(t, nil)
+}
+func catalogFixtureQuota(t *testing.T, quota *QuotaPolicy) (*registry, SnapshotManifest, string, string) {
 	t.Helper()
 	base := t.TempDir()
 	t.Cleanup(func() {
@@ -33,6 +36,7 @@ func catalogFixture(t *testing.T) (*registry, SnapshotManifest, string, string) 
 		})
 	})
 	cfg := policy()
+	cfg.Quota = quota
 	cfg.Version = 2
 	cfg.RuntimeRoot = filepath.Join(base, "runtime")
 	cfg.CgroupRoot = filepath.Join(base, "groups")

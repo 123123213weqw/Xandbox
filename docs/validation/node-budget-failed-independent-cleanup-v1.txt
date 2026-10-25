@@ -1,0 +1,2 @@
+FAILED nodeV1 frozen8b951bb: owned launcher refused CPU/pids mismatch before QEMU/L1 boot; passed=false, zero L1 boots. Python stillset old4CPU/128pids while new Go profile strictlyrequired8CPU/256pids. Fix producer, never relax launcher guard.
+Read-only independent audit: exact root/control/cgroup parent/one ATTEMPTED outer group/runner absent. No KVM execution/cold recovery/node runtime acceptance inferred from this attempted scope.

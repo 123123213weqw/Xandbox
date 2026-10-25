@@ -24,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/guestbridge"
 	"github.com/123123213weqw/Xandbox/internal/guestinit"
 	"github.com/123123213weqw/Xandbox/internal/guestwire"
@@ -53,11 +54,19 @@ type driver struct {
 	registry *registry
 	cfg      Config
 	procs    map[string]*process
+	quota    *projectQuota
+	node     *nodeEnvelope
 }
 
 // New requires root and a pre-delegated empty cgroup-v2 root. Its caller must
 // hold the exclusive state lock throughout the driver's lifetime.
 func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver, error) {
+	return newDriver(stateDir, configPath, records, nil)
+}
+func NewWithAdmission(stateDir, configPath string, records []sandbox.Record, limits sandbox.AdmissionLimits) (sandbox.Driver, error) {
+	return newDriver(stateDir, configPath, records, &limits)
+}
+func newDriver(stateDir, configPath string, records []sandbox.Record, limits *sandbox.AdmissionLimits) (sandbox.Driver, error) {
 	if os.Geteuid() != 0 {
 		return nil, errors.New("Firecracker driver requires privileged Linux controller")
 	}
@@ -70,6 +79,23 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 	cfg, err := loadConfig(configPath)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.Node != nil {
+		if limits == nil {
+			return nil, errors.New("version3 requires complete bound admission limits")
+		}
+		if err = cfg.Node.match(*limits, true); err != nil {
+			return nil, err
+		}
+		allocated := 0
+		for _, r := range records {
+			if r.State != sandbox.Destroyed {
+				allocated++
+			}
+		}
+		if err = cfg.Node.match(sandbox.AdmissionLimits{RetainedRecords: len(records), AllocatedInstances: allocated}, false); err != nil {
+			return nil, err
+		}
 	}
 	for _, asset := range cfg.assets() {
 		if err := checkAsset(asset); err != nil {
@@ -111,7 +137,7 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 		return nil, errors.New("operator must delegate memory, pids and cpu controllers")
 	}
 	if cfg.IO != nil && !hasWords(string(controllers), "io") {
-		return nil, errors.New("configured IO policy requires delegated io controller")
+		return nil, ErrIODelegation
 	}
 	if err := privateDir(cfg.RuntimeRoot); err != nil {
 		return nil, err
@@ -124,6 +150,26 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 			return nil, err
 		}
 	}
+	node, err := openNodeEnvelope(cfg, stateDir)
+	if err != nil {
+		return nil, err
+	}
+	keepNode := false
+	defer func() {
+		if node != nil && !keepNode {
+			node.close()
+		}
+	}()
+	quota, err := openProjectQuota(cfg)
+	if err != nil {
+		return nil, err
+	}
+	keepQuota := false
+	defer func() {
+		if quota != nil && !keepQuota {
+			quota.anchor.Close()
+		}
+	}()
 	for _, p := range []string{filepath.Join(cfg.RuntimeRoot, "j"), filepath.Join(cfg.RuntimeRoot, "j/firecracker"), filepath.Join(stateDir, "firecracker")} {
 		if err := privateDir(p); err != nil {
 			return nil, err
@@ -132,6 +178,12 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 	r, err := newRegistry(filepath.Join(stateDir, "firecracker"), cfg, records)
 	if err != nil {
 		return nil, err
+	}
+	if quota != nil {
+		if err := quota.reconcile(r.owners); err != nil {
+			return nil, err
+		}
+		r.beforeRelease = quota.release
 	}
 	// Unknown resources must not be adopted or silently ignored. In particular,
 	// a lost ownership manifest must not make a previous VM appear destroyed.
@@ -166,7 +218,9 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 			return nil, errors.New("snapshot catalog and runtime require the same filesystem")
 		}
 	}
-	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process)}, nil
+	keepQuota = true
+	keepNode = true
+	return &driver{registry: r, cfg: cfg, procs: make(map[string]*process), quota: quota, node: node}, nil
 }
 
 func (*driver) Name() string { return "firecracker" }
@@ -178,9 +232,9 @@ func (d *driver) paths(k string) (string, string) {
 func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Preparation) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			// Prepare has no tenant argv/output or bearer credentials. Bounded
-			// initialization errors stay in private operator logs, not the API.
-			slog.Error("Firecracker preparation failed", "error", retErr)
+			// Only a sealed class leaves the backend. Neither the log handler nor
+			// its queue receives or formats the original error object.
+			slog.Error("Firecracker preparation failed", diagnostics.ReasonAttribute, int(DiagnosticReason(retErr)))
 		}
 	}()
 	k, err := key(ref)
@@ -196,6 +250,12 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 			return err
 		}
 	}
+	if d.node != nil {
+		if err := d.node.acquirePrepare(ctx); err != nil {
+			return err
+		}
+		defer d.node.preparing.release()
+	}
 	group, jail := d.paths(k)
 	for _, p := range []string{group, jail} {
 		if _, err := os.Lstat(p); !os.IsNotExist(err) {
@@ -205,6 +265,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	owner, err := d.registry.reserveContext(ctx, ref)
 	if err != nil {
 		return err
+	}
+	if d.quota != nil {
+		if err := d.quota.reserve(owner, func() error { return d.registry.markQuotaAttempt(k) }); err != nil {
+			return err
+		}
 	}
 	// A configured reserved range is mandatory; also reject known host accounts.
 	if _, err := user.LookupId(strconv.Itoa(owner.UID)); err == nil {
@@ -222,8 +287,8 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		return err
 	}
 	for file, value := range map[string]string{
-		"memory.max": "805306368", "memory.swap.max": "0", "memory.oom.group": "1",
-		"pids.max": "64", "cpu.max": "200000 100000",
+		"memory.max": strconv.FormatUint(instanceMemoryMax, 10), "memory.swap.max": "0", "memory.oom.group": "1",
+		"pids.max": strconv.FormatUint(instancePidsMax, 10), "cpu.max": fmt.Sprintf("%d %d", instanceCPUQuota, nodeCPUPeriod),
 	} {
 		if err := os.WriteFile(filepath.Join(group, file), []byte(value), 0); err != nil {
 			return err
@@ -244,7 +309,20 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	}
 	defer cg.Close()
 	root := filepath.Join(jail, "root")
-	if err := os.MkdirAll(root, 0700); err != nil {
+	if d.quota != nil {
+		if err := os.Mkdir(jail, 0700); err != nil {
+			return err
+		}
+		if err := d.quota.setDir(jail, owner, true); err != nil {
+			return err
+		}
+		if err := os.Mkdir(root, 0700); err != nil {
+			return err
+		}
+		if err := d.quota.setDir(root, owner, true); err != nil {
+			return err
+		}
+	} else if err := os.MkdirAll(root, 0700); err != nil {
 		return err
 	}
 	assets := map[string]Asset{"workspace.ext4": d.cfg.Workspace}
@@ -258,8 +336,20 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		}
 	}
 	if d.registry.catalog != nil {
+		// Only trusted immutable links enter during this pre-fork window.
+		// Every failure leaves an owned, never-admitted jail for normal GC.
+		if d.quota != nil {
+			if err := d.quota.setDir(root, owner, false); err != nil {
+				return err
+			}
+		}
 		if err := d.registry.catalog.linkOwned(ctx, owner, root); err != nil {
 			return err
+		}
+		if d.quota != nil {
+			if err := d.quota.setDir(root, owner, true); err != nil {
+				return err
+			}
 		}
 	}
 	if err := os.Chmod(filepath.Join(root, "workspace.ext4"), 0600); err != nil {
@@ -267,6 +357,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 	}
 	if err := os.Chown(filepath.Join(root, "workspace.ext4"), owner.UID, owner.UID); err != nil {
 		return err
+	}
+	if d.quota != nil {
+		if err := d.quota.verifyPrepared(jail, owner); err != nil {
+			return err
+		}
 	}
 	leaseRead, leaseWrite, err := os.Pipe()
 	if err != nil {
@@ -291,6 +386,9 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		"--uid", strconv.Itoa(owner.UID), "--gid", strconv.Itoa(owner.UID), "--chroot-base-dir", filepath.Join(d.cfg.RuntimeRoot, "j"),
 		"--cgroup-version", "2", "--parent-cgroup", rel, "--resource-limit", "no-file=256", "--resource-limit", "fsize=134217728",
 		"--", "--api-sock", "/api.sock"}
+	if d.quota != nil {
+		args = append([]string{"-deny-quota-mutation"}, args...)
+	}
 	cmd := exec.Command(d.cfg.Warden.Path, args...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	cmd.ExtraFiles = []*os.File{leaseRead, kill}
@@ -395,6 +493,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 			health, err = guestbridge.Call(callCtx, filepath.Join(root, "v.sock"), guestwire.Request{Version: guestwire.Version, Operation: "health", Ref: ref})
 			return err
 		}); err != nil {
+			return err
+		}
+	}
+	if d.quota != nil {
+		if err := retry(ctx, p.done, func() error { return d.quota.verifyDomain(group, owner) }); err != nil {
 			return err
 		}
 	}
@@ -749,6 +852,13 @@ func waitPristine(ctx context.Context, done <-chan struct{}, socket string) erro
 	}
 	if phase != guestinit.Waiting {
 		return errors.New("restored template is not unassigned; initialization retry is forbidden")
+	}
+	return nil
+}
+
+func (d *driver) CheckAdmission(l sandbox.AdmissionLimits) error {
+	if d.cfg.Node != nil {
+		return d.cfg.Node.match(l, false)
 	}
 	return nil
 }

@@ -1,0 +1,7 @@
+Frozen source93c5be6; final runner exit0 and absent. Independent frozen native/cross seven artifact hashes equal. Ordinary five artifacts are byte-identical to prior4ee; new gateway/fixture are distinct.
+Actual Linux Go1.27.3 full race count3, vet, tagged fixture race count10/vet, CGO0 kernel quota count3, root Python107 with zero skips and mock6 passed. Frozen Darwin Go1.27.3 full race count3/vet passed.
+Actual final TLS owned-L1 checkpoint + original-disk cold: 2 boots passed. Actual unchanged normal schema3 node-budget checkpoint + cold staging/dispatch regression: 2 boots passed.
+Independent read-only audit: final2 scopes4 generations, earlier f6982 scopes4 generations, original9d false1 generation; every exact scope root/control/parent/all execution groups absent. All four runners terminal/absent. No supplemental cleanup.
+Original component190 had zero hardware boots. Original9d false remains false, one boot/no accepted checkpoint/no cold/no budget regression. Corrected f698 functional pass is preserved as an earlier source predating external-FD hygiene. Final93 has its own full native gates and actual FD10/CWD/privilege/TLS/KVM proof.
+All KVM work confined to owned L1, no shared-L0 service/network/kernel change or host tenant execution fallback. Public reports contain flags/counters/timings/artifact hashes, not private credentials/certificates/receipts/process identities.
+No production-ready, complete TLS/PKI/DoS/policy-media fault, systemd/operator acceptance, percentile/SLO or full Goal completion claim.

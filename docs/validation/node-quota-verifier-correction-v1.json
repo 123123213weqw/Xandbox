@@ -1,0 +1,57 @@
+{
+  "kind": "DERIVED_offline_verifier_correction_not_an_original_hardware_report",
+  "hardware_runner_terminal_status": 0,
+  "hardware_source_and_ELFs_changed": false,
+  "hardware_acceptance_predicates_changed": false,
+  "hardware_reports_modified_or_rerun": false,
+  "original_offline_verifier_sha256": "a9bcaca56c0178c07b1e94f70d695ca62b048cc94112be9663cdc6dc22619e2e",
+  "original_private_trace_sha256": "8713c21dd21e552d1ae268979e79e6ae925066ac97e6bdcef384ade1e1174a4c",
+  "original_offline_returncode": 1,
+  "old_golden_predicate": {
+    "live_bytes": 189911040,
+    "cold_bytes": 189906944,
+    "private_inodes": 16
+  },
+  "actual_stopped_case": {
+    "live_bytes": 189915136,
+    "private_inodes": 16,
+    "linked_namespace_accounted_before_cut": true,
+    "receipt_before_bytes": 189915136,
+    "cold_bytes": 189911040,
+    "pid_file_empty_after_cold": true,
+    "pid_not_recovery_authority": true
+  },
+  "basis": {
+    "frozen_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
+    "source_path": "cmd/xandbox-host-fixture/quota_driver_linux.go",
+    "source_sha256": "2a4cb50b031293602b843ea7ef49f80b394cfb66631342894f435dbf8ea81a37",
+    "mutable_allocation_not_policy": "Existing frozen L1 contract already treats current physical allocation as mutable, checks actual kernel quota usage exactly equals independently walked named inode blocks/inodes, unchanged limits and logical identity/namespace; no new waiver or filesystem policy.",
+    "attribution_limit": "The observed stopped aggregate was4KiB larger than the older run; current cold aggregate fell4KiB and diagnostic PID file was empty. Public data do not uniquely attribute every allocation delta to that PID file; no sole-cause claim."
+  },
+  "corrected_offline_predicate": {
+    "minimum_existing_bytes": 134217728,
+    "maximum_existing_bytes": 201326592,
+    "alignment": 4096,
+    "exact_inodes": 16,
+    "live_equals_saved_receipt_before": true,
+    "linked_namespace_before_true": true,
+    "unchanged_L1_kernel_namespace_hard_policy_and_identity_checks_required": true,
+    "pid_flags_remain_required": true,
+    "native_or_hardware_predicate_relaxed": false
+  },
+  "negative_tests_executed": 34,
+  "negative_dimensions": [
+    "bool/float instead of exact integer",
+    "below original128MiB floor",
+    "above original192MiB hard ceiling",
+    "unaligned bytes",
+    "wrong inode count",
+    "false namespace assertion",
+    "receipt-before mismatch",
+    "false PID-file/authority flags"
+  ],
+  "corrected_private_verifier_sha256": "a34f10af5daf54c3b0d2bc8ed8c6e8e840866072b8cf3892754a00237cec4a00",
+  "all_full_matrix_other_assertions_preserved": true,
+  "not_a_new_physical_or_SLO_claim": true,
+  "private_trace_with_local_paths_not_published": true
+}

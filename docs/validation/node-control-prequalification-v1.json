@@ -1,0 +1,364 @@
+{
+  "version": 1,
+  "status": "prequalification_only_not_kvm_qualified",
+  "production_ready": false,
+  "frozen_source_commit": "b2afd3e1dd6e84d56001f77098fe4cdd474f0cad",
+  "source_archive_sha256": "6574c3bfe1e6e43fa31b19494bd13c4539d4cf95926670334de992156521b897",
+  "toolchain": "go1.27.3",
+  "build_flags": [
+    "-trimpath",
+    "-buildvcs=false"
+  ],
+  "linux_build": {
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "CGO_ENABLED": "0",
+    "independent_frozen_archive_cross_and_native_six_artifacts_identical": true,
+    "artifact_sha256": {
+      "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+      "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+      "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+      "fixture": "9f507648fe2baffd945af6c55f093a9ae45047319bd4b7e1695c19c7acbe9d07",
+      "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+    }
+  },
+  "tests": {
+    "frozen_darwin_arm64_full_race_count": 3,
+    "frozen_darwin_vet": true,
+    "frozen_darwin_real_daemon_cli_mock_process": true,
+    "frozen_linux_amd64_full_race_count": 3,
+    "frozen_linux_vet": true,
+    "linux_opt_in_fixture_race_count": 10,
+    "linux_opt_in_fixture_vet": true,
+    "linux_cgo_free_kernel_quota_filter_count": 3,
+    "linux_root_python_tests_passed": 82,
+    "linux_root_python_tests_skipped": 0,
+    "linux_all_make_smoke_suites_passed": true,
+    "frozen_linux_real_daemon_cli_mock_process": true,
+    "fixed_prepare_probe_whole_elf_symbols_opcodes_checked": true
+  },
+  "new_production_qualification": {
+    "actual_new_operator_kvm_case": false,
+    "actual_different_uid_kernel_operator_rejection": false,
+    "actual_operator_filesystem_fault_or_power_cut": false,
+    "new_default_io_full_matrix": false,
+    "new_quota240_dual_live_and_fault_matrix": false,
+    "new_node_snapshot_prepare_cancel_matrix": false,
+    "production_slo": false
+  },
+  "scope_notes": [
+    "Durable acknowledged drain, clean restart and exact CAS retries tested with actual MOCK daemon/CLI processes, not hardware isolation.",
+    "Controller pre/post-commit errors and blocked persistence use simulated Store implementations, not physical filesystem D/EIO or media fault.",
+    "Kernel same-UID UDS positives and pure UID mismatch unit tests do not certify actual different-UID kernel refusal.",
+    "New exact fixed probe plan replaces the old daemon binding; historical reports and manifests are not relabeled.",
+    "Private native runner returned terminal status0 and its exact owned process was absent; no new L1/KVM job was launched."
+  ],
+  "development_false_predecessors": [
+    {
+      "case": "public-lock-negative-under-umask077",
+      "cause": "test creation0644 was masked to0600",
+      "correction": "explicit Chmod0644 before rejection assertion; no production permission relaxation"
+    },
+    {
+      "case": "first-process-harness-exit-status",
+      "cause": "helper expected COMPLETED while established Job API uses EXITED",
+      "correction": "helper polls actual raw/session execution result and asserts EXITED plus output/exit_code"
+    },
+    {
+      "case": "imported-legacy-metadata-smoke",
+      "cause": "old fixture expected metadata capacity error but newly introduced conservative admission correctly returned NODE_DRAINING",
+      "correction": "assert default drained then same-UID CLI CAS resume, and still require metadata capacity rejection; no production fail-open"
+    }
+  ],
+  "sanitized_process_report_sha256": {
+    "node-control-darwin-process-v1.json": "25a4cefdc0ea14885970e3f22fc9f890175c1a0d52c4733f7fcd34f3281317ee",
+    "node-control-linux-process-v1.json": "690ee1627e64030200582528b4646ef3140e765ec8bcc6bb7dd6636682b1ac1c"
+  },
+  "frozen_changed_inputs": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 4706,
+      "sha256": "11e83a91416d6b37a3558b3d427e476995c87e6ccc9a3f054cf7a0fbc11b5c88"
+    },
+    {
+      "path": "Makefile",
+      "bytes": 1281,
+      "sha256": "16057f11a766b1cecfb3b18ed696f63bfef369dc18806b1a0170edc02448570f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 21963,
+      "sha256": "d846951478ecf6f6e3518fc7ff7322339140c664c8ab2cf51b856909b14ed14c"
+    },
+    {
+      "path": "cmd/sandboxd/lock_test.go",
+      "bytes": 3564,
+      "sha256": "b6e794b6eb65864844770319a3d5eb81eb7344da836f39ce497b45c75c345998"
+    },
+    {
+      "path": "cmd/sandboxd/lock_unix.go",
+      "bytes": 962,
+      "sha256": "98eafdb402c3b7ffabc0f8aa985e87c33ee6462aa7d7da008203121872234e10"
+    },
+    {
+      "path": "cmd/sandboxd/main.go",
+      "bytes": 10745,
+      "sha256": "e37d75ded5fb19c5b62cced0c8c48bb6b9cdd455bb6ba02a6d04948f230a7621"
+    },
+    {
+      "path": "cmd/xandbox-host-fixture/node_prepare_trace_linux.go",
+      "bytes": 19870,
+      "sha256": "f3c24a9b59bd056428fd2c0806a4372dd6453bb0303bf705de12282a892bdb0b"
+    },
+    {
+      "path": "cmd/xandbox-host-fixture/node_prepare_trace_linux_test.go",
+      "bytes": 7035,
+      "sha256": "5a4a92c893ded82c7d0365c1972075ab6dfa4e7c1d3021324aaf0035dac260f2"
+    },
+    {
+      "path": "cmd/xandbox-node/main.go",
+      "bytes": 2712,
+      "sha256": "5d22a690769c2702d4631506b01d45bc4529c3aefbc6281f57adcb4ca3afc714"
+    },
+    {
+      "path": "cmd/xandbox-node/main_test.go",
+      "bytes": 2621,
+      "sha256": "83f1bb75b05a13a05ea5f8f104aad2ba42cfcb156f6271f297768c3174cc10ae"
+    },
+    {
+      "path": "docs/LEDGER.md",
+      "bytes": 11911,
+      "sha256": "acbdf0e2962be43512b0cff1929ece08c9382d28edb25137d9f3c4b6910925f9"
+    },
+    {
+      "path": "docs/NODE_CONTROL.md",
+      "bytes": 8724,
+      "sha256": "ec533a68efe18d8a92b986028f437743c28b07c08534b501e244d5526173f3bd"
+    },
+    {
+      "path": "docs/NODE_PREPARE_CANCELLATION.md",
+      "bytes": 7812,
+      "sha256": "1051d1807ac009051126f0ada0769faff9f02d4591d0d66f38040a81013b4e73"
+    },
+    {
+      "path": "docs/NODE_PREPARE_TRACE.md",
+      "bytes": 8421,
+      "sha256": "d9ee2743f7961759d38ca9943b5bd702eb39c4df85785248a570bf6c4e48c7ee"
+    },
+    {
+      "path": "docs/OPERATIONS.md",
+      "bytes": 11421,
+      "sha256": "46e1480f6ce87752acbc4771bf447d535893a52cc0ed9644fd8bd3f9207b3a2e"
+    },
+    {
+      "path": "internal/httpapi/drain_test.go",
+      "bytes": 1886,
+      "sha256": "3a7452c3e379c02516607c051acdf12ada8bf72f65ccfb0a23e12408c10994d5"
+    },
+    {
+      "path": "internal/httpapi/server.go",
+      "bytes": 11304,
+      "sha256": "1cd7c7dcd2df7c4f1154d16fa4fb784b035e66e4066988160248b15f46a5260f"
+    },
+    {
+      "path": "internal/nodecontrol/client.go",
+      "bytes": 3782,
+      "sha256": "b37d3d7407166848b5aa92f9270a3e3249f502650c82581bb2f6d2d04a7d0c3c"
+    },
+    {
+      "path": "internal/nodecontrol/client_test.go",
+      "bytes": 3900,
+      "sha256": "ba72cfa19b3885e868df7ddde3035433f247e50301cfd97cc7b0eb9dcfab5b1a"
+    },
+    {
+      "path": "internal/nodecontrol/control.go",
+      "bytes": 5732,
+      "sha256": "24922953d06dedf9aec5e72c1f071e1f07e8e008536f2a52e369baeca66265f6"
+    },
+    {
+      "path": "internal/nodecontrol/control_test.go",
+      "bytes": 11976,
+      "sha256": "875b395158916c837c0e91b79ef14e3d3a6f79d45f773c648e8b3998041809a9"
+    },
+    {
+      "path": "internal/nodecontrol/owner_other.go",
+      "bytes": 180,
+      "sha256": "44e443ce2034280aaa4fecb9d025d4b1b2684c6f27ad404f120eccce8f00d9ba"
+    },
+    {
+      "path": "internal/nodecontrol/owner_unix.go",
+      "bytes": 493,
+      "sha256": "41e65afc29f9b3c75fc83b278f3037273a04ff574874c89c2188456ba8e7f755"
+    },
+    {
+      "path": "internal/nodecontrol/peer_darwin.go",
+      "bytes": 597,
+      "sha256": "c5d52c054f336825f9309c230b05d134a5d2adec0006a3335175088d6165e211"
+    },
+    {
+      "path": "internal/nodecontrol/peer_linux.go",
+      "bytes": 538,
+      "sha256": "b45f1e3a76e5b8cfac5488fcc3f400139779a27cc97d628b57f797760cd5a816"
+    },
+    {
+      "path": "internal/nodecontrol/peer_other.go",
+      "bytes": 191,
+      "sha256": "3be1de878fa97975058017233842094e1a6af2c7693b722d125b73767cae556e"
+    },
+    {
+      "path": "internal/nodecontrol/server.go",
+      "bytes": 5979,
+      "sha256": "aa0dbb1215b335d975c0984144cafcf12e1ca985cbe4eb95eed485a6b0132ca0"
+    },
+    {
+      "path": "internal/nodecontrol/server_test.go",
+      "bytes": 8039,
+      "sha256": "090902db04a5c8c96857dafaf977584700943deac6e4c54179cb154c52d4aef8"
+    },
+    {
+      "path": "internal/nodecontrol/state.go",
+      "bytes": 8129,
+      "sha256": "c00d6b174bf10720facff2b3c5f944f45b3c49a5180f76dd906df4644f033ead"
+    },
+    {
+      "path": "internal/privatefile/directory_other.go",
+      "bytes": 413,
+      "sha256": "2062a837d7cf96d729187fa2e830cadbea08e6ca61813fbc673421835113f90d"
+    },
+    {
+      "path": "internal/privatefile/directory_unix.go",
+      "bytes": 3388,
+      "sha256": "c89ae269d28864fb2fb90d08aa34bfaa41d94ec2506e73312a66835bb991a8bb"
+    },
+    {
+      "path": "internal/sandbox/admission_gate.go",
+      "bytes": 2146,
+      "sha256": "05f61cc4e1945340b4996ef1cecda009510242813ed0ce4e4267e688e69ab565"
+    },
+    {
+      "path": "internal/sandbox/admission_gate_test.go",
+      "bytes": 3451,
+      "sha256": "b355dd95c4182a60951ca4174ad60882819cf35e6c69e0d2fba464678339c7c1"
+    },
+    {
+      "path": "internal/sandbox/managed.go",
+      "bytes": 3371,
+      "sha256": "8d2669d01c8947e64f595d6e89ffcca57ab0fdcf5ae609e1dff744582854c1c1"
+    },
+    {
+      "path": "internal/sandbox/manager.go",
+      "bytes": 26946,
+      "sha256": "2b762e245c2fed41ee7c4fa508bdd0af4e35d44d1c5f7ff46fda9958318a6938"
+    },
+    {
+      "path": "internal/sandbox/types.go",
+      "bytes": 6173,
+      "sha256": "31b4dd3ca6ea3b1964c2a4e7666ba0bf13b4fcc77be62effb5d8b32b5974264f"
+    },
+    {
+      "path": "internal/session/broker.go",
+      "bytes": 22492,
+      "sha256": "c4ec606be81384ac04957c204629ceb3250b470d2fa7bca7d57580e17a912923"
+    },
+    {
+      "path": "internal/session/drain_test.go",
+      "bytes": 4644,
+      "sha256": "571595b3ce202f9759c4d899c891dc2f362ec18a469217f983a6ce4d92d6b475"
+    },
+    {
+      "path": "scripts/kvm_nested_host.py",
+      "bytes": 78822,
+      "sha256": "2a8240434ef247ccc5d90e9729602b58424297a433b1054eff0c378862ce2618"
+    },
+    {
+      "path": "scripts/metadata_smoke.py",
+      "bytes": 14301,
+      "sha256": "137036c5583ebd3c42a3027682748f28506f17e88c8721128b4a539eb8e77564"
+    },
+    {
+      "path": "scripts/node_control_smoke.py",
+      "bytes": 9410,
+      "sha256": "931daf810900f423ead679511fb72779523144d03758b45dff549b388c5f7d56"
+    },
+    {
+      "path": "scripts/test_kvm_node_prepare_cancel.py",
+      "bytes": 4219,
+      "sha256": "1fedad57f6e0451835f92dd3d39f94366356dc6bb41e2c4f65cee01bd9c6e482"
+    },
+    {
+      "path": "scripts/test_kvm_node_snapshot.py",
+      "bytes": 4931,
+      "sha256": "d9f8b8a6048d1310aac5d9105ca67682705e1197ffdab31b612301d55712714b"
+    }
+  ],
+  "private_native_result_archive_sha256": "e3d360595ac364e6d9cac424f8a7e8bc9c62ab5e7782945b3ba5f878729ba389",
+  "private_native_result_member_sha256": [
+    {
+      "name": "node-control-native-pipeline-v1.log",
+      "bytes": 1584,
+      "sha256": "774f14ca3f2c3f2c5ed64e874ec87396ee01cfbbe0ec4a4c6fc5f34d01ca2382"
+    },
+    {
+      "name": "node-control-native-race-v1.log",
+      "bytes": 1767,
+      "sha256": "fedaffd8483296d1435b72705b73126a5eefda9b2bce97098d87b3c30da14aab"
+    },
+    {
+      "name": "node-control-native-vet-v1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "node-control-native-fixture-v1.log",
+      "bytes": 70,
+      "sha256": "528bb850be6beee75a5e99b15dbacb86fc40dbce017c8291d178f5c097061b91"
+    },
+    {
+      "name": "node-control-native-fixture-vet-v1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "node-control-native-filter-v1.log",
+      "bytes": 846,
+      "sha256": "523088707db1b68d915589886b6c2e975d277dcbce55ccc9d11d9a2526d0ffa5"
+    },
+    {
+      "name": "node-control-native-python-v1.log",
+      "bytes": 181,
+      "sha256": "0771db5608ae4487e73e979a2bc4dafee751bb939491d10bb9165ea50b10a5cc"
+    },
+    {
+      "name": "node-control-native-smoke-v1.log",
+      "bytes": 5492,
+      "sha256": "c2ceaf59e83ec531a708c5fa8db89534800d6b9bdf2da529366659fc90189233"
+    },
+    {
+      "name": "node-control-native-process-v1.json",
+      "bytes": 880,
+      "sha256": "690ee1627e64030200582528b4646ef3140e765ec8bcc6bb7dd6636682b1ac1c"
+    },
+    {
+      "name": "node-control-native-artifacts-v1.sha256",
+      "bytes": 586,
+      "sha256": "25e3c05bc7dd56376cfccc985ff04c09c2611adb8140678b0e2d08f1bd6457c6"
+    },
+    {
+      "name": "node-control-native-v1.status",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "name": "run-node-control-native-v1.sh",
+      "bytes": 3931,
+      "sha256": "61f5e5a9a78e545b8b077902fb49f9ccb40b74c3e013cb8be0d7ab1f36241a82"
+    }
+  ],
+  "private_darwin_race_log_sha256": "e15fec6ea861fcb0dc4a3fce549189f074f3d145146d5bda069d896c3db4a409",
+  "private_preliminary_failure_logs_sha256": {
+    "drain-development-full-v3.log": "2cba4e4bf82507cf48a2593296dc193f263bf19fcda6a611b42ed437f1815b76",
+    "drain-development-full-v4.log": "721ec264a8b012c1875622702327a5084e6b892ed87c08f958ecb1d4cf1f7902"
+  },
+  "raw_runtime_logs_console_paths_credentials_exported": false
+}

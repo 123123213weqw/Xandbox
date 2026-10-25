@@ -19,6 +19,7 @@ import (
 )
 
 type Options struct {
+	AdmissionGate    *AdmissionGate
 	Metrics          *telemetry.Registry
 	MaxRecords       int
 	MaxTenantRecords int
@@ -88,6 +89,9 @@ type Manager struct {
 }
 
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
+	if opts.AdmissionGate == nil {
+		opts.AdmissionGate = NewAdmissionGate(true)
+	}
 	if opts.MaxRecords == 0 {
 		opts.MaxRecords = 10_000
 	}
@@ -133,12 +137,28 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	if opts.StopWorkers < 1 || opts.StopWorkers > 64 || opts.CleanupWorkers < 1 || opts.CleanupWorkers > 64 || opts.WorkQueueSize < 1 || opts.WorkQueueSize > 10000 {
 		return nil, errors.New("invalid lifecycle worker or queue bounds")
 	}
+	if policy, ok := driver.(ResourceAdmission); ok {
+		if err := policy.CheckAdmission(AdmissionLimits{MaxInstances: opts.MaxInstances, MaxRecords: opts.MaxRecords}); err != nil {
+			return nil, err
+		}
+	}
 	records, err := store.Load()
 	if err != nil {
 		return nil, err
 	}
 	if len(records) > MaxLedgerRecords {
 		return nil, errors.New("ledger exceeds hard record limit")
+	}
+	allocated := 0
+	for _, record := range records {
+		if record.State != Destroyed {
+			allocated++
+		}
+	}
+	if policy, ok := driver.(ResourceAdmission); ok {
+		if err := policy.CheckAdmission(AdmissionLimits{RetainedRecords: len(records), AllocatedInstances: allocated}); err != nil {
+			return nil, err
+		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{
@@ -275,10 +295,10 @@ func createHashes(key string, req CreateRequest) (string, string, error) {
 // CreateScoped reserves ownership, tenant quota, and idempotency atomically.
 // Completed tombstones retain keys: a retry never creates a fresh generation.
 func (m *Manager) CreateScoped(ctx context.Context, owner Owner, key string, req CreateRequest) (Record, error) {
-	return m.createScoped(ctx, owner, key, req, nil, nil)
+	return m.createScoped(ctx, owner, key, req, nil, nil, nil)
 }
 
-func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref)) (_ Record, retErr error) {
+func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref), ticket *CreationTicket) (_ Record, retErr error) {
 	started := time.Now()
 	defer func() { m.opts.Metrics.Observe(telemetry.CreateCall, time.Since(started), retErr != nil) }()
 	if !owner.Valid() {
@@ -354,6 +374,10 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 			return r, nil
 		}
 	}
+	if ticket == nil && !m.opts.AdmissionGate.Open() {
+		m.mu.Unlock()
+		return Record{}, ErrDraining
+	}
 	if len(m.records) >= m.opts.MaxRecords {
 		m.mu.Unlock()
 		return Record{}, ErrMetadataCapacity
@@ -380,12 +404,18 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		m.mu.Unlock()
 		return Record{}, errors.New("random identity collision")
 	}
-	m.records[id], m.active[id] = i, i
-	m.metricRecords.Add(1)
-	m.metricAllocated.Add(1)
-	m.tenantRecords[owner.TenantID]++
-	if keyHash != "" {
-		m.createKeys[index] = i
+	err = m.opts.AdmissionGate.reserve(ticket, func() {
+		m.records[id], m.active[id] = i, i
+		m.metricRecords.Add(1)
+		m.metricAllocated.Add(1)
+		m.tenantRecords[owner.TenantID]++
+		if keyHash != "" {
+			m.createKeys[index] = i
+		}
+	})
+	if err != nil {
+		m.mu.Unlock()
+		return Record{}, err
 	}
 	m.mu.Unlock()
 	if reserved != nil {

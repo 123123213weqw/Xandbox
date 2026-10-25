@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 )
 
 func TestFixedBinsAndInvalidObservations(t *testing.T) {
@@ -73,5 +75,46 @@ func TestObserverHasNoHeapAllocation(t *testing.T) {
 	r := &Registry{}
 	if n := testing.AllocsPerRun(1000, func() { r.Observe(StopAttempt, time.Millisecond, false) }); n != 0 {
 		t.Fatal("observer allocated", n)
+	}
+}
+
+func TestDiagnosticCountersAndQueueAreFixedAndBounded(t *testing.T) {
+	r := &Registry{}
+	raw := string(r.Render(Gauges{Diagnostics: diagnostics.Stats{Enqueued: 3, Dropped: 5, Written: 2, WriteErrors: 1, Queued: 1, Capacity: 64}}))
+	for _, want := range []string{"xandbox_diagnostics_enqueued_total 3\n", "xandbox_diagnostics_dropped_total 5\n", "xandbox_diagnostics_written_total 2\n", "xandbox_diagnostics_write_errors_total 1\n", "xandbox_diagnostics_queued 1\n", "xandbox_diagnostics_queue_capacity 64\n"} {
+		if !strings.Contains(raw, want) {
+			t.Fatal("missing closed counter", want)
+		}
+	}
+	if len(raw) > 65536 {
+		t.Fatal("exposition exceeded existing cap")
+	}
+}
+
+func TestPrepareCauseExpositionHasExactlyThreePrimitiveRows(t *testing.T) {
+	r := &Registry{}
+	raw := string(r.Render(Gauges{Diagnostics: diagnostics.Stats{PrepareIO: ^uint64(0), PrepareQuota: 17, PrepareOther: 23}}))
+	want := map[string]bool{
+		`xandbox_prepare_failed_total{reason="io"} 18446744073709551615`: false,
+		`xandbox_prepare_failed_total{reason="quota"} 17`:                false,
+		`xandbox_prepare_failed_total{reason="other"} 23`:                false,
+	}
+	for _, line := range strings.Split(raw, "\n") {
+		if !strings.HasPrefix(line, "xandbox_prepare_failed_total") {
+			continue
+		}
+		seen, ok := want[line]
+		if !ok || seen {
+			t.Fatal("unexpected or duplicate producer class")
+		}
+		want[line] = true
+	}
+	for _, seen := range want {
+		if !seen {
+			t.Fatal("missing producer class")
+		}
+	}
+	if len(raw) > 65536 || !strings.Contains(raw, "not durable records or accepted-operation acknowledgments") || !strings.Contains(raw, "xandbox_diagnostics_written_total 0\n") {
+		t.Fatal("bound or independent-counter contract")
 	}
 }

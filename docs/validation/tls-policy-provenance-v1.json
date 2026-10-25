@@ -1,0 +1,358 @@
+{
+  "status": "finite_actual_gateway_policy_reload_pre_file_and_post_durable_pre_snapshot_holds_watchdog_and_cold_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_m4": false,
+  "complete_pr19_acceptance": false,
+  "frozen_source_revision": "83d949ec423531ff08f65cd2904031f24732ab58",
+  "source_archive": {
+    "name": "tls-policy-source-v1.tar.gz",
+    "sha256": "6702001326d4fcfe779b2f552718af354cdafa43519b74e117a77c3da2bf5f48",
+    "bytes": 1913451
+  },
+  "changed_test_inputs": {
+    "cmd/xandbox-host-fixture/main_linux.go": {
+      "sha256": "853ea7d286691634aafc31b92f2bd4a7b4479b6763030bee89705d1df4973943",
+      "bytes": 5231
+    },
+    "cmd/xandbox-host-fixture/node_linux.go": {
+      "sha256": "3885745cdb14d27779edca3e00279c26593631104a1c39673f0ca260e26cce30",
+      "bytes": 27362
+    },
+    "cmd/xandbox-host-fixture/node_tls_policy_linux.go": {
+      "sha256": "8a8fb9dce95240cbae79a68d4a55f995d42de9cfaa61803e0e72b27779415a10",
+      "bytes": 21799
+    },
+    "cmd/xandbox-host-fixture/node_tls_policy_linux_test.go": {
+      "sha256": "b688ab496e88593a2aae0b5946818c1291306c01663ee866d762e65ed822a04f",
+      "bytes": 6455
+    },
+    "cmd/xandbox-host-fixture/node_tls_policy_notify_linux.go": {
+      "sha256": "1293b2fee80c39155d86edfd267eaccefef89bda2adfb44034cf04b18697fe79",
+      "bytes": 17953
+    },
+    "scripts/kvm_nested_host.py": {
+      "sha256": "5fcb0ea9858424f3b4decb54f1646009bcb9ec37ba5c71c646353c191cbc25a1",
+      "bytes": 110012
+    },
+    "scripts/test_kvm_tls_policy.py": {
+      "sha256": "dd8364634f226ec4d0cc3b6f33a7931642618c843086aa9ce719c1b575cd9abf",
+      "bytes": 3650
+    },
+    "go.mod": {
+      "sha256": "f71439d7c2332632fc2c35b694ff6b98a1a0af35307517fd1936f804c87a2810",
+      "bytes": 261
+    },
+    "go.sum": {
+      "sha256": "eae41579a1200dd75cc394a61944d2255153c015e23227fde325e8c5b700d2dd",
+      "bytes": 968
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "2fc057fcff142bb51f4baf75ad655c953e29315f614146a9f6347b9dd6b72f22",
+      "bytes": 4831
+    }
+  },
+  "production_go_mod_sum_workflow_unchanged": true,
+  "ordinary_five_and_gateway_artifacts_byte_exact_to_prior0b": true,
+  "native_artifacts_sha256": {
+    "sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-template": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "xandbox-gateway": "241ca933d03ee472492f3ea4bc50fb0a7b816e2ae1aa09505bade852cac101fe",
+    "fixture": "1572bf9ae83d7d1be377d953b7214315ff933abb644b63c7e137c2c7aac12477",
+    "builder": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36"
+  },
+  "native_toolchain": "go1.27.3 linux/amd64",
+  "native_trimpath": true,
+  "native_buildvcs": false,
+  "native_cgo": false,
+  "actual_frozen_gates": {
+    "linux_full_race": 3,
+    "linux_vet": true,
+    "fixture_race": 10,
+    "fixture_vet": true,
+    "root_python": 111,
+    "root_python_skips": 0,
+    "cgo0_kernel_quota": 3,
+    "mock_objects": 6,
+    "darwin_full_race": 3,
+    "darwin_vet": true,
+    "darwin_log": {
+      "sha256": "3bdba46c6aa0d48f01c6d0284167ec8096bd46ac6db79bb198a4edaba0511d08",
+      "bytes": 1746
+    },
+    "independent_frozen_cross_native7_exact": true
+  },
+  "new_actual_hardware": {
+    "passing_scopes": 4,
+    "outer_generations": 8,
+    "pre_file_boots": 2,
+    "post_commit_boots": 2,
+    "healthy_tls_regression_boots": 2,
+    "normal_node_budget_regression_boots": 2,
+    "failed_runs_for_this_source": 0,
+    "real_tls_guest_generations_per_fault_scope": 3
+  },
+  "fault_checkpoints": {
+    "pre": {
+      "child_heartbeat_watchdog_closes_tls_while_root_notification_valid": true,
+      "cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut": true,
+      "delete_to_durable_private_quota0_observed_ms": 116.921,
+      "delete_to_execution_empty_observed_ms": 58.822,
+      "directory_fsync_entries": 0,
+      "exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked": true,
+      "file_fsync_entries": 1,
+      "filesystem_d_or_physical_media_fault_claim": false,
+      "fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog": true,
+      "held_to_child_gone_observed_ms": 2543.52,
+      "hold_bound_ms": 20000,
+      "independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold": true,
+      "operator_config2_input_synced_no_policy_authority_fixture_patch": true,
+      "ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue": true,
+      "other_continue_submissions": 7,
+      "other_continue_while_held": 0,
+      "policy_memfd_entries": 0,
+      "policy_revision_before_cold": 1,
+      "production_slo_or_all_policy_windows_claim": false,
+      "real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404": true,
+      "root_actually_sigkill_reaped_target_enoent_on_still_open_listener": true,
+      "target_continue_or_errno_replies": 0
+    },
+    "post": {
+      "child_heartbeat_watchdog_closes_tls_while_root_notification_valid": true,
+      "cold_receipt_fsynced_after_real_ordinary_cleanup_no_claim_unsynced_media_cut": true,
+      "delete_to_durable_private_quota0_observed_ms": 299.086,
+      "delete_to_execution_empty_observed_ms": 53.873,
+      "directory_fsync_entries": 1,
+      "exact_gateway_elf_tgid_incarnation_nodecontrol_and_child_privileges_checked": true,
+      "file_fsync_entries": 1,
+      "filesystem_d_or_physical_media_fault_claim": false,
+      "fixed_reload_target_held_no_reply_and_old_key_leaf1_new_key401_before_watchdog": true,
+      "held_to_child_gone_observed_ms": 2664.19,
+      "hold_bound_ms": 20000,
+      "independent_execution_stop_private_destroy_quota0_and_all_reaped_before_cold": true,
+      "operator_config2_input_synced_no_policy_authority_fixture_patch": true,
+      "ordinary_controller_same_incarnation_busy_guest_progress_and_session_continue": true,
+      "other_continue_submissions": 9,
+      "other_continue_while_held": 0,
+      "policy_memfd_entries": 1,
+      "policy_revision_before_cold": 2,
+      "production_slo_or_all_policy_windows_claim": false,
+      "real_tls13_two_tenant_kvm_uid_boot_workspace_and_cross404": true,
+      "root_actually_sigkill_reaped_target_enoent_on_still_open_listener": true,
+      "target_continue_or_errno_replies": 0
+    }
+  },
+  "fault_recovery": {
+    "pre": {
+      "all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed": true,
+      "current_revision2_verified_tls_leaf2_new_key200_old_key401": true,
+      "no_policy_ledger_owner_control_authority_repair_by_fixture": true,
+      "old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc": true,
+      "ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival": true,
+      "original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked": true,
+      "policy_revision_before_start": 1,
+      "post_commit_revision2_old_config1_refused_and_exact_replay": false,
+      "pre_file_old_revision1_then_production_commit2": true
+    },
+    "post": {
+      "all_four_projects_zero_pools_idle_processes_reaped_node_subtree_removed": true,
+      "current_revision2_verified_tls_leaf2_new_key200_old_key401": true,
+      "no_policy_ledger_owner_control_authority_repair_by_fixture": true,
+      "old_raw_session_keys410_closed_route410_and_fresh_independent_kvm_full_gc": true,
+      "ordinary_no_test_layer_cold_open_pending0_and_no_guest_revival": true,
+      "original_disk_actual_policy_config_identity_lock_and_destroyed_guests_before_daemon_checked": true,
+      "policy_revision_before_start": 2,
+      "post_commit_revision2_old_config1_refused_and_exact_replay": true,
+      "pre_file_old_revision1_then_production_commit2": false
+    }
+  },
+  "boundary": "TEST ONLY inherited FSYNC + MEMFD_CREATE/NNP fixed launcher on exact gateway241ca/TGID/incarnation/NodeControl, not a security policy or production hook. Target never receives reply. Pre FSYNC entry before rename retains actual1. Post fixed policy memfd_create ENTRY follows checked state.Commit success, after exact temp fsync/rename/dir fsync; snapshot descriptor not allocated/published. Name read only from trusted fixed root memory with ID_VALID before/after. Other CONTINUE counts are successful submissions, not completion counts.",
+  "watchdog_boundary": "Old auth/leaf1 and new401 before timeout. Child actually gone/listener absent while root alive and held ID valid, since last root message watchdog3s. Not immediate revocation of every duplicate backend FD, cancellation of accepted jobs or Stop. Ordinary accepted TLS busy job progresses and session identity remains. Exact root then SIGKILL/reap, ID ENOENT with listener still open.",
+  "cold_boundary": "Two guests fully destroyed/quota0/controller reaped before receipt/cut; cleanup/receipt may sync filesystem. Not an unsynced policy media loss. Original disk verifies actual journal1/2, identity/lock/input/config/ordinary authority before daemon. Pre current2 requires new production Commit2; post durable2 must refuse oldinput1 and exact replay2 without journal rewrite. No fixture policy/ledger/control/owner repair. Fresh third guest then fullGC.",
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "current_runner_terminal_exit": 0,
+    "current_and_previous_runner_absent": true,
+    "no_supplemental_cleanup": true,
+    "scopes": [
+      {
+        "mode": "pre",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "post",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "tls",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      },
+      {
+        "mode": "budget",
+        "outer_generations_absent": 2,
+        "exact_root_control_parent_and_all_generations_absent": true
+      }
+    ]
+  },
+  "private_raw_archive": {
+    "name": "tls-policy-reports-v1.tar.gz",
+    "sha256": "557abc7daacc356be3f1d4bf2f632783dcaa653fa5c3c11e82d37364a017cc53",
+    "bytes": 11479,
+    "regular_members": 15
+  },
+  "private_raw_members": {
+    "kvm-tls-policy-pre-v1.json": {
+      "sha256": "6e634e1ebe78bf05c82c6fff0d127e92003012d01c40695f2579e46ab57b2558",
+      "bytes": 9063
+    },
+    "kvm-tls-policy-post-v1.json": {
+      "sha256": "48efbc32cbbab63bb832c35df55ea2bb609f82cb2b6ea56ae2105b6388caa369",
+      "bytes": 9068
+    },
+    "kvm-tls-policy-tls-v1.json": {
+      "sha256": "e5f3ea0e48494842a172b222cfeaab741591ff53584fe34b98ab17d32fb25110",
+      "bytes": 9527
+    },
+    "kvm-tls-policy-budget-v1.json": {
+      "sha256": "3e6eb95baa100ae2025433f40a826228653875d1ca83668bbab260619847be90",
+      "bytes": 7849
+    },
+    "tls-policy-race-v1.log": {
+      "sha256": "bfe7d43da275fa7e08c7e33fa87630da3cfc9e577e78bd026d304ee638fb042e",
+      "bytes": 1903
+    },
+    "tls-policy-vet-v1.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "tls-policy-fixture-v1.log": {
+      "sha256": "f345bfcf826c2c60e4f7935bf63850911e8b4d08c08c9b57d5b53eb826106078",
+      "bytes": 70
+    },
+    "tls-policy-fixture-vet-v1.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "tls-policy-filter-v1.log": {
+      "sha256": "3be0a4f9304dab96be1582c7395c1c1f1e1b053762ffc099864afd523f5ab715",
+      "bytes": 846
+    },
+    "tls-policy-python-v1.log": {
+      "sha256": "1027113eff5e6be47978a80d99fb82a19421c3cb860ab71540a7b72541e07bea",
+      "bytes": 211
+    },
+    "tls-policy-smoke-v1.log": {
+      "sha256": "81be07d8e0a22b5c025410bd981196da8be8f527f6701094b2c1c084eff10cd5",
+      "bytes": 6663
+    },
+    "tls-policy-v1.status": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "tls-policy-v1.pipeline.log": {
+      "sha256": "9cd5cc6c371b07fa4bdb5507f1534381f3283e530981076bb1a9f43b68628e72",
+      "bytes": 1212
+    },
+    "tls-policy-artifacts-v1.sha256": {
+      "sha256": "27f7def23bcf6ba8efb6ef485249655c93d52f2e134d544f7922f6f2ca6d99cd",
+      "bytes": 674
+    },
+    "run-tls-policy-v1.sh": {
+      "sha256": "004818312c1d83381d7f2b92083a25e67b2498dd4b9fbde475faea1e81024841",
+      "bytes": 5573
+    }
+  },
+  "offline_verifier": {
+    "actually_executed": true,
+    "negative_mutations_rejected": 78,
+    "script_sha256": "7f40216afa203e0ed6b5a2423340bef8b1c375f0f850f7d6b465ff646a782899",
+    "source_artifact_native_cross_archives_gates_report_types_and_privacy_bound": true
+  },
+  "unchanged_historical_manifests": {
+    "runtime4ee-provenance-v1.json": {
+      "sha256": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+      "bytes": 19942
+    },
+    "node-budget-provenance-v2.json": {
+      "sha256": "3631506494adc4ec7ffae2db915b2205d9b5940d962bef7f06453b2f5875de5d",
+      "bytes": 12566
+    },
+    "operator-store-provenance-v1.json": {
+      "sha256": "0d6edce5036415afd72402afc6247c821b9938cf5ce097f9b8e68f6426eb200e",
+      "bytes": 8736
+    },
+    "node-operator-provenance-v4b.json": {
+      "sha256": "239715994379cc7940a869374b7057ffd8353123212c20a21191355bb156a5e8",
+      "bytes": 13841
+    },
+    "session-ticket-provenance-v2.json": {
+      "sha256": "ac87bf851705024898455d63ede87784016ad09f49d2039519c8c0266522c01d",
+      "bytes": 14221
+    },
+    "operator-shutdown-provenance-v3.json": {
+      "sha256": "028d911010f71752c22bc75cf37476c90a02d0a3cedcc4fc5ee9974ff2276170",
+      "bytes": 17626
+    },
+    "tls-gateway-provenance-v3.json": {
+      "sha256": "d9eb8a913cef6c282d31c3b7b5a26b11fdea29ee68595ace8d2adf4ba205237a",
+      "bytes": 25781
+    },
+    "tls-gateway-bootstrap-provenance-v4.json": {
+      "sha256": "508b104439081029e67a2a0478c190b643d0085ba533036aac98b7e942d5609e",
+      "bytes": 13509
+    }
+  },
+  "limitations": [
+    "Only two selected kernel-notification windows; not filesystem D-state, physical media faults, every fsync/rename/identity/lock/bootstrap crash window, nor malicious root/kernel defense. No synthetic successful syscall return or guessed durable unacknowledged intent.",
+    "Fixture private UDS clients only observe/clean existing work after ingress withdrawal, not a tenant transport fallback. Cold operation uses ordinary gateway/controller without extra notification layer.",
+    "Observed timings are finite N1 separate origins: held entry to sampled child disappearance versus explicit ordinary Delete to execution empty and private quota0. Not watchdog3s measured from last heartbeat, internal durations, speedup, percentile, fairness or production SLO.",
+    "Policy orphan-temporary metadata retention, cgroup/log/archive hard budgets, PKI/backend authority lifecycle, durable audit/alert, operator/systemd acceptance, long open-loop load and upgrade/backup/rollback/fullM1-M4 remain unfinished. PR remains draft and Goal active.",
+    "Earlier9d TLS false/native bootstrap control and f698/93/0b evidence remain unchanged under their own original sources, not retagged or counted as a new failure for83d."
+  ],
+  "publication": {
+    "raw_hardware_reports_copied_byte_exact": true,
+    "mock_results_decoded_unchanged": true,
+    "private_raw_archive_retained_not_public": true,
+    "no_keys_certs_receipts_console_process_identities_exported": true
+  },
+  "public_inputs": {
+    "kvm-tls-policy-pre-v1.json": {
+      "sha256": "6e634e1ebe78bf05c82c6fff0d127e92003012d01c40695f2579e46ab57b2558",
+      "bytes": 9063
+    },
+    "kvm-tls-policy-post-v1.json": {
+      "sha256": "48efbc32cbbab63bb832c35df55ea2bb609f82cb2b6ea56ae2105b6388caa369",
+      "bytes": 9068
+    },
+    "kvm-tls-policy-tls-v1.json": {
+      "sha256": "e5f3ea0e48494842a172b222cfeaab741591ff53584fe34b98ab17d32fb25110",
+      "bytes": 9527
+    },
+    "kvm-tls-policy-budget-v1.json": {
+      "sha256": "3e6eb95baa100ae2025433f40a826228653875d1ca83668bbab260619847be90",
+      "bytes": 7849
+    },
+    "tls-policy-independent-cleanup-v1.json": {
+      "sha256": "ff66b41023cc6cc55fc5710055884e10f40c58957f431f29099b90651a23d10b",
+      "bytes": 734
+    },
+    "tls-policy-native-artifacts-v1.txt": {
+      "sha256": "0cea04798190e24041e22fcdc8b7f16c5e2c9c420a7e0135c9ebf3fa49c9ee41",
+      "bytes": 548
+    },
+    "tls-policy-mock-derived-v1.json": {
+      "sha256": "7e56251898816317d5bf9aae677c3240fa697b4e2366c4c09003066d834cf625",
+      "bytes": 5311
+    },
+    "tls-policy-pipeline-v1.txt": {
+      "sha256": "a4a782d321a6f7c966b21535be7a5d004f48abefd52dcb0c18c4862101dd972f",
+      "bytes": 2172
+    }
+  }
+}

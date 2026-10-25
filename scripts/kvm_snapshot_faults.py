@@ -18,7 +18,7 @@ import shutil
 import subprocess
 import time
 
-from kvm_driver_smoke import UnixHTTP, digest, wait
+from kvm_driver_smoke import UnixHTTP, digest, wait, private_resource_receipt, same_owned_directory
 from kvm_snapshot_smoke import private_json
 
 
@@ -46,10 +46,16 @@ def main():
     cgroup = Path('/sys/fs/cgroup/xandbox-initialization-proof-' + suffix)
     assert len(os.fsencode(runtime / 'j/firecracker' / ('0' * 64) / 'root/v.sock')) <= 107
     assert not root.exists() and not cgroup.exists()
+    private_resource_receipt(logs / 'resource-receipt.json', {'version': 1,
+        'source_revision': args.source_revision, 'kind': 'initialization', 'root': str(root),
+        'runtime': str(runtime), 'cgroup': str(cgroup)})
     root.mkdir(mode=0o700)
     process = child = None
+    cgroup_identity = None
     result = {'test': 'experimental_real_kvm_initialization_faults', 'source_revision': args.source_revision,
               'harness_sha256': digest(__file__), 'production_ready': False,
+              'helper_sha256': {name: digest(Path(__file__).with_name(name)) for name in
+                  ('kvm_driver_smoke.py', 'kvm_snapshot_smoke.py', 'kvm_resources.py')},
               'validated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'architecture': os.uname().machine, 'host_kernel': os.uname().release,
               'guest_memory_mib': 512, 'vcpus': 2, 'workspace_bytes': 128 << 20,
@@ -78,6 +84,7 @@ def main():
             except KeyError: pass
             else: raise AssertionError('proof UID is assigned')
         cgroup.mkdir(mode=0o700)
+        cgroup_identity = cgroup.lstat()
         (cgroup / 'cgroup.subtree_control').write_text('+memory +pids +cpu')
         config = {'version': 2, 'runtime_root': str(runtime), 'cgroup_root': str(cgroup),
                   'uid_start': uid, 'uid_count': 8, 'reserved_uid_range': True,
@@ -240,7 +247,8 @@ def main():
             except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=10)
         controller_log.close()
         safe = True
-        if cgroup.exists():
+        if cgroup.exists() and not same_owned_directory(cgroup, cgroup_identity): safe = False
+        if cgroup.exists() and same_owned_directory(cgroup, cgroup_identity):
             for g in cgroup.iterdir():
                 if not g.is_dir(): continue
                 try:

@@ -1,0 +1,401 @@
+{
+  "version": 1,
+  "scope": "forward_policy_recovery_persistence_and_operation_lock_foundation_only",
+  "source_revision": "fc1d7094cc87ddd79682555cc5861d6103abb7ec",
+  "source_archive_sha256": "387683df42eac61d369c6632c9086fcabe3bdc1dd7555ead7562142f72e9f6a8",
+  "native_runner_sha256": "5ec896a97321d2ab1c7c0cd2da3831e1a525d5ba0768e4b3930373dd52b37ae4",
+  "toolchain": "go1.27.3",
+  "source_files": [
+    {
+      "path": "internal/gateway/recovery_crash_linux_test.go",
+      "sha256": "31c07d9f39a977356a1ecfdbcb37bdf070576060ec56d493a69f1bc09fd0b400"
+    },
+    {
+      "path": "internal/gateway/recovery_linux.go",
+      "sha256": "308b2c7cd77facfdc51fded0dbf66a77934129d266b01965234b61887da6a972"
+    },
+    {
+      "path": "internal/gateway/recovery_linux_test.go",
+      "sha256": "f503ad491885cd7a3005ba3c7c4c27474a49a9ea0a62512fe582901a516f0227"
+    },
+    {
+      "path": "internal/gateway/state_linux.go",
+      "sha256": "461ac9334753ab8b671d82946786edb3e07f8059661bb10303c2cf9713c519d4"
+    },
+    {
+      "path": "internal/installtxn/operation_linux.go",
+      "sha256": "276c9e26cdd3f82eb826ea075fdd9b9ec33294a765c643cecaf2cd60e2511468"
+    },
+    {
+      "path": "internal/installtxn/operation_linux_test.go",
+      "sha256": "bbdae1424c6510075d860ada00ddadf2f82d287cc67ab1d90151eac4fabb36cc"
+    },
+    {
+      "path": "internal/installtxn/rotation_linux.go",
+      "sha256": "ee94aa22f9dd169269a6f292f02384d9075d9a18fc32d3b4bdae422774355a87"
+    },
+    {
+      "path": "internal/installtxn/rotation_linux_test.go",
+      "sha256": "b5a299a2e066b6c8f529a17fb31169b4525a484786dd96071a7520b3be253e3f"
+    },
+    {
+      "path": "internal/installtxn/run_linux.go",
+      "sha256": "99a23b9853388ab3965a53ef6b8f5c6301f53cbbe5cb0425216f201c70489aa5"
+    }
+  ],
+  "unchanged_interface_files": [
+    {
+      "path": "cmd/xandbox-install/main.go",
+      "sha256": "4f6ad1c69e6cdf9f1ca5091fe47ac2cdeda5417e3054db7e2783668c49ab19a2"
+    },
+    {
+      "path": "internal/gateway/envelope_linux.go",
+      "sha256": "cf9cefd36ff63104b8d341492692d2c36347e8533a4594a9b88a700b820d8630"
+    },
+    {
+      "path": "internal/gateway/config_linux.go",
+      "sha256": "ac8e2378a5cef408674dbc0d348e09ca4e13764c354c5f36603a742fec53a586"
+    },
+    {
+      "path": "internal/gateway/broker_linux.go",
+      "sha256": "d33582aefd35ae1b4b782696186865f85a3e0ac04e9c43443d92dd93b2e92e96"
+    },
+    {
+      "path": "internal/gateway/managed_linux.go",
+      "sha256": "e3f2c95acbc9d4c33da397d1497b53c5bbb3a1b275f0c4f64095ac99edfca296"
+    },
+    {
+      "path": "internal/installtxn/engine_linux.go",
+      "sha256": "108ffb86457542bf3133226c55a21012fe09001cb7a5afdd291343d4a014f46d"
+    },
+    {
+      "path": "internal/installtxn/plan.go",
+      "sha256": "ac43ba26f836a8e7e3b719bbe246ea690482b97e19be61dbd769cc83d9fe101c"
+    }
+  ],
+  "implemented": {
+    "existing_state_opener_no_create_bootstrap_or_repair": true,
+    "private_existing_highwater_exact_or_next_only_epoch_at_least_two": true,
+    "static_crypto_backend_validation_without_serving_result": true,
+    "advance_helper_operational_callers": 0,
+    "ordinary_serving_validators_actual_time_unchanged": true,
+    "installer_operation_lock_shared_across_files_manager_ack_receipt": true,
+    "read_only_gate_status_gateway_keep_original_flock": true,
+    "operation_lock_new_files": 0,
+    "production_exclusive_maintenance_callers": 0,
+    "public_schema_and_cli_command_set_changed": false
+  },
+  "validation": {
+    "linux_amd64": {
+      "terminal_exit": 0,
+      "runner_observed_gone": true,
+      "full_race_repetitions": 3,
+      "vet_exit": 0,
+      "focused_meaningful_parent_tests": 15,
+      "focused_repetitions": 3,
+      "helpers_excluded_from_acceptance": [
+        "TestAdvanceCrashProcessHelper",
+        "TestOperationLockProcessHelper"
+      ],
+      "focused_pass_counts": {
+        "TestAdvanceCrashProcessHelper": 3,
+        "TestAdvanceAbruptProcessDeathBeforeAndAfterDurableCommit": 3,
+        "TestAdvanceExpiredOrFuturePolicyPersistsOnlyExactNextAndServingStillRejects": 3,
+        "TestAdvanceInvalidPolicyOrCASNeverCollectsOrRewrites": 3,
+        "TestAdvanceStillValidatesTLSShapeAndRequiresAuthority": 3,
+        "TestExistingPolicyStateNeverCreatesRepairsOrBootstraps": 3,
+        "TestExistingPolicyStateExclusiveLockColdBindingAndNoBootstrap": 3,
+        "TestAdvanceSameRevisionDigestConflictAndGapPreserveAdmissibleOrphan": 3,
+        "TestOperationLockSharedExclusiveIndependentFlockAndDescriptorLifetime": 3,
+        "TestOperationLockCancellationIdentityAndInvalidInventoryNeverRepair": 3,
+        "TestInitialOperationLockFreshOnlyAndOriginalInodePreserved": 3,
+        "TestOperationLockProcessHelper": 3,
+        "TestOperationFourProcessesSharedDeathAndExclusiveAdmission": 3,
+        "TestOperationDescriptorCloseOnExecAndSameInodeReadOnlyGate": 3,
+        "TestOperationActualInstallAndReconcileScopesCoverManagerWithReadOnlyGate": 3,
+        "TestOperationActualReconfigurationScopeCoversACKAndErrorRelease": 3,
+        "TestOperationActualMutationEntriesWaitWithoutFileOrManagerWork": 3
+      },
+      "expired_and_future_persistence_serving_refused": true,
+      "valid_orphan_negative_and_positive_controls": true,
+      "actual_advance_test_process_death_boundaries": [
+        "before-commit",
+        "after-commit"
+      ],
+      "process_death_boundary_repetitions": 3,
+      "four_simultaneous_shared_lock_processes": true,
+      "shared_and_exclusive_owner_sigkill_release": true,
+      "exec_close_on_exec_and_unrelated_close_lifetime": true,
+      "actual_ordinary_engine_scopes_use_shadow_root_model_manager_ack": true,
+      "host_deploy_install_fixture_race_repetitions_each": 3,
+      "cgo_free_quota_repetitions": 3,
+      "python_tests": 235,
+      "python_skips": 0,
+      "pinned_static_pie_data_parser_enabled": true
+    },
+    "darwin_arm64": {
+      "terminal_exit": 0,
+      "full_race_repetitions": 3,
+      "vet_exit": 0,
+      "source_header_and_completion_verified": true,
+      "log_sha256": "cd1106b83ae88fc867339192561a84c82091f82bfa84629cf90bdb0b57803a5a"
+    },
+    "cross_compile": {
+      "five_amd64_byte_equal_to_native": [
+        "xandbox-install",
+        "xandbox-gateway",
+        "installtxn.test",
+        "gateway.test",
+        "policycontrol.test"
+      ],
+      "artifacts": [
+        {
+          "name": "gateway.test",
+          "sha256": "556594e65b3193fcd7ddac99bd183ac9df953ac91246f36f952fe5c9069f5ae2",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "installtxn.test",
+          "sha256": "b11e638f875814ae70533bf858cde075859f3252d0a364aadf54fa1d2c6d9b8e",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "policycontrol.test",
+          "sha256": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-gateway",
+          "sha256": "993788d371089c855ca27f2292f514d039f56ebfde68b701675f5757cb3fd931",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-gateway-arm64",
+          "sha256": "20d3f7ff355a318cc449666f312fe475cebdd7e93a7d122a7e1ea59649b60066",
+          "architecture": "arm64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-install",
+          "sha256": "5318aebd554dc06223c7cadf3d86927a29ba94f75d4f4ac2246e231ddc970f20",
+          "architecture": "amd64",
+          "executed_on_arm64": false
+        },
+        {
+          "name": "xandbox-install-arm64",
+          "sha256": "038f388d55af318818b121aeacc540d2c1a38ad10cb3b3cf88d2b9e4362b9595",
+          "architecture": "arm64",
+          "executed_on_arm64": false
+        }
+      ]
+    },
+    "all_twenty_one_native_artifacts_actually_built_and_rehashed": [
+      {
+        "name": "builder",
+        "sha256": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e"
+      },
+      {
+        "name": "deploy-helper",
+        "sha256": "b8b3d2dfa9d722dac568108f77b0511a8a3792481e0453adb177177fecc97ebf"
+      },
+      {
+        "name": "firecracker.test",
+        "sha256": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16"
+      },
+      {
+        "name": "fixture",
+        "sha256": "d2dd1f547329860b56e8387ee497f08d0382d50a31c2bbba9bf2bf5a736eeb5f"
+      },
+      {
+        "name": "gateway.test",
+        "sha256": "556594e65b3193fcd7ddac99bd183ac9df953ac91246f36f952fe5c9069f5ae2"
+      },
+      {
+        "name": "installtxn.test",
+        "sha256": "b11e638f875814ae70533bf858cde075859f3252d0a364aadf54fa1d2c6d9b8e"
+      },
+      {
+        "name": "policycontrol.test",
+        "sha256": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97"
+      },
+      {
+        "name": "releasestore.test",
+        "sha256": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3"
+      },
+      {
+        "name": "sandboxd",
+        "sha256": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+      },
+      {
+        "name": "session.test",
+        "sha256": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+      },
+      {
+        "name": "setup",
+        "sha256": "5fa6dfdf679442d4f480ac14a66a6ba646ff3fe13b8720bcbff7f00b910a8edb"
+      },
+      {
+        "name": "setup.test",
+        "sha256": "530fcaef0bda972fedcb4c14183998ec295723a93b38cae09a8d572abbaa394d"
+      },
+      {
+        "name": "xandbox-gateway",
+        "sha256": "993788d371089c855ca27f2292f514d039f56ebfde68b701675f5757cb3fd931"
+      },
+      {
+        "name": "xandbox-ingress-launch",
+        "sha256": "adeab47aea990649fb5ff4bd02517a5cbdd6ef225aa910ce48417ada8b0f6a33"
+      },
+      {
+        "name": "xandbox-install",
+        "sha256": "5318aebd554dc06223c7cadf3d86927a29ba94f75d4f4ac2246e231ddc970f20"
+      },
+      {
+        "name": "xandbox-launch",
+        "sha256": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c"
+      },
+      {
+        "name": "xandbox-node",
+        "sha256": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071"
+      },
+      {
+        "name": "xandbox-ready",
+        "sha256": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff"
+      },
+      {
+        "name": "xandbox-release",
+        "sha256": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb"
+      },
+      {
+        "name": "xandbox-template",
+        "sha256": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d"
+      },
+      {
+        "name": "xandbox-warden",
+        "sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0"
+      }
+    ],
+    "delta_against_previous_managed_policy_native_record": {
+      "changed": [
+        "deploy-helper",
+        "fixture",
+        "gateway.test",
+        "installtxn.test",
+        "setup",
+        "setup.test",
+        "xandbox-gateway",
+        "xandbox-ingress-launch",
+        "xandbox-install"
+      ],
+      "unchanged": [
+        "builder",
+        "firecracker.test",
+        "policycontrol.test",
+        "releasestore.test",
+        "sandboxd",
+        "session.test",
+        "xandbox-launch",
+        "xandbox-node",
+        "xandbox-ready",
+        "xandbox-release",
+        "xandbox-template",
+        "xandbox-warden"
+      ]
+    },
+    "raw_software_evidence": [
+      {
+        "name": "forward-foundation-controls-first-v1.log",
+        "bytes": 11125,
+        "sha256": "5b94772b55004a97e170869ac0db8d9778afa0d7856ba8cbc607e681ee4083d2"
+      },
+      {
+        "name": "forward-foundation-controls-v1.log",
+        "bytes": 33102,
+        "sha256": "2f6145de5cd68a126bceed8746d3d6dcf2ea3001bf3db6df1c9564276f46c7ca"
+      },
+      {
+        "name": "forward-foundation-deploy-v1.log",
+        "bytes": 72,
+        "sha256": "2993143db39315d26de8fbb05c630c24d4e750044022f3ce46f0c5d5dbe76116"
+      },
+      {
+        "name": "forward-foundation-full-race-v1.log",
+        "bytes": 2708,
+        "sha256": "be6055dc8ed9d9e29fe02ea53e79b3d42c63b8e8090a4fe0a9016e80c80a6de8"
+      },
+      {
+        "name": "forward-foundation-host-v1.log",
+        "bytes": 70,
+        "sha256": "0071e2108ee65dd04407d6bb2ea41604bec4eb3ef831352bd291b285d9a593f8"
+      },
+      {
+        "name": "forward-foundation-install-v1.log",
+        "bytes": 73,
+        "sha256": "39f5c4b765bffe6031942e70b5304b7893637869154110269e9f420b9f3e2621"
+      },
+      {
+        "name": "forward-foundation-native-v1.sha256",
+        "bytes": 1683,
+        "sha256": "b5477a566c0b59ac92c68a4f480b069398229a1c1045c4b0ee807ec41fc19552"
+      },
+      {
+        "name": "forward-foundation-native-v1.status",
+        "bytes": 2,
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      {
+        "name": "forward-foundation-python-v1.log",
+        "bytes": 335,
+        "sha256": "3b265dead9dbc43bcdab252436dee39aef6f167feb468bb8a91dc06ebd2bca30"
+      },
+      {
+        "name": "forward-foundation-quota-v1.log",
+        "bytes": 61,
+        "sha256": "aa12b6cc8e8df45e04d738cbcde4091a5de07fe4f8d0ec73755dae1a3713ee1f"
+      },
+      {
+        "name": "forward-foundation-vet-v1.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "original_pipeline_sha256": "0208c468b97e89e7ab867b8865d24df638e3a371ea14b75a4e36b477fa56ea9d"
+  },
+  "evidence_limits": {
+    "synthetic_test_pki": true,
+    "actual_linux_store_files_flock_ofd_process_io": true,
+    "installer_root_is_anchored_shadow": true,
+    "installer_artifacts_manager_and_ack_are_modeled": true,
+    "root_cli_maintenance_acceptance": false,
+    "real_runroot_tls_child_maintenance_acceptance": false,
+    "new_systemd_kvm_drain_cold_acceptance": false,
+    "real_block_device_fault_or_powercut": false,
+    "changed_runtime_full_matrix_requalified": false
+  },
+  "prequalification_note": "A development upload checksum wrapper failed on printf quoting after uploading one binary; the other binary was not uploaded. The partial development run is not this frozen-source native qualification. The corrected bounded wrapper and subsequent originals were preserved separately.",
+  "claims": {
+    "expired_policy_recovery_command_available": false,
+    "committed_never_acked_expired_policy_liveness_gap_resolved": false,
+    "uncommitted_expired_candidate_supersession_resolved": false,
+    "production_ready": false,
+    "complete_goal_or_milestone": false,
+    "historical_hardware_re_signed": false
+  },
+  "remaining": [
+    "Explicit bounded forward-recovery journal, exact request/supersession CAS, immutable full install proof and source-independent retry",
+    "Main-incarnation proof and ingress-only maintenance under exclusive operation lock",
+    "Durable advance of exact installed predecessor before successor publication, all intent/ACK crash windows and repeated expiry",
+    "Separate proven uncommitted expired-candidate abort or supersession rule",
+    "Fresh owned-L1 root CLI/TLS/continuing KVM writer/drain/cold/fault/cleanup qualification using new artifacts",
+    "Original broader production milestones, backend authority migration, self upgrade/rollback, catalog and consistent backup, audit retention and saturation/SLO acceptance"
+  ],
+  "historical_validation_files_preserved": {
+    "total": 624,
+    "json": 418,
+    "text": 206
+  }
+}

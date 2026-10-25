@@ -143,6 +143,13 @@ func OpenSnapshotCatalogContext(ctx context.Context, stateDir, configPath string
 	if e != nil {
 		return nil, e
 	}
+	if cfg.Node != nil {
+		node, err := openNodeEnvelope(cfg, stateDir)
+		if err != nil {
+			return nil, err
+		}
+		c.beforePublish = func() error { return node.check(true) }
+	}
 	return &SnapshotCatalog{catalog: c, hostABI: abi}, nil
 }
 func (s *SnapshotCatalog) Publish(ctx context.Context, manifest, memory, state string) (string, error) {

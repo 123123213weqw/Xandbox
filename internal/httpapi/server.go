@@ -58,6 +58,7 @@ func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error)
 		health := map[string]any{
 			"backend": node.Backend, "isolation": false,
 			"authentication":   a.auth != nil,
+			"admission_open":   manager.AdmissionOpen(),
 			"production_ready": false,
 			"message":          "lifecycle prototype; production acceptance incomplete",
 		}
@@ -69,6 +70,14 @@ func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error)
 			health["stats"] = manager.Stats()
 		}
 		respond(w, http.StatusOK, health)
+	})
+	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
+		open := manager.AdmissionOpen()
+		status := http.StatusOK
+		if !open {
+			status = http.StatusServiceUnavailable
+		}
+		respond(w, status, map[string]bool{"admission_open": open})
 	})
 	mux.HandleFunc("POST /v1/sandboxes", a.create)
 	mux.HandleFunc("GET /v1/sandboxes/{id}", a.get)
@@ -84,7 +93,7 @@ func NewConfigured(manager *sandbox.Manager, opts Options) (http.Handler, error)
 		mux.HandleFunc("POST /v1/sessions/{id}/revoke", a.revokeSession)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/healthz" && r.Method == http.MethodGet {
+		if (r.URL.Path == "/healthz" || r.URL.Path == "/readyz") && r.Method == http.MethodGet {
 			mux.ServeHTTP(w, r)
 			return
 		}
@@ -295,6 +304,8 @@ func failure(w http.ResponseWriter, err error) {
 		status, code, message = 503, "METADATA_CAPACITY", "ledger record capacity exhausted"
 	case errors.Is(err, sandbox.ErrTenantMetadataCapacity):
 		status, code, message = 429, "TENANT_METADATA_QUOTA", "tenant ledger record quota exhausted"
+	case errors.Is(err, sandbox.ErrDraining):
+		status, code, message = 503, "NODE_DRAINING", "node admission is closed"
 	case errors.Is(err, sandbox.ErrCapacity), errors.Is(err, sandbox.ErrClosing):
 		status, code, message = 503, "UNAVAILABLE", "service unavailable"
 	}

@@ -1,0 +1,376 @@
+{
+  "status": "finite_new4ee_schema3_space_prepare_entry_cancel_trace_and_owner_partialcopy_windows_passed",
+  "production_ready": false,
+  "goal_complete": false,
+  "complete_m2": false,
+  "complete_pr19_acceptance": false,
+  "production_or_test_source_changed_this_turn": false,
+  "frozen_source_revision": "ab048ed65b12fc806cba9d16eecd1c830c37fa93",
+  "frozen_source_archive_sha256": "6c733ba3ed9c1fd047abf512563c44a2e4a4ff5c24179d6711b5c25cb1a229ac",
+  "frozen_source_tracked_files_rehashed_before_hardware": true,
+  "reused_native_artifacts_sha256": {
+    "builder-runtime4ee-v1": "40bb0d25cd7005fa48ecc5b6befa9d93bee8a8115a72df5067effb46eea07b36",
+    "fixture-runtime4ee-v1": "f7c712bb64914c2bddcaaf2d0ebb9d6fab7fd7435c940f966a4a8a99a43fffa5",
+    "sandboxd-runtime4ee-v1": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "xandbox-node-runtime4ee-v1": "fd700c3927fb5889fc65027691c4e81658dd3b4e76f82dcf5f098b6e25617e95",
+    "xandbox-template-runtime4ee-v1": "ff05652e49045a057b90de74e57c1a285bb994ea6026fd82e6b8fbaef40f5dec",
+    "xandbox-warden-runtime4ee-v1": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "firecracker-runtime4ee-v1.test": "b167f2722c3e220e0ab009ff4b963ba8e1abc6b2d8a51cb29e02288f748eb459",
+    "session-runtime4ee-v1.test": "638f16a5e871d8299a38686519d7d9e208e7eb5838fb5965c97483527e340161",
+    "smoke/sandboxd": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a"
+  },
+  "native_and_cross_source_exact": true,
+  "native_gates_reused_not_rerun_this_turn": {
+    "provenance": "runtime4ee-provenance-v1.json",
+    "sha256": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+    "actual_previous_native_full_race": 3,
+    "actual_previous_native_full_vet": true,
+    "actual_previous_fixture_race": 10,
+    "actual_previous_fixture_vet": true,
+    "actual_previous_root_python": 95,
+    "actual_previous_root_python_skips": 0,
+    "actual_previous_kernel_filter_count": 3,
+    "actual_previous_mock_result_objects": 6,
+    "actual_previous_darwin_race": 3,
+    "actual_previous_darwin_vet": true
+  },
+  "actual_new_hardware": {
+    "scopes": 4,
+    "outer_execution_generations": 7,
+    "node_snapshot_prepare_cancel_boots": 2,
+    "owner_unlink_fsync_pending_boots": 2,
+    "unsynced_copy_cut_boots": 2,
+    "stable_partial_write_errno_boots": 1,
+    "shared_l0_boot_unchanged": true,
+    "fixed_profiles_and_limits_unchanged": true
+  },
+  "fixed_node_policy": {
+    "launch_profile": "node-snapshot-v1",
+    "l1_memory_mib": 8192,
+    "l1_disk_bytes": 12884901888,
+    "l0_cgroup_memory_max": 10737418240,
+    "vcpus": 8,
+    "guest_network_interfaces": 0,
+    "node_capacity": 4,
+    "prepare_workers": 1,
+    "records": 1024,
+    "sessions": 32,
+    "private_quota_bytes": 201326592,
+    "private_quota_inodes": 128,
+    "io_bytes_per_second": 16777216,
+    "io_operations_per_second": 1024,
+    "guest_touched_bytes_each": 8388608,
+    "not_full_guest_ram_saturation": true
+  },
+  "new_cancel_case": {
+    "all_four_projects_zero_pins_zero_pools_idle": true,
+    "cancelled_key410_durable_destroyed_pools_baseline_no_backend_resources": true,
+    "continue_is_not_write_completion": true,
+    "exact_copy_stage_timing_scheduler_fairness_or_slo_claim": false,
+    "filesystem_D_or_physical_media_fault_claim": false,
+    "held_continue_response_count": 1,
+    "held_workspace_prefix_bytes": 16777216,
+    "held_write_to_continue_reply_observed_ms": 227.507696,
+    "hold_deadline_ms": 20000,
+    "holder_request_to_ready_observed_ms": 2373.713452,
+    "http_budget_ms_unchanged": 40000,
+    "keeper_delete_to_execution_domain_empty_observed_ms": 36.348192,
+    "keeper_delete_to_full_reclaim_observed_ms": 161.645539,
+    "keeper_holder_and_two_queued_frontend_allocated_four_fifth503": true,
+    "keeper_stop_cleanup_durable_destroyed_project_zero_while_write_still_held": true,
+    "observed_daemon_reaped_and_ordinary_daemon_restarted": true,
+    "original_queued_http_cancelled_without_token": true,
+    "other_continue_replies_during_keeper_cleanup": 27,
+    "prepare_timeout_ms_unchanged": 30000,
+    "real_nested_kvm": true,
+    "schema3_exact_prepare_workers_one": true,
+    "survivor_original_requests_ready_real_guests_independent_boots_clean_workspace": true,
+    "survivor_request_to_ready_observed_ms": 2838.710281,
+    "trace": {
+      "all_eight_cpu_loss_counters_zero": true,
+      "all_nine_probe_hits_equal_trace": true,
+      "cancelled_waiters_without_token": 1,
+      "completed_preparations": 2,
+      "event_count": 15,
+      "exact_channel_linearization_or_slo_claim": false,
+      "exact_ordinary_elf_sha256": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+      "instruction_entry_probes": 9,
+      "live_incarnation_inode_control_event_tgid_checked": true,
+      "normalized_transitions": [
+        {
+          "goroutine_index": 1,
+          "point": "enter"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "selected",
+          "selected_case": 0
+        },
+        {
+          "goroutine_index": 1,
+          "point": "ok"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "node_ok"
+        },
+        {
+          "goroutine_index": 2,
+          "point": "enter"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "enter"
+        },
+        {
+          "goroutine_index": 2,
+          "point": "selected",
+          "selected_case": 1
+        },
+        {
+          "goroutine_index": 2,
+          "point": "cancel"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "release"
+        },
+        {
+          "goroutine_index": 1,
+          "point": "released"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "selected",
+          "selected_case": 0
+        },
+        {
+          "goroutine_index": 3,
+          "point": "ok"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "node_ok"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "release"
+        },
+        {
+          "goroutine_index": 3,
+          "point": "released"
+        }
+      ]
+    },
+    "two_queued_actual_gate_entries_no_backend_owner_jail_group": true
+  },
+  "prepare_entry_calibration": {
+    "all_eight_cpu_loss_counters_zero": true,
+    "calibration_only": true,
+    "completed_preparations": 2,
+    "entry_probe_only_no_uretprobe_or_user_memory_read": true,
+    "event_count": 12,
+    "exact_channel_linearization_or_latency_slo_claim": false,
+    "exact_ordinary_elf_sha256": "4ee09d0af230234aeb69491b896d25858500b3c9d6a2297477c5d92465768c4a",
+    "first_selected_token_observed_before_second_dispatch": true,
+    "instruction_entry_probes": 9,
+    "live_daemon_incarnation_inode_control_and_event_tgid_checked": true,
+    "normalized_transitions": [
+      {
+        "goroutine_index": 1,
+        "point": "enter"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "selected"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "ok"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "node_ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "enter"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "release"
+      },
+      {
+        "goroutine_index": 1,
+        "point": "released"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "selected"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "node_ok"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "release"
+      },
+      {
+        "goroutine_index": 2,
+        "point": "released"
+      }
+    ],
+    "queued_request_cancellation_and_cleanup_isolation_claim": false,
+    "second_actual_gate_entry_inside_first_held_interval": true
+  },
+  "source_claim_flag_not_overridden": {
+    "prepare_permit_hardware_trace_claim": false,
+    "separate_normalized_entry_calibration_and_cancel_objects_prove_only_their_named_finite_events": true
+  },
+  "actual_space_observations": {
+    "inode_filler_files": 126592,
+    "inode_pressure_free_before_delete": 5152,
+    "inode_pressure_free_after_delete": 5166,
+    "byte_filler_allocated_bytes": 8330145792,
+    "observed_free_bytes": 2825740288,
+    "free_byte_guard": 3362619392,
+    "free_inode_guard": 5776
+  },
+  "actual_cold_observations": {
+    "owner_present": true,
+    "durable_owner_pins": 2,
+    "partial_subset": {
+      "cold_partial_entries": 2,
+      "cold_partial_workspace_size_bytes": 0,
+      "cold_partial_project_space_bytes": 8192,
+      "cold_partial_project_inodes": 2
+    }
+  },
+  "measurement_scope": "N1 polling upper bounds. Keeper was real Ready with prior marker/memory command completed, not CPU-saturated busy work. Stop and durable private reclaim measured separately from DELETE. Credits/pools checked at named later baselines, not backfilled at the earlier timing. CONTINUE replies are submissions, not completed WRITE I/O. Not physical erase/all caches/SLO. Original raw HTTP cancellation is not session pre-Core ticket across drain.",
+  "strict_actual_report_mutation_checks_rejected": 16,
+  "independent_cleanup": {
+    "actually_executed_read_only": true,
+    "scopes": 4,
+    "outer_execution_generations_absent": 7,
+    "precise_root_control_cgroup_parent_and_all_groups_absent": true,
+    "both_outer_private_cut_receipts_0600_singlelink_and_excluded_from_public": true,
+    "terminal_exit": 0,
+    "exact_runner_absent": true,
+    "supplemental_cleanup_actions": false,
+    "quota_and_namespace_checked_inside_l1_not_inferred_from_outer_disk_deletion": true
+  },
+  "raw_private_archive": {
+    "sha256": "b8f500ac7e098b9b4158016383ede682261652094197ab69e1e4d09b0e17dbed",
+    "regular_allowlisted_member_count": 8,
+    "manifest": {
+      "kvm-node4ee-admission-v1.json": {
+        "sha256": "e0b1d8cf08b6c8cf8749ee0c60247ca49d4c381b133d57fb9ec7da23519f86a9",
+        "bytes": 13115
+      },
+      "kvm-node4ee-inflight-v1.json": {
+        "sha256": "e87deb4fa3b729035646635384b171819c593a97086ca516c08cf8ddca02c6b3",
+        "bytes": 8970
+      },
+      "kvm-node4ee-owner-v1.json": {
+        "sha256": "8540b21d4d1c867077df9bcc071f94f4f240fb37ab1eb23dd08f67d3718f1d98",
+        "bytes": 9879
+      },
+      "kvm-node4ee-partial-v1.json": {
+        "sha256": "c30299aba1c98bf3450fa4d7398d9866d60cd853f1d3c50a47ae8e3cdd6c8b42",
+        "bytes": 8773
+      },
+      "node4ee-artifacts-v1.sha256": {
+        "sha256": "12090d1bae36dca8b6b3fafc152dde234db91b5cea01aae09676038ed65c46a4",
+        "bytes": 871
+      },
+      "node4ee-v1.pipeline.log": {
+        "sha256": "00384d9fead7e9f76354b13d389fa577b195e1980ebc4007e65cd547ca8d990f",
+        "bytes": 1367
+      },
+      "node4ee-v1.status": {
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      },
+      "run-node4ee-v1.sh": {
+        "sha256": "649c8ead5ba784ebb2def81fac5d5c36c5a04bd04ecca64f5e25abff52e9cc01",
+        "bytes": 3223
+      }
+    },
+    "audit_stdout_separately_captured_not_tar_member": true
+  },
+  "new_hardware_false_predecessors": [],
+  "new_verifier_false_predecessors": [],
+  "historical_manifests": {
+    "runtime4ee-provenance-v1.json": {
+      "sha256": "e240a13d2deb2a0f1fed9980c7faa1a1ad25e4bf742303597fe5772d3e7c2207",
+      "not_retagged_or_spliced": true
+    },
+    "node-cancel-provenance-v1.json": {
+      "sha256": "c67d7752a26b2fd6828d247936eb0f6c59e5a30a3ccc1e9db44844688df66ef1",
+      "not_retagged_or_spliced": true
+    },
+    "node-prepare-provenance-v3.json": {
+      "sha256": "e4beedbb12422cd82b4303ac3384765d9c95fcf04a7e8d06f38428d584f45d45",
+      "not_retagged_or_spliced": true
+    },
+    "node-snapshot-provenance-v2.json": {
+      "sha256": "5321bac5bf819c488f5de761b9fbabecf1e04a17afa1f0d130107aa9ee34517a",
+      "not_retagged_or_spliced": true
+    },
+    "owner-cut-provenance-v2.json": {
+      "sha256": "9be7595caecd22a57c1156f17e0e69ce68e198e242ddb9555a9019dc243701d6",
+      "not_retagged_or_spliced": true
+    },
+    "copy-cut-provenance-v2.json": {
+      "sha256": "14ddc4b1c679898cad08fa2299aa84a13bb77cab4011149d39a1717eff060813",
+      "not_retagged_or_spliced": true
+    },
+    "copy-prepare-provenance-v1.json": {
+      "sha256": "1efbb67b0f180abe3de7c0b083fd43e9b39ddc5d804a06747c362e0a9a923339",
+      "not_retagged_or_spliced": true
+    }
+  },
+  "privacy": "No raw registers/TIDs/addresses, controller/inner console, cut/owner/session/filler receipts, identities, runtime paths, credentials or images exported. Only sanitized ordinal transition sequences, bounded values/booleans/hash references and scanned text.",
+  "not_completed": [
+    "Actual accepted session reservation BEFORE Core across drain.",
+    "Unresolved actual Store writer on SIGTERM/state lock retention until exit.",
+    "Full worst-case RAM/ancestor/affinity/uniqueRAM/node resources, open-loop/fairness/long-duration/operator/SLO.",
+    "Production TLS gateway/credential lifecycle/network boundaries, tested operator/systemd, persistent audit/alerts/log export bounds/archive/rotation/backup/upgrade/rollback.",
+    "Other metadata/catalog-lock/commit windows, physical media/erase, dual supervisor, prewarm/full initialization, full M1-M4/final PR acceptance/main merge/archive/Goal."
+  ],
+  "files": {
+    "kvm-node4ee-admission-v1.json": {
+      "sha256": "e0b1d8cf08b6c8cf8749ee0c60247ca49d4c381b133d57fb9ec7da23519f86a9",
+      "bytes": 13115
+    },
+    "kvm-node4ee-owner-v1.json": {
+      "sha256": "8540b21d4d1c867077df9bcc071f94f4f240fb37ab1eb23dd08f67d3718f1d98",
+      "bytes": 9879
+    },
+    "kvm-node4ee-inflight-v1.json": {
+      "sha256": "e87deb4fa3b729035646635384b171819c593a97086ca516c08cf8ddca02c6b3",
+      "bytes": 8970
+    },
+    "kvm-node4ee-partial-v1.json": {
+      "sha256": "c30299aba1c98bf3450fa4d7398d9866d60cd853f1d3c50a47ae8e3cdd6c8b42",
+      "bytes": 8773
+    },
+    "node4ee-reused-native-artifacts-v1.txt": {
+      "sha256": "12090d1bae36dca8b6b3fafc152dde234db91b5cea01aae09676038ed65c46a4",
+      "bytes": 871
+    },
+    "node4ee-pipeline-v1.txt": {
+      "sha256": "00384d9fead7e9f76354b13d389fa577b195e1980ebc4007e65cd547ca8d990f",
+      "bytes": 1367
+    },
+    "node4ee-independent-cleanup-v1.txt": {
+      "sha256": "4357d50695cbf398bb2a3cfdf7595c4af20ec85d886840908f2682e147f8a8e8",
+      "bytes": 791
+    }
+  }
+}

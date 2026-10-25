@@ -1,0 +1,464 @@
+{
+  "version": 1,
+  "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0",
+  "source_archive_sha256": "ec118344d23e725716c2d80f47c05673d367e9b003788dcbcc9240bdfbe38ca9",
+  "production_ready": false,
+  "goal_complete": false,
+  "all_25_named_runtime_scopes_passed": true,
+  "all_25_fresh_for_new_daemon": true,
+  "old_d163_measurement_rows_reused_or_retagged": false,
+  "native_cross_artifacts_sha256": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a",
+    "xandbox-launch": "26f35a3df792fb4044b559d8dcbd4e74933105281d24c8f0b0666eb53415588e",
+    "fixture": "b02d69ae99ede4363ad97f9a5713e2c5c0cbcefb2551eea85de304fb11eed0f5",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568"
+  },
+  "scope": {
+    "named_runtime_scopes": 25,
+    "original_report_files_including_two_expansions": 27,
+    "nested_outer_generations_independently_absent": 43,
+    "owned_loop_bindings_independently_absent": 4,
+    "ten_named_boundaries_and_two_new_live_trace_scopes_in_this_runtime_claim": false
+  },
+  "gates": {
+    "default_cold_checks": 30,
+    "queue_expanded_checks_not_extra_scenarios": 9,
+    "session_expanded_checks_not_extra_scenarios": 9,
+    "closed_loop_new_guest_cycles": 5,
+    "default_snapshot_checks": 10,
+    "default_switch_samples_each_tenant": 120,
+    "default_duration_seconds": 246.352,
+    "quota_busy_switch_samples_each_tenant": 120,
+    "quota_busy_duration_seconds": 604.49169916,
+    "initialization_faults": 6,
+    "explicit_historical_test_guest_faults": 2,
+    "io_snapshot_checks": 12,
+    "storage_checks_default_enospc_ledger_erofs_io_enospc_io_erofs": [
+      5,
+      3,
+      7,
+      5
+    ],
+    "live_kernel_quota_and_namespace_accounting_windows_checked": true,
+    "independent_physical_allocation_negative_controls": 136,
+    "independent_live_io_negative_controls": 8
+  },
+  "observations_ms_nearest_rank": {
+    "default_alpha": {
+      "binding": {
+        "n": 120,
+        "p50": 696.475,
+        "p95": 797.858,
+        "p99": 824.565,
+        "max": 1009.811
+      },
+      "first_new_command": {
+        "n": 120,
+        "p50": 710.502,
+        "p95": 814.398,
+        "p99": 836.744,
+        "max": 1047.417
+      },
+      "old_host_stopped": {
+        "n": 120,
+        "p50": 731.253,
+        "p95": 834.724,
+        "p99": 888.871,
+        "max": 1047.673
+      },
+      "old_durable_destroyed": {
+        "n": 120,
+        "p50": 797.53,
+        "p95": 908.563,
+        "p99": 970.511,
+        "max": 1107.643
+      }
+    },
+    "default_beta": {
+      "binding": {
+        "n": 120,
+        "p50": 706.828,
+        "p95": 787.59,
+        "p99": 821.666,
+        "max": 830.217
+      },
+      "first_new_command": {
+        "n": 120,
+        "p50": 720.64,
+        "p95": 813.789,
+        "p99": 833.97,
+        "max": 843.039
+      },
+      "old_host_stopped": {
+        "n": 120,
+        "p50": 741.243,
+        "p95": 822.737,
+        "p99": 849.114,
+        "max": 861.758
+      },
+      "old_durable_destroyed": {
+        "n": 120,
+        "p50": 812.08,
+        "p95": 893.195,
+        "p99": 919.88,
+        "max": 920.514
+      }
+    },
+    "quota_busy_alpha": {
+      "binding": {
+        "n": 120,
+        "p50": 959.699,
+        "p95": 1453.852,
+        "p99": 1568.53,
+        "max": 1581.773
+      },
+      "first_new_command": {
+        "n": 120,
+        "p50": 1031.5,
+        "p95": 1547.736,
+        "p99": 1627.148,
+        "max": 1682.535
+      },
+      "old_host_stopped": {
+        "n": 120,
+        "p50": 983.305,
+        "p95": 1488.238,
+        "p99": 1526.686,
+        "max": 1603.453
+      },
+      "old_durable_destroyed": {
+        "n": 120,
+        "p50": 1331.291,
+        "p95": 1607.443,
+        "p99": 1701.942,
+        "max": 1743.219
+      }
+    },
+    "quota_busy_beta": {
+      "binding": {
+        "n": 120,
+        "p50": 976.942,
+        "p95": 1371.401,
+        "p99": 1449.127,
+        "max": 1544.636
+      },
+      "first_new_command": {
+        "n": 120,
+        "p50": 1032.749,
+        "p95": 1436.582,
+        "p99": 1523.124,
+        "max": 1655.023
+      },
+      "old_host_stopped": {
+        "n": 120,
+        "p50": 991.223,
+        "p95": 1382.955,
+        "p99": 1476.222,
+        "max": 1552.565
+      },
+      "old_durable_destroyed": {
+        "n": 120,
+        "p50": 1373.464,
+        "p95": 1655.495,
+        "p99": 1688.529,
+        "max": 1694.695
+      }
+    }
+  },
+  "independent_read_only_audit": {
+    "actually_read_only": true,
+    "batch": "runtime",
+    "runner_terminal_status": 0,
+    "runner_absent": true,
+    "scope_count": 25,
+    "outer_generations_absent": 43,
+    "owned_loop_bindings_absent": 4,
+    "no_supplemental_cleanup": true,
+    "not_absolute_escape_or_all_machine_inventory": true,
+    "scopes": [
+      {
+        "name": "default-cold",
+        "kind": "cold-driver",
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "default-snapshot",
+        "kind": "snapshot-service",
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "io-snapshot",
+        "kind": "snapshot-service",
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "default-initialization",
+        "kind": "initialization",
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "default-machine-id",
+        "kind": "initialization",
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "default-before-marker",
+        "kind": "initialization",
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "default-power",
+        "kind": "owned_l1",
+        "outer_generations_absent": 4,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-mixed",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-loss-reserve",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-loss-release",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-syscalls",
+        "kind": "owned_l1",
+        "outer_generations_absent": 4,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-preclear",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-postclear",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-reserve",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-clear",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-snapshot",
+        "kind": "owned_l1",
+        "outer_generations_absent": 4,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-io",
+        "kind": "owned_l1",
+        "outer_generations_absent": 5,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-default-io",
+        "kind": "owned_l1",
+        "outer_generations_absent": 5,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-negative",
+        "kind": "owned_l1",
+        "outer_generations_absent": 4,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-unenforced",
+        "kind": "owned_l1",
+        "outer_generations_absent": 1,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "quota-eio",
+        "kind": "owned_l1",
+        "outer_generations_absent": 2,
+        "exact_declared_paths_absent": true
+      },
+      {
+        "name": "enospc",
+        "kind": "private_mount_namespace",
+        "exact_declared_paths_absent": true,
+        "no_owned_loop_binding": true
+      },
+      {
+        "name": "readonly",
+        "kind": "private_mount_namespace",
+        "exact_declared_paths_absent": true,
+        "no_owned_loop_binding": true
+      },
+      {
+        "name": "io-enospc",
+        "kind": "private_mount_namespace",
+        "exact_declared_paths_absent": true,
+        "no_owned_loop_binding": true
+      },
+      {
+        "name": "io-readonly",
+        "kind": "private_mount_namespace",
+        "exact_declared_paths_absent": true,
+        "no_owned_loop_binding": true
+      }
+    ]
+  },
+  "reviewed_numeric_state_privacy_contract_sha256": {
+    "verify-runtime4ee-default-v1.py": "0a14b647fbf4e4f55977b8cbf440f1b0817d16d2b17a2cbe833923e74db93691",
+    "verify-runtime4ee-quota-v1.py": "ff18f45e5131eed490939d3c5ad95550cb3fae4e056bdafe39c81f9eae69beb8",
+    "d163_allocation_contract_v1.py": "c8a6fd3c9492c09fa4a75037de0868ea0bc61790a95d7867bb3c0e82b11153ab"
+  },
+  "original_reports": {
+    "kvm-fiveb-runtime-default-cold-v1.json": {
+      "sha256": "659bd7359e42d503fd1e79bdaf879e0848af1afa6f2e06c9d6a301987221bf2a",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-snapshot-v1.json": {
+      "sha256": "53b5e2bcb8801e09f7246d268e7f16d07df91466ba8a0e13e759df63d7bc46b2",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-initialization-v1.json": {
+      "sha256": "e3443a7409e7387a3e1ed7970c1cb8a359e3ca876274a47a1836c2d5ab14b9e4",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-machine-id-v1.json": {
+      "sha256": "1df566fbbd91e0711e2f8fa9465df21a40ef8a5ddbe9da87735706bec855e73d",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-before-marker-v1.json": {
+      "sha256": "15ab1bfa324631de3a5c6d9353073d21787b284d62cd597e434b3c6fed0be07b",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-io-snapshot-v1.json": {
+      "sha256": "33dbdb3ed7269c23c57618d724523181ca0e70a26724203b35788bd77939fb2a",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-power-v1.json": {
+      "sha256": "dd9f1f11721cdbfea9d086bea8a74dd19a28640ce7693add24bb19470aaa0c61",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-mixed-v1.json": {
+      "sha256": "8176aa8c1ccadf43add3f60643e733f2364077135c40b8d354d9af0b3c531311",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-loss-reserve-v1.json": {
+      "sha256": "9e7669f3c728f4bcd2073c4bbbdb1f0ec78f871d03554b927a9196c4c444437b",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-loss-release-v1.json": {
+      "sha256": "e5fce07922885e2074d3633e29045bd4ffe5833d3604dc3a7fe8bcd0d99ec362",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-syscalls-v1.json": {
+      "sha256": "7b1fa73094a1d3a069adb701ddc9ba06e651cef0e2304f43305492adc005de71",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-preclear-v1.json": {
+      "sha256": "9dbc7586e68c3d43fbcacd92aa4558f885328e1565d6cd2b9c363f890c5a261a",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-postclear-v1.json": {
+      "sha256": "d04b0d3a87262ec76e3fb022fe9d820dc71b6ed48ff13fd955ad2dd7f06f25f1",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-reserve-v1.json": {
+      "sha256": "3b221f30f9f8bfc85c2e922fa68cb0afeaf7e4cf257c488ef890159a4c0af856",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-clear-v1.json": {
+      "sha256": "1e79a65f4fc21a5b15f3ecc3e05561fd02157041d77d33f33eab871317097d0a",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-snapshot-v1.json": {
+      "sha256": "94850b96876e0ddec43ef5bf79a9174f4cd66850aae807fb4ef832fe90b32a12",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-io-v1.json": {
+      "sha256": "1c56cfe006ea713032543e92a80014fe5ebbad2bae8a0b738065ae14df2c8121",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-default-io-v1.json": {
+      "sha256": "fde0a378d86bc793123779640d086782ed6c598904f0fc2c411f170dac674afa",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-negative-v1.json": {
+      "sha256": "c9cc47c6fd066f71b65fab54ae15e52dd43106a3443e8d58e57fd16c1b3015bf",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-unenforced-v1.json": {
+      "sha256": "2cc1ced29ab361de287a844b9bf190f23f553a86f33b1436c7e061c747fe74a8",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-quota-eio-v1.json": {
+      "sha256": "9c55c372b1b14b6494cb6c4e2a89c762bcf8309eb51a30f32547463668d9cb19",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-io-enospc-v1.json": {
+      "sha256": "ed6e66475d17eb295595dba8da7f80321cee7b3a2ce4637fd63930e8da9eb822",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-io-readonly-v1.json": {
+      "sha256": "ff163532ce059f981e10a419481bdbce506c0c3e81b176ad833ec4f9386d9a7a",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-readonly-v1.json": {
+      "sha256": "d1a869c65a725ae4359b8d846f66f78b3cee41e08407e4da14a6cf944fd7befa",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-enospc-v1.json": {
+      "sha256": "6854955c880155621672ae8c25a5377112817bcdcdbadce3c55a8c422daa7c28",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-cold-v1-queue.json": {
+      "sha256": "cc167e6ea30347a5fc8a4114dfe0b2fa8521901a9cf1e7cb76b4b9466b5edba2",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    },
+    "kvm-fiveb-runtime-default-cold-v1-session.json": {
+      "sha256": "a8fa6722a76c8b387d1ad582a0468fb489f229b84fd78119494914bdd80c2fcf",
+      "source_revision": "37a862ab4ccbfa10056c82b446cd5d60256ccfd0"
+    }
+  },
+  "offline_verifier_correction": {
+    "first_observation_rejected": true,
+    "cause": "substring classifier confused io-cold contract with default-cold; actual original io-enospc role set correctly included workspace, not legacy/queue/session inputs",
+    "fix": "match the exact default-cold logical kind; retain IO artifact/type/readback/pressure requirements",
+    "original_rows_modified": false,
+    "hardware_rerun": false
+  },
+  "limitations": [
+    "Only25 named ordinary daemon runtime scopes, not all production requirements or Goal completion.",
+    "Ordinary direct-driver/custom-PID1 L1 matrices; not all25 through the systemd Go-launcher unit. The latter has a separate limited deployment proof.",
+    "This runtime uses frozen37 harness/fixtureb02; separate7fc/fixture320 trace2 and boundary10 are not silently folded into it.",
+    "Finite paced closed-loop and nontransactional resource observations, not open-loop/fairness/long duration/unique RAM billing or production SLO.",
+    "Default tasks already completed before switching; quota every old writer ran/progressed and host stop preceded earliest possible job deadline. Different workloads/resources, not a speedup ratio.",
+    "A bounded native calibration build overlapped part of the DEFAULT mixed load on the shared L0; host load/warm cache uncontrolled.",
+    "Named healthy/notification/mapper/syscall/ENOSPC/EROFS tests do not imply arbitrary physical media recovery, D-state reclaim guarantees or secure erase.",
+    "Real systemd TLS/catalog/install/upgrade/backup/independent operator, durable audit/retention and saturation remain separate gates.",
+    "Raw console, resource identities, credentials and receipts/hashes remain private."
+  ]
+}

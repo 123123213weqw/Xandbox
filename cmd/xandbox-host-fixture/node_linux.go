@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/client"
@@ -28,9 +29,10 @@ const fixtureMarker = "Xandbox nested host fixture v1\n"
 const nodeGroup = "/sys/fs/cgroup/xandbox"
 
 type nodeRequest struct {
-	Version   int    `json:"version"`
-	Operation string `json:"operation"`
-	Phase     string `json:"phase,omitempty"`
+	Version   int             `json:"version"`
+	Operation string          `json:"operation"`
+	Phase     string          `json:"phase,omitempty"`
+	Receipt   json.RawMessage `json:"receipt,omitempty"`
 }
 type nodeReceipt struct {
 	Phase               string
@@ -38,22 +40,58 @@ type nodeReceipt struct {
 	Key, L1Boot, L2Boot string
 }
 type node struct {
-	api         *client.Client
-	process     *exec.Cmd
-	exited      chan error
-	token, boot string
+	quotaDriver     bool
+	nodeBudget      bool
+	nodeSnapshot    bool
+	quotaSnapshot   bool
+	quotaSwitch     bool
+	switchTokenB    string
+	switchTemplate  string
+	quotaStateIO    bool
+	quotaWindowLock *os.File
+	quotaHeld       *quotaBarrierLive
+	quotaLost       *quotaLossLive
+	copyCut         *copyCutLive
+	ownerCut        *ownerCutLive
+	mapper          *stateMapper
+	api             *client.Client
+	process         *exec.Cmd
+	exited          chan error
+	token, boot     string
 }
 
 func (q nodeRequest) validate() error {
 	if q.Version != 1 {
 		return errors.New("bad fixture protocol")
 	}
+	if q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-owner-cut-recover" {
+		if q.Phase != "" || len(q.Receipt) == 0 || len(q.Receipt) > copyCutReceiptMax {
+			return errors.New("bounded fixed private cut receipt required")
+		}
+		return nil
+	}
+	if len(q.Receipt) > 0 {
+		return errors.New("receipt only allowed on fixed private cold recovery")
+	}
+
 	switch q.Operation {
-	case "probe", "recover", "quota-probe":
+	case "node-diagnostics-checkpoint", "node-diagnostics-recover":
+		if !diagnosticHoldMode(q.Phase).valid() {
+			return errors.New("fixed diagnostic hold phase required")
+		}
+	case "node-tls-policy-checkpoint", "node-tls-policy-recover":
+		if !tlsPolicyMode(q.Phase).valid() {
+			return errors.New("fixed TLS policy phase required")
+		}
+	case "node-operator-store-checkpoint", "node-operator-store-recover":
+		if !operatorStoreMode(q.Phase).valid() {
+			return errors.New("fixed operator store phase required")
+		}
+	case "node-tls-gateway-checkpoint", "node-tls-gateway-recover", "node-operator-shutdown-checkpoint", "node-operator-shutdown-recover", "node-session-ticket-checkpoint", "node-session-ticket-recover", "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "node-operator-checkpoint", "node-operator-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
-	case "checkpoint":
+	case "checkpoint", "quota-checkpoint":
 		if q.Phase != "running" && q.Phase != "stopped" && q.Phase != "destroyed" {
 			return errors.New("invalid checkpoint phase")
 		}
@@ -155,9 +193,21 @@ func (n *node) initialize() error {
 	} else if e = json.Unmarshal(b, &n.token); e != nil {
 		return e
 	}
+	if n.quotaSwitch {
+		if e = n.initializeQuotaSwitch(); e != nil {
+			return e
+		}
+	}
+	capacity := 1
+	if n.quotaSnapshot {
+		capacity = 2
+	}
+	if n.nodeBudget {
+		capacity = 4
+	}
 	h := sha256.Sum256([]byte(n.token))
 	if _, e = os.Stat("/srv/config/auth.json"); os.IsNotExist(e) {
-		if e = privateWrite("/srv/config/auth.json", map[string]any{"version": 1, "keys": []any{map[string]any{"tenant_id": "nested-fixture", "max_instances": 1, "token_sha256": hex.EncodeToString(h[:])}}}); e != nil {
+		if e = privateWrite("/srv/config/auth.json", map[string]any{"version": 1, "keys": []any{map[string]any{"tenant_id": "nested-fixture", "max_instances": capacity, "token_sha256": hex.EncodeToString(h[:])}}}); e != nil {
 			return e
 		}
 	}
@@ -169,6 +219,16 @@ func (n *node) initialize() error {
 	}
 	if e = os.WriteFile(nodeGroup+"/cgroup.subtree_control", []byte("+memory +pids +cpu"), 0); e != nil {
 		return e
+	}
+	if n.nodeBudget {
+		if n.nodeSnapshot {
+			e = n.initializeNodeSnapshotBudget()
+		} else {
+			e = n.initializeNodeBudget()
+		}
+		if e != nil {
+			return e
+		}
 	}
 	n.api = client.NewWithToken("/srv/state/api.sock", n.token)
 	return nil
@@ -202,6 +262,30 @@ func (n *node) start(ctx context.Context) error {
 	}
 	defer log.Close()
 	n.process = exec.Command("/srv/assets/sandboxd", "-backend", "firecracker", "-state-dir", "/srv/state", "-auth-file", "/srv/config/auth.json", "-firecracker-config", "/srv/config/backend.json", "-max-instances", "1", "-metrics")
+	if n.quotaDriver {
+		mode := "quota-daemon-drop"
+		if n.quotaSnapshot {
+			mode = "quota-snapshot-daemon-drop"
+		}
+		if n.quotaSwitch {
+			mode = "quota-switch-daemon-drop"
+		}
+		if n.nodeBudget {
+			mode = "node-budget-daemon"
+			if n.nodeSnapshot {
+				mode = "node-snapshot-daemon"
+			}
+		}
+		n.process = exec.Command("/usr/bin/xandbox-host-fixture", "-mode", mode)
+	}
+	if n.nodeBudget {
+		cg, err := os.Open(nodeGroup + "/control")
+		if err != nil {
+			return err
+		}
+		defer cg.Close()
+		n.process.SysProcAttr = &syscall.SysProcAttr{UseCgroupFD: true, CgroupFD: int(cg.Fd())}
+	}
 	n.process.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	n.process.Stdout, n.process.Stderr = log, log
 	if e = n.process.Start(); e != nil {
@@ -451,9 +535,43 @@ func runNode() error { return runNodeProfile(false) }
 func runNodeProfile(stateIO bool) error { return runNodeOptions(stateIO, false) }
 
 func runNodeOptions(stateIO, quotaProbe bool) error {
-	if stateIO && quotaProbe {
+	return runNodeProfiles(stateIO, quotaProbe, false)
+}
+func runNodeProfiles(stateIO, quotaProbe, quotaDriver bool) error {
+	return runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, false)
+}
+func runNodeAllProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot bool) error {
+	return runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, false)
+}
+func runNodeQuotaIOProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO bool) error {
+	return runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, false)
+}
+func runNodeQuotaSwitchProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch bool) error {
+	return runNodeBudgetProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, false)
+}
+func runNodeBudgetProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget bool) error {
+	return runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget, false)
+}
+func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget, nodeSnapshot bool) error {
+	if nodeSnapshot && (stateIO || quotaProbe || quotaDriver || quotaSnapshot || quotaStateIO || quotaSwitch || nodeBudget) {
+		return errors.New("exclusive node snapshot profile required")
+	}
+	if nodeBudget && (stateIO || quotaProbe || quotaSnapshot || quotaStateIO || quotaSwitch || !quotaDriver) {
+		return errors.New("exclusive node-budget driver profile required")
+	}
+	count := 0
+	for _, enabled := range []bool{stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch} {
+		if enabled {
+			count++
+		}
+	}
+	if count > 1 {
 		return errors.New("exclusive L1 image profile required")
 	}
+	quotaDriver = quotaDriver || quotaSnapshot || quotaStateIO || quotaSwitch || nodeSnapshot
+	quotaSnapshot = quotaSnapshot || quotaSwitch || nodeSnapshot
+	nodeBudget = nodeBudget || nodeSnapshot
+	stateIO = stateIO || quotaStateIO
 	if e := requireNode(); e != nil {
 		return e
 	}
@@ -465,7 +583,11 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 			return e
 		}
 		defer mapper.close()
-		if e = unix.Mount(stateDevice, "/srv", "ext4", unix.MS_NOSUID, "errors=remount-ro"); e != nil {
+		mountOptions := "errors=remount-ro"
+		if quotaStateIO {
+			mountOptions += ",prjquota"
+		}
+		if e = unix.Mount(stateDevice, "/srv", "ext4", unix.MS_NOSUID, mountOptions); e != nil {
 			return e
 		}
 	}
@@ -487,7 +609,7 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{}
+	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, quotaSwitch: quotaSwitch, mapper: mapper, nodeBudget: nodeBudget, nodeSnapshot: nodeSnapshot}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -502,9 +624,23 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 			e = q.validate()
 		}
 		if e == nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
+			timeout := 70 * time.Second
+			if q.Operation == "node-diagnostics-checkpoint" || q.Operation == "node-diagnostics-recover" || q.Operation == "node-tls-policy-checkpoint" || q.Operation == "node-tls-policy-recover" || q.Operation == "node-tls-gateway-checkpoint" || q.Operation == "node-tls-gateway-recover" || q.Operation == "node-operator-shutdown-checkpoint" || q.Operation == "node-operator-shutdown-recover" || q.Operation == "node-session-ticket-checkpoint" || q.Operation == "node-session-ticket-recover" || q.Operation == "node-operator-store-checkpoint" || q.Operation == "node-operator-store-recover" || q.Operation == "node-operator-checkpoint" || q.Operation == "node-operator-recover" || q.Operation == "node-snapshot-checkpoint" || q.Operation == "node-snapshot-recover" || q.Operation == "node-budget-checkpoint" || q.Operation == "node-budget-recover" || q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
+				timeout = 200 * time.Second
+			}
+			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
+				timeout = 200 * time.Second
+			}
+			if q.Operation == "quota-switch-run" {
+				timeout = switchRunBudget
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			var result map[string]any
 			switch q.Operation {
+			case "node-tls-policy-checkpoint":
+				result, e = n.nodeTLSPolicyCheckpoint(ctx, tlsPolicyMode(q.Phase))
+			case "node-tls-policy-recover":
+				result, e = n.nodeTLSPolicyRecover(ctx, tlsPolicyMode(q.Phase))
 			case "probe":
 				e = kvmAvailable()
 				if e == nil {
@@ -512,6 +648,115 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 				}
 			case "checkpoint":
 				result, e = n.checkpoint(ctx, q.Phase)
+			case "quota-snapshot-setup":
+				if !quotaSnapshot {
+					e = errors.New("fixed quota snapshot profile required")
+				} else {
+					result, e = n.quotaSnapshotSetup(ctx)
+				}
+			case "quota-copy-setup":
+				result, e = n.quotaCopySetup(ctx)
+			case "node-prepare-cancel":
+				result, e = n.nodePrepareCancel(ctx)
+			case "node-snapshot-checkpoint":
+				result, e = n.nodeSnapshotCheckpoint(ctx)
+			case "node-snapshot-recover":
+				result, e = n.nodeSnapshotRecover(ctx)
+			case "node-tls-gateway-checkpoint":
+				result, e = n.nodeTLSGatewayCheckpoint(ctx)
+			case "node-tls-gateway-recover":
+				result, e = n.nodeTLSGatewayRecover(ctx)
+			case "node-diagnostics-checkpoint":
+				result, e = n.diagnosticCheckpoint(ctx, diagnosticHoldMode(q.Phase))
+			case "node-diagnostics-recover":
+				result, e = n.diagnosticRecover(ctx, diagnosticHoldMode(q.Phase))
+			case "node-operator-shutdown-checkpoint":
+				result, e = n.nodeOperatorShutdownCheckpoint(ctx)
+			case "node-operator-shutdown-recover":
+				result, e = n.nodeOperatorShutdownRecover(ctx)
+			case "node-session-ticket-checkpoint":
+				result, e = n.nodeSessionTicketCheckpoint(ctx)
+			case "node-session-ticket-recover":
+				result, e = n.nodeSessionTicketRecover(ctx)
+			case "node-operator-store-checkpoint":
+				result, e = n.nodeOperatorStoreCheckpoint(ctx, operatorStoreMode(q.Phase))
+			case "node-operator-store-recover":
+				result, e = n.nodeOperatorStoreRecover(ctx, operatorStoreMode(q.Phase))
+			case "node-operator-checkpoint":
+				result, e = n.nodeOperatorCheckpoint(ctx)
+			case "node-operator-recover":
+				result, e = n.nodeOperatorRecover(ctx)
+			case "node-budget-checkpoint":
+				result, e = n.nodeBudgetCheckpoint(ctx)
+			case "node-budget-recover":
+				result, e = n.nodeBudgetRecover(ctx)
+			case "quota-owner-cut-checkpoint":
+				var private []byte
+				result, private, e = n.quotaOwnerCutCheckpoint(ctx)
+				if e == nil {
+					out["private_receipt"] = json.RawMessage(private)
+				}
+			case "quota-owner-cut-recover":
+				result, e = n.quotaOwnerCutRecover(ctx, q.Receipt)
+			case "quota-copy-cut-checkpoint":
+				var private []byte
+				result, private, e = n.quotaCopyCutCheckpoint(ctx)
+				if e == nil {
+					out["private_receipt"] = json.RawMessage(private)
+				}
+			case "quota-copy-cut-recover":
+				result, e = n.quotaCopyCutRecover(ctx, q.Receipt)
+			case "quota-switch-setup":
+				result, e = n.quotaSwitchSetup(ctx)
+			case "quota-switch-run":
+				result, e = n.quotaSwitchRun(ctx)
+				if result != nil {
+					out["result"] = result
+				} // Retain bounded sanitized incomplete rows, too.
+			case "quota-switch-checkpoint":
+				result, e = n.quotaSwitchCheckpoint(ctx)
+			case "quota-switch-recover":
+				result, e = n.quotaSwitchRecover(ctx)
+			case "quota-clear-checkpoint":
+				result, e = n.quotaClearCheckpoint(ctx)
+			case "quota-clear-recover":
+				result, e = n.recoverQuotaClear(ctx)
+			case "quota-unenforced":
+				result, e = n.quotaUnenforced(ctx)
+			case "quota-negative-setup":
+				result, e = n.quotaNegativeSetup(ctx)
+			case "quota-syscall-setup":
+				result, e = n.quotaSyscallSetup(ctx)
+			case "quota-listener-reserve-checkpoint":
+				result, e = n.quotaListenerCheckpoint(ctx, quotaLossReserve)
+			case "quota-listener-reserve-recover":
+				result, e = n.quotaListenerRecover(ctx, quotaLossReserve)
+			case "quota-listener-release-checkpoint":
+				result, e = n.quotaListenerCheckpoint(ctx, quotaLossRelease)
+			case "quota-listener-release-recover":
+				result, e = n.quotaListenerRecover(ctx, quotaLossRelease)
+			case "quota-barrier-checkpoint":
+				result, e = n.quotaBarrierCheckpoint(ctx)
+			case "quota-barrier-recover":
+				result, e = n.recoverQuotaBarrier(ctx)
+			case "quota-commit-eio-checkpoint":
+				result, e = n.quotaBarrierCheckpointOn(ctx, quotaReserveEIO)
+			case "quota-commit-eio-recover":
+				result, e = n.recoverQuotaBarrierOn(ctx, quotaReserveEIO)
+			case "quota-preclear-hold-checkpoint":
+				result, e = n.quotaBarrierCheckpointOn(ctx, quotaReleasePreHold)
+			case "quota-preclear-hold-recover":
+				result, e = n.recoverQuotaBarrierOn(ctx, quotaReleasePreHold)
+			case "quota-postclear-hold-checkpoint":
+				result, e = n.quotaBarrierCheckpointOn(ctx, quotaReleasePostHold)
+			case "quota-postclear-hold-recover":
+				result, e = n.recoverQuotaBarrierOn(ctx, quotaReleasePostHold)
+			case "quota-checkpoint":
+				if !quotaDriver {
+					e = errors.New("ordinary driver quota image profile required")
+				} else {
+					result, e = n.quotaDriverCheckpoint(ctx, q.Phase)
+				}
 			case "io-fault":
 				if mapper == nil {
 					e = errors.New("isolated state-I/O image profile required")
@@ -529,11 +774,20 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 				if quotaProbe {
 					quotaResult, e = recoverQuotaProbe()
 				}
+				if e == nil && quotaDriver {
+					quotaResult, e = verifyDriverQuotaColdBootOn(mapper)
+				}
 				if e == nil {
 					e = kvmAvailable()
 				}
 				if e == nil {
 					result, e = n.recover(ctx)
+					if e == nil && quotaDriver {
+						e = driverQuotaAllClearOn(mapper)
+						if e == nil {
+							quotaResult["all_private_project_ids_cleared"] = true
+						}
+					}
 					if e == nil {
 						for k, v := range quotaResult {
 							result[k] = v
@@ -561,6 +815,11 @@ func runNodeOptions(stateIO, quotaProbe bool) error {
 					_, _ = io.CopyN(os.Stderr, log, 16384)
 				}
 				_ = log.Close()
+			}
+			if quotaDriver && q.Operation == "recover" {
+				if diag, diagErr := driverQuotaDiagnosticOn(mapper); diagErr == nil {
+					out["quota_diagnostic"] = diag
+				}
 			}
 			out["error"] = "FIXTURE_STEP_FAILED"
 		}

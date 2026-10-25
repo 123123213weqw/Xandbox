@@ -1,0 +1,5 @@
+Originalv1 unit path-selector failure terminal1/gone before six native artifacts/anyKVM; no fake hardware false count.
+admission 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+store-pre 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+store-post 2 exact owned execution generations/root/control/parents independently absent; no cleanup actions
+ALL3 accepted scopes/6outergenerations audited; quota/namespace witnessed inside L1 before disk deletion, not inferred from missing paths.
