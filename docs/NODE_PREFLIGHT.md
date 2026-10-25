@@ -81,3 +81,13 @@ Go 单元测试覆盖版本/控制器闭集解析、每类缺项/unknown 拒绝�
 限量输出，以及只属于测试自身的子进程错误/超时/reap。
 `make smoke` 额外执行真实 doctor 进程，并检查调用者的假 PATH 命令、远程 manager
 环境及秘密字符串不进入查询或输出。这些测试不是 KVM 或生产部署验收。
+
+## 有限原生观察
+
+[独立组件报告](validation/node-doctor-component-v1.json)绑定源码 `5f17589`、
+归档、runner、原生 doctor 与原始证据摘要。Linux 普通用户的组件 race×3、vet、
+模块校验和真实进程 smoke 通过；amd64 原生/独立交叉构建字节一致，arm64 仅交叉编译。
+该节点实际观察到 systemd 249，CLI 按预期退出 1，唯一失败项为当前组合的版本下限；
+KVM 设备/调用者权限和 cgroup 基本观察通过，但未打开 KVM 或创建 VM。
+没有升级/修改该节点，也不把这条负面前置检查当作部署或隔离验收。
+已有 daemon/installer/guest/gateway 的 Go 源码与依赖未改变，原有实机报告不被重签。
