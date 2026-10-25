@@ -73,6 +73,22 @@ The result certifies **current state**, not a durable historic discard request:
 
 ## Evidence boundary
 
+The later `draft-kernel-guard` regression (harness `9754d6b`, runtime Go
+`df679bb`) exposed a missing descendant-freeze check: an empty frozen child can
+coexist with an empty unfrozen parent. The populated-descendant refusal passed,
+but the frozen-child call returned an actual present-draft discard receipt.
+That original run **failed**; its single owned L1 generation was independently
+confirmed absent, without supplemental cleanup. It is not part of the two
+previously accepted named cases.
+
+The current implementation adds a read-only, FD-anchored traversal and checks
+each descendant's events, filesystem and inode identity, with limits of 64
+groups, depth 16 and 512 entries per group. Inventory changes fail closed.
+Empty unfrozen children remain permitted; it does not simply reject all child
+groups or alter the negative test to accept the former behavior. Ordinary-file
+unit models are not kernel evidence. The older frozen-source reports below do
+not certify this changed installer; new results must be recorded separately.
+
 The [software-only frozen proof](validation/supersession-draft-native-v2.json)
 binds Go source `df679bb868f8fbab68b9b7563b9aee5824ea771e` and its exact
 archive/runner/artifact hashes. Linux Go 1.27.3 completed the **entire same-process
