@@ -1,0 +1,125 @@
+{
+  "scope": "read-only systemd-install-v1 prerequisite inspector, not VM or deployment acceptance",
+  "source_revision": "5f175894479f4dbef9822e061749c20bcf4407c6",
+  "source_archive_sha256": "f60e43a93c1ffffaf3752a5b9f050900a69edcc9ac3d551608de894987f2e64d",
+  "native_runner_sha256": "1ffd57c2a826be88baae484fca6e9ccaf5d8dc3112bfe947ab9577e3ecac73c6",
+  "native_binary_sha256": "25980bcc184c3a2ae582b67238030a892a14bdc341b6bab00d6e529246753840",
+  "native_component_race_repetitions": 3,
+  "native_test_parents_including_one_noop_child_helper": 15,
+  "native_vet_and_module_verify_passed": true,
+  "amd64_cross_native_bytes_equal": true,
+  "arm64_cross_compile_only": true,
+  "python_report_validation_tests": 4,
+  "mac_python_all_tests": 274,
+  "mac_python_existing_platform_skips": 5,
+  "observed_cli_terminal": 1,
+  "observed_report": {
+    "version": 1,
+    "profile": "systemd-install-v1",
+    "os": "linux",
+    "architecture": "amd64",
+    "required_systemd_major": 254,
+    "observed_systemd_major": 249,
+    "basic_prerequisites_met": false,
+    "checks": [
+      {
+        "id": "linux",
+        "status": "pass",
+        "code": "linux_observed"
+      },
+      {
+        "id": "architecture",
+        "status": "pass",
+        "code": "qualified_fixture_architecture"
+      },
+      {
+        "id": "systemd_pid1",
+        "status": "pass",
+        "code": "systemd_pid1_observed"
+      },
+      {
+        "id": "systemd_version",
+        "status": "fail",
+        "code": "dedicated_newer_systemd_node_required"
+      },
+      {
+        "id": "cgroup_v2",
+        "status": "pass",
+        "code": "cgroup2_filesystem_observed"
+      },
+      {
+        "id": "controllers",
+        "status": "pass",
+        "code": "root_controllers_observed_not_unit_delegation"
+      },
+      {
+        "id": "kvm_device",
+        "status": "pass",
+        "code": "kvm_character_device_observed_not_opened"
+      },
+      {
+        "id": "kvm_permissions",
+        "status": "pass",
+        "code": "caller_access_observed_not_device_open"
+      }
+    ],
+    "missing_controllers": [],
+    "deferred_checks": [
+      "actual_kvm_creation",
+      "clone3_and_namespace_capabilities",
+      "unit_delegation_and_budget_readback",
+      "asset_hashes_and_guest_health",
+      "storage_quota_and_backing_device",
+      "reserved_uids_and_trusted_paths",
+      "node_capacity_and_pressure",
+      "network_and_tls_policy",
+      "production_fault_matrix_and_slos"
+    ],
+    "read_only": true,
+    "vm_created": false,
+    "isolation_validated": false,
+    "production_ready": false
+  },
+  "raw_evidence_hashes": {
+    "doctor-component-v1.race.log": {
+      "bytes": 15218,
+      "sha256": "48883e90815c9eabbc3b6ee29f31c2bd98a82ac81e40da6898f8072e4dbcdd41"
+    },
+    "doctor-component-v1.vet.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "doctor-component-v1.mod.log": {
+      "bytes": 21,
+      "sha256": "b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd"
+    },
+    "doctor-component-v1.python.log": {
+      "bytes": 102,
+      "sha256": "feabb4add9e2ca3374e538560634d1ec97dc4f4ce89aab12f3d726e36ea9b2f6"
+    },
+    "doctor-component-v1.smoke.json": {
+      "bytes": 85,
+      "sha256": "6fed7e58c92d902ee414bc6c06c9a19082a3781746056d4c4b938983c051696d"
+    },
+    "doctor-component-v1.host.json": {
+      "bytes": 1231,
+      "sha256": "c9c1f9033c4fc589ce7c2634d8fe4d71c307dc83411e00ebd9b8daffb14bb302"
+    },
+    "doctor-component-v1.host.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "doctor-component-v1.sha256": {
+      "bytes": 150,
+      "sha256": "be159e1000265ba794cba0196c9583737766bff7098c9ecc747520fb429f8d9b"
+    },
+    "doctor-component-v1.status": {
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  },
+  "existing_runtime_go_sources_and_dependencies_unchanged_from_main": "9e9915848a1a6937ea5df79daf01d21fd5bea0e0",
+  "candidate_ci_not_certified_by_this_component_report": true,
+  "production_ready": false,
+  "goal_complete": false
+}
