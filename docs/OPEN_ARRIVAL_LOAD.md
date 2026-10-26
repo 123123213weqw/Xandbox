@@ -40,7 +40,7 @@ VM 与 control 的预留仍装入 NodeRoot 7 GiB。不是全节点 RAM 饱和试
 ## 时钟、负载和分母
 
 先做 8 次串行真实生命周期预检，确认普通 API、guest、Stop 和 quota wire contract；
-预检不计入 offered 窗口或其百分位。随后两个 canary 已实际运行，才设测量原点。
+预检不计入 offered 窗口或其百分位。两个 canary 各在同一 guest 上先做三次 busy/普通 release/重复启动心跳预检（不算 Stop），确认旧序号不会污染下一轮，再设测量原点。
 
 | 相位 | 独立 offered 时长 | 全局 raw 到达率 | raw intents | 每租户 |
 | --- | --- | --- | --- | --- |
@@ -77,7 +77,7 @@ raw 与 canary 各相位、各租户分别统计：
 
 raw 走普通鉴权 create，核对实际 KVM/owner/Ready/租户；guest 新 boot、非 root、
 干净 workspace。guest 内写 16 MiB tmpfs 和 1 MiB ext4、sync/hash，随后运行有
-递增序号的忙任务。另一个 guest exec 观察序号增加并核对 job 仍 RUNNING，再发 Stop。
+递增序号的忙任务。先用普通同步 guest exec 清除并核对旧心跳文件不存在，再启动异步忙任务；忙任务不再删除进度文件，之后只原子替换序号。另一个 guest exec 观察序号增加并核对 job 仍 RUNNING，再发 Stop。
 
 Stop 必须是现有同步 **HTTP 200 + 同一 Ref + STOPPED + StoppedAt**。
 独立内核 observer 从 Stop 发起时刻等待旧执行域为空，必须早于该任务原始 60 秒预算。
@@ -138,3 +138,27 @@ NodeRoot 移除另证。inventory 不恢复任务或修补生产元数据。
 故障、升级回滚、独立操作员或完整生产故障矩阵。实际门槛需冻结源码、24 个原生产物、
 原生全套 race/CGO0 三遍与 root Python 零 skip；旧预算/OOM 兼容及新完整 40 分钟/cold
 分别实测，所有外层代际/资源独立只读无残留复核后，才能新增脱敏合格证据。
+
+
+## 保留的实际失败（不是合格长稳证据）
+
+2026-10-26，候选源码 `99c6d8a53e95e1c2762fc68c6ea2219b98142a38` 的原始运行：
+同一 fixture 的旧预算和真实 OOM 场景各两次启动通过；新 load 首次启动在测量原点后
+**685035.997 ms**（约 11 分 25 秒）失败，尚在相位 1。首个失败为第二租户 canary
+第 69 号 intent 的 busy/progress 阶段，普通 helper 仅返回固定 guest workload failure；
+不是 companion cancellation。保留 173 个结果行、155 个已接受 key 的内存计数、
+69 个资源采样及私有 partial/console/report/receipt/counters，不把它补齐为 40 分钟。
+
+独立只读审计确认该批 **5 个唯一外层代际**（2+2+1）的声明目录/cgroup 全部不存在，
+无需补充清理；84 个脚本及 9 个实际输入重新校验。没有新 load 合格报告或 cold 通过声明。
+
+源码中可识别一个相关竞态：拒绝 switch 后复用同一 guest，旧序号可能先满足 progress
+的存在性检查，随后异步 busy 的 `rm` 删除该序号，再次 `cat` 失败。**这是源码推断**；
+旧 helper 未保留 guest exit/stderr，不能断言它就是全部实测根因，更不是生产内核故障证明。
+
+后续修正将清理/不存在证明移到异步 busy 启动前的普通同步 guest exec，并在 raw/session
+两条 API 路径增加 reset-completed-before-launch 的合约及失败负例。新增同 guest 三轮
+实际预检；progress 读失败保留独立退出码，私有诊断保留 exit/truncated/输出字节数，
+不输出 guest 内容。不重试丢失序号来凑进展，不缩短窗口、改相位/worker/预算或放宽门槛。
+修正源码仍须重新原生编译验证、完整真实运行/cold 和独立清理审计；旧软件/运行结果
+只为各自原始源码作证。

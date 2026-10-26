@@ -90,7 +90,7 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		partial["load_window_completed"] = !measuredStart.IsZero() && time.Since(measuredStart) >= nodeLoadDuration
 		partial["run_passed"] = retErr == nil
 		if retErr == nil {
-			for _, flag := range []string{"real_nested_kvm", "checkpoint_receipt_fsynced", "all_raw_and_canary_intents_accounted", "fixed_offered_clock_not_completion_paced", "cross_tenant_lookup404_checked", "coarse_one_fifth_equal_offer_progress_guard_passed", "high_rate_service_refusal_observed", "all_pools_and_private_namespaces_empty", "quiescent_exact_project_clear_tail_passed", "accepted_private_replay_inventory_fsynced", "cold_distinct_phase_armed", "no_operator_quota_sync_in_offered_window", "post_drain_controller_fd_guard_passed"} {
+			for _, flag := range []string{"real_nested_kvm", "reused_guest_heartbeat_preflight_passed", "checkpoint_receipt_fsynced", "all_raw_and_canary_intents_accounted", "fixed_offered_clock_not_completion_paced", "cross_tenant_lookup404_checked", "coarse_one_fifth_equal_offer_progress_guard_passed", "high_rate_service_refusal_observed", "all_pools_and_private_namespaces_empty", "quiescent_exact_project_clear_tail_passed", "accepted_private_replay_inventory_fsynced", "cold_distinct_phase_armed", "no_operator_quota_sync_in_offered_window", "post_drain_controller_fd_guard_passed"} {
 				partial[flag] = true
 			}
 		}
@@ -137,6 +137,24 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		}
 		if outcome != "completed" {
 			return nil, errors.New("idle canary preflight admission failed")
+		}
+		// Deliberately reuse one assigned guest after ordinary release, so a
+		// stale sequence exists on the next attempt. This is preflight only,
+		// not Stop evidence and not a shortened replacement for the40min run.
+		for attempt := 0; attempt < 3; attempt++ {
+			actor, cancel := context.WithTimeout(ctx, 35*time.Second)
+			job, deadline, e := nodeLoadBusy(actor, canaryAPI[tenant], canaries[tenant].binding.Current, &canaries[tenant].binding)
+			if e == nil {
+				e = nodeLoadReleaseBusy(actor, canaryAPI[tenant], canaries[tenant].binding, job)
+			}
+			if e == nil && !time.Now().Before(deadline) {
+				e = errors.New("reused heartbeat preflight exceeded original deadline")
+			}
+			cancel()
+			if e != nil {
+				state.fail(nodeLoadRow{Kind: 1, Tenant: tenant, Stage: "reused_heartbeat_preflight"}, e)
+				return nil, e
+			}
 		}
 		if e = canaryAPI[1-tenant].call(ctx, "GET", switchPath(canaries[tenant].binding.Current), "", nil, nil, 404); e != nil {
 			return nil, e

@@ -12,7 +12,7 @@ NODE_LOAD_METRICS = ('client_queue_delay_ms', 'api_reply_ms_all_started_outcomes
                      'total_iteration_ms', 'server_measured_revocation_ms',
                      'quiescent_full_project_clear_ms')
 NODE_LOAD_SUCCESS_FLAGS = (
-    'real_nested_kvm', 'checkpoint_receipt_fsynced',
+    'real_nested_kvm', 'reused_guest_heartbeat_preflight_passed', 'checkpoint_receipt_fsynced',
     'all_raw_and_canary_intents_accounted', 'fixed_offered_clock_not_completion_paced',
     'cross_tenant_lookup404_checked', 'coarse_one_fifth_equal_offer_progress_guard_passed',
     'high_rate_service_refusal_observed', 'all_pools_and_private_namespaces_empty',

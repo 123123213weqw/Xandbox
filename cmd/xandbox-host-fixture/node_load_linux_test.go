@@ -6,12 +6,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"math"
+	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
 )
 
 func TestNodeLoadNamedProfilePreservesEveryOldHardDeadline(t *testing.T) {
@@ -324,5 +329,106 @@ func TestNodeLoadResourceCoverageCannotBeReplacedByShortSmoke(t *testing.T) {
 		if nodeLoadSamplesValid(v) == nil {
 			t.Fatal("invalid/partial sustained series accepted")
 		}
+	}
+}
+
+func TestNodeLoadHeartbeatResetCompletesBeforeAsyncLaunch(t *testing.T) {
+	// In-memory HTTP responses only; no guest command is executed on L0.
+	ref := sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
+	for _, useSession := range []bool{false, true} {
+		for _, fault := range []string{"", "prepare", "progress"} {
+			t.Run(fmt.Sprintf("session=%t/fault=%s", useSession, fault), func(t *testing.T) {
+				binding := session.Result{ID: strings.Repeat("c", 32), Current: ref, Revision: 1}
+				var bp *session.Result
+				if useSession {
+					bp = &binding
+				}
+				postCount := 0
+				prepared, launched := false, false
+				api := &switchAPI{http: &http.Client{Transport: nodeOOMTestTransport(func(req *http.Request) (*http.Response, error) {
+					status := 200
+					var result any
+					if req.Method == "POST" {
+						var body struct {
+							Argv    []string `json:"argv"`
+							Timeout int      `json:"timeout_ms"`
+						}
+						if e := json.NewDecoder(req.Body).Decode(&body); e != nil || body.Timeout != 60000 {
+							t.Fatal("ordinary guest budget lost", e)
+						}
+						postCount++
+						var want []string
+						switch postCount {
+						case 1:
+							want = nodeLoadPrepareHeartbeatCommand()
+						case 2:
+							want = nodeLoadBusyCommand()
+							if !prepared {
+								t.Fatal("busy launched before reset completion")
+							}
+							launched = true
+						case 3:
+							want = nodeLoadProgressCommand()
+							if !launched {
+								t.Fatal("reader before new busy launch")
+							}
+						default:
+							t.Fatal("unexpected exec")
+						}
+						if !reflect.DeepEqual(body.Argv, want) {
+							t.Fatal("wrong fixed guest command order")
+						}
+						j := sandbox.Job{ID: strings.Repeat(string(rune('d'+postCount-1)), 32), Ref: ref, Status: "RUNNING"}
+						result = j
+						if useSession {
+							result = map[string]any{"revision": 1, "sandbox": ref, "job": j}
+						}
+						status = 202
+					} else {
+						parts := strings.Split(req.URL.Path, "/")
+						id := parts[len(parts)-1]
+						j := sandbox.Job{ID: id, Ref: ref, Status: "EXITED"}
+						if id == strings.Repeat("d", 32) {
+							if fault == "prepare" {
+								j.Output = sandbox.Output{ExitCode: 41, Stderr: "private-guest-output"}
+							} else {
+								prepared = true
+							}
+						}
+						if id == strings.Repeat("e", 32) {
+							j.Status = "RUNNING"
+						}
+						if id == strings.Repeat("f", 32) && fault == "progress" {
+							j.Output = sandbox.Output{ExitCode: 42, Stderr: "private-guest-output"}
+						}
+						result = j
+					}
+					b, e := json.Marshal(result)
+					if e != nil {
+						t.Fatal(e)
+					}
+					return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(string(b))), Header: make(http.Header)}, nil
+				})}}
+				_, _, e := nodeLoadBusy(context.Background(), api, ref, bp)
+				if fault == "" {
+					if e != nil || postCount != 3 {
+						t.Fatal(e, postCount)
+					}
+				} else {
+					if e == nil || strings.Contains(e.Error(), "private-guest-output") {
+						t.Fatal("failure lost or private output escaped", e)
+					}
+					if fault == "prepare" && postCount != 1 {
+						t.Fatal("launched after reset failure")
+					}
+					if fault == "progress" && !strings.Contains(e.Error(), "exit=42") {
+						t.Fatal("numeric guest cause lost")
+					}
+				}
+			})
+		}
+	}
+	if strings.Contains(nodeLoadBusyCommand()[2], "rm -f") || !strings.Contains(nodeLoadPrepareHeartbeatCommand()[2], "test ! -e /tmp/load-seq") {
+		t.Fatal("observable sequence deleted after async launch")
 	}
 }

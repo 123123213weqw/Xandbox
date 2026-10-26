@@ -92,15 +92,24 @@ func nodeLoadWorkCommand() []string {
 	return []string{"sh", "-c", "set -e; test ! -e load-marker; printf load > load-marker; dd if=/dev/zero of=/tmp/load-memory bs=1048576 count=16 2>/dev/null; dd if=/dev/zero of=load-data bs=1048576 count=1 2>/dev/null; test $(wc -c < /tmp/load-memory) -eq 16777216; test $(wc -c < load-data) -eq 1048576; sync; sha256sum load-data >/dev/null; id -u; cat /proc/sys/kernel/random/boot_id"}
 }
 
+// Reset is an ordinary synchronous guest exec BEFORE the async heartbeat job.
+// Never delete a sequence file after a concurrent progress reader has started.
+func nodeLoadPrepareHeartbeatCommand() []string {
+	return []string{"sh", "-c", `set -e; rm -f /tmp/load-release /tmp/load-seq /tmp/load-seq.new; test ! -e /tmp/load-release; test ! -e /tmp/load-seq; test ! -e /tmp/load-seq.new`}
+}
+
 func nodeLoadBusyCommand() []string {
-	return []string{"sh", "-c", `set -e; rm -f /tmp/load-release /tmp/load-seq; i=0; while [ ! -e /tmp/load-release ]; do i=$((i+1)); printf '%s\n' "$i" > /tmp/load-seq.new; mv /tmp/load-seq.new /tmp/load-seq; sleep 0.05; done`}
+	return []string{"sh", "-c", `set -e; i=0; while [ ! -e /tmp/load-release ]; do i=$((i+1)); printf '%s\n' "$i" > /tmp/load-seq.new; mv /tmp/load-seq.new /tmp/load-seq; sleep 0.05; done`}
 }
 
 func nodeLoadProgressCommand() []string {
-	return []string{"sh", "-c", `set -e; i=0; while [ ! -s /tmp/load-seq ]; do i=$((i+1)); test $i -le 200; sleep 0.05; done; first=$(cat /tmp/load-seq); case $first in ''|*[!0-9]*) exit 1;; esac; i=0; while :; do next=$(cat /tmp/load-seq); case $next in ''|*[!0-9]*) exit 1;; esac; if [ "$next" -gt "$first" ]; then break; fi; i=$((i+1)); test $i -le 200; sleep 0.05; done`}
+	return []string{"sh", "-c", `set -e; i=0; while [ ! -s /tmp/load-seq ]; do i=$((i+1)); test $i -le 200; sleep 0.05; done; first=$(cat /tmp/load-seq) || exit 42; case $first in ''|*[!0-9]*) exit 1;; esac; i=0; while :; do next=$(cat /tmp/load-seq) || exit 44; case $next in ''|*[!0-9]*) exit 1;; esac; if [ "$next" -gt "$first" ]; then break; fi; i=$((i+1)); test $i -le 200; sleep 0.05; done`}
 }
 
 func nodeLoadBusy(ctx context.Context, c *switchAPI, ref sandbox.Ref, binding *session.Result) (sandbox.Job, time.Time, error) {
+	if _, e := nodeLoadHeartbeatExec(ctx, c, ref, binding, nodeLoadPrepareHeartbeatCommand(), "prepare"); e != nil {
+		return sandbox.Job{}, time.Time{}, e
+	}
 	deadline := time.Now().Add(60 * time.Second)
 	var j sandbox.Job
 	var e error
@@ -119,12 +128,7 @@ func nodeLoadBusy(ctx context.Context, c *switchAPI, ref sandbox.Ref, binding *s
 	if !hex32Pattern(j.ID) || j.Ref != ref || j.Generation != ref.Generation {
 		return j, deadline, errors.New("load busy execution binding mismatch")
 	}
-	if binding != nil {
-		_, e = c.sessionExec(ctx, *binding, nodeLoadProgressCommand())
-	} else {
-		_, e = c.executeVM(ctx, ref, nodeLoadProgressCommand())
-	}
-	if e != nil {
+	if _, e = nodeLoadHeartbeatExec(ctx, c, ref, binding, nodeLoadProgressCommand(), "progress"); e != nil {
 		return j, deadline, e
 	}
 	j, e = c.job(ctx, ref, j)
@@ -132,6 +136,25 @@ func nodeLoadBusy(ctx context.Context, c *switchAPI, ref sandbox.Ref, binding *s
 		return j, deadline, errors.New("actual load busy progress before original timeout required")
 	}
 	return j, deadline, nil
+}
+
+// Preserve closed numeric failure evidence instead of discarding the actual
+// guest exit status behind the generic switch helper error. Never log output.
+func nodeLoadHeartbeatExec(ctx context.Context, c *switchAPI, ref sandbox.Ref, binding *session.Result, argv []string, stage string) (sandbox.Output, error) {
+	var out sandbox.Output
+	var e error
+	if binding != nil {
+		out, e = c.sessionExec(ctx, *binding, argv)
+	} else {
+		out, e = c.executeVM(ctx, ref, argv)
+	}
+	if e != nil {
+		return out, fmt.Errorf("load heartbeat %s exit=%d truncated=%t stdout_bytes=%d stderr_bytes=%d: %w", stage, out.ExitCode, out.Truncated, len(out.Stdout), len(out.Stderr), e)
+	}
+	if out.Truncated {
+		return out, errors.New("heartbeat observation output was truncated")
+	}
+	return out, nil
 }
 
 func nodeLoadReleaseBusy(ctx context.Context, c *switchAPI, b session.Result, j sandbox.Job) error {
