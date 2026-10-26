@@ -34,6 +34,10 @@ Version 1/2 保持实验性兼容格式，不自动扩容、迁移或获得生�
 
 ## 当前测试边界
 
+另有[单实例真实 host-cgroup OOM 有限门槛](NODE_OOM_PRESSURE.md)：TEST ONLY 新 fixture
+已另取普通基线与 OOM 各两次启动、邻居继续/Stop/GC/复用/cold 及独立无残留证据；
+不是 guest-origin 或整节点 RAM 饱和，不改变下述历史报告，不勾选完整节点或生产门槛。
+
 已有边界/溢出/逐资源拒绝、schema与binding漂移、服务参数/导入计数、owner未确认时容量保留、CPU/RAM/层级输入、磁盘/inode压力边界、准备并发/取消及读接口安全测试。新增固定8GiB L1 RAM/12GiB disk/10GiB outer cgroup/CPU8测试规格，不修改旧2GiB/3GiB规格。下列有限实机证据仍不能替代完整节点压力与生产验收。
 
 ## 首轮有限实机证据

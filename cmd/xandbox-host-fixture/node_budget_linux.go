@@ -23,6 +23,8 @@ import (
 )
 
 const nodeBudgetInstances = nodeGroup + "/instances"
+const nodeBudgetCheckpointPhase = "node-envelope-healthy-checkpoint"
+const nodeOOMCheckpointPhase = "node-oom-after-real-group-kill"
 
 func budgetPolicy() firecracker.NodePolicy {
 	return firecracker.NodePolicy{Version: 1, CgroupRoot: nodeGroup, MaxInstances: 4, MaxRecords: 1024, MaxSessions: 32, PrepareWorkers: 1, MemoryMax: 7 << 30, ControllerMemoryMax: 1 << 30, HostMemoryReserve: 512 << 20, PidsMax: 384, ControllerPidsMax: 128, CPUQuota: 800000, IOBytesPerSecond: 256 << 20, IOOperationsPerSecond: 8192, DiskBytes: 10 << 30, DiskInodes: 100000, ExternalDiskBytes: 2 << 30, ExternalInodes: 2048, MinFreeBytes: 256 << 20, MinFreeInodes: 2048}
@@ -140,6 +142,12 @@ func budgetVM(ref sandbox.Ref) error {
 func budgetOwner(ref sandbox.Ref) (clearWindowOwner, []byte, error) {
 	if e := requireNode(); e != nil {
 		return clearWindowOwner{}, nil, e
+	}
+	return readBudgetOwner(ref)
+}
+func readBudgetOwner(ref sandbox.Ref) (clearWindowOwner, []byte, error) {
+	if requireNode() != nil && requireQuotaChild() != nil {
+		return clearWindowOwner{}, nil, errors.New("fixed L1 owner reader required")
 	}
 	if !switchRefValid(ref) {
 		return clearWindowOwner{}, nil, errors.New("invalid fixed budget owner ref")
@@ -355,68 +363,105 @@ func (n *node) nodeBudgetCheckpoint(ctx context.Context) (map[string]any, error)
 	if e = driverQuotaAllClear(); e != nil {
 		return nil, e
 	}
-	key, e = randomKey()
-	if e != nil {
-		return nil, e
-	}
-	live, e := api.create(ctx, key)
-	if e != nil {
-		return nil, e
-	}
-	if e = budgetVM(live.Ref); e != nil {
-		return nil, e
-	}
-	out, e := api.executeVM(ctx, live.Ref, []string{"sh", "-c", "set -e; test ! -e budget-marker; printf fresh-budget > budget-marker; sync; id -u; cat /proc/sys/kernel/random/boot_id"})
-	if e != nil {
-		return nil, e
-	}
-	boot, e := switchGuestIdentity(out)
-	if e != nil {
-		return nil, e
-	}
-	owner, raw, e := budgetOwner(live.Ref)
-	if e != nil {
-		return nil, e
-	}
-	fs, e := openQuotaFS(false)
-	if e != nil {
-		return nil, e
-	}
-	defer fs.file.Close()
-	if e = fs.sync(); e != nil {
-		return nil, e
-	}
-	if e = unix.Syncfs(int(fs.file.Fd())); e != nil {
-		return nil, e
-	}
-	qr, e := driverQuotaRead(owner.ProjectID)
-	if e != nil {
-		return nil, e
-	}
-	jail := "/srv/r/j/firecracker/" + live.ID + live.Generation
-	blocks, inodes, entries, e := driverQuotaTree(jail, false)
-	if e != nil {
-		return nil, e
-	}
-	receipt := budgetCheckpoint{Node: nodeReceipt{Phase: "node-envelope-healthy-checkpoint", Ref: live.Ref, Key: key, L1Boot: n.boot, L2Boot: boot}, Owner: raw, Quota: driverQuotaReceipt{Phase: "running", Jail: jail, Project: owner.ProjectID, Record: qr, NamespaceBlocks: blocks, NamespaceInodes: inodes, Entries: entries}}
-	if e = validateDriverQuotaAccounting(receipt.Quota, qr, blocks, inodes, entries); e != nil {
-		return nil, e
-	}
-	receipt.Config, e = fileHash("/srv/config/backend.json")
-	if e != nil {
-		return nil, e
-	}
-	if e = privateWrite("/srv/fixture/node-budget-receipt.json", receipt); e != nil {
+	if e = n.budgetFreshCheckpoint(ctx, api, nil, nodeBudgetCheckpointPhase); e != nil {
 		return nil, e
 	}
 	return map[string]any{"real_nested_kvm": true, "checkpoint_receipt_fsynced": true, "node_schema3_exact_frontend_counts_and_parent_control_placement_enforced": true, "wrong_limits_and_wrong_control_subtree_rejected_before_binding_and_api": true, "four_simultaneous_actual_kvm_guests_uid_data_and_filters_checked": true, "fifth_create503_then_full_quota_reclaim_checked": true, "parent_limit_drift_refused_new_preparation_without_fallback": true, "stop_cleanup_and_existing_exec_continue_during_stricter_parent_drift": true, "failed_prepare_key410_and_same_policy_restored_before_fresh_guest": true, "healthy_synced_checkpoint_not_inflight_metadata_fault": true, "guest_memory_touched_bytes_each": 8 << 20, "node_memory_max_bytes": cfg.Node.MemoryMax, "controller_memory_max_bytes": cfg.Node.ControllerMemoryMax, "node_cpu_quota_us": cfg.Node.CPUQuota, "node_pids_max": cfg.Node.PidsMax, "prepare_workers": cfg.Node.PrepareWorkers, "node_io_bytes_per_second": cfg.Node.IOBytesPerSecond, "node_io_operations_per_second": cfg.Node.IOOperationsPerSecond}, nil
 }
+func (n *node) budgetFreshCheckpoint(ctx context.Context, api *switchAPI, oldBoots []string, phase string) error {
+	if e := requireNode(); e != nil {
+		return e
+	}
+	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase {
+		return errors.New("closed budget checkpoint phase required")
+	}
+	if (phase == nodeBudgetCheckpointPhase && len(oldBoots) != 0) || (phase == nodeOOMCheckpointPhase && len(oldBoots) != 4) {
+		return errors.New("checkpoint origin boot set mismatch")
+	}
+	seenBoots := map[string]bool{}
+	for _, boot := range oldBoots {
+		if !switchUUID(boot) || seenBoots[boot] {
+			return errors.New("distinct real origin boots required")
+		}
+		seenBoots[boot] = true
+	}
+	key, e := randomKey()
+	if e != nil {
+		return e
+	}
+	live, e := api.create(ctx, key)
+	if e != nil {
+		return e
+	}
+	if e = budgetVM(live.Ref); e != nil {
+		return e
+	}
+	out, e := api.executeVM(ctx, live.Ref, []string{"sh", "-c", "set -e; test ! -e budget-marker; printf fresh-budget > budget-marker; sync; id -u; cat /proc/sys/kernel/random/boot_id"})
+	if e != nil {
+		return e
+	}
+	boot, e := switchGuestIdentity(out)
+	if e != nil {
+		return e
+	}
+	for _, oldBoot := range oldBoots {
+		if boot == oldBoot {
+			return errors.New("old guest boot reused after OOM reclaim")
+		}
+	}
+	owner, raw, e := budgetOwner(live.Ref)
+	if e != nil {
+		return e
+	}
+	fs, e := openQuotaFS(false)
+	if e != nil {
+		return e
+	}
+	defer fs.file.Close()
+	if e = fs.sync(); e != nil {
+		return e
+	}
+	if e = unix.Syncfs(int(fs.file.Fd())); e != nil {
+		return e
+	}
+	qr, e := driverQuotaRead(owner.ProjectID)
+	if e != nil {
+		return e
+	}
+	jail := "/srv/r/j/firecracker/" + live.ID + live.Generation
+	blocks, inodes, entries, e := driverQuotaTree(jail, false)
+	if e != nil {
+		return e
+	}
+	receipt := budgetCheckpoint{Node: nodeReceipt{Phase: phase, Ref: live.Ref, Key: key, L1Boot: n.boot, L2Boot: boot}, Owner: raw, Quota: driverQuotaReceipt{Phase: "running", Jail: jail, Project: owner.ProjectID, Record: qr, NamespaceBlocks: blocks, NamespaceInodes: inodes, Entries: entries}}
+	if e = validateDriverQuotaAccounting(receipt.Quota, qr, blocks, inodes, entries); e != nil {
+		return e
+	}
+	receipt.Config, e = fileHash("/srv/config/backend.json")
+	if e != nil {
+		return e
+	}
+	if e = privateWrite("/srv/fixture/node-budget-receipt.json", receipt); e != nil {
+		return e
+	}
+	return nil
+}
+
 func (n *node) nodeBudgetRecover(ctx context.Context) (map[string]any, error) {
+	return n.recoverBudgetCheckpoint(ctx, nodeBudgetCheckpointPhase)
+}
+func (n *node) nodeOOMRecover(ctx context.Context) (map[string]any, error) {
+	return n.recoverBudgetCheckpoint(ctx, nodeOOMCheckpointPhase)
+}
+func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[string]any, error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
 	if !n.nodeBudget || n.process != nil {
 		return nil, errors.New("fresh budget recovery required")
+	}
+	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase {
+		return nil, errors.New("closed budget recovery phase required")
 	}
 	b, e := privatefile.Read("/srv/fixture/node-budget-receipt.json", 32768)
 	if e != nil {
@@ -426,8 +471,8 @@ func (n *node) nodeBudgetRecover(ctx context.Context) (map[string]any, error) {
 	if e = strictjson.Decode(b, &saved); e != nil {
 		return nil, e
 	}
-	if saved.Node.Phase != "node-envelope-healthy-checkpoint" || !switchRefValid(saved.Node.Ref) || saved.Node.L1Boot == n.boot || !switchUUID(saved.Node.L1Boot) || !switchUUID(saved.Node.L2Boot) || !hashPattern.MatchString(saved.Node.Key) || !hashPattern.MatchString(saved.Config) {
-		return nil, errors.New("budget cold identity invalid")
+	if e = validateBudgetCheckpointIdentity(saved, phase, n.boot); e != nil {
+		return nil, e
 	}
 	h, e := fileHash("/srv/config/backend.json")
 	if e != nil || h != saved.Config {
@@ -514,4 +559,14 @@ func (n *node) nodeBudgetRecover(ctx context.Context) (map[string]any, error) {
 		}
 	}
 	return map[string]any{"l1_boot_changed": true, "exact_node_policy_and_owner_quota_metadata_checked_before_daemon": true, "old_execution_absent_and_ordinary_recovery_destroyed_resources_absent": true, "old_key410_all_four_projects_zero_before_reuse": true, "fresh_actual_guest_uid_boot_workspace_checked": true, "all_four_projects_zero_controller_reaped_entire_node_subtree_removed": true, "no_assigned_guest_restore_and_no_node_policy_retargeted": true}, nil
+}
+
+func validateBudgetCheckpointIdentity(saved budgetCheckpoint, phase, boot string) error {
+	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase {
+		return errors.New("closed budget recovery phase required")
+	}
+	if !switchUUID(boot) || saved.Node.Phase != phase || !switchRefValid(saved.Node.Ref) || saved.Node.L1Boot == boot || !switchUUID(saved.Node.L1Boot) || !switchUUID(saved.Node.L2Boot) || !hashPattern.MatchString(saved.Node.Key) || !hashPattern.MatchString(saved.Config) {
+		return errors.New("budget cold identity invalid")
+	}
+	return nil
 }
