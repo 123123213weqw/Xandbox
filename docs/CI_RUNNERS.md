@@ -53,3 +53,17 @@ macOS CI 验证控制面/模拟后端的跨平台行为，不证明 macOS 支持
 每构建100遍，无失败、data race或skip，临时目录仅剩自有marker。它是明确的合成开发证据，
 不是新冻结源码的完整CI、实际KVM或生产认证；新源码仍须另跑完整对应门槛。
 原始失败不重标成功、不重跑覆盖，也不将此独立单测问题混作测试PID1孤儿回收的修复。
+
+## 2cec原始PR：独立的cleanup指标观察竞态
+
+2cec原始push六项成功；原PR的Linux/Go1.25.14默认race步骤在
+`TestMetricsDoNotAcquireAnyLifecycleLock`失败：缺少cleanup_attempt success1。
+其余五项成功，Linux新fixture步骤因前序失败跳过；不是新的fixture测试失败或runner容量。
+原失败保留，不重跑覆盖。
+
+源码中Allocated在cleanupLocked内部先减为0，CleanupAttempt histogram在函数defer中
+稍后发布；旧测试只等DESTROYED/Allocated0就读取histogram，并非合法完成屏障。
+新候选仅改测试：额外等该独占单实例的cleanup worker返回/队列空，再保留原有全部
+histogram和无生命周期锁读取断言；新增“Allocated0但worker仍running”合成拒绝控制。
+原一秒无锁检查与三秒eventually预算不变，不增加sleep或改生产telemetry。
+该测试修正与真实session初始拒绝故障是两个问题，须分别验证，不用CI绿灯替代KVM。
