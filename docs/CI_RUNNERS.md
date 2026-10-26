@@ -67,3 +67,19 @@ macOS CI 验证控制面/模拟后端的跨平台行为，不证明 macOS 支持
 histogram和无生命周期锁读取断言；新增“Allocated0但worker仍running”合成拒绝控制。
 原一秒无锁检查与三秒eventually预算不变，不增加sleep或改生产telemetry。
 该测试修正与真实session初始拒绝故障是两个问题，须分别验证，不用CI绿灯替代KVM。
+
+
+## 新broker首次冻结原生回归：旧ELF pin按设计拒绝新程序
+
+冻结060f3ed的24个产物均重建：按实际Go依赖图，sandboxd、host fixture、session.test
+三项改变且独立amd64 cross/native逐字节一致，其余21项与native6相同。随后完整fixture
+race三遍仅固定旧ELF测试三次拒绝新daemon，native原始状态1，其余步骤尚未执行；
+不把这次失败改成通过、指向旧daemon、跳过测试或重跑不变源码。
+
+旧prepareTraceELFSHA绑定5bfb，新的普通daemon为7ccb2720…；只在验证新ELF与原生构建
+相同后更新**唯一固定hash**。Go1.27.3 objdump逐个核对九个原instruction地址/字节/
+寄存器，全部未变；原whole-ELF、符号包含关系、可执行segment字节和owned L1身份闸门
+保持不变，没有通用hash/offset环境选择器。通知类fixture也必须匹配同一新固定daemon。
+
+这只是离线重新绑定，不是新live trace、KVM或全部生产验收。旧12/15事件和5bfb报告仍只
+证明各自旧程序；修正fixture须再次冻结/原生/CI，并为新普通程序另取真实验收证据。

@@ -25,7 +25,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const prepareTraceELFSHA = "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+const prepareTraceELFSHA = "7ccb2720694e1e91adb684e47a8531194801c4fe76d42b81c17df93694c4f01e"
 const prepareTraceRoot = "/sys/kernel/tracing"
 const prepareTraceInstance = prepareTraceRoot + "/instances/xandbox_prepare_calibration"
 const prepareTraceGroup = "xandbox_prepare_calibration"
