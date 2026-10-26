@@ -98,3 +98,26 @@ race三遍仅固定旧ELF测试三次拒绝新daemon，native原始状态1，其
 另以合成 append gate 验证已取消调用者收到 pending、FD 与排他锁仍归原 writer、
 Read 不等待或虚构未提交记录、释放后正常终态和精确计数。它不是 kernel fsync 故障实测。
 原有 blocked-store/超时 Close 测试保留；新冻结源须重新完整验收，不能把失败改签为通过。
+
+## 19470de 原始 PR：启动恢复加载器不是在线观察器
+
+同一源码的 [原 push](https://github.com/123123213weqw/Xandbox/actions/runs/40361397287)
+六项通过；[原 PR](https://github.com/123123213weqw/Xandbox/actions/runs/40361406793)
+Linux/Go1.27 的初始容量拒绝测试在 `Load()` 删除 `.session-*` 临时文件时遇到 ENOENT。
+PR 的 macOS 项为 cancelled，原因未确认；没有重跑或主动取消原运行，不能将其视为成功。
+
+`Broker.New` 在启动 journal worker 之前调用 `FileStore.Load`；该恢复加载器会验证目录、
+删除临时文件并同步目录，不是给存活 journal 使用的只读快照。新测试在普通回复后调用它，
+可能与合法后台终态重写/rename 竞争；这次报错不是“磁盘缺少 CLOSED”的直接证明。
+
+修正仅限测试观察：按 fixture 的不可变 ID 打开已原子发布的 JSON，限制读取字节并严格
+解码，所有被断言的状态/Ref/history 都来自该 FD，而非内存。不会调用恢复 Load、
+删除 staging、同步目录或替 journal 提交；普通容量回复后的检查仍是立即读取，不改成
+eventually。原 CLOSED Save 暂停屏障、三秒预算、journal 不确定性及旧 key410 控制均保留。
+
+新增独立观察器控制保留 owned staging 的同一 inode/字节，并把内存状态故意设成与
+已提交文件不同，防止“只看内存”假阳性。恢复原 Load 观察方式的 overlay 三次确定失败，
+证明它会删除这个受控 staging；该控制没有并发 writer，也不是真实 KVM/磁盘故障。
+生产 broker/Store、唯一 ELF pin、错误 allowlist 和所有运行预算不变。测试产物
+`session.test` 需要独立重编译并重新冻结；CI、Linux 整轮及新普通 daemon 的实机门槛
+仍须单独通过，不沿用此前失败或旧普通 ELF 报告代签。

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -13,6 +16,76 @@ import (
 )
 
 // These are control-plane Mock tests, never KVM/physical recovery evidence.
+// Load is startup recovery: it removes staging files and must not observe a
+// live journal. Open one bounded, atomically published record instead. The
+// immutable ID comes from the fixture; every asserted field comes from disk.
+func readInitialCommittedRecord(b *Broker, fs *FileStore) (Record, error) {
+	entries := b.all()
+	if len(entries) != 1 {
+		return Record{}, fmt.Errorf("expected one initial intent, got %d", len(entries))
+	}
+	id := b.copy(entries[0]).ID
+	if !idPattern.MatchString(id) {
+		return Record{}, errors.New("invalid fixture intent ID")
+	}
+	f, err := os.Open(filepath.Join(fs.dir, id+".json"))
+	if err != nil {
+		return Record{}, err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return Record{}, err
+	}
+	if !st.Mode().IsRegular() || st.Mode().Perm() != 0600 || st.Size() > maxFileBytes {
+		return Record{}, errors.New("invalid fixture committed record")
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxFileBytes+1))
+	if err != nil {
+		return Record{}, err
+	}
+	r, err := decodeRecord(data)
+	if err == nil && r.ID != id {
+		return Record{}, errors.New("fixture filename identity mismatch")
+	}
+	return r, err
+}
+
+func TestCommittedInitialIntentObserverPreservesOwnedJournalStaging(t *testing.T) {
+	fs, err := NewFileStore(filepath.Join(t.TempDir(), "sessions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := storeFixture(1)
+	r.State = Closed
+	if err = fs.Save(r); err != nil {
+		t.Fatal(err)
+	}
+	memory := clone(r)
+	memory.State = Active // The observer must read disk, not this in-memory state.
+	b := &Broker{records: map[string]*entry{r.ID: newEntry(memory)}}
+	staging := filepath.Join(fs.dir, ".session-12345")
+	const pending = "synthetic owned unpublished journal data"
+	if err = os.WriteFile(staging, []byte(pending), 0600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(staging)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := readInitialCommittedRecord(b, fs)
+	if err != nil || got.ID != r.ID || got.State != Closed || got.Current != r.Current || len(got.Attempts) != 1 || got.Attempts[0].State != "COMMITTED" {
+		t.Fatal("observer did not read the committed envelope", err)
+	}
+	after, err := os.Stat(staging)
+	if err != nil || !os.SameFile(before, after) {
+		t.Fatal("observer recovered or replaced owned journal staging", err)
+	}
+	if data, err := os.ReadFile(staging); err != nil || string(data) != pending {
+		t.Fatal("observer changed unpublished journal bytes", err)
+	}
+}
+
 func initialAdmissionFull(t *testing.T, tenant bool, wrap func(Store) Store) (*Broker, *sandbox.Manager, *probeDriver, *FileStore, sandbox.Owner, []sandbox.Record) {
 	t.Helper()
 	b, core, driver, fs := fixture(t, Options{}, wrap)
@@ -53,11 +126,11 @@ func TestInitialOpenCapacityRefusalHasDurableClosedIntentWithoutCandidate(t *tes
 			}
 			// Read immediately, not eventually: the ordinary error response may
 			// not conceal a pending/failed CLOSED journal commit.
-			rows, e := fs.Load()
-			if e != nil || len(rows) != 1 || rows[0].State != Closed || rows[0].Revision != 0 || !zeroRef(rows[0].Current) || len(rows[0].Attempts) != 1 || rows[0].Attempts[0].State != "FAILED" || !zeroRef(rows[0].Attempts[0].Target) {
+			row, e := readInitialCommittedRecord(b, fs)
+			if e != nil || row.State != Closed || row.Revision != 0 || !zeroRef(row.Current) || len(row.Attempts) != 1 || row.Attempts[0].State != "FAILED" || !zeroRef(row.Attempts[0].Target) {
 				t.Fatal("capacity error preceded durable failed initial intent", e)
 			}
-			if _, has, e := b.Get(owner.TenantID, rows[0].ID); e != nil || has {
+			if _, has, e := b.Get(owner.TenantID, row.ID); e != nil || has {
 				t.Fatal("rejected initial session published admission", e)
 			}
 			if records, _ := b.Metrics(); records != 1 {
@@ -123,8 +196,8 @@ func TestInitialOpenCapacityCannotMaskClosedJournalErrorOrAmbiguity(t *testing.T
 			}
 			store.armed.Store(false)
 			eventually(t, func() bool {
-				r, e := fs.Load()
-				return e == nil && len(r) == 1 && r[0].State == Closed && r[0].Attempts[0].State == "FAILED"
+				r, e := readInitialCommittedRecord(b, fs)
+				return e == nil && r.State == Closed && r.Attempts[0].State == "FAILED"
 			})
 		})
 	}
@@ -144,8 +217,8 @@ func TestInitialOpenAllocatedBackendCapacityErrorStillFences(t *testing.T) {
 	}
 	eventually(t, func() bool { return core.Metrics().Allocated == 0 })
 	eventually(t, func() bool {
-		r, e := fs.Load()
-		return e == nil && len(r) == 1 && r[0].State == Closed && r[0].Attempts[0].State == "FAILED" && !zeroRef(r[0].Attempts[0].Target)
+		r, e := readInitialCommittedRecord(b, fs)
+		return e == nil && r.State == Closed && r.Attempts[0].State == "FAILED" && !zeroRef(r.Attempts[0].Target)
 	})
 }
 
@@ -216,11 +289,11 @@ func TestInitialOpenCapacityReplyWaitsForActualClosedCommit(t *testing.T) {
 		t.Fatal("ordinary capacity replied before CLOSED commit")
 	default:
 	}
-	rows, err := fs.Load()
-	if err != nil || len(rows) != 1 || rows[0].State != Creating {
+	row, err := readInitialCommittedRecord(b, fs)
+	if err != nil || row.State != Creating {
 		t.Fatal("synthetic pre-commit hold already changed disk state", err)
 	}
-	if _, route, err := b.Get(owner.TenantID, rows[0].ID); err != nil || route {
+	if _, route, err := b.Get(owner.TenantID, row.ID); err != nil || route {
 		t.Fatal("held failed initial intent admitted execution", err)
 	}
 	if driver.calls.Load() != calls || core.Metrics().Allocated != before.Allocated || core.Metrics().Records != before.Records {
@@ -235,8 +308,8 @@ func TestInitialOpenCapacityReplyWaitsForActualClosedCommit(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("closed commit did not complete")
 	}
-	rows, err = fs.Load()
-	if err != nil || len(rows) != 1 || rows[0].State != Closed || rows[0].Attempts[0].State != "FAILED" {
+	row, err = readInitialCommittedRecord(b, fs)
+	if err != nil || row.State != Closed || row.Attempts[0].State != "FAILED" {
 		t.Fatal("capacity reply lacks durable failed intent", err)
 	}
 }
