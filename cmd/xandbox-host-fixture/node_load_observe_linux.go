@@ -217,11 +217,14 @@ type nodeLoadObservation struct {
 	Kernel                map[string]uint64       `json:"kernel"`
 	DiagnosticSequence    uint64                  `json:"diagnostic_sequence"`
 	DiagnosticRecords     []nodeLoadDiagnosticRow `json:"diagnostic_records"`
+	PID1                  *nodeLoadCensus         `json:"pid1_census"`
 }
 type nodeLoadPrivateDiagnostics struct {
-	Slow    []nodeLoadObservation `json:"slow"`
-	Omitted int                   `json:"omitted"`
-	Failure *nodeLoadObservation  `json:"failure"`
+	Slow            []nodeLoadObservation `json:"slow"`
+	Omitted         int                   `json:"omitted"`
+	Failure         *nodeLoadObservation  `json:"failure"`
+	PreflightBefore *nodeLoadCensus       `json:"pid1_preflight_before"`
+	PreflightAfter  *nodeLoadCensus       `json:"pid1_preflight_after"`
 }
 
 func nodeLoadClip(s string) string {
@@ -360,11 +363,13 @@ func (n *node) nodeLoadObserve(ctx context.Context, tenant int, key, identity st
 	if e == nil && resp.StatusCode == 200 {
 		out.Kernel, _ = n.nodeLoadKernelCounters(b)
 	}
+	census := n.nodeLoadPID1Census(ctx, identity)
+	out.PID1 = &census
 	got, e = processStart(n.process.Process.Pid)
 	if e != nil || got != identity {
 		out.Available = false
 	}
-	out.Complete = out.Available && out.Kernel != nil && out.DiagnosticReadOK && !out.LedgerScanTruncated && out.LedgerReadErrors == 0 && ctx.Err() == nil
+	out.Complete = out.Available && out.Kernel != nil && census.Complete && out.DiagnosticReadOK && !out.LedgerScanTruncated && out.LedgerReadErrors == 0 && ctx.Err() == nil
 	return finish()
 }
 

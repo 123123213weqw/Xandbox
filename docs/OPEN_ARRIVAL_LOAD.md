@@ -210,3 +210,47 @@ message/code、凭证或 guest 输出写入公共指标。30 秒 prepare、35 �
 
 后续必须冻结新源码、重跑完整原生软件门槛、旧场景兼容和完整 40 分钟/cold。
 若某次复测偶然通过但没有确定/修复第二次失败的实际原因，也不能据此宣称该 500 已根治。
+
+### 第三次原始运行：prepare deadline 已取证，PID 累积原因仍待直接核查
+
+冻结运行源码 `701e144a42aa5d03a702838de78fa6ae0366ec7f` 的新尝试仍失败：
+相位 2、第二租户 raw intent629 在 **1364508.922 ms** 返回 HTTP500/`INTERNAL`，
+reply **30008.311 ms**。827 行、137 采样、330 个已接受 key 的内存计数均保留；
+没有完成 offered 窗口、tail 或 cold。后续 CI-only 镜像维护提交不改变这个运行来源。
+
+两个在途探针及首 fatal 私有快照实际取回：一个候选已存在 owner/cgroup/jail/
+完整逻辑大小 workspace/API/vsock，后一个尚无 backend owner；真实 producer 诊断为
+`PrepareFailed / Deadline`，私有错误为 context deadline，prepare-other 计数1、IO/quota0。
+这些证明准备超时类别，不证明究竟是哪一等待阶段。
+
+Node `pids.current` 从原点49随 records10→332 累积到预算值384，control仅15→18。
+Node/control pids max-event仍为0，**不能仅凭这些值证明或排除某个后代的 fork 限制**。
+源码可识别测试PID1未做通用孤儿回收，但旧运行没有 proc state/parent/comm/UID 记录，
+不能现在宣称已观察到僵尸、已确认根因，或生产 daemon 已有同样缺陷。
+
+本批 baseline/OOM各两启动通过、新load一次失败；本批5个代际、三批合计
+**15个唯一外层代际/9个scope** 全部独立只读确认不存在，无补充清理。
+当前24产物/84脚本/9实际输入及归档/runner重新校验。所有外层OOM/pids-limit事件为0，
+不与内部 Node 的 PID 预算观测混用。原始 wire/capsule/partial/console 保持私有。
+
+## 新候选：现有预检前后的只读 PID1 census
+
+仍使用同一个固定 `--node-load` 协议，不增加短跑成功模式，也没有新目标/时长选择器。
+在原有8次串行真实生命周期预检前、后，以及20秒/首fatal诊断中做有界 proc census：
+
+- 只在已验证的自有L1 PID1、同一普通controller incarnation下读取；最多4096个目录项，
+  单文件最多8KiB，与原有2秒协作式观察budget相同。解析明确绑定该proc目录的PID，
+  处理comm中的空格/右括号，单独验证有效UID和末次controller state/start ticks。
+- 仅统计实际 `PPid=1`、`state=Z`；已知由 `exec.Cmd.Wait` 管理的controller单独标记，
+  不冒充被收养的后代。comm只投影成VMM/warden/jailer/other闭集计数；reserved UID、
+  精确实例cgroup、deleted或不可判定membership分别计数。空membership不伪造归属。
+- PID、parent、comm、UID、cgroup、start ticks不序列化。census只在私有capsule中保存，
+  原有192KiB/1MiB frame和L0私有detach边界不变；公共成功报告仅增加
+  `pid1_preflight_census_clean`。完整性、消失进程、读错和截断显式报告，失败证据不被补成零。
+- 如果预检后仍有实际收养的僵尸，或观察不完整/受管controller已死，则**预检失败**，
+  不声称完成40分钟或cold。这是提前拒绝已观察到的资源回收缺口，不是缩短通过门槛。
+  通过该预检后仍必须执行原40分钟/6360 raw/240canary/100tail/cold全部原条件。
+
+本候选**没有**wait/reap、signal、ptrace、cgroup移动或任何生产行为修补；尤其不运行
+会与 `exec.Cmd.Wait` 争抢退出状态的 `wait4(-1)`。不增加PID预算、不延长prepare timeout、
+不改负载来避开失败。它需要新的冻结源码/原生回归/真实L1证据后，才能讨论具体的init回收修正。

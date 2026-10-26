@@ -93,7 +93,7 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		partial["load_window_completed"] = !measuredStart.IsZero() && time.Since(measuredStart) >= nodeLoadDuration
 		partial["run_passed"] = retErr == nil
 		if retErr == nil {
-			for _, flag := range []string{"real_nested_kvm", "reused_guest_heartbeat_preflight_passed", "checkpoint_receipt_fsynced", "all_raw_and_canary_intents_accounted", "fixed_offered_clock_not_completion_paced", "cross_tenant_lookup404_checked", "coarse_one_fifth_equal_offer_progress_guard_passed", "high_rate_service_refusal_observed", "all_pools_and_private_namespaces_empty", "quiescent_exact_project_clear_tail_passed", "accepted_private_replay_inventory_fsynced", "cold_distinct_phase_armed", "no_operator_quota_sync_in_offered_window", "post_drain_controller_fd_guard_passed"} {
+			for _, flag := range []string{"real_nested_kvm", "pid1_preflight_census_clean", "reused_guest_heartbeat_preflight_passed", "checkpoint_receipt_fsynced", "all_raw_and_canary_intents_accounted", "fixed_offered_clock_not_completion_paced", "cross_tenant_lookup404_checked", "coarse_one_fifth_equal_offer_progress_guard_passed", "high_rate_service_refusal_observed", "all_pools_and_private_namespaces_empty", "quiescent_exact_project_clear_tail_passed", "accepted_private_replay_inventory_fsynced", "cold_distinct_phase_armed", "no_operator_quota_sync_in_offered_window", "post_drain_controller_fd_guard_passed"} {
 				partial[flag] = true
 			}
 		}
@@ -110,6 +110,26 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 	}
 	state.observe = func(ctx context.Context, tenant int, key string) nodeLoadObservation {
 		return n.nodeLoadObserve(ctx, tenant, key, identity, measuredStart)
+	}
+	captureCensus := func(before bool) error {
+		bounded, cancel := context.WithTimeout(ctx, nodeLoadProbeBudget)
+		census := n.nodeLoadPID1Census(bounded, identity)
+		cancel()
+		stage := "pid1_preflight_after"
+		if before {
+			stage = "pid1_preflight_before"
+			state.privateDiagnostics.PreflightBefore = &census
+		} else {
+			state.privateDiagnostics.PreflightAfter = &census
+		}
+		if e := nodeLoadPreflightCensusValid(census); e != nil {
+			state.fail(nodeLoadRow{Kind: 3, Index: -1, Tenant: -1, Phase: 4, Stage: stage, Outcome: "failed"}, e)
+			return e
+		}
+		return nil
+	}
+	if e = captureCensus(true); e != nil {
+		return nil, e
 	}
 	tokens := [2]string{n.token, n.loadTokenB}
 	// Eight serial preflight lifecycles exercise the exact guest/Stop/quota wire
@@ -129,6 +149,11 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 			state.fail(row, e)
 			return nil, e
 		}
+	}
+	// A retained adopted zombie is a failed resource preflight, never a
+	// shortened passing load run. No wait/reap or budget adjustment is done.
+	if e = captureCensus(false); e != nil {
+		return nil, e
 	}
 	canaries := [2]*nodeLoadCanary{{}, {}}
 	canaryAPI := [2]*switchAPI{newSwitchAPI("/srv/state/api.sock", tokens[0]), newSwitchAPI("/srv/state/api.sock", tokens[1])}

@@ -15,7 +15,8 @@ from node_load_contract import (NODE_LOAD_MAX_FRAME, NODE_LOAD_PHASE_COUNTS,
                                 NODE_LOAD_OUTCOMES, NODE_LOAD_METRICS,
                                 NODE_LOAD_SUCCESS_FLAGS, node_load_profile,
                                 nested_node_load_resources, node_load_policy,
-                                validate_node_load_result, NODE_LOAD_KERNEL_FIELDS, detach_node_load_private)
+                                validate_node_load_result, NODE_LOAD_KERNEL_FIELDS, detach_node_load_private,
+                                NODE_LOAD_CENSUS_FIELDS, validate_node_load_census)
 
 
 class NodeLoadTests(unittest.TestCase):
@@ -226,6 +227,18 @@ class NodeLoadTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             channel.read()
 
+    def private_census(self):
+        value = dict.fromkeys(NODE_LOAD_CENSUS_FIELDS, 0)
+        value.update(available=True, complete=True, truncated=False,
+                     managed_controller_zombie=False, candidates=16, scanned=16,
+                     capture_ms=10, node_pids=18, control_pids=18)
+        return value
+
+    def private_capsule(self, slow=None, failure=None):
+        return {'slow': slow, 'omitted': 0, 'failure': failure,
+                'pid1_preflight_before': self.private_census(),
+                'pid1_preflight_after': self.private_census()}
+
     def private_observation(self):
         return {
             'available': True, 'elapsed_ms': 20000, 'offered_origin_known': True, 'capture_ms': 10, 'complete': True,
@@ -238,15 +251,14 @@ class NodeLoadTests(unittest.TestCase):
             'last_error_private': 'private-error-sentinel',
             'recent_errors_private': ['private-error-sentinel'],
             'kernel': copy.deepcopy(self.good()['resource_samples'][0]['kernel']),
-            'diagnostic_sequence': 1,
+            'pid1_census': self.private_census(), 'diagnostic_sequence': 1,
             'diagnostic_records': [{'sequence': 1, 'kind': 2, 'reason': 1,
                                     'time_unix_ns': 1, 'dropped_before': 0}]}
 
     def test_private_shadow_is_detached_before_any_passing_public_projection(self):
         value = self.good()
         value['slow_create_probes_started'] = 1
-        value['private_load_diagnostics'] = {'slow': [self.private_observation()],
-                                             'omitted': 0, 'failure': None}
+        value['private_load_diagnostics'] = self.private_capsule(slow=[self.private_observation()])
         with self.assertRaises(AssertionError):
             validate_node_load_result(value)
         public, sidecar = detach_node_load_private(value)
@@ -255,13 +267,14 @@ class NodeLoadTests(unittest.TestCase):
         self.assertNotIn('private-error-sentinel', __import__('json').dumps(public))
         self.assertEqual(sidecar['slow'][0]['last_error_private'], 'private-error-sentinel')
         self.assertIn('private_load_diagnostics', value)  # no mutation/hidden loss
-        public, sidecar = detach_node_load_private(self.good())
-        self.assertIsNone(sidecar)
-        validate_node_load_result(public)
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(self.good())  # new passing wire cannot omit both preflight censuses
+        failed_without_census = {**self.good(), 'run_passed': False}
+        public, sidecar = detach_node_load_private(failed_without_census)
+        self.assertIsNone(sidecar)  # setup may fail before the first census
         value = self.good()
         value['run_passed'] = False
-        value['private_load_diagnostics'] = {'slow': None, 'omitted': 0,
-                                             'failure': self.private_observation()}
+        value['private_load_diagnostics'] = self.private_capsule(failure=self.private_observation())
         public, sidecar = detach_node_load_private(value)
         self.assertEqual(sidecar['failure']['intent_index'], 627)
         with self.assertRaises(AssertionError):
@@ -270,8 +283,7 @@ class NodeLoadTests(unittest.TestCase):
     def test_private_capsule_limits_unknown_fields_and_false_null_aliases_rejected(self):
         good = self.good()
         good['slow_create_probes_started'] = 1
-        good['private_load_diagnostics'] = {'slow': [self.private_observation()],
-                                            'omitted': 0, 'failure': None}
+        good['private_load_diagnostics'] = self.private_capsule(slow=[self.private_observation()])
         for name in ('extra', 'oversized', 'boolean_count', 'too_many', 'private_field',
                      'false_errors', 'false_records', 'bad_kind', 'bad_kernel'):
             bad = copy.deepcopy(good)
@@ -310,8 +322,7 @@ class NodeLoadTests(unittest.TestCase):
 
     def test_private_reply_survives_schema_failure_without_overwrite_or_public_leak(self):
         value = self.good()
-        value['private_load_diagnostics'] = {'slow': None, 'omitted': 0,
-                                            'failure': self.private_observation()}
+        value['private_load_diagnostics'] = self.private_capsule(failure=self.private_observation())
         reply = {'ok': False, 'result': value}
         for malformed in (False, True):
             sample = copy.deepcopy(reply)
@@ -339,7 +350,7 @@ class NodeLoadTests(unittest.TestCase):
         row = self.private_observation()
         row.update(stream_kind=3, offered_origin_known=False, elapsed_ms=0)
         value = {**self.good(), 'slow_create_probes_started': 1,
-                 'private_load_diagnostics': {'slow': [row], 'omitted': 0, 'failure': None}}
+                 'private_load_diagnostics': self.private_capsule(slow=[row])}
         public, private = detach_node_load_private(value)
         validate_node_load_result(public)
         self.assertEqual(private['slow'][0]['stream_kind'], 3)
@@ -348,6 +359,45 @@ class NodeLoadTests(unittest.TestCase):
             bad['private_load_diagnostics']['slow'][0][field] = val
             with self.subTest(field=field), self.assertRaises(AssertionError):
                 detach_node_load_private(bad)
+
+    def test_private_census_retains_zombies_as_failure_not_clean_success(self):
+        census = self.private_census()
+        census.update(adopted_zombies=8, vmm_zombies=8, reserved_uid_zombies=8,
+                      membership_unknown_zombies=8, node_pids=26)
+        validate_node_load_census(census)
+        with self.assertRaises(AssertionError):
+            validate_node_load_census(census, require_clean=True)
+        value = {**self.good(), 'run_passed': False,
+                 'private_load_diagnostics': self.private_capsule()}
+        value['private_load_diagnostics']['pid1_preflight_after'] = census
+        public, private = detach_node_load_private(value)
+        self.assertEqual(private['pid1_preflight_after']['vmm_zombies'], 8)
+        self.assertNotIn('adopted_zombies', json.dumps(public))
+        with self.assertRaises(AssertionError):
+            detach_node_load_private({**value, 'run_passed': True})
+        before_missing = copy.deepcopy(value)
+        before_missing['run_passed'] = True
+        before_missing['private_load_diagnostics']['pid1_preflight_before'] = None
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(before_missing)
+
+    def test_census_schema_has_no_identity_or_unbounded_incomplete_success(self):
+        good = self.private_census()
+        validate_node_load_census(good, require_clean=True)
+        for name, value in (('scanned', True), ('candidates', 4097), ('capture_ms', math.nan),
+                            ('adopted_zombies', 1), ('read_errors', 1),
+                            ('membership_unknown_zombies', 1), ('deleted_scoped_zombies', 1),
+                            ('truncated', True), ('available', False), ('scanned', 0)):
+            bad = {**good, name: value}
+            with self.subTest(name=name, value=value), self.assertRaises(AssertionError):
+                validate_node_load_census(bad)
+        for name in ('pid', 'ppid', 'comm', 'uid', 'cgroup', 'startticks'):
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                validate_node_load_census({**good, name: 'private'})
+        incomplete = {**good, 'complete': False, 'read_errors': 1}
+        validate_node_load_census(incomplete)  # private lower-bound failure evidence is retained
+        with self.assertRaises(AssertionError):
+            validate_node_load_census(incomplete, require_clean=True)
 
     def test_kernel_series_reports_exact_device_observation_and_closed_counts(self):
         for name, value in (('controller_threads', 0), ('controller_threads', True),

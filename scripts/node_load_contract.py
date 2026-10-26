@@ -13,7 +13,7 @@ NODE_LOAD_METRICS = ('client_queue_delay_ms', 'api_reply_ms_all_started_outcomes
                      'total_iteration_ms', 'server_measured_revocation_ms',
                      'quiescent_full_project_clear_ms')
 NODE_LOAD_SUCCESS_FLAGS = (
-    'real_nested_kvm', 'reused_guest_heartbeat_preflight_passed', 'checkpoint_receipt_fsynced',
+    'real_nested_kvm', 'pid1_preflight_census_clean', 'reused_guest_heartbeat_preflight_passed', 'checkpoint_receipt_fsynced',
     'all_raw_and_canary_intents_accounted', 'fixed_offered_clock_not_completion_paced',
     'cross_tenant_lookup404_checked', 'coarse_one_fifth_equal_offer_progress_guard_passed',
     'high_rate_service_refusal_observed', 'all_pools_and_private_namespaces_empty',
@@ -38,7 +38,37 @@ NODE_LOAD_OBSERVATION_FIELDS = {
     'api_socket_present', 'vsocket_present', 'workspace_logical_bytes',
     'last_error_private', 'recent_errors_private', 'kernel',
     'diagnostic_sequence', 'diagnostic_records', 'stream_kind', 'intent_index', 'tenant',
-    'diagnostic_read_ok', 'ledger_scan_truncated', 'ledger_candidates', 'ledger_inspected', 'ledger_read_errors'}
+    'diagnostic_read_ok', 'ledger_scan_truncated', 'ledger_candidates', 'ledger_inspected', 'ledger_read_errors', 'pid1_census'}
+NODE_LOAD_CENSUS_FIELDS = {
+    'available', 'complete', 'truncated', 'capture_ms', 'candidates', 'scanned',
+    'vanished', 'read_errors', 'adopted_zombies', 'managed_controller_zombie',
+    'vmm_zombies', 'warden_zombies', 'jailer_zombies', 'other_zombies',
+    'reserved_uid_zombies', 'node_scoped_zombies', 'deleted_scoped_zombies',
+    'membership_unknown_zombies', 'node_pids', 'control_pids'}
+
+
+def validate_node_load_census(v, require_clean=False):
+    assert type(v) is dict and set(v) == NODE_LOAD_CENSUS_FIELDS
+    booleans = {'available', 'complete', 'truncated', 'managed_controller_zombie'}
+    for name in booleans:
+        assert type(v[name]) is bool
+    finite(v['capture_ms'])
+    for name in NODE_LOAD_CENSUS_FIELDS - booleans - {'capture_ms', 'node_pids', 'control_pids'}:
+        integer(v[name], 0, 16384 if name == 'read_errors' else 4096)
+    integer(v['node_pids'], 0, 1 << 50); integer(v['control_pids'], 0, 1 << 50)
+    assert v['scanned'] + v['vanished'] <= v['candidates']
+    assert v['adopted_zombies'] == sum(v[n] for n in ('vmm_zombies', 'warden_zombies', 'jailer_zombies', 'other_zombies'))
+    assert v['adopted_zombies'] <= v['scanned']
+    assert v['reserved_uid_zombies'] <= v['adopted_zombies']
+    assert v['deleted_scoped_zombies'] <= v['node_scoped_zombies']
+    assert v['node_scoped_zombies'] + v['membership_unknown_zombies'] == v['adopted_zombies']
+    if v['complete']:
+        assert v['available'] and not v['truncated'] and v['read_errors'] == 0
+        assert v['scanned'] > 0 and v['candidates'] > 0
+        assert v['scanned'] + v['vanished'] == v['candidates']
+    if require_clean:
+        assert v['available'] and v['complete'] and v['adopted_zombies'] == 0
+        assert not v['managed_controller_zombie']
 
 
 def validate_node_load_kernel(v):
@@ -63,16 +93,23 @@ def detach_node_load_private(value):
     public = dict(value)
     private = public.pop('private_load_diagnostics', None)
     if private is None:
+        assert public.get('run_passed') is not True  # passing new wire must retain both private preflight censuses
         integer(public.get('slow_create_probes_started', 0), 0, 0)
         integer(public.get('slow_create_probes_omitted', 0), 0, 0)
         return public, None
-    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure'}
+    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure', 'pid1_preflight_before', 'pid1_preflight_after'}
     assert len(json.dumps(private, ensure_ascii=True).encode()) <= 192 << 10
     slow = [] if private['slow'] is None else private['slow']
     assert type(slow) is list and len(slow) <= 8
     integer(private['omitted'], 0, 6468)  # raw6360 + tail100 + preflight8; no canary Create probes
     integer(public['slow_create_probes_started'], len(slow), len(slow))
     integer(public['slow_create_probes_omitted'], private['omitted'], private['omitted'])
+    for name in ('pid1_preflight_before', 'pid1_preflight_after'):
+        census = private[name]
+        if census is not None:
+            validate_node_load_census(census, require_clean=public.get('run_passed') is True)
+        else:
+            assert public.get('run_passed') is not True
     observations = slow + ([] if private['failure'] is None else [private['failure']])
     for row in observations:
         assert type(row) is dict and set(row) == NODE_LOAD_OBSERVATION_FIELDS
@@ -93,6 +130,10 @@ def detach_node_load_private(value):
         assert all(type(error) is str and len(error.encode()) <= 515 for error in errors)
         if row['kernel'] is not None:
             validate_node_load_kernel(row['kernel'])
+        if row['pid1_census'] is not None:
+            validate_node_load_census(row['pid1_census'])
+        if row['complete']:
+            assert row['pid1_census'] is not None and row['pid1_census']['complete']
         integer(row['diagnostic_sequence'], 0, (1 << 64) - 1)
         records = [] if row['diagnostic_records'] is None else row['diagnostic_records']
         assert type(records) is list and len(records) <= 16
