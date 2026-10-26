@@ -91,6 +91,12 @@ func (n *node) initializeBudgetCgroups(c firecracker.Config) error {
 		return e
 	}
 	p := budgetPolicy()
+	if n.nodeLoad {
+		p = nodeLoadPolicy()
+	}
+	if c.Node == nil || *c.Node != p {
+		return errors.New("fixed selected node policy required")
+	}
 	for path, value := range map[string]string{nodeGroup + "/memory.max": strconv.FormatUint(p.MemoryMax, 10), nodeGroup + "/memory.swap.max": "0", nodeGroup + "/pids.max": strconv.FormatUint(p.PidsMax, 10), nodeGroup + "/cpu.max": "800000 100000", nodeGroup + "/io.max": fmt.Sprintf("%s rbps=%d wbps=%d riops=%d wiops=%d", dev, p.IOBytesPerSecond, p.IOBytesPerSecond, p.IOOperationsPerSecond, p.IOOperationsPerSecond), nodeGroup + "/control/memory.max": strconv.FormatUint(p.ControllerMemoryMax, 10), nodeGroup + "/control/memory.swap.max": "0", nodeGroup + "/control/memory.oom.group": "1", nodeGroup + "/control/pids.max": strconv.FormatUint(p.ControllerPidsMax, 10)} {
 		if e = os.WriteFile(path, []byte(value), 0); e != nil {
 			return e
@@ -372,10 +378,10 @@ func (n *node) budgetFreshCheckpoint(ctx context.Context, api *switchAPI, oldBoo
 	if e := requireNode(); e != nil {
 		return e
 	}
-	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase {
+	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase && phase != nodeLoadCheckpointPhase {
 		return errors.New("closed budget checkpoint phase required")
 	}
-	if (phase == nodeBudgetCheckpointPhase && len(oldBoots) != 0) || (phase == nodeOOMCheckpointPhase && len(oldBoots) != 4) {
+	if ((phase == nodeBudgetCheckpointPhase || phase == nodeLoadCheckpointPhase) && len(oldBoots) != 0) || (phase == nodeOOMCheckpointPhase && len(oldBoots) != 4) {
 		return errors.New("checkpoint origin boot set mismatch")
 	}
 	seenBoots := map[string]bool{}
@@ -384,6 +390,9 @@ func (n *node) budgetFreshCheckpoint(ctx context.Context, api *switchAPI, oldBoo
 			return errors.New("distinct real origin boots required")
 		}
 		seenBoots[boot] = true
+	}
+	if phase == nodeLoadCheckpointPhase && !n.nodeLoad {
+		return errors.New("fixed load checkpoint origin required")
 	}
 	key, e := randomKey()
 	if e != nil {
@@ -460,7 +469,7 @@ func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[s
 	if !n.nodeBudget || n.process != nil {
 		return nil, errors.New("fresh budget recovery required")
 	}
-	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase {
+	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase && phase != nodeLoadCheckpointPhase {
 		return nil, errors.New("closed budget recovery phase required")
 	}
 	b, e := privatefile.Read("/srv/fixture/node-budget-receipt.json", 32768)
@@ -513,6 +522,14 @@ func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[s
 	if e = driverQuotaAllClear(); e != nil {
 		return nil, e
 	}
+	if phase == nodeLoadCheckpointPhase {
+		if !n.nodeLoad {
+			return nil, errors.New("fixed load recovery origin required")
+		}
+		if e = n.nodeLoadReplayInventory(ctx, api); e != nil {
+			return nil, e
+		}
+	}
 	key, e := randomKey()
 	if e != nil {
 		return nil, e
@@ -562,7 +579,7 @@ func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[s
 }
 
 func validateBudgetCheckpointIdentity(saved budgetCheckpoint, phase, boot string) error {
-	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase {
+	if phase != nodeBudgetCheckpointPhase && phase != nodeOOMCheckpointPhase && phase != nodeLoadCheckpointPhase {
 		return errors.New("closed budget recovery phase required")
 	}
 	if !switchUUID(boot) || saved.Node.Phase != phase || !switchRefValid(saved.Node.Ref) || saved.Node.L1Boot == boot || !switchUUID(saved.Node.L1Boot) || !switchUUID(saved.Node.L2Boot) || !hashPattern.MatchString(saved.Node.Key) || !hashPattern.MatchString(saved.Config) {

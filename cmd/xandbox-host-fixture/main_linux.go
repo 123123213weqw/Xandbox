@@ -30,6 +30,18 @@ func main() {
 		}
 	case "node-budget":
 		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
+	case "node-load":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed load PID1 accepts no arguments")
+		} else {
+			err = runNodeLoadProfile()
+		}
+	case "node-load-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed load daemon accepts no arguments")
+		} else {
+			err = runNodeLoadDaemon()
+		}
 	case "node-oom-pressure":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("fixed OOM child accepts no arguments")
