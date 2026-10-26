@@ -3,7 +3,6 @@
 package installtxn
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -201,15 +200,30 @@ func (m systemManager) reconcileUnits(ctx context.Context, explicitIngress bool)
 }
 
 type limitedBuffer struct {
-	bytes.Buffer
+	data  []byte
 	limit int
 }
 
+func (b *limitedBuffer) Len() int      { return len(b.data) }
+func (b *limitedBuffer) Bytes() []byte { return b.data }
+
 func (b *limitedBuffer) Write(p []byte) (int, error) {
-	if b.Len()+len(p) > b.limit {
+	if b.limit < 0 || b.Len() > b.limit || len(p) > b.limit-b.Len() {
 		return 0, errors.New("bounded manager output exceeded")
 	}
-	return b.Buffer.Write(p)
+	b.data = append(b.data, p...)
+	return len(p), nil
+}
+
+// Keep every os/exec copy path behind Write. An embedded bytes.Buffer would
+// promote ReaderFrom, letting io.Copy bypass the limit entirely.
+func captureManagerOutput(cmd *exec.Cmd) ([]byte, error) {
+	out, errout := &limitedBuffer{limit: 16384}, &limitedBuffer{limit: 4096}
+	cmd.Stdout, cmd.Stderr = out, errout
+	if e := cmd.Run(); e != nil || errout.Len() != 0 {
+		return nil, ErrPlatform
+	}
+	return out.Bytes(), nil
 }
 func (f *filesystem) managerCommand(ctx context.Context, args []string) ([]byte, error) {
 	// Root-owned OS systemctl and its verified ancestry are a declared trust root;
@@ -228,15 +242,9 @@ func (f *filesystem) managerCommand(ctx context.Context, args []string) ([]byte,
 	cmd := exec.CommandContext(ctx, "/usr/bin/systemctl", append([]string{"--no-ask-password", "--no-pager", "--quiet"}, args...)...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL=C", "SYSTEMD_COLORS=0", "SYSTEMD_PAGER="}
 	cmd.Stdin = nil
-	out, errout := &limitedBuffer{limit: 16384}, &limitedBuffer{limit: 4096}
-	cmd.Stdout = out
-	cmd.Stderr = errout
-	if e = cmd.Run(); e != nil || errout.Len() != 0 {
-		return nil, ErrPlatform
-	}
-	return out.Bytes(), nil
+	return captureManagerOutput(cmd)
 }
 
-// Keep io imported in compile-time interface checks instead of trusting exec's
-// writer selection to accidentally bypass the fixed bounds.
+// The positive writer check does not exclude ReaderFrom; regression tests also
+// check the negative method set and real io.Copy/os/exec behavior.
 var _ io.Writer = (*limitedBuffer)(nil)

@@ -105,6 +105,12 @@ xandbox-install verify
 process identity or raw manager output is relayed. Errors report an unconfirmed
 installation; they do not promise that nothing happened.
 
+The manager subprocess capture has explicit stdout/stderr limits and refuses
+unexpected stderr or unconfirmed completion. The [output-bound correction and
+its regression scope](INSTALL_MANAGER_OUTPUT.md) distinguish a real copy-path
+bypass from ordinary command failure; earlier installer hardware reports do not
+certify a newly built installer.
+
 - Before commit: preserve the exact request, plan and pinned sources. Retry the
   same apply; if its release is no longer one of the publisher's retained two,
   stop for explicit operator recovery rather than selecting a newer release.

@@ -142,7 +142,7 @@ func TestBoundedManagerWriterNeverExportsRawOverflow(t *testing.T) {
 	if _, e := b.Write([]byte("abc")); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := b.Write([]byte("private-overflow")); e == nil || b.String() != "abc" {
+	if _, e := b.Write([]byte("private-overflow")); e == nil || string(b.Bytes()) != "abc" {
 		t.Fatal("unbounded writer")
 	}
 }
