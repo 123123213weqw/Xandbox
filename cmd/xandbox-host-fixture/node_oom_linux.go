@@ -329,6 +329,22 @@ func nodeOOMEmpty(group string) (bool, error) {
 	return v == 0, nil
 }
 
+func nodeOOMStop(ctx context.Context, api *switchAPI, ref sandbox.Ref) error {
+	if !switchRefValid(ref) {
+		return errors.New("exact neighbor generation required for Stop")
+	}
+	var stopped sandbox.Record
+	// Ordinary Stop is synchronous HTTP200; only DELETE is acceptance-only202.
+	// The subsequent kernel-domain observation is still separately required.
+	if e := api.call(ctx, "POST", switchPath(ref)+"/stop", "", generationBody(ref), &stopped, 200); e != nil {
+		return e
+	}
+	if stopped.Ref != ref || stopped.State != sandbox.Stopped || stopped.StoppedAt.IsZero() || !stopped.DestroyedAt.IsZero() {
+		return errors.New("ordinary Stop lacks exact durable STOPPED reply")
+	}
+	return nil
+}
+
 func (n *node) nodeOOMCheckpoint(ctx context.Context) (map[string]any, error) {
 	if e := requireNode(); e != nil {
 		return nil, e
@@ -677,7 +693,7 @@ func (n *node) nodeOOMCheckpoint(ctx context.Context) (map[string]any, error) {
 	// Physical Stop and durable Destroyed/ownership/quota release are separate.
 	stopStarted := time.Now()
 	for i := 1; i < 4; i++ {
-		if e = api.call(ctx, "POST", switchPath(refs[i])+"/stop", "", generationBody(refs[i]), nil, 202); e != nil {
+		if e = nodeOOMStop(ctx, api, refs[i]); e != nil {
 			return nil, e
 		}
 	}

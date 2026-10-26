@@ -4,15 +4,66 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 )
+
+type nodeOOMTestTransport func(*http.Request) (*http.Response, error)
+
+func (f nodeOOMTestTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestNodeOOMOrdinaryStopRequires200AndExactStoppedRecord(t *testing.T) {
+	ref := sandbox.Ref{ID: strings.Repeat("a", 32), Generation: strings.Repeat("b", 32)}
+	good := sandbox.Record{Ref: ref, State: sandbox.Stopped, StoppedAt: time.Now().UTC()}
+	for _, tc := range []struct {
+		name   string
+		status int
+		change func(*sandbox.Record)
+		pass   bool
+	}{
+		{"ordinary-synchronous-stop", 200, func(*sandbox.Record) {}, true},
+		{"acceptance-not-stop", 202, func(*sandbox.Record) {}, false},
+		{"wrong-generation", 200, func(r *sandbox.Record) { r.Generation = strings.Repeat("c", 32) }, false},
+		{"wrong-id", 200, func(r *sandbox.Record) { r.ID = strings.Repeat("c", 32) }, false},
+		{"still-stopping", 200, func(r *sandbox.Record) { r.State = sandbox.Stopping }, false},
+		{"no-durable-stop", 200, func(r *sandbox.Record) { r.StoppedAt = time.Time{} }, false},
+		{"reclaim-not-stop", 200, func(r *sandbox.Record) { r.DestroyedAt = time.Now().UTC() }, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := good
+			tc.change(&r)
+			payload, e := json.Marshal(r)
+			if e != nil {
+				t.Fatal(e)
+			}
+			calls := 0
+			api := &switchAPI{http: &http.Client{Transport: nodeOOMTestTransport(func(req *http.Request) (*http.Response, error) {
+				calls++
+				if req.Method != "POST" || req.URL.Path != switchPath(ref)+"/stop" {
+					t.Fatal("wrong ordinary operation")
+				}
+				var body map[string]string
+				if e := json.NewDecoder(req.Body).Decode(&body); e != nil || len(body) != 1 || body["generation"] != ref.Generation {
+					t.Fatal("generation binding lost")
+				}
+				return &http.Response{StatusCode: tc.status, Body: io.NopCloser(strings.NewReader(string(payload))), Header: make(http.Header)}, nil
+			})}}
+			e = nodeOOMStop(context.Background(), api, ref)
+			if calls != 1 || (e == nil) != tc.pass {
+				t.Fatal("ordinary Stop contract changed", e)
+			}
+		})
+	}
+}
 
 func TestNodeOOMFixedFixtureCannotAllocateOrOperateOnL0(t *testing.T) {
 	if runNodeOOMPressure() == nil {
