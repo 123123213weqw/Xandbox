@@ -368,10 +368,10 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		return nil, failure
 	}
 	if time.Since(measuredStart) < nodeLoadDuration {
-		return nil, errors.New("long offered interval ended early")
+		return nil, state.finalFailure(nodeLoadFinalOfferClock, errors.New("long offered interval ended early"))
 	}
 	if e = n.nodeLoadAllGone(ctx); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalPostOfferEmpty, e)
 	}
 	// No new competing producers remain. Full project-zero timing is now
 	// attributable in the separate100-cycle serial tail, not in active reuse.
@@ -386,14 +386,14 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		}
 		record(row, e)
 		if e != nil {
-			return nil, e
+			return nil, state.finalFailure(nodeLoadFinalTail, e)
 		}
 	}
 	if e = n.nodeLoadAllGone(ctx); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalPostTailEmpty, e)
 	}
 	if e = nodeLoadAcceptance(state); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalAcceptance, e)
 	}
 	fdCtx, stopFDWait := context.WithTimeout(ctx, 10*time.Second)
 	defer stopFDWait()
@@ -401,23 +401,23 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		fds, e := os.ReadDir(fmt.Sprintf("/proc/%d/fd", n.process.Process.Pid))
 		return e == nil && len(fds) <= baseline.ControllerFDs+4, e
 	}); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalFDDrain, e)
 	}
 	final, e := n.nodeLoadSample(ctx, measuredStart, identity)
 	if e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalSample, e)
 	}
 	state.samples = append(state.samples, final)
 	if e = nodeLoadSamplesValid(state.samples); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalSamplesValid, e)
 	}
 	if e = n.nodeLoadWriteInventory(state); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalInventory, e)
 	}
 	api := newSwitchAPI("/srv/state/api.sock", n.token)
 	defer api.close()
 	if e = n.budgetFreshCheckpoint(ctx, api, nil, nodeLoadCheckpointPhase); e != nil {
-		return nil, e
+		return nil, state.finalFailure(nodeLoadFinalCheckpoint, e)
 	}
 	return nil, nil
 }

@@ -1,5 +1,22 @@
 # CI runner 镜像维护
 
+## 容量 FIFO 新候选的固定 ELF 绑定（尚待原生/实机验证）
+
+普通 Manager 的[有界容量准入](CAPACITY_ADMISSION.md)改变普通 daemon。
+Go1.27.3 linux/amd64、CGO0、`-trimpath -buildvcs=false` 独立交叉产物为
+`c2e7ffed…`；仅有交叉编译证据，不能代替 Linux 原生或 KVM 验收。
+三组原目标函数的 source-relative/normalized 指令与长度逐项相同，九个固定点的
+opcode/寄存器、符号范围与可执行 file-backed segment 字节已离线核对。
+Go 与 Python 的唯一固定 hash 同步更新，未开放 hash/offset 选择器或跳过闸门。
+新源码仍须独立原生重建、核对普通 ELF 逐字节一致并完整跑对应软件/CI/运行门槛。
+下文7ccb及更早报告保持原来源，不给新候选代签。
+
+容量顺序/deadline 身份机制的本地重复曾遇到原2秒预算内真实 fsync 延迟，
+修正为明确无 I/O stub 的纯机制证明，保留实际账本持久回收测试；不放宽2秒/3秒、
+不接受 fenced timeout 冒充成功。原共享300ms catalog 测试另改为每操作各自同300ms
+锁隔离检查，整个 quota release barrier 仍保持；生产 registry 未改。
+全量本地门槛及两组相反方向的负对照均保留来源，但这些不是 Linux/KVM 证据。
+
 ## macOS 14 → 15（2026-10-26）
 
 冻结源码 `701e144a42aa5d03a702838de78fa6ae0366ec7f` 的原始 push/PR CI

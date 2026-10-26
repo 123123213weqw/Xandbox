@@ -25,7 +25,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const prepareTraceELFSHA = "7ccb2720694e1e91adb684e47a8531194801c4fe76d42b81c17df93694c4f01e"
+const prepareTraceELFSHA = "c2e7ffed32477bdc8e7b5e2c6dc8c92e6fe16e22cb9b7138ad7b6342dc506741"
 const prepareTraceRoot = "/sys/kernel/tracing"
 const prepareTraceInstance = prepareTraceRoot + "/instances/xandbox_prepare_calibration"
 const prepareTraceGroup = "xandbox_prepare_calibration"
@@ -47,15 +47,15 @@ type prepareProbe struct {
 func prepareProbes() []prepareProbe {
 	const prefix = "github.com/123123213weqw/Xandbox/internal/firecracker."
 	return []prepareProbe{
-		{"enter", prefix + "(*prepareGate).acquire", 0x748012, "4889842480000000", "ax"},
-		{"selected", prefix + "(*prepareGate).acquire", 0x748085, "4885c0", "ax"},
-		{"ok", prefix + "(*prepareGate).acquire", 0x7480d5, "31c0", "ax"},
-		{"cancel", prefix + "(*prepareGate).acquire", 0x7480f5, "4883c470", "ax"},
-		{"race_release", prefix + "(*prepareGate).acquire", 0x7480c5, "488b442438", "ax"},
-		{"node_ok", prefix + "(*nodeEnvelope).acquirePrepare", 0x745a35, "31c0", "ax"},
-		{"node_reject_release", prefix + "(*nodeEnvelope).acquirePrepare", 0x745a25, "488b442418", "ax"},
-		{"release", prefix + "(*driver).Prepare.deferwrap1", 0x751df2, "488b01", "cx"},
-		{"released", prefix + "(*driver).Prepare.deferwrap1", 0x751dfc, "4883c410", "ax"},
+		{"enter", prefix + "(*prepareGate).acquire", 0x749612, "4889842480000000", "ax"},
+		{"selected", prefix + "(*prepareGate).acquire", 0x749685, "4885c0", "ax"},
+		{"ok", prefix + "(*prepareGate).acquire", 0x7496d5, "31c0", "ax"},
+		{"cancel", prefix + "(*prepareGate).acquire", 0x7496f5, "4883c470", "ax"},
+		{"race_release", prefix + "(*prepareGate).acquire", 0x7496c5, "488b442438", "ax"},
+		{"node_ok", prefix + "(*nodeEnvelope).acquirePrepare", 0x747035, "31c0", "ax"},
+		{"node_reject_release", prefix + "(*nodeEnvelope).acquirePrepare", 0x747025, "488b442418", "ax"},
+		{"release", prefix + "(*driver).Prepare.deferwrap1", 0x7533f2, "488b01", "cx"},
+		{"released", prefix + "(*driver).Prepare.deferwrap1", 0x7533fc, "4883c410", "ax"},
 	}
 }
 

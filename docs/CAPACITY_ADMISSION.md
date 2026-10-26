@@ -80,3 +80,10 @@ Close、drain / 单次 ticket、幂等重放/并发重复、失败的 DESTROYED 
 新程序仍需独立交叉/原生构建、完整软件/CI、固定 ELF 探针重新校准与真实预算/OOM/
 完整持续负载及 cold 回归。保持原 40 分钟、到达率、worker、client queue、actor、
 N4、prepare worker 1、Stop/GC/TTL/history 和所有错误 allowlist 不变。
+
+后续 TEST fixture 为真实收尾检查添加闭集阶段投影：offered clock、post-offer 空状态、
+quota tail、post-tail 空状态、acceptance、FD drain、最终采样、采样校验、inventory
+与 checkpoint。仍返回原始错误、只保留第一个失败；已存在的 worker/tail 行不被通用
+defer 覆盖。只公开固定阶段名，不导出私有错误文本、不添加 measured result 行，
+不改变通过条件、请求数、预算或成功报告。机制测试与静态 wiring guard 不是实机故障证据；
+不能借此改写 b370de1 原始报告或宣称已捕获其精确内部返回原因。
