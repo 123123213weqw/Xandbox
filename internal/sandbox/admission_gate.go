@@ -13,16 +13,44 @@ type AdmissionGate struct {
 	mu      sync.Mutex
 	open    atomic.Bool
 	pending int
+	changed chan struct{}
 }
 
 func NewAdmissionGate(open bool) *AdmissionGate {
-	g := &AdmissionGate{}
+	g := &AdmissionGate{changed: make(chan struct{})}
 	g.open.Store(open)
 	return g
 }
-func (g *AdmissionGate) Open() bool        { return g.open.Load() }
-func (g *AdmissionGate) SetOpen(open bool) { g.mu.Lock(); g.open.Store(open); g.mu.Unlock() }
-func (g *AdmissionGate) Pending() int      { g.mu.Lock(); defer g.mu.Unlock(); return g.pending }
+func (g *AdmissionGate) Open() bool { return g.open.Load() }
+func (g *AdmissionGate) SetOpen(open bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.open.Load() != open {
+		g.open.Store(open)
+		g.signalLocked()
+	}
+}
+func (g *AdmissionGate) Pending() int { g.mu.Lock(); defer g.mu.Unlock(); return g.pending }
+
+func (g *AdmissionGate) signalLocked() {
+	close(g.changed)
+	g.changed = make(chan struct{})
+}
+
+// inspect pairs the state check with its notification under the same lock.
+// A fence between inspection and reservation still wins in reserve.
+func (g *AdmissionGate) inspect(ticket *CreationTicket) (<-chan struct{}, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if ticket != nil {
+		if ticket.gate != g || ticket.used || ticket.returned {
+			return nil, ErrInvalid
+		}
+	} else if !g.open.Load() {
+		return nil, ErrDraining
+	}
+	return g.changed, nil
+}
 
 // CreationTicket authorizes ONE Core reservation for a session mutation that
 // was already accepted before drain. It is an in-process capability, never a
@@ -42,6 +70,7 @@ func (t *CreationTicket) Release() {
 	if !t.used && !t.returned {
 		t.returned = true
 		g.pending--
+		g.signalLocked()
 	}
 }
 func (g *AdmissionGate) reserve(ticket *CreationTicket, commit func()) error {
@@ -53,6 +82,7 @@ func (g *AdmissionGate) reserve(ticket *CreationTicket, commit func()) error {
 		}
 		ticket.used = true
 		g.pending--
+		g.signalLocked()
 	} else if !g.open.Load() {
 		return ErrDraining
 	}

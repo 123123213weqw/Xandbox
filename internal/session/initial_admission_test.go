@@ -88,7 +88,9 @@ func TestCommittedInitialIntentObserverPreservesOwnedJournalStaging(t *testing.T
 
 func initialAdmissionFull(t *testing.T, tenant bool, wrap func(Store) Store) (*Broker, *sandbox.Manager, *probeDriver, *FileStore, sandbox.Owner, []sandbox.Record) {
 	t.Helper()
-	b, core, driver, fs := fixture(t, Options{}, wrap)
+	// No capacity is released in these refusal tests. Shorten ONLY queue wait,
+	// not preparation, so repeated journal/capacity controls need no real sleep.
+	b, core, driver, fs := fixtureWithCoreOptions(t, Options{}, wrap, sandbox.Options{MaxInstances: 4, CapacityWaitTimeout: 5 * time.Millisecond, ReapInterval: time.Millisecond, RetryDelay: time.Millisecond})
 	owner := alpha
 	holder := sandbox.Owner{TenantID: "holder", MaxInstances: 4}
 	count := 4

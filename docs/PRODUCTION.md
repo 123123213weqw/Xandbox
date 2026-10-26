@@ -5,6 +5,13 @@
 
 最后更新：2026-10-27。
 
+最新开发工作另有[有界容量 FIFO 准入候选](CAPACITY_ADMISSION.md)：raw / managed
+共用顺序、独立对称等待上限，不保留 VM 容量，等待不叠加 Prepare deadline。
+它改变普通 Manager；**尚无该新程序的 Linux/KVM、持续负载/cold 或完整运行矩阵
+合格证据**。b370de1 的第六次长测跑完 offered window / tail，但高负载 canary
+进展为零而失败；独立回收确认共30代际/18scope无残留。不是长测通过或生产就绪。
+下段7ccb及更早报告为各自历史来源，不给这一新候选代签；完整里程碑勾选不变。
+
 当前分支另有普通 broker 的[初始实例容量拒绝候选](SESSIONS.md)：仅在未分配 Ref 且
 CLOSED/FAILED 持久提交成功后保留精确容量拒绝，其他不确定情形继续失败关闭。
 该候选改变普通 daemon 为 `7ccb2720…`，**尚未取得该新程序的完整 Linux/KVM、
