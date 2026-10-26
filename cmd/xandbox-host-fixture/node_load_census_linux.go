@@ -19,26 +19,27 @@ const nodeLoadProcLimit = 4096
 // Only aggregate, closed fields enter the private diagnostic capsule. PID,
 // PPID, comm, UID, cgroup path and start ticks are never serialized.
 type nodeLoadCensus struct {
-	Available             bool    `json:"available"`
-	Complete              bool    `json:"complete"`
-	Truncated             bool    `json:"truncated"`
-	CaptureMS             float64 `json:"capture_ms"`
-	Candidates            int     `json:"candidates"`
-	Scanned               int     `json:"scanned"`
-	Vanished              int     `json:"vanished"`
-	ReadErrors            int     `json:"read_errors"`
-	AdoptedZombies        int     `json:"adopted_zombies"`
-	ManagedControllerDead bool    `json:"managed_controller_zombie"`
-	VMM                   int     `json:"vmm_zombies"`
-	Warden                int     `json:"warden_zombies"`
-	Jailer                int     `json:"jailer_zombies"`
-	Other                 int     `json:"other_zombies"`
-	ReservedUID           int     `json:"reserved_uid_zombies"`
-	NodeScoped            int     `json:"node_scoped_zombies"`
-	DeletedScoped         int     `json:"deleted_scoped_zombies"`
-	MembershipUnknown     int     `json:"membership_unknown_zombies"`
-	NodePIDs              uint64  `json:"node_pids"`
-	ControlPIDs           uint64  `json:"control_pids"`
+	Available             bool               `json:"available"`
+	Complete              bool               `json:"complete"`
+	Truncated             bool               `json:"truncated"`
+	CaptureMS             float64            `json:"capture_ms"`
+	Candidates            int                `json:"candidates"`
+	Scanned               int                `json:"scanned"`
+	Vanished              int                `json:"vanished"`
+	ReadErrors            int                `json:"read_errors"`
+	AdoptedZombies        int                `json:"adopted_zombies"`
+	ManagedControllerDead bool               `json:"managed_controller_zombie"`
+	VMM                   int                `json:"vmm_zombies"`
+	Warden                int                `json:"warden_zombies"`
+	Jailer                int                `json:"jailer_zombies"`
+	Other                 int                `json:"other_zombies"`
+	ReservedUID           int                `json:"reserved_uid_zombies"`
+	NodeScoped            int                `json:"node_scoped_zombies"`
+	DeletedScoped         int                `json:"deleted_scoped_zombies"`
+	MembershipUnknown     int                `json:"membership_unknown_zombies"`
+	NodePIDs              uint64             `json:"node_pids"`
+	ControlPIDs           uint64             `json:"control_pids"`
+	Init                  *nodeLoadInitStats `json:"init_reaper,omitempty"`
 }
 
 type nodeLoadProcIdentity struct {
@@ -143,6 +144,18 @@ func (n *node) nodeLoadPID1Census(ctx context.Context, identity string) (out nod
 	defer func() { out.CaptureMS = switchMS(began) }()
 	if requireNode() != nil || !n.nodeLoad || n.process == nil || n.process.Process == nil || ctx.Err() != nil {
 		return out
+	}
+	// Serialize observation with exact waits, without doing any reaping here.
+	if r := n.loadInit; r != nil {
+		if nodeLoadInitLock(ctx, r.gate) != nil {
+			return out
+		}
+		defer func() { r.gate <- struct{}{} }()
+		stats := r.stats
+		out.Init = &stats
+		if r.controller != n.process.Process.Pid || r.start != identity || !stats.Active || stats.Errors != 0 {
+			return out
+		}
 	}
 	controller := n.process.Process.Pid
 	got, e := processStart(controller)

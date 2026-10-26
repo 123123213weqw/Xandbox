@@ -55,7 +55,11 @@ func (n *node) nodeLoadAllGone(ctx context.Context) error {
 			return errors.New("load retained a generation owner")
 		}
 	}
-	return driverQuotaAllClear()
+	if e := driverQuotaAllClear(); e != nil {
+		return e
+	}
+	_, e = n.nodeLoadInitQuiesce(ctx)
+	return e
 }
 
 func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr error) {
@@ -93,7 +97,7 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		partial["load_window_completed"] = !measuredStart.IsZero() && time.Since(measuredStart) >= nodeLoadDuration
 		partial["run_passed"] = retErr == nil
 		if retErr == nil {
-			for _, flag := range []string{"real_nested_kvm", "pid1_preflight_census_clean", "reused_guest_heartbeat_preflight_passed", "checkpoint_receipt_fsynced", "all_raw_and_canary_intents_accounted", "fixed_offered_clock_not_completion_paced", "cross_tenant_lookup404_checked", "coarse_one_fifth_equal_offer_progress_guard_passed", "high_rate_service_refusal_observed", "all_pools_and_private_namespaces_empty", "quiescent_exact_project_clear_tail_passed", "accepted_private_replay_inventory_fsynced", "cold_distinct_phase_armed", "no_operator_quota_sync_in_offered_window", "post_drain_controller_fd_guard_passed"} {
+			for _, flag := range []string{"real_nested_kvm", "pid1_preflight_census_clean", "owned_pid1_reaper_and_quiescent_pid_charge_checked", "reused_guest_heartbeat_preflight_passed", "checkpoint_receipt_fsynced", "all_raw_and_canary_intents_accounted", "fixed_offered_clock_not_completion_paced", "cross_tenant_lookup404_checked", "coarse_one_fifth_equal_offer_progress_guard_passed", "high_rate_service_refusal_observed", "all_pools_and_private_namespaces_empty", "quiescent_exact_project_clear_tail_passed", "accepted_private_replay_inventory_fsynced", "cold_distinct_phase_armed", "no_operator_quota_sync_in_offered_window", "post_drain_controller_fd_guard_passed"} {
 				partial[flag] = true
 			}
 		}
@@ -112,9 +116,7 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		return n.nodeLoadObserve(ctx, tenant, key, identity, measuredStart)
 	}
 	captureCensus := func(before bool) error {
-		bounded, cancel := context.WithTimeout(ctx, nodeLoadProbeBudget)
-		census := n.nodeLoadPID1Census(bounded, identity)
-		cancel()
+		census, quiesceErr := n.nodeLoadInitQuiesce(ctx)
 		stage := "pid1_preflight_after"
 		if before {
 			stage = "pid1_preflight_before"
@@ -122,7 +124,17 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		} else {
 			state.privateDiagnostics.PreflightAfter = &census
 		}
-		if e := nodeLoadPreflightCensusValid(census); e != nil {
+		e := nodeLoadPreflightCensusValid(census)
+		if quiesceErr != nil {
+			e = quiesceErr
+		}
+		if e == nil && (census.Init == nil || !census.Init.Active || census.Init.Errors != 0 || census.Init.Sweeps == 0) {
+			e = errors.New("eight ordinary preflight adopted VMM waits required")
+		}
+		if e == nil && !before && census.Init.Reaped < state.privateDiagnostics.PreflightBefore.Init.Reaped+8 {
+			e = errors.New("eight ordinary preflight adopted VMM waits required")
+		}
+		if e != nil {
 			state.fail(nodeLoadRow{Kind: 3, Index: -1, Tenant: -1, Phase: 4, Stage: stage, Outcome: "failed"}, e)
 			return e
 		}
@@ -151,7 +163,8 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		}
 	}
 	// A retained adopted zombie is a failed resource preflight, never a
-	// shortened passing load run. No wait/reap or budget adjustment is done.
+	// shortened passing load run. The census remains read-only; only the
+	// separately guarded custom PID1 reaper may consume owned zombie statuses.
 	if e = captureCensus(false); e != nil {
 		return nil, e
 	}
@@ -542,5 +555,6 @@ func (n *node) nodeLoadRecover(ctx context.Context) (map[string]any, error) {
 	}
 	out["all_accepted_raw_and_session_keys_cold_replayed410_before_new_guest"] = true
 	out["private_load_inventory_validated_without_restoration"] = true
+	out["owned_pid1_reaper_fresh_guest_quiescence_checked"] = true
 	return out, nil
 }

@@ -558,6 +558,14 @@ func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[s
 	if e = driverQuotaAllClear(); e != nil {
 		return nil, e
 	}
+	if phase == nodeLoadCheckpointPhase {
+		if _, e = n.nodeLoadInitQuiesce(ctx); e != nil {
+			return nil, e
+		}
+		if e = n.loadInit.stop(ctx); e != nil {
+			return nil, e
+		}
+	}
 	if e = n.process.Process.Signal(os.Interrupt); e != nil {
 		return nil, e
 	}

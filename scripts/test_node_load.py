@@ -231,13 +231,16 @@ class NodeLoadTests(unittest.TestCase):
         value = dict.fromkeys(NODE_LOAD_CENSUS_FIELDS, 0)
         value.update(available=True, complete=True, truncated=False,
                      managed_controller_zombie=False, candidates=16, scanned=16,
-                     capture_ms=10, node_pids=18, control_pids=18)
+                     capture_ms=10, node_pids=18, control_pids=18,
+                     init_reaper={'active': True, 'sweeps': 1, 'reaped': 0, 'errors': 0})
         return value
 
     def private_capsule(self, slow=None, failure=None):
+        after = self.private_census()
+        after['init_reaper']['reaped'] = 8
         return {'slow': slow, 'omitted': 0, 'failure': failure,
                 'pid1_preflight_before': self.private_census(),
-                'pid1_preflight_after': self.private_census()}
+                'pid1_preflight_after': after}
 
     def private_observation(self):
         return {
@@ -398,6 +401,39 @@ class NodeLoadTests(unittest.TestCase):
         validate_node_load_census(incomplete)  # private lower-bound failure evidence is retained
         with self.assertRaises(AssertionError):
             validate_node_load_census(incomplete, require_clean=True)
+
+    def test_owned_init_evidence_cannot_be_omitted_or_fake_success_on_new_wire(self):
+        good = {**self.good(), 'private_load_diagnostics': self.private_capsule()}
+        public, private = detach_node_load_private(good)
+        validate_node_load_result(public)
+        self.assertNotIn('init_reaper', json.dumps(public))
+        for mode in ('absent', 'inactive', 'error', 'no_sweep', 'not_eight', 'charge_retained', 'identity', 'boolean_count'):
+            bad = copy.deepcopy(good)
+            census = bad['private_load_diagnostics']['pid1_preflight_after']
+            init = census['init_reaper']
+            if mode == 'absent':
+                del census['init_reaper']
+            elif mode == 'inactive':
+                init['active'] = False
+            elif mode == 'error':
+                init['errors'] = 1
+            elif mode == 'no_sweep':
+                init['sweeps'] = 0
+            elif mode == 'not_eight':
+                init['reaped'] = 7
+            elif mode == 'charge_retained':
+                census['node_pids'] += 1
+            elif mode == 'identity':
+                init['pid'] = 123
+            elif mode == 'boolean_count':
+                init['reaped'] = True
+            with self.subTest(mode=mode), self.assertRaises(AssertionError):
+                detach_node_load_private(bad)
+        legacy = self.private_census()
+        del legacy['init_reaper']
+        validate_node_load_census(legacy)  # old failed negative control is not re-signed
+        with self.assertRaises(AssertionError):
+            validate_node_load_census(legacy, require_clean=True)
 
     def test_kernel_series_reports_exact_device_observation_and_closed_counts(self):
         for name, value in (('controller_threads', 0), ('controller_threads', True),

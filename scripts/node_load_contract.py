@@ -13,7 +13,7 @@ NODE_LOAD_METRICS = ('client_queue_delay_ms', 'api_reply_ms_all_started_outcomes
                      'total_iteration_ms', 'server_measured_revocation_ms',
                      'quiescent_full_project_clear_ms')
 NODE_LOAD_SUCCESS_FLAGS = (
-    'real_nested_kvm', 'pid1_preflight_census_clean', 'reused_guest_heartbeat_preflight_passed', 'checkpoint_receipt_fsynced',
+    'real_nested_kvm', 'pid1_preflight_census_clean', 'owned_pid1_reaper_and_quiescent_pid_charge_checked', 'reused_guest_heartbeat_preflight_passed', 'checkpoint_receipt_fsynced',
     'all_raw_and_canary_intents_accounted', 'fixed_offered_clock_not_completion_paced',
     'cross_tenant_lookup404_checked', 'coarse_one_fifth_equal_offer_progress_guard_passed',
     'high_rate_service_refusal_observed', 'all_pools_and_private_namespaces_empty',
@@ -22,7 +22,8 @@ NODE_LOAD_SUCCESS_FLAGS = (
     'no_operator_quota_sync_in_offered_window', 'post_drain_controller_fd_guard_passed')
 NODE_LOAD_RECOVERY_FLAGS = (
     'all_accepted_raw_and_session_keys_cold_replayed410_before_new_guest',
-    'private_load_inventory_validated_without_restoration')
+    'private_load_inventory_validated_without_restoration',
+    'owned_pid1_reaper_fresh_guest_quiescence_checked')
 
 NODE_LOAD_KERNEL_FIELDS = {
     'controller_threads', 'prepare_failed_io', 'prepare_failed_quota', 'prepare_failed_other',
@@ -48,7 +49,15 @@ NODE_LOAD_CENSUS_FIELDS = {
 
 
 def validate_node_load_census(v, require_clean=False):
-    assert type(v) is dict and set(v) == NODE_LOAD_CENSUS_FIELDS
+    assert type(v) is dict and set(v) in (NODE_LOAD_CENSUS_FIELDS, NODE_LOAD_CENSUS_FIELDS | {'init_reaper'})
+    # Legacy negative controls remain readable; a passing new wire MUST prove
+    # an active, error-free owned init, not merely omit its mechanism evidence.
+    init = v.get('init_reaper')
+    if init is not None:
+        assert type(init) is dict and set(init) == {'active', 'sweeps', 'reaped', 'errors'}
+        assert type(init['active']) is bool
+        for name in ('sweeps', 'reaped', 'errors'):
+            integer(init[name], 0, 1 << 32)
     booleans = {'available', 'complete', 'truncated', 'managed_controller_zombie'}
     for name in booleans:
         assert type(v[name]) is bool
@@ -69,6 +78,8 @@ def validate_node_load_census(v, require_clean=False):
     if require_clean:
         assert v['available'] and v['complete'] and v['adopted_zombies'] == 0
         assert not v['managed_controller_zombie']
+        assert v['node_pids'] == v['control_pids']
+        assert init is not None and init['active'] and init['sweeps'] > 0 and init['errors'] == 0
 
 
 def validate_node_load_kernel(v):
@@ -110,6 +121,9 @@ def detach_node_load_private(value):
             validate_node_load_census(census, require_clean=public.get('run_passed') is True)
         else:
             assert public.get('run_passed') is not True
+    if public.get('run_passed') is True:
+        before, after = (private[name]['init_reaper']['reaped'] for name in ('pid1_preflight_before', 'pid1_preflight_after'))
+        assert after >= before + 8  # actual eight original ordinary lifecycles, not synthetic waits
     observations = slow + ([] if private['failure'] is None else [private['failure']])
     for row in observations:
         assert type(row) is dict and set(row) == NODE_LOAD_OBSERVATION_FIELDS

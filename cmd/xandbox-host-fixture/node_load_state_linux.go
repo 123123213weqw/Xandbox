@@ -233,6 +233,9 @@ func (n *node) nodeLoadSample(ctx context.Context, start time.Time, identity str
 	if !n.nodeLoad || n.process == nil {
 		return row, errors.New("fixed load controller required")
 	}
+	if e := n.loadInit.healthy(ctx); e != nil {
+		return row, e
+	}
 	observed := time.Now()
 	row.ElapsedMS = switchMS(start)
 	got, e := processStart(n.process.Process.Pid)

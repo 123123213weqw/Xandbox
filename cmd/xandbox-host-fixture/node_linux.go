@@ -43,6 +43,7 @@ type node struct {
 	quotaDriver     bool
 	nodeBudget      bool
 	nodeLoad        bool
+	loadInit        *nodeLoadInit
 	loadTokenB      string
 	nodeSnapshot    bool
 	quotaSnapshot   bool
@@ -304,7 +305,18 @@ func (n *node) start(ctx context.Context) error {
 		return e
 	}
 	n.exited = make(chan error, 1)
-	go func() { n.exited <- n.process.Wait() }()
+	// Capture this exact child; an init sweep must never consume its status.
+	cmd, exited, childDone := n.process, n.exited, make(chan struct{})
+	go func() {
+		err := cmd.Wait()
+		close(childDone)
+		exited <- err
+	}()
+	if n.nodeLoad {
+		if e = n.startNodeLoadInit(ctx, childDone); e != nil {
+			return e
+		}
+	}
 	return waitNode(ctx, func() (bool, error) {
 		var h struct {
 			Backend         string `json:"backend"`

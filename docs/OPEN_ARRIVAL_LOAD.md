@@ -233,7 +233,7 @@ Node/control pids max-event仍为0，**不能仅凭这些值证明或排除某�
 当前24产物/84脚本/9实际输入及归档/runner重新校验。所有外层OOM/pids-limit事件为0，
 不与内部 Node 的 PID 预算观测混用。原始 wire/capsule/partial/console 保持私有。
 
-## 新候选：现有预检前后的只读 PID1 census
+## 取证阶段：现有预检前后的只读 PID1 census
 
 仍使用同一个固定 `--node-load` 协议，不增加短跑成功模式，也没有新目标/时长选择器。
 在原有8次串行真实生命周期预检前、后，以及20秒/首fatal诊断中做有界 proc census：
@@ -251,6 +251,41 @@ Node/control pids max-event仍为0，**不能仅凭这些值证明或排除某�
   不声称完成40分钟或cold。这是提前拒绝已观察到的资源回收缺口，不是缩短通过门槛。
   通过该预检后仍必须执行原40分钟/6360 raw/240canary/100tail/cold全部原条件。
 
-本候选**没有**wait/reap、signal、ptrace、cgroup移动或任何生产行为修补；尤其不运行
+该取证提交 `ce677b9` **没有**wait/reap、signal、ptrace、cgroup移动或任何生产行为修补；尤其不运行
 会与 `exec.Cmd.Wait` 争抢退出状态的 `wait4(-1)`。不增加PID预算、不延长prepare timeout、
 不改负载来避开失败。它需要新的冻结源码/原生回归/真实L1证据后，才能讨论具体的init回收修正。
+
+
+### 第四次实际运行：直接确认测试 PID1 的孤儿 VMM 泄漏
+
+取证源码 `ce677b932e91ba189bf06743ec87d7d2fa5fc04b` 的旧预算/OOM 各两启动通过；
+原8次串行 raw 预检的真实 guest/Stop/Destroy/quota 契约完成，但随后 census 直接确认
+**8 个 PPid1 / Z / Firecracker / 保留 UID / 精确实例 deleted cgroup 的孤儿僵尸**。
+预检前为0，预检后 Node/control `pids.current` 差8，controller仍存活。
+因此在 offered 原点之前如实失败，测量行0，没有40分钟、tail或cold成功。
+
+该批5个外层代际/3scope，四批合计**20个唯一外层代际/12scope**均独立只读确认不存在，
+无补充清理。这确认了**自制测试 init 的收养进程回收缺陷**，不能倒推它是所有历史500
+的唯一原因，也不能据此断言正常 systemd 部署有同一生产缺陷。
+
+## 新修正候选：只回收精确归属的已死孤儿，尚未实测验收
+
+仅在固定 `node-load` 自有L1 PID1中绑定本次controller/start ticks；不改变父子结构或
+放宽 `requireNode` / `requireQuotaChild`。自制init以250ms周期、有界4096目录/8KiB文件/
+2秒协作budget扫描。只对 `PPid1 + Z + firecracker + 有效UID400000..400003 +
+精确64hex实例deleted cgroup` 的候选再次验证完整PID/start/UID/membership和controller后，
+调用 **`Wait4(精确PID, WNOHANG)`**。永不wait(-1)、signal活进程、移动cgroup、修补生产
+owner/ledger/jail/quota，或重试失败工作。已知controller PID明确排除，其他固定受管root
+helper不满足保留UID/VMM/deleted域谓词；普通`exec.Cmd.Wait`继续独占其直接子进程退出状态。
+
+reaper与只读census共享可取消gate，避免census读取一半时自身wait删除proc；census本身仍
+不做wait。内部身份不序列化，私有census仅增加active/sweeps/reaped/errors闭集计数。
+错误锁存并停止，不自动重启或偷偷重试成成功。旧负例仍可读取；新通过报告必须同时保留
+两个干净census、原8次预检至少8次精确回收、Node/control PID charge相等，不能省略机制证据。
+
+窗口后、100次tail后和cold fresh guest销毁后均独立检查真正quiescence；cold退出前取消并
+join reaper，再由原`Cmd.Wait`收取controller状态、移除整个NodeRoot。PID384/control128、
+prepare30秒及原40分钟/6360raw/240canary/100tail/cold门槛均不变。
+
+**这里描述候选实现，不是合格证据。** 合成机制负例、冻结原生软件验证及新的完整真实KVM
+运行仍需分别完成；不能用旧8僵尸负例或旧native/CI报告为修正后的fixture代签。
