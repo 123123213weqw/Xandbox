@@ -87,7 +87,7 @@ func (q nodeRequest) validate() error {
 		if !operatorStoreMode(q.Phase).valid() {
 			return errors.New("fixed operator store phase required")
 		}
-	case "node-tls-gateway-checkpoint", "node-tls-gateway-recover", "node-operator-shutdown-checkpoint", "node-operator-shutdown-recover", "node-session-ticket-checkpoint", "node-session-ticket-recover", "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-budget-checkpoint", "node-budget-recover", "node-operator-checkpoint", "node-operator-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "node-tls-gateway-checkpoint", "node-tls-gateway-recover", "node-operator-shutdown-checkpoint", "node-operator-shutdown-recover", "node-session-ticket-checkpoint", "node-session-ticket-recover", "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-oom-checkpoint", "node-oom-recover", "node-budget-checkpoint", "node-budget-recover", "node-operator-checkpoint", "node-operator-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -625,7 +625,7 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 		}
 		if e == nil {
 			timeout := 70 * time.Second
-			if q.Operation == "node-diagnostics-checkpoint" || q.Operation == "node-diagnostics-recover" || q.Operation == "node-tls-policy-checkpoint" || q.Operation == "node-tls-policy-recover" || q.Operation == "node-tls-gateway-checkpoint" || q.Operation == "node-tls-gateway-recover" || q.Operation == "node-operator-shutdown-checkpoint" || q.Operation == "node-operator-shutdown-recover" || q.Operation == "node-session-ticket-checkpoint" || q.Operation == "node-session-ticket-recover" || q.Operation == "node-operator-store-checkpoint" || q.Operation == "node-operator-store-recover" || q.Operation == "node-operator-checkpoint" || q.Operation == "node-operator-recover" || q.Operation == "node-snapshot-checkpoint" || q.Operation == "node-snapshot-recover" || q.Operation == "node-budget-checkpoint" || q.Operation == "node-budget-recover" || q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
+			if q.Operation == "node-diagnostics-checkpoint" || q.Operation == "node-diagnostics-recover" || q.Operation == "node-tls-policy-checkpoint" || q.Operation == "node-tls-policy-recover" || q.Operation == "node-tls-gateway-checkpoint" || q.Operation == "node-tls-gateway-recover" || q.Operation == "node-operator-shutdown-checkpoint" || q.Operation == "node-operator-shutdown-recover" || q.Operation == "node-session-ticket-checkpoint" || q.Operation == "node-session-ticket-recover" || q.Operation == "node-operator-store-checkpoint" || q.Operation == "node-operator-store-recover" || q.Operation == "node-operator-checkpoint" || q.Operation == "node-operator-recover" || q.Operation == "node-snapshot-checkpoint" || q.Operation == "node-snapshot-recover" || q.Operation == "node-oom-checkpoint" || q.Operation == "node-oom-recover" || q.Operation == "node-budget-checkpoint" || q.Operation == "node-budget-recover" || q.Operation == "quota-owner-cut-checkpoint" || q.Operation == "quota-owner-cut-recover" || q.Operation == "quota-copy-cut-checkpoint" || q.Operation == "quota-copy-cut-recover" || q.Operation == "quota-copy-setup" || q.Operation == "quota-snapshot-setup" || q.Operation == "quota-negative-setup" || q.Operation == "quota-syscall-setup" {
 				timeout = 200 * time.Second
 			}
 			if q.Operation == "quota-switch-setup" || q.Operation == "quota-switch-recover" {
@@ -686,6 +686,10 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 				result, e = n.nodeOperatorCheckpoint(ctx)
 			case "node-operator-recover":
 				result, e = n.nodeOperatorRecover(ctx)
+			case "node-oom-checkpoint":
+				result, e = n.nodeOOMCheckpoint(ctx)
+			case "node-oom-recover":
+				result, e = n.nodeOOMRecover(ctx)
 			case "node-budget-checkpoint":
 				result, e = n.nodeBudgetCheckpoint(ctx)
 			case "node-budget-recover":

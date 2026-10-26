@@ -30,6 +30,12 @@ func main() {
 		}
 	case "node-budget":
 		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
+	case "node-oom-pressure":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed OOM child accepts no arguments")
+		} else {
+			err = runNodeOOMPressure()
+		}
 	case "node-tls-policy-gateway":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("fixed gateway policy child accepts no arguments")
