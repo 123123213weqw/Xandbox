@@ -66,6 +66,7 @@ func nodeLoadCall(ctx context.Context, c *switchAPI, method, path, key string, b
 		req.Header.Set("Idempotency-Key", key)
 	}
 	r, e := c.http.Do(req)
+	nodeLoadCaptureServer(ctx, r)
 	if e != nil {
 		return "", e
 	}

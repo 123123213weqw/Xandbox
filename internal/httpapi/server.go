@@ -12,6 +12,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
 )
 
 type API struct {
@@ -168,12 +169,20 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 		failure(w, sandbox.ErrInvalid)
 		return
 	}
-	record, err := a.manager.CreateScoped(r.Context(), identity(r), key, req)
+	ctx := telemetry.WithCreationTrace(r.Context())
+	record, err := a.manager.CreateScoped(ctx, identity(r), key, req)
+	creationTiming(w, ctx)
 	if err != nil {
 		failure(w, err)
 		return
 	}
 	respond(w, http.StatusCreated, publicRecord(record))
+}
+
+func creationTiming(w http.ResponseWriter, ctx context.Context) {
+	if value := telemetry.CreationServerTiming(ctx); value != "" {
+		w.Header().Set("Server-Timing", value)
+	}
 }
 
 func (a *API) get(w http.ResponseWriter, r *http.Request) {

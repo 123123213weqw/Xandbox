@@ -1,5 +1,6 @@
 // Package telemetry provides fixed-cardinality, process-local observations.
-// Writers perform only atomic additions: no I/O, callbacks or lifecycle locks.
+// Registry writers perform only atomic additions. Request-local creation
+// observations use their own bounded memory lock, never I/O or lifecycle locks.
 package telemetry
 
 import (

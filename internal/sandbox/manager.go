@@ -363,6 +363,7 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 	// timeout before reservation is an ordinary capacity refusal, never an
 	// allocation retry. After reservation all failures retain the usual fence.
 	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.PrepareTimeout)
+	opCtx = telemetry.CarryCreationTrace(opCtx, ctx)
 	stopCancel := context.AfterFunc(ctx, cancel)
 	defer cancel()
 	defer stopCancel()
@@ -377,6 +378,8 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		}
 	}()
 	index := owner.TenantID + "\x00" + keyHash
+	admissionSpan := telemetry.StartCreation(ctx, telemetry.CoreAdmission)
+	defer admissionSpan.End()
 	for {
 		m.mu.Lock()
 		if m.closing {
@@ -478,13 +481,16 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		case <-changed:
 		}
 	}
+	admissionSpan.End()
 	if reserved != nil {
 		reserved(i.ref)
 	}
 	// Ownership is durable BEFORE the driver can allocate any resource.
 	i.mu.Lock()
 	ref := i.record.Ref
+	ownershipSpan := telemetry.StartCreation(ctx, telemetry.CoreOwnershipCommit)
 	err = m.store.Save(i.record)
+	ownershipSpan.End()
 	i.mu.Unlock()
 	if err != nil {
 		// Save may have committed before reporting a durability error. Keep the
@@ -504,7 +510,9 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 	}
 	i.mu.Unlock()
 	if err = opCtx.Err(); err == nil {
+		driverSpan := telemetry.StartCreation(ctx, telemetry.CoreDriver)
 		err = m.driver.Prepare(opCtx, ref, Preparation{Limits: req.Limits, DeadlineNS: i.expiresNS})
+		driverSpan.End()
 	}
 	stopCancel()
 	cancel()
@@ -516,7 +524,9 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 	if err == nil {
 		next := i.record
 		next.State = Ready
+		readySpan := telemetry.StartCreation(ctx, telemetry.CoreReadyCommit)
 		err = m.saveLocked(i, next)
+		readySpan.End()
 	}
 	// Stop intent is atomic and can arrive while READY's fsync owns record.mu.
 	// A completed disk write must not reopen admission/renewal after revocation.

@@ -85,6 +85,7 @@ type nodeLoadActorSnapshot struct {
 	Outcome     string               `json:"outcome"`
 	Invalid     bool                 `json:"invalid"`
 	Phases      []nodeLoadActorPoint `json:"phases"`
+	Server      []nodeLoadServerCall `json:"server"`
 }
 
 type nodeLoadActorsSnapshot struct {
@@ -139,7 +140,7 @@ func (actors *nodeLoadActors) begin(ctx context.Context, kind, index, tenant, wo
 		now = time.Now
 	}
 	a := &nodeLoadActor{start: now(), now: now}
-	a.value = nodeLoadActorSnapshot{Kind: kind, Index: index, Tenant: tenant, Worker: worker, Outcome: "pending", Phases: []nodeLoadActorPoint{}}
+	a.value = nodeLoadActorSnapshot{Kind: kind, Index: index, Tenant: tenant, Worker: worker, Outcome: "pending", Phases: []nodeLoadActorPoint{}, Server: []nodeLoadServerCall{}}
 	if deadline, ok := ctx.Deadline(); ok {
 		a.value.BudgetKnown = true
 		a.value.BudgetMS = max(0, nodeLoadMS(deadline.Sub(a.start)))
@@ -236,8 +237,7 @@ func (a *nodeLoadActor) finish(row nodeLoadRow, e error) {
 func (a *nodeLoadActor) snapshot() nodeLoadActorSnapshot {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	v := a.value
-	v.Phases = append([]nodeLoadActorPoint{}, v.Phases...)
+	v := nodeLoadActorClone(a.value)
 	if !v.Done {
 		v.ElapsedMS = nodeLoadMS(a.now().Sub(a.start))
 	}
@@ -268,15 +268,14 @@ func (actors *nodeLoadActors) freezeFailure(row nodeLoadRow, cause error) {
 func (actors *nodeLoadActors) snapshot() nodeLoadActorsSnapshot {
 	actors.mu.Lock()
 	defer actors.mu.Unlock()
-	v := nodeLoadActorsSnapshot{Version: 1, Invalid: actors.invalid, Latest: []nodeLoadActorSnapshot{}}
+	v := nodeLoadActorsSnapshot{Version: 2, Invalid: actors.invalid, Latest: []nodeLoadActorSnapshot{}}
 	for _, a := range actors.latest {
 		if a != nil {
 			v.Latest = append(v.Latest, a.snapshot())
 		}
 	}
 	if actors.failure != nil {
-		f := *actors.failure
-		f.Phases = append([]nodeLoadActorPoint{}, f.Phases...)
+		f := nodeLoadActorClone(*actors.failure)
 		v.Failure = &f
 	}
 	return v

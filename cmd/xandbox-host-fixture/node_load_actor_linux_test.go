@@ -94,7 +94,7 @@ func TestNodeLoadActorFirstFailureSnapshotSurvivesOtherActorsAndCancellation(t *
 		t.Fatal("observer invented measured rows", err)
 	}
 	capsule := out["private_load_diagnostics"].(nodeLoadPrivateDiagnostics)
-	if capsule.Actors.Version != 1 || capsule.Actors.Failure == nil || capsule.Actors.Failure.Outcome != "deadline" {
+	if capsule.Actors.Version != 2 || capsule.Actors.Failure == nil || capsule.Actors.Failure.Outcome != "deadline" {
 		t.Fatal("private trace lost")
 	}
 	encoded, _ := json.Marshal(capsule.Actors)

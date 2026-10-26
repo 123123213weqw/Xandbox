@@ -99,6 +99,12 @@ NODE_LOAD_ACTOR_PHASES = (
     'canary_open_fresh', 'canary_open_work', 'busy_prepare', 'busy_start',
     'busy_progress', 'busy_verify', 'canary_switch_http', 'canary_new_fresh',
     'canary_new_work', 'canary_release')
+
+NODE_LOAD_SERVER_PHASES = (
+    'xa_core_admission', 'xa_core_owner_commit', 'xa_core_driver', 'xa_core_ready_commit',
+    'xa_driver_slot', 'xa_driver_owner', 'xa_driver_quota_reserve', 'xa_driver_copy',
+    'xa_driver_quota_verify', 'xa_driver_activation', 'xa_session_intent_commit',
+    'xa_session_prepared_commit', 'xa_session_active_commit')
 NODE_LOAD_ACTOR_STAGES = (
     'raw_create', 'raw_fresh', 'raw_work', 'raw_busy', 'raw_stop', 'raw_empty',
     'raw_destroy', 'raw_replay', 'canary_open', 'canary_start', 'canary_switch',
@@ -116,7 +122,7 @@ def validate_node_load_capacity(value):
 def validate_node_load_actor(value):
     assert type(value) is dict and set(value) == {
         'kind', 'intent_index', 'tenant', 'worker', 'elapsed_ms', 'budget_known',
-        'budget_ms', 'done', 'result_stage', 'outcome', 'invalid', 'phases'}
+        'budget_ms', 'done', 'result_stage', 'outcome', 'invalid', 'phases', 'server'}
     integer(value['kind'], 0, 1); integer(value['tenant'], 0, 1)
     integer(value['intent_index'], 0, 6359 if value['kind'] == 0 else 239)
     assert value['intent_index'] % 2 == value['tenant']
@@ -161,12 +167,57 @@ def validate_node_load_actor(value):
             assert n == len(value['phases']) - 1 and not value['done']
             assert phase['end_ms'] == 0 and phase['outcome'] == 'pending'
     # Distinct gaps remain unmeasured; never relabel them capacity/IO waiting.
+    validate_node_load_server(value)
     return (value['kind'], value['tenant'], value['worker'])
+
+
+def validate_node_load_server(actor, require_present=False):
+    calls = actor['server']
+    assert type(calls) is list and len(calls) <= (1 if actor['kind'] == 0 else 2)
+    points = {v['phase']: v for v in actor['phases'] if v['phase'] in (
+        'raw_create', 'canary_open_http', 'canary_switch_http')}
+    seen, last = set(), -1
+    for call in calls:
+        assert type(call) is dict and set(call) == {'phase', 'response_observed', 'timings_present', 'entries'}
+        assert type(call['phase']) is str and call['phase'] in points and call['phase'] not in seen
+        ordinal = NODE_LOAD_ACTOR_PHASES.index(call['phase'])
+        assert ordinal > last
+        last = ordinal; seen.add(call['phase'])
+        assert type(call['response_observed']) is bool and type(call['timings_present']) is bool
+        assert not call['timings_present'] or call['response_observed']
+        assert type(call['entries']) is list and len(call['entries']) <= len(NODE_LOAD_SERVER_PHASES)
+        if call['timings_present']:
+            assert call['entries']
+        else:
+            assert not call['entries']
+        point = points[call['phase']]
+        elapsed = (point['end_ms'] if point['ended'] else actor['elapsed_ms']) - point['begin_ms']
+        metrics, last_metric = {}, -1
+        for entry in call['entries']:
+            assert type(entry) is dict and set(entry) == {'phase', 'ms', 'calls'}
+            assert type(entry['phase']) is str and entry['phase'] in NODE_LOAD_SERVER_PHASES
+            index = NODE_LOAD_SERVER_PHASES.index(entry['phase'])
+            assert index > last_metric
+            last_metric = index
+            finite(entry['ms']); integer(entry['calls'], 1, 1)
+            assert entry['ms'] <= min(35001, elapsed + 1)  # header millisecond rounding, not clock synchronization
+            if actor['kind'] == 0:
+                assert not entry['phase'].startswith('xa_session_')
+            metrics[entry['phase']] = entry['ms']
+        for name, duration in metrics.items():
+            if name.startswith('xa_driver_'):
+                assert 'xa_core_driver' in metrics and duration <= metrics['xa_core_driver'] + 1
+        if require_present:
+            assert call['response_observed'] and call['timings_present']
+    if require_present:
+        assert seen == set(points)
+    # Parent/child durations overlap. Do NOT sum them into a total or turn
+    # missing responses into zero latency / proof of no server-side work.
 
 
 def validate_node_load_actors(value, public):
     assert type(value) is dict and set(value) == {'version', 'invalid', 'latest', 'failure'}
-    integer(value['version'], 1, 1)
+    integer(value['version'], 2, 2)
     assert value['invalid'] is False
     assert type(value['latest']) is list and len(value['latest']) <= 10
     slots = [validate_node_load_actor(v) for v in value['latest']]
@@ -189,6 +240,8 @@ def validate_node_load_actors(value, public):
     if public.get('run_passed') is True:
         assert value['failure'] is None
         assert all(v['done'] and v['outcome'] == 'ok' for v in value['latest'])
+        for actor in value['latest']:
+            validate_node_load_server(actor, require_present=True)
         assert {(kind, tenant) for kind, tenant, worker in slots} == {(0, 0), (0, 1), (1, 0), (1, 1)}
 
 

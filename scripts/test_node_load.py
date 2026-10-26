@@ -3,6 +3,7 @@ import copy
 import io
 import math
 import json
+import re
 from pathlib import Path
 import stat
 import tempfile
@@ -18,6 +19,7 @@ from node_load_contract import (NODE_LOAD_MAX_FRAME, NODE_LOAD_PHASE_COUNTS,
                                 validate_node_load_result, NODE_LOAD_KERNEL_FIELDS, detach_node_load_private,
                                 NODE_LOAD_CENSUS_FIELDS, validate_node_load_census,
                                 validate_node_load_actors, validate_node_load_capacity)
+from node_load_contract import NODE_LOAD_SERVER_PHASES
 
 
 class NodeLoadTests(unittest.TestCase):
@@ -232,7 +234,7 @@ class NodeLoadTests(unittest.TestCase):
         value = {**self.good(), 'private_load_diagnostics': self.private_capsule()}
         public, private = detach_node_load_private(value)
         validate_node_load_result(public)
-        self.assertEqual(private['actors']['version'], 1)
+        self.assertEqual(private['actors']['version'], 2)
         self.assertNotIn('canary_switch_http', json.dumps(public))
         self.assertNotIn('budget_known', json.dumps(public))
         self.assertIn('actors', value['private_load_diagnostics'])  # no mutation
@@ -248,6 +250,10 @@ class NodeLoadTests(unittest.TestCase):
         failure['phases'] = [
             {'phase': 'canary_open_http', 'begin_ms': 0, 'end_ms': 24225.451, 'ended': True, 'outcome': 'ok'},
             {'phase': 'canary_switch_http', 'begin_ms': 24225.451, 'end_ms': 35000.78, 'ended': True, 'outcome': 'deadline'}]
+        failure['server'] = [
+            {'phase': 'canary_open_http', 'response_observed': True, 'timings_present': True,
+             'entries': [{'phase': 'xa_core_admission', 'ms': 20000, 'calls': 1}]},
+            {'phase': 'canary_switch_http', 'response_observed': False, 'timings_present': False, 'entries': []}]
         value['first_failure'] = {'Kind': 1, 'Index': 64, 'Tenant': 0, 'Stage': 'canary_switch'}
         value['private_load_diagnostics']['actors']['failure'] = failure
         _, private = detach_node_load_private(value)
@@ -306,7 +312,7 @@ class NodeLoadTests(unittest.TestCase):
         actor = self.private_actor(0, 0, 0)
         actor.update(done=False, result_stage='', outcome='pending', budget_known=False, budget_ms=0)
         actor['phases'][0].update(ended=False, end_ms=0, outcome='pending')
-        v = {'version': 1, 'invalid': False, 'latest': [actor], 'failure': None}
+        v = {'version': 2, 'invalid': False, 'latest': [actor], 'failure': None}
         validate_node_load_actors(v, {'run_passed': False})
         for change in ({'end_ms': 1}, {'outcome': 'ok'}):
             bad = copy.deepcopy(v); bad['latest'][0]['phases'][0].update(change)
@@ -336,16 +342,71 @@ class NodeLoadTests(unittest.TestCase):
                      init_reaper={'active': True, 'sweeps': 1, 'reaped': 0, 'errors': 0})
         return value
 
+    def test_private_server_phase_vocabulary_and_overlapping_children(self):
+        root = Path(__file__).resolve().parents[1]
+        for path, name in (('internal/telemetry/creation.go', 'creationNames'),
+                           ('cmd/xandbox-host-fixture/node_load_server_linux.go', 'nodeLoadServerNames')):
+            text = (root / path).read_text()
+            start = text.index('var ' + name + ' = [...]string{')
+            end = text.index('\n}', start)
+            names = tuple(re.findall(r'"(xa_[a-z_]+)"', text[start:end]))
+            self.assertEqual(names, NODE_LOAD_SERVER_PHASES)
+        v = self.private_actors()
+        entries = v['latest'][2]['server'][0]['entries']
+        entries[:] = [{'phase': 'xa_core_admission', 'ms': 0.1, 'calls': 1},
+                      {'phase': 'xa_core_driver', 'ms': 0.8, 'calls': 1},
+                      {'phase': 'xa_driver_slot', 'ms': 0.7, 'calls': 1}]
+        validate_node_load_actors(v, {'run_passed': True})
+        self.assertGreater(sum(x['ms'] for x in entries), 1)  # parent includes child, not a serial sum
+
+    def test_private_server_phase_schema_rejects_fabricated_or_missing_evidence(self):
+        good = self.private_actors()
+        changes = [
+            lambda v: v.update(version=1),
+            lambda v: v['latest'][0].pop('server'),
+            lambda v: v['latest'][0]['server'].append(copy.deepcopy(v['latest'][0]['server'][0])),
+            lambda v: v['latest'][0]['server'][0].update(phase='canary_switch_http'),
+            lambda v: v['latest'][0]['server'][0].update(key='private'),
+            lambda v: v['latest'][0]['server'][0].update(response_observed=False),
+            lambda v: v['latest'][0]['server'][0].update(timings_present=1),
+            lambda v: v['latest'][0]['server'][0].update(entries=[]),
+            lambda v: v['latest'][0]['server'][0].update(timings_present=False),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(phase='private'),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(token='private'),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(calls=2),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(calls=True),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(ms=float('nan')),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(ms=float('inf')),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(ms=-1),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(ms=35002),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(ms=3),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(phase='xa_driver_slot'),
+            lambda v: v['latest'][0]['server'][0]['entries'][0].update(phase='xa_session_intent_commit'),
+            lambda v: v['latest'][0]['server'][0]['entries'].append(copy.deepcopy(v['latest'][0]['server'][0]['entries'][0])),
+        ]
+        for n, change in enumerate(changes):
+            bad = copy.deepcopy(good); change(bad)
+            with self.subTest(n=n), self.assertRaises(AssertionError):
+                validate_node_load_actors(bad, {'run_passed': True})
+        absent = copy.deepcopy(good)
+        absent['latest'][0]['server'][0].update(response_observed=False, timings_present=False, entries=[])
+        validate_node_load_actors(absent, {'run_passed': False})  # unknown is retained, not invented zero
+        with self.assertRaises(AssertionError):
+            validate_node_load_actors(absent, {'run_passed': True})
+
     def private_actor(self, kind, index, tenant, worker=0):
         return {'kind': kind, 'intent_index': index, 'tenant': tenant, 'worker': worker,
                 'elapsed_ms': 1, 'budget_known': True, 'budget_ms': 35000,
                 'done': True, 'result_stage': 'raw_replay' if kind == 0 else 'canary_replay',
                 'outcome': 'ok', 'invalid': False,
+                'server': [{'phase': 'raw_create' if kind == 0 else 'canary_switch_http',
+                            'response_observed': True, 'timings_present': True,
+                            'entries': [{'phase': 'xa_core_admission', 'ms': 0.5, 'calls': 1}]}],
                 'phases': [{'phase': 'raw_create' if kind == 0 else 'canary_switch_http',
                             'begin_ms': 0, 'end_ms': 1, 'ended': True, 'outcome': 'ok'}]}
 
     def private_actors(self):
-        return {'version': 1, 'invalid': False,
+        return {'version': 2, 'invalid': False,
                 'latest': [self.private_actor(kind, tenant, tenant)
                            for kind in (0, 1) for tenant in (0, 1)], 'failure': None}
 
