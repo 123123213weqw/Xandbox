@@ -16,7 +16,8 @@ from node_load_contract import (NODE_LOAD_MAX_FRAME, NODE_LOAD_PHASE_COUNTS,
                                 NODE_LOAD_SUCCESS_FLAGS, node_load_profile,
                                 nested_node_load_resources, node_load_policy,
                                 validate_node_load_result, NODE_LOAD_KERNEL_FIELDS, detach_node_load_private,
-                                NODE_LOAD_CENSUS_FIELDS, validate_node_load_census)
+                                NODE_LOAD_CENSUS_FIELDS, validate_node_load_census,
+                                validate_node_load_actors, validate_node_load_capacity)
 
 
 class NodeLoadTests(unittest.TestCase):
@@ -227,6 +228,106 @@ class NodeLoadTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             channel.read()
 
+    def test_private_actor_trace_is_versioned_bounded_and_removed_with_sidecar(self):
+        value = {**self.good(), 'private_load_diagnostics': self.private_capsule()}
+        public, private = detach_node_load_private(value)
+        validate_node_load_result(public)
+        self.assertEqual(private['actors']['version'], 1)
+        self.assertNotIn('canary_switch_http', json.dumps(public))
+        self.assertNotIn('budget_known', json.dumps(public))
+        self.assertIn('actors', value['private_load_diagnostics'])  # no mutation
+        bad = copy.deepcopy(value)
+        del bad['private_load_diagnostics']['actors']
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(bad)  # old source wire is not new evidence
+
+    def test_private_actor_failed_snapshot_must_match_first_actual_worker(self):
+        value = {**self.good(), 'run_passed': False, 'private_load_diagnostics': self.private_capsule()}
+        failure = self.private_actor(1, 64, 0)
+        failure.update(result_stage='canary_switch', elapsed_ms=35000.78, outcome='deadline')
+        failure['phases'] = [
+            {'phase': 'canary_open_http', 'begin_ms': 0, 'end_ms': 24225.451, 'ended': True, 'outcome': 'ok'},
+            {'phase': 'canary_switch_http', 'begin_ms': 24225.451, 'end_ms': 35000.78, 'ended': True, 'outcome': 'deadline'}]
+        value['first_failure'] = {'Kind': 1, 'Index': 64, 'Tenant': 0, 'Stage': 'canary_switch'}
+        value['private_load_diagnostics']['actors']['failure'] = failure
+        _, private = detach_node_load_private(value)
+        self.assertEqual(private['actors']['failure'], failure)
+        for field, replacement in (('Index', 66), ('Tenant', 1), ('Kind', 0), ('Stage', 'canary_new')):
+            bad = copy.deepcopy(value); bad['first_failure'][field] = replacement
+            with self.subTest(field=field), self.assertRaises(AssertionError):
+                detach_node_load_private(bad)
+        bad = copy.deepcopy(value); bad['private_load_diagnostics']['actors']['failure'] = None
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(bad)
+
+    def test_private_actor_schema_rejects_selector_identity_and_timing_fabrication(self):
+        good = self.private_actors()
+        cases = [
+            ('top_version', lambda v: v.update(version=0)),
+            ('boolean_version', lambda v: v.update(version=True)),
+            ('invalid_registry', lambda v: v.update(invalid=True)),
+            ('unknown_top', lambda v: v.update(token='private')),
+            ('too_many', lambda v: v.update(latest=v['latest'] * 3)),
+            ('duplicate_slot', lambda v: v['latest'].append(copy.deepcopy(v['latest'][0]))),
+            ('worker', lambda v: v['latest'][0].update(worker=4)),
+            ('intent_parity', lambda v: v['latest'][0].update(intent_index=1)),
+            ('canary_bound', lambda v: v['latest'][2].update(intent_index=240)),
+            ('tenant', lambda v: v['latest'][0].update(tenant=True)),
+            ('actor_identity', lambda v: v['latest'][0].update(ref='private')),
+            ('invalid_actor', lambda v: v['latest'][0].update(invalid=True)),
+            ('nan', lambda v: v['latest'][0].update(elapsed_ms=float('nan'))),
+            ('infinite', lambda v: v['latest'][0].update(budget_ms=float('inf'))),
+            ('boolean_time', lambda v: v['latest'][0].update(elapsed_ms=True)),
+            ('stretched_budget', lambda v: v['latest'][0].update(budget_ms=35001)),
+            ('unknown_budget_invented', lambda v: v['latest'][0].update(budget_known=False)),
+            ('raw_error', lambda v: v['latest'][0].update(outcome='context deadline with private path')),
+            ('open_result_stage', lambda v: v['latest'][0].update(result_stage='arbitrary')),
+            ('phase_selector', lambda v: v['latest'][0]['phases'][0].update(phase='private selector')),
+            ('phase_identity', lambda v: v['latest'][0]['phases'][0].update(pid=99)),
+            ('wrong_actor_phase', lambda v: v['latest'][0]['phases'][0].update(phase='canary_switch_http')),
+            ('release_without_switch', lambda v: v['latest'][2]['phases'][0].update(phase='canary_release')),
+            ('duplicate_phase', lambda v: v['latest'][0]['phases'].append(copy.deepcopy(v['latest'][0]['phases'][0]))),
+            ('too_many_phases', lambda v: v['latest'][0].update(phases=v['latest'][0]['phases'] * 17)),
+            ('end_before_start', lambda v: v['latest'][0]['phases'][0].update(begin_ms=2)),
+            ('past_actor_end', lambda v: v['latest'][0]['phases'][0].update(end_ms=2)),
+            ('done_pending_phase', lambda v: v['latest'][0]['phases'][0].update(ended=False, end_ms=0, outcome='pending')),
+            ('done_pending_result', lambda v: v['latest'][0].update(outcome='pending')),
+            ('nonboolean_done', lambda v: v['latest'][0].update(done=0)),
+            ('nonboolean_ended', lambda v: v['latest'][0]['phases'][0].update(ended=1)),
+            ('unknown_outcome', lambda v: v['latest'][0]['phases'][0].update(outcome='secret')),
+            ('missing_canary', lambda v: v['latest'].pop()),
+        ]
+        for name, mutate in cases:
+            v = copy.deepcopy(good); mutate(v)
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                validate_node_load_actors(v, {'run_passed': True})
+
+    def test_private_actor_pending_and_unknown_deadline_never_invent_completion(self):
+        actor = self.private_actor(0, 0, 0)
+        actor.update(done=False, result_stage='', outcome='pending', budget_known=False, budget_ms=0)
+        actor['phases'][0].update(ended=False, end_ms=0, outcome='pending')
+        v = {'version': 1, 'invalid': False, 'latest': [actor], 'failure': None}
+        validate_node_load_actors(v, {'run_passed': False})
+        for change in ({'end_ms': 1}, {'outcome': 'ok'}):
+            bad = copy.deepcopy(v); bad['latest'][0]['phases'][0].update(change)
+            with self.assertRaises(AssertionError):
+                validate_node_load_actors(bad, {'run_passed': False})
+
+    def test_private_capacity_gauges_cannot_change_policy_or_project_wait_reason(self):
+        good = {'queued': 3, 'capacity': 8, 'class_capacity': 4}
+        validate_node_load_capacity(good)
+        for changes in ({'queued': True}, {'queued': -1}, {'queued': 9}, {'capacity': 9},
+                        {'class_capacity': 5}, {'prepare_wait_ms': 30}):
+            bad = {**good, **changes}
+            with self.subTest(changes=changes), self.assertRaises(AssertionError):
+                validate_node_load_capacity(bad)
+        value = {**self.good(), 'private_load_diagnostics': self.private_capsule(failure=self.private_observation())}
+        value['private_load_diagnostics']['failure']['capacity'] = None
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(value)  # complete cannot mean missing queue evidence
+        value['private_load_diagnostics']['failure']['complete'] = False
+        detach_node_load_private(value)  # incomplete observation stays explicit
+
     def private_census(self):
         value = dict.fromkeys(NODE_LOAD_CENSUS_FIELDS, 0)
         value.update(available=True, complete=True, truncated=False,
@@ -235,10 +336,23 @@ class NodeLoadTests(unittest.TestCase):
                      init_reaper={'active': True, 'sweeps': 1, 'reaped': 0, 'errors': 0})
         return value
 
+    def private_actor(self, kind, index, tenant, worker=0):
+        return {'kind': kind, 'intent_index': index, 'tenant': tenant, 'worker': worker,
+                'elapsed_ms': 1, 'budget_known': True, 'budget_ms': 35000,
+                'done': True, 'result_stage': 'raw_replay' if kind == 0 else 'canary_replay',
+                'outcome': 'ok', 'invalid': False,
+                'phases': [{'phase': 'raw_create' if kind == 0 else 'canary_switch_http',
+                            'begin_ms': 0, 'end_ms': 1, 'ended': True, 'outcome': 'ok'}]}
+
+    def private_actors(self):
+        return {'version': 1, 'invalid': False,
+                'latest': [self.private_actor(kind, tenant, tenant)
+                           for kind in (0, 1) for tenant in (0, 1)], 'failure': None}
+
     def private_capsule(self, slow=None, failure=None):
         after = self.private_census()
         after['init_reaper']['reaped'] = 8
-        return {'slow': slow, 'omitted': 0, 'failure': failure,
+        return {'slow': slow, 'omitted': 0, 'failure': failure, 'actors': self.private_actors(),
                 'pid1_preflight_before': self.private_census(),
                 'pid1_preflight_after': after}
 
@@ -254,6 +368,7 @@ class NodeLoadTests(unittest.TestCase):
             'last_error_private': 'private-error-sentinel',
             'recent_errors_private': ['private-error-sentinel'],
             'kernel': copy.deepcopy(self.good()['resource_samples'][0]['kernel']),
+            'capacity': {'queued': 3, 'capacity': 8, 'class_capacity': 4},
             'pid1_census': self.private_census(), 'diagnostic_sequence': 1,
             'diagnostic_records': [{'sequence': 1, 'kind': 2, 'reason': 1,
                                     'time_unix_ns': 1, 'dropped_before': 0}]}

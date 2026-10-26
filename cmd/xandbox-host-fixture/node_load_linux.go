@@ -246,24 +246,28 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 	for tenant := 0; tenant < 2; tenant++ {
 		for worker := 0; worker < nodeLoadWorkers; worker++ {
 			workers.Add(1)
-			go func(tenant int) {
+			go func(tenant, worker int) {
 				defer workers.Done()
 				api := newSwitchAPI("/srv/state/api.sock", tokens[tenant])
 				defer api.close()
 				for arrival := range rawQueue[tenant] {
 					actor, cancel := context.WithTimeout(runCtx, 35*time.Second)
-					row, e := nodeLoadRaw(actor, api, state, measuredStart, arrival, 0, false)
+					traced, trace := state.beginActor(actor, 0, arrival.Index, tenant, worker)
+					row, e := nodeLoadRaw(traced, api, state, measuredStart, arrival, 0, false)
+					trace.finish(row, e)
 					cancel()
 					record(row, e)
 				}
-			}(tenant)
+			}(tenant, worker)
 		}
 		workers.Add(1)
 		go func(tenant int) {
 			defer workers.Done()
 			for arrival := range canaryQueue[tenant] {
 				actor, cancel := context.WithTimeout(runCtx, 35*time.Second)
-				row, e := canaries[tenant].tick(actor, canaryAPI[tenant], state, measuredStart, arrival)
+				traced, trace := state.beginActor(actor, 1, arrival.Index, tenant, 0)
+				row, e := canaries[tenant].tick(traced, canaryAPI[tenant], state, measuredStart, arrival)
+				trace.finish(row, e)
 				cancel()
 				record(row, e)
 			}

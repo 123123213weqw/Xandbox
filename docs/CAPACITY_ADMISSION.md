@@ -87,3 +87,13 @@ quota tail、post-tail 空状态、acceptance、FD drain、最终采样、采样
 defer 覆盖。只公开固定阶段名，不导出私有错误文本、不添加 measured result 行，
 不改变通过条件、请求数、预算或成功报告。机制测试与静态 wiring guard 不是实机故障证据；
 不能借此改写 b370de1 原始报告或宣称已捕获其精确内部返回原因。
+
+## 新普通程序的首轮实际结果仍未通过
+
+同一fc4/C2来源的第七批预算与真实单实例OOM各两启动有限正例已独立核对；
+load在约11分20.7秒发生canary switch的原35秒actor超时，只有170行，未进入tail/cold。
+全部35个历史及本批实际代际/21scope独立只读无残留，不等于持续负载通过。
+现有数据未分别记录当时open/busy/内部等待耗时，不能据此断言FIFO唯一根因，
+也不以调大deadline、降低负载、增实例或canary身份特判修复。
+新的TEST ONLY私有actor阶段和既有queue gauge取证边界见[持续负载记录](OPEN_ARRIVAL_LOAD.md)。
+它们不修改本节生产队列政策，也不能追溯补造原始运行的内部等待证据。

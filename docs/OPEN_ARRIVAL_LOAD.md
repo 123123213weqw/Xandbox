@@ -12,6 +12,40 @@
 包含五批旧失败共30代际/18scope已独立只读确认不存在，无补充清理。
 具体正例、验收违例与“精确内部返回错误尚未捕获”的区别见上述设计记录。
 
+## 第七次原始运行与新的私有因果诊断
+
+冻结源 `fc4fedf55340efe0c11a91d1e2d71617e2f3bac3` / 普通 daemon `c2e7ffed…`
+的新一批仍**失败**：节点预算、单实例真实 OOM 各两次启动的有限正例独立核对通过，
+load 只启动一次，在 offered 起点后 **680728.402 ms** 首次失败。第二相位 canary
+intent index64 的 switch HTTP 返回原 actor context deadline；actor总计35000.780ms，
+switch HTTP10775.329ms。相减的24225.451ms只是整个前置setup，不是直接测出的容量、
+Prepare或IO等待。后续13个worker与3个scheduler的context取消不另算独立服务故障。
+
+只有170行/69资源样本，156条accepted inventory仍在内存；未完成40分钟、100次tail、
+同步inventory/checkpoint或原盘cold。首fatal census无收养僵尸、reaper155/错误0；八个
+slow快照中一次曾见1个，后续快照及fatal为0，不宣称全程零僵尸或据此证明泄漏。
+本批5个实际外层代际独立只读无残留；含六批旧失败共35代际/21scope再次核对不存在，
+outer OOM/pids-limit事件零，无补充清理。保留原始失败，不延长actor、减小负载或重跑未改工作。
+
+为下一次取证增加的内容仅属于 **TEST ONLY私有诊断**，不是此旧运行的补造测量：
+
+- 最多8个raw及2个canary固定worker槽位，逐actor保留最近闭集phase；精确围绕原来的
+  raw create、canary轮换关闭、open HTTP/资源核对/fresh/work、busy reset/start/progress/job
+  核对、switch HTTP、新guest命令及普通release调用记单调时钟。每actor最多16段，不追加任务。
+- 不改变原context/deadline、调用顺序/次数、错误、返回值或公共measured row；未覆盖区间
+  明确保留为未测量，不能由差值冒充capacity或IO根因。`ok`仅表示该Go调用无error，
+  合法503拒绝同样可能为`ok`，不是成功切换。
+- 首worker失败在传播取消前冻结深拷贝，其他actor或之后复用该worker不得覆盖。
+  结果校验在调用返回nil后失败时也保留真实首因，不伪造一个失败HTTP phase。
+- 原有一次metrics读中私有读取固定create queue gauges；无新增管理调用、生命周期锁、
+  第二controller、ledger Load、quota同步或任意进程/路径选择器。独立gauge并非事务快照或单actor等待归因。
+- Go/Python同步的version1 actor子协议保持192KiB私有capsule/1MiB frame；拒绝错slot/intent、
+  重复或倒序phase、非有限数、未知字段与身份/原始错误。trace和queue快照随私有sidecar先detach，
+  不进入公共成功报告。历史fc4 wire仍只由其冻结验证器解释，不把旧wire当新schema证书。
+
+这项诊断尚未提供新的完整KVM长测/cold合格证据。虚拟时钟、合成HTTP及AST wiring负例
+仅证明工具连接与边界，不能证明实机吞吐、公平性或完整生产Goal。
+
 ## 为什么不再只跑固定次数的闭环
 
 完成一轮才开始下一轮，会让慢响应自动降低请求到达率，掩盖过载。

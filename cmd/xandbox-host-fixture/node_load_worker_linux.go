@@ -31,7 +31,9 @@ func nodeLoadRaw(ctx context.Context, api *switchAPI, state *nodeLoadState, star
 	var record sandbox.Record
 	origin := time.Now()
 	stopProbe := state.startCreateProbe(ctx, a.Tenant, key, kind, a.Index)
-	outcome, e := nodeLoadCall(ctx, api, "POST", "/v1/sandboxes", key, nodeSpec(), &record, 201)
+	outcome, e := nodeLoadTraced(ctx, loadActorRawCreate, func() (string, error) {
+		return nodeLoadCall(ctx, api, "POST", "/v1/sandboxes", key, nodeSpec(), &record, 201)
+	})
 	row.ReplyMS = switchMS(origin)
 	row.DueReplyMS = nodeLoadMS(time.Now().Sub(due))
 	row.APIObserved = true
@@ -146,7 +148,9 @@ func (c *nodeLoadCanary) open(ctx context.Context, api *switchAPI, state *nodeLo
 		return "", e
 	}
 	var b session.Result
-	outcome, e := nodeLoadCall(ctx, api, "POST", "/v1/sessions", key, nodeSpec(), &b, 201)
+	outcome, e := nodeLoadTraced(ctx, loadActorOpenHTTP, func() (string, error) {
+		return nodeLoadCall(ctx, api, "POST", "/v1/sessions", key, nodeSpec(), &b, 201)
+	})
 	if e != nil || outcome != "completed" {
 		return outcome, e
 	}
@@ -159,13 +163,16 @@ func (c *nodeLoadCanary) open(ctx context.Context, api *switchAPI, state *nodeLo
 	c.binding = b
 	c.born = time.Now()
 	c.attempts = 0
-	if e = budgetVM(b.Current); e != nil {
+	if e = nodeLoadTraceError(ctx, loadActorOpenVerify, func() error {
+		if e := budgetVM(b.Current); e != nil {
+			return e
+		}
+		_, _, e := budgetOwner(b.Current)
+		return e
+	}); e != nil {
 		return "", e
 	}
-	if _, _, e = budgetOwner(b.Current); e != nil {
-		return "", e
-	}
-	out, e := api.sessionExec(ctx, b, nodeLoadFreshCommand())
+	out, e := nodeLoadTraced(ctx, loadActorOpenFresh, func() (sandbox.Output, error) { return api.sessionExec(ctx, b, nodeLoadFreshCommand()) })
 	if e != nil {
 		return "", e
 	}
@@ -173,7 +180,7 @@ func (c *nodeLoadCanary) open(ctx context.Context, api *switchAPI, state *nodeLo
 	if e != nil {
 		return "", e
 	}
-	if _, e = api.sessionExec(ctx, b, nodeLoadWorkCommand()); e != nil {
+	if _, e = nodeLoadTraced(ctx, loadActorOpenWork, func() (sandbox.Output, error) { return api.sessionExec(ctx, b, nodeLoadWorkCommand()) }); e != nil {
 		return "", e
 	}
 	return outcome, nil
@@ -203,7 +210,7 @@ func (c *nodeLoadCanary) tick(ctx context.Context, api *switchAPI, state *nodeLo
 	// Rotate on attempt count AND wall age, preserving the existing64 history,
 	// 300s TTL and60s execution budgets rather than stretching them for a soak.
 	if c.binding.ID != "" && (c.attempts >= 8 || time.Since(c.born) >= 200*time.Second) {
-		if e := c.close(ctx, api); e != nil {
+		if e := nodeLoadTraceError(ctx, loadActorRotateClose, func() error { return c.close(ctx, api) }); e != nil {
 			return row, e
 		}
 	}
@@ -246,7 +253,9 @@ func (c *nodeLoadCanary) tick(ctx context.Context, api *switchAPI, state *nodeLo
 	}()
 	row.Stage = "canary_switch"
 	var next session.Result
-	outcome, e := nodeLoadCall(ctx, api, "POST", "/v1/sessions/"+old.ID+"/switch", key, request, &next, 200)
+	outcome, e := nodeLoadTraced(ctx, loadActorSwitch, func() (string, error) {
+		return nodeLoadCall(ctx, api, "POST", "/v1/sessions/"+old.ID+"/switch", key, request, &next, 200)
+	})
 	row.ReplyMS = switchMS(origin)
 	row.StopReplyMS = row.ReplyMS
 	row.DueReplyMS = nodeLoadMS(time.Now().Sub(due))
@@ -263,7 +272,7 @@ func (c *nodeLoadCanary) tick(ctx context.Context, api *switchAPI, state *nodeLo
 		row.Stage = "canary_release"
 		// Refusal does not mean the old job stopped. Explicit ordinary guest
 		// release ends only this fixed TEST workload; it is not counted as Stop.
-		if e = nodeLoadReleaseBusy(ctx, api, old, job); e != nil {
+		if e = nodeLoadTraceError(ctx, loadActorRelease, func() error { return nodeLoadReleaseBusy(ctx, api, old, job) }); e != nil {
 			return row, e
 		}
 		row.Outcome = outcome
@@ -293,7 +302,7 @@ func (c *nodeLoadCanary) tick(ctx context.Context, api *switchAPI, state *nodeLo
 		<-observed
 		return row, e
 	}
-	out, e := api.sessionExec(ctx, next, nodeLoadFreshCommand())
+	out, e := nodeLoadTraced(ctx, loadActorNewFresh, func() (sandbox.Output, error) { return api.sessionExec(ctx, next, nodeLoadFreshCommand()) })
 	row.FirstMS = switchMS(origin)
 	if e != nil {
 		cancelObserve()
@@ -336,7 +345,7 @@ func (c *nodeLoadCanary) tick(ctx context.Context, api *switchAPI, state *nodeLo
 	if e = api.call(ctx, "POST", "/v1/sessions/"+old.ID+"/exec", "", map[string]any{"revision": old.Revision, "argv": []string{"true"}}, nil, 409); e != nil {
 		return row, e
 	}
-	if _, e = api.sessionExec(ctx, next, nodeLoadWorkCommand()); e != nil {
+	if _, e = nodeLoadTraced(ctx, loadActorNewWork, func() (sandbox.Output, error) { return api.sessionExec(ctx, next, nodeLoadWorkCommand()) }); e != nil {
 		return row, e
 	}
 	row.Outcome = "completed"

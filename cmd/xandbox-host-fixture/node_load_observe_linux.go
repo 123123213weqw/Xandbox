@@ -180,6 +180,27 @@ func (n *node) nodeLoadKernelCounters(metrics []byte) (map[string]uint64, error)
 	return out, nil
 }
 
+// Existing fixed gauges sampled in the SAME metrics response, privately. They
+// are not a linearized view or a per-actor capacity/driver-wait attribution.
+func nodeLoadCapacityMetrics(metrics []byte) (map[string]uint64, error) {
+	out := map[string]uint64{}
+	for _, entry := range []struct{ name, metric string }{
+		{"queued", "xandbox_create_queued"}, {"capacity", "xandbox_create_queue_capacity"},
+		{"class_capacity", "xandbox_create_queue_capacity_per_class"},
+	} {
+		value, e := nodeLoadMetric(string(metrics), entry.metric)
+		if e != nil {
+			return nil, e
+		}
+		out[entry.name] = value
+	}
+	class := uint64(min(128, nodeLoadPolicy().MaxInstances))
+	if out["class_capacity"] != class || out["capacity"] != 2*class || out["queued"] > out["capacity"] {
+		return nil, errors.New("fixed capacity queue gauge bounds required")
+	}
+	return out, nil
+}
+
 // This shadow channel is PRIVATE even on a passing run. Python detaches it
 // before the public result validator; raw LastError text never reaches metrics.
 type nodeLoadDiagnosticRow struct {
@@ -215,16 +236,18 @@ type nodeLoadObservation struct {
 	LastError             string                  `json:"last_error_private"`
 	RecentErrors          []string                `json:"recent_errors_private"`
 	Kernel                map[string]uint64       `json:"kernel"`
+	Capacity              map[string]uint64       `json:"capacity"`
 	DiagnosticSequence    uint64                  `json:"diagnostic_sequence"`
 	DiagnosticRecords     []nodeLoadDiagnosticRow `json:"diagnostic_records"`
 	PID1                  *nodeLoadCensus         `json:"pid1_census"`
 }
 type nodeLoadPrivateDiagnostics struct {
-	Slow            []nodeLoadObservation `json:"slow"`
-	Omitted         int                   `json:"omitted"`
-	Failure         *nodeLoadObservation  `json:"failure"`
-	PreflightBefore *nodeLoadCensus       `json:"pid1_preflight_before"`
-	PreflightAfter  *nodeLoadCensus       `json:"pid1_preflight_after"`
+	Actors          nodeLoadActorsSnapshot `json:"actors"`
+	Slow            []nodeLoadObservation  `json:"slow"`
+	Omitted         int                    `json:"omitted"`
+	Failure         *nodeLoadObservation   `json:"failure"`
+	PreflightBefore *nodeLoadCensus        `json:"pid1_preflight_before"`
+	PreflightAfter  *nodeLoadCensus        `json:"pid1_preflight_after"`
 }
 
 func nodeLoadClip(s string) string {
@@ -362,6 +385,7 @@ func (n *node) nodeLoadObserve(ctx context.Context, tenant int, key, identity st
 	resp.Body.Close()
 	if e == nil && resp.StatusCode == 200 {
 		out.Kernel, _ = n.nodeLoadKernelCounters(b)
+		out.Capacity, _ = nodeLoadCapacityMetrics(b)
 	}
 	census := n.nodeLoadPID1Census(ctx, identity)
 	out.PID1 = &census
@@ -369,7 +393,7 @@ func (n *node) nodeLoadObserve(ctx context.Context, tenant int, key, identity st
 	if e != nil || got != identity {
 		out.Available = false
 	}
-	out.Complete = out.Available && out.Kernel != nil && census.Complete && out.DiagnosticReadOK && !out.LedgerScanTruncated && out.LedgerReadErrors == 0 && ctx.Err() == nil
+	out.Complete = out.Available && out.Kernel != nil && out.Capacity != nil && census.Complete && out.DiagnosticReadOK && !out.LedgerScanTruncated && out.LedgerReadErrors == 0 && ctx.Err() == nil
 	return finish()
 }
 

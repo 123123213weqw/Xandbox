@@ -47,6 +47,7 @@ type nodeLoadState struct {
 	observe                      func(context.Context, int, string) nodeLoadObservation
 	probesStarted, probesOmitted int
 	privateDiagnostics           nodeLoadPrivateDiagnostics
+	actors                       nodeLoadActors
 
 	samples []nodeLoadResource
 }
@@ -86,6 +87,7 @@ func (s *nodeLoadState) fail(row nodeLoadRow, e error) bool {
 		s.first = e
 		copy := row
 		s.firstRow = &copy
+		s.actors.freezeFailure(row, e)
 		return true
 	}
 	return false
@@ -180,6 +182,7 @@ func (s *nodeLoadState) summary() (map[string]any, error) {
 	out := map[string]any{"planned_raw_intents": nodeLoadRawTotal, "planned_canary_intents": nodeLoadCanaryTotal, "planned_quiescent_tail": nodeLoadTailTotal, "observed_result_rows": len(s.rows), "accepted_replay_inventory_count": len(s.keys), "groups": groups, "resource_samples": append([]nodeLoadResource(nil), s.samples...), "nearest_rank_no_zero_latency_for_drops": true, "quotas_checked_only_quiescent_not_attributed_across_active_reuse": true}
 	out["slow_create_probes_started"], out["slow_create_probes_omitted"] = s.probesStarted, s.probesOmitted
 	s.privateDiagnostics.Omitted = s.probesOmitted
+	s.privateDiagnostics.Actors = s.actors.snapshot()
 	if len(s.privateDiagnostics.Slow) > 0 || s.privateDiagnostics.Failure != nil || s.privateDiagnostics.PreflightBefore != nil || s.privateDiagnostics.PreflightAfter != nil {
 		if e := nodeLoadPrivateBound(s.privateDiagnostics); e != nil {
 			return nil, e

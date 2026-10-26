@@ -37,7 +37,7 @@ NODE_LOAD_OBSERVATION_FIELDS = {
     'available', 'elapsed_ms', 'offered_origin_known', 'capture_ms', 'complete', 'record_found', 'record_state',
     'owner_present', 'cgroup_present', 'jail_present', 'workspace_present',
     'api_socket_present', 'vsocket_present', 'workspace_logical_bytes',
-    'last_error_private', 'recent_errors_private', 'kernel',
+    'last_error_private', 'recent_errors_private', 'kernel', 'capacity',
     'diagnostic_sequence', 'diagnostic_records', 'stream_kind', 'intent_index', 'tenant',
     'diagnostic_read_ok', 'ledger_scan_truncated', 'ledger_candidates', 'ledger_inspected', 'ledger_read_errors', 'pid1_census'}
 NODE_LOAD_CENSUS_FIELDS = {
@@ -94,6 +94,104 @@ def validate_node_load_kernel(v):
             assert all(v[f'{group}_io_{field}'] == 0 for field in ('rbytes', 'wbytes', 'rios', 'wios'))
 
 
+NODE_LOAD_ACTOR_PHASES = (
+    'raw_create', 'canary_rotate_close', 'canary_open_http', 'canary_open_verify',
+    'canary_open_fresh', 'canary_open_work', 'busy_prepare', 'busy_start',
+    'busy_progress', 'busy_verify', 'canary_switch_http', 'canary_new_fresh',
+    'canary_new_work', 'canary_release')
+NODE_LOAD_ACTOR_STAGES = (
+    'raw_create', 'raw_fresh', 'raw_work', 'raw_busy', 'raw_stop', 'raw_empty',
+    'raw_destroy', 'raw_replay', 'canary_open', 'canary_start', 'canary_switch',
+    'canary_release', 'canary_new', 'canary_old_gc', 'canary_replay')
+NODE_LOAD_ACTOR_OUTCOMES = ('pending', 'ok', 'deadline', 'cancelled', 'other')
+
+
+def validate_node_load_capacity(value):
+    assert type(value) is dict and set(value) == {'queued', 'capacity', 'class_capacity'}
+    integer(value['queued'], 0, 8)
+    integer(value['capacity'], 8, 8)
+    integer(value['class_capacity'], 4, 4)
+
+
+def validate_node_load_actor(value):
+    assert type(value) is dict and set(value) == {
+        'kind', 'intent_index', 'tenant', 'worker', 'elapsed_ms', 'budget_known',
+        'budget_ms', 'done', 'result_stage', 'outcome', 'invalid', 'phases'}
+    integer(value['kind'], 0, 1); integer(value['tenant'], 0, 1)
+    integer(value['intent_index'], 0, 6359 if value['kind'] == 0 else 239)
+    assert value['intent_index'] % 2 == value['tenant']
+    integer(value['worker'], 0, 3 if value['kind'] == 0 else 0)
+    for name in ('budget_known', 'done', 'invalid'):
+        assert type(value[name]) is bool
+    assert value['invalid'] is False
+    finite(value['elapsed_ms']); finite(value['budget_ms'])
+    assert value['elapsed_ms'] <= 55 * 60 * 1000 and value['budget_ms'] <= 35000
+    if not value['budget_known']:
+        assert value['budget_ms'] == 0
+    assert type(value['outcome']) is str and value['outcome'] in NODE_LOAD_ACTOR_OUTCOMES
+    if value['done']:
+        assert type(value['result_stage']) is str and value['result_stage'] in NODE_LOAD_ACTOR_STAGES
+        assert value['outcome'] != 'pending'
+    else:
+        assert value['result_stage'] == '' and value['outcome'] == 'pending'
+    assert type(value['phases']) is list and len(value['phases']) <= 16
+    seen, end, last_phase = set(), 0, -1
+    for n, phase in enumerate(value['phases']):
+        assert type(phase) is dict and set(phase) == {'phase', 'begin_ms', 'end_ms', 'ended', 'outcome'}
+        assert type(phase['phase']) is str and phase['phase'] in NODE_LOAD_ACTOR_PHASES and phase['phase'] not in seen
+        ordinal = NODE_LOAD_ACTOR_PHASES.index(phase['phase'])
+        assert ordinal > last_phase
+        last_phase = ordinal
+        if value['kind'] == 0:
+            assert phase['phase'] in ('raw_create', 'busy_prepare', 'busy_start', 'busy_progress', 'busy_verify')
+        else:
+            assert phase['phase'] != 'raw_create'
+        if phase['phase'] == 'canary_release':
+            assert 'canary_switch_http' in seen and not {'canary_new_fresh', 'canary_new_work'} & seen
+        seen.add(phase['phase'])
+        assert type(phase['ended']) is bool
+        finite(phase['begin_ms']); finite(phase['end_ms'])
+        assert end <= phase['begin_ms'] <= value['elapsed_ms']
+        assert type(phase['outcome']) is str and phase['outcome'] in NODE_LOAD_ACTOR_OUTCOMES
+        if phase['ended']:
+            assert phase['begin_ms'] <= phase['end_ms'] <= value['elapsed_ms']
+            assert phase['outcome'] != 'pending'
+            end = phase['end_ms']
+        else:
+            assert n == len(value['phases']) - 1 and not value['done']
+            assert phase['end_ms'] == 0 and phase['outcome'] == 'pending'
+    # Distinct gaps remain unmeasured; never relabel them capacity/IO waiting.
+    return (value['kind'], value['tenant'], value['worker'])
+
+
+def validate_node_load_actors(value, public):
+    assert type(value) is dict and set(value) == {'version', 'invalid', 'latest', 'failure'}
+    integer(value['version'], 1, 1)
+    assert value['invalid'] is False
+    assert type(value['latest']) is list and len(value['latest']) <= 10
+    slots = [validate_node_load_actor(v) for v in value['latest']]
+    assert len(slots) == len(set(slots))
+    if value['failure'] is not None:
+        validate_node_load_actor(value['failure'])
+        failure = value['failure']
+        assert failure['done'] and failure['outcome'] not in ('ok', 'pending')
+        first = public.get('first_failure')
+        assert type(first) is dict
+        integer(first['Kind'], 0, 1); integer(first['Tenant'], 0, 1)
+        integer(first['Index'], 0, 6359 if first['Kind'] == 0 else 239)
+        assert type(first['Stage']) is str
+        assert (failure['kind'], failure['intent_index'], failure['tenant'], failure['result_stage']) == (
+            first['Kind'], first['Index'], first['Tenant'], first['Stage'])
+    first = public.get('first_failure')
+    if (public.get('observed_result_rows', 0) > 0 and type(first) is dict
+            and first.get('Kind') in (0, 1) and first.get('Stage') in NODE_LOAD_ACTOR_STAGES):
+        assert value['failure'] is not None
+    if public.get('run_passed') is True:
+        assert value['failure'] is None
+        assert all(v['done'] and v['outcome'] == 'ok' for v in value['latest'])
+        assert {(kind, tenant) for kind, tenant, worker in slots} == {(0, 0), (0, 1), (1, 0), (1, 1)}
+
+
 def detach_node_load_private(value):
     """Return a public candidate plus an explicitly private, bounded sidecar.
 
@@ -108,8 +206,9 @@ def detach_node_load_private(value):
         integer(public.get('slow_create_probes_started', 0), 0, 0)
         integer(public.get('slow_create_probes_omitted', 0), 0, 0)
         return public, None
-    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure', 'pid1_preflight_before', 'pid1_preflight_after'}
+    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure', 'pid1_preflight_before', 'pid1_preflight_after', 'actors'}
     assert len(json.dumps(private, ensure_ascii=True).encode()) <= 192 << 10
+    validate_node_load_actors(private['actors'], public)
     slow = [] if private['slow'] is None else private['slow']
     assert type(slow) is list and len(slow) <= 8
     integer(private['omitted'], 0, 6468)  # raw6360 + tail100 + preflight8; no canary Create probes
@@ -144,6 +243,10 @@ def detach_node_load_private(value):
         assert all(type(error) is str and len(error.encode()) <= 515 for error in errors)
         if row['kernel'] is not None:
             validate_node_load_kernel(row['kernel'])
+        if row['capacity'] is not None:
+            validate_node_load_capacity(row['capacity'])
+        if row['complete']:
+            assert row['capacity'] is not None
         if row['pid1_census'] is not None:
             validate_node_load_census(row['pid1_census'])
         if row['complete']:

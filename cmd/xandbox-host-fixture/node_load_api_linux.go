@@ -107,16 +107,20 @@ func nodeLoadProgressCommand() []string {
 }
 
 func nodeLoadBusy(ctx context.Context, c *switchAPI, ref sandbox.Ref, binding *session.Result) (sandbox.Job, time.Time, error) {
-	if _, e := nodeLoadHeartbeatExec(ctx, c, ref, binding, nodeLoadPrepareHeartbeatCommand(), "prepare"); e != nil {
+	if _, e := nodeLoadTraced(ctx, loadActorBusyPrepare, func() (sandbox.Output, error) {
+		return nodeLoadHeartbeatExec(ctx, c, ref, binding, nodeLoadPrepareHeartbeatCommand(), "prepare")
+	}); e != nil {
 		return sandbox.Job{}, time.Time{}, e
 	}
 	deadline := time.Now().Add(60 * time.Second)
 	var j sandbox.Job
 	var e error
 	if binding != nil {
-		j, e = c.sessionJob(ctx, *binding, nodeLoadBusyCommand())
+		j, e = nodeLoadTraced(ctx, loadActorBusyStart, func() (sandbox.Job, error) { return c.sessionJob(ctx, *binding, nodeLoadBusyCommand()) })
 	} else {
-		e = c.call(ctx, "POST", switchPath(ref)+"/exec", "", sandbox.ExecRequest{Generation: ref.Generation, Argv: nodeLoadBusyCommand(), TimeoutMS: 60000}, &j, 202)
+		e = nodeLoadTraceError(ctx, loadActorBusyStart, func() error {
+			return c.call(ctx, "POST", switchPath(ref)+"/exec", "", sandbox.ExecRequest{Generation: ref.Generation, Argv: nodeLoadBusyCommand(), TimeoutMS: 60000}, &j, 202)
+		})
 		if e == nil && (!hex32Pattern(j.ID) || j.Generation != ref.Generation) {
 			return j, deadline, errors.New("raw busy response generation mismatch")
 		}
@@ -128,10 +132,12 @@ func nodeLoadBusy(ctx context.Context, c *switchAPI, ref sandbox.Ref, binding *s
 	if !hex32Pattern(j.ID) || j.Ref != ref || j.Generation != ref.Generation {
 		return j, deadline, errors.New("load busy execution binding mismatch")
 	}
-	if _, e = nodeLoadHeartbeatExec(ctx, c, ref, binding, nodeLoadProgressCommand(), "progress"); e != nil {
+	if _, e = nodeLoadTraced(ctx, loadActorBusyProgress, func() (sandbox.Output, error) {
+		return nodeLoadHeartbeatExec(ctx, c, ref, binding, nodeLoadProgressCommand(), "progress")
+	}); e != nil {
 		return j, deadline, e
 	}
-	j, e = c.job(ctx, ref, j)
+	j, e = nodeLoadTraced(ctx, loadActorBusyVerify, func() (sandbox.Job, error) { return c.job(ctx, ref, j) })
 	if e != nil || j.Status != "RUNNING" || !time.Now().Before(deadline) {
 		return j, deadline, errors.New("actual load busy progress before original timeout required")
 	}
