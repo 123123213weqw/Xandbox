@@ -1,0 +1,460 @@
+{
+  "scope": "test_only_single_owned_l1_vm_host_cgroup_oom_not_guest_or_full_node_saturation",
+  "source_revision": "d5daa22e3441a5986d2d514489f1079d6a1c1fdf",
+  "production_go_and_dependencies_unchanged_from_main": "90e6ba3e1beb94947a043fb3482ab774ae6a47df",
+  "production_ready": false,
+  "full_goal_complete": false,
+  "source_archive_sha256": "2f3d61b2289b5e829dead93c027373995ba8920e206eece3dfe365a6622983a2",
+  "native_runner_sha256": "d3546d500bad36dd554b2594b52c0b17bf4e17d44c4873d628d307c696661232",
+  "kvm_runner_sha256": "aa0e5d67688721427b370e0adcd01c6f5dd40b1fb3b415f5cbda01503e3c4acd",
+  "go_toolchain": "go1.27.3",
+  "architecture": "linux/amd64",
+  "native_software": {
+    "whole_fixture_race_repetitions": 3,
+    "whole_fixture_cgo_free_repetitions": 3,
+    "no_test_skips": true,
+    "new_go_test_parents": [
+      "TestNodeOOMOrdinaryStopRequires200AndExactStoppedRecord",
+      "TestNodeOOMFixedFixtureCannotAllocateOrOperateOnL0",
+      "TestNodeOOMKernelRowsRejectMissingDuplicateOverflowAndTruncation",
+      "TestNodeOOMMembershipIsOneExactExistingGeneration",
+      "TestNodeOOMPrivateDiagnosticsHaveNoCopyBypass",
+      "TestNodeOOMRequiresEveryPrivilegeFieldAndNoImmunity",
+      "TestNodeOOMColdReceiptCannotBorrowHealthyBudgetPhase"
+    ],
+    "each_new_parent_passes_each_suite": 3,
+    "explicit_offline_pinned_elf_test_passes_each_suite": 3,
+    "vet_and_dependency_checksums_passed": true,
+    "root_python_tests": 279,
+    "root_python_skips": 0,
+    "all24_actually_built": true,
+    "other23_byte_equal_to_original_native_components": true,
+    "independent_amd64_cross_native_fixture_bytes_equal": true,
+    "arm64_compile_only": true,
+    "arm64_fixture_compile_only_sha256": "03f8be6046b42f7fdc001c9e19b84baac7cf2e7188145da07ab3227ca82d3aeb"
+  },
+  "native_artifacts_sha256": {
+    "sandboxd": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "xandbox-template": "573e197ae991324deb2652efa35108103347ad344c07157156916581a7ba335d",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-node": "ea48602300fcde5aa90171e2dea3adf0f4ec36c8afd91b68aded103e04a69071",
+    "xandbox-gateway": "6fbda0367f167d08337c495bd18d4bc7bdf4728f9a788440e0dc629b16120f92",
+    "xandbox-launch": "8f612a9d458a5a9e6cc6a673ea71bac4302fc946bbde742617e3bbbec571941c",
+    "xandbox-ingress-launch": "c5c9af860cd974536a999e3f4026cc1f89d606fd9826fc3a31c230918b2cb3da",
+    "xandbox-ready": "d7e5ae452f292bce3fe3c02b88827d449617ec4ab448be99412ee11468bb6bff",
+    "deploy-helper": "1455c7989fa1f515febfe88cd338ef93bae0ff121f867f89c7436183c0ce9785",
+    "fixture": "b08648684541944a59c0434ca06c6d1194754fbe704ccff2766598f17f08d2e1",
+    "builder": "5ff77f04cd02fd482061e4dfcbd5f34b2839a3d9cc388ffde63b5fd9d038624e",
+    "firecracker.test": "a837871c7038323f03f3bf39b2ecc156d72609ac8bcfde349630e0efad446e16",
+    "session.test": "2f1a8c5ac99b25b713756f6947a3441a8655a67852efdfb34d4bea31f0055568",
+    "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "releasestore.test": "7381a64fd56ec5372765b69939f05e7d3dc8ef8d0fca499b17de3544e1ef02e3",
+    "xandbox-install": "c8c420db6d0ac544cb230c04d04a2f5bf6f0318407d36d3bedc78e574074092d",
+    "installtxn.test": "8c7d5aa5b77b8d60712ee6c26c572cca66e4a8b69605bd7a632a079cb1a09ccf",
+    "setup": "b6dc5fa2ccd12818ed0e8491a15c0b92a86e70242d8bb6b5c44c661390d8e0db",
+    "setup.test": "83c1709648888f95f00ef7d938825f024ab93033becfc1950ccb87e1d368f1b2",
+    "gateway.test": "6e36d7987cbc2acae7447c8807fc37bd68739ceceaafe3454c1e680171450492",
+    "policycontrol.test": "b0d300171352231a354a1c83a7d3d3d3bf116d9a79e766eaf769b311a2caae97",
+    "managed-setup": "98d7d6093c18dadf5da13bf009beec5925ba23b0f42b795693f09ffc5ef66b3b",
+    "managed-setup.test": "1bb1e738e2c527fe6068f68f3c83ba8e9a42b5e5fb9002c63296e9abc06bb746",
+    "xandbox-doctor": "25980bcc184c3a2ae582b67238030a892a14bdc341b6bab00d6e529246753840"
+  },
+  "actual_input_artifacts_sha256": {
+    "firecracker": "99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5",
+    "jailer": "65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f",
+    "kernel": "1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3",
+    "initrd": "2cf3a83a1855daabb9c0da3820fc9e65d707236862350985bcfa5e3406f668c9",
+    "workspace": "64b8fef846938745be3c9a4367b0dff437481e1c48e97077902d73e16e613954",
+    "fixture": "b08648684541944a59c0434ca06c6d1194754fbe704ccff2766598f17f08d2e1",
+    "daemon": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+    "warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "alpine": "f8e1cafba9b1b283b5d30d06f9885c8d2bc161ffe9083ade8e2e157813a53407"
+  },
+  "script_source_sha256": [
+    {
+      "sha256": "f8db83d5fee69553b76474795883cbcd65d8f7cbdad30668772b791eb6e665e3",
+      "relative_source_path": "scripts/auth_smoke.py"
+    },
+    {
+      "sha256": "ed9bf884799aa8c76207a7163dfb3dfbbae80953434833ee9eff10945d54429d",
+      "relative_source_path": "scripts/build_guest_fault_fixture.py"
+    },
+    {
+      "sha256": "24a66110e6076a18e7d50728842dc89a8075880c0f3c3ed94977475f169cf2a1",
+      "relative_source_path": "scripts/build_guest_image.py"
+    },
+    {
+      "sha256": "74953cfd9576404283a01f3150bb25d7270211c9cff70d30ca017f91701e92ae",
+      "relative_source_path": "scripts/build_nested_host.py"
+    },
+    {
+      "sha256": "b318954ccb17e93a7666730d4704d34fa0e736cf9626a8331f8b08d7cc3af51d",
+      "relative_source_path": "scripts/build_systemd_deployment.py"
+    },
+    {
+      "sha256": "7b05040c0c050e3e4519f0f5c162120475437c4bb3f5c0ab6d439b82c4ec3dd9",
+      "relative_source_path": "scripts/build_systemd_host.py"
+    },
+    {
+      "sha256": "bb11db6a4280b7f4994b02b0a7f666a14ab81afceffc3d9e1d6e74658356ded3",
+      "relative_source_path": "scripts/build_systemd_ingress.py"
+    },
+    {
+      "sha256": "6ba907f468195226b64295aea9637c5e674515a9ae53009a0696332d14a57b1d",
+      "relative_source_path": "scripts/build_systemd_install.py"
+    },
+    {
+      "sha256": "ce807b1cb433d48e11e6f5b6404fd5b9cb3e2adccd51e3be45dc49265ad08953",
+      "relative_source_path": "scripts/build_systemd_managed.py"
+    },
+    {
+      "sha256": "68323f1acea51f9515c7ad39918f0b3dd1649ba7cd9d400ed9f2389daa58e6e9",
+      "relative_source_path": "scripts/build_systemd_readiness.py"
+    },
+    {
+      "sha256": "c101ff0fbcdb8fb03b3e535f2b76d5589f4931b5b8d4dbc5dc1de32498a276ef",
+      "relative_source_path": "scripts/build_systemd_release.py"
+    },
+    {
+      "sha256": "f8dc749c485b56fb70699666a41804049dc45ab6b783de5f27a8c6b9966fb436",
+      "relative_source_path": "scripts/diagnostics_smoke.py"
+    },
+    {
+      "sha256": "e52eab2d151b5e47d0ea6764bfa13525e758c691ad103322426166e6f833ade9",
+      "relative_source_path": "scripts/doctor_smoke.py"
+    },
+    {
+      "sha256": "d43a70d1721a7fe69663904495c6383b7a92b77abca67461ec4f3df89b58cbc3",
+      "relative_source_path": "scripts/ingress_guard_probe.py"
+    },
+    {
+      "sha256": "885463d8fd8a7ca7fa727649aafa680166728e78214324f997b55a895d8942a9",
+      "relative_source_path": "scripts/install_fixture_trace.py"
+    },
+    {
+      "sha256": "bc32896a47d7b368ac8daeab421cee58c277df29377040c6b9ea83b9236f20a7",
+      "relative_source_path": "scripts/install_secret_scanner.py"
+    },
+    {
+      "sha256": "15b8ce83277dcc48012c27572b49e080351963fca438b00122a2a3e27ebe7396",
+      "relative_source_path": "scripts/kvm_assets.json"
+    },
+    {
+      "sha256": "96f40814ea9a5e35e90b5d678ab03cc6b1da1164b2b19629bc3bbe295418330d",
+      "relative_source_path": "scripts/kvm_driver_smoke.py"
+    },
+    {
+      "sha256": "dea5503e4c063efd218fd34fbe0ca3d6c135541fa2be69a36f58f3b412f638dc",
+      "relative_source_path": "scripts/kvm_guest_smoke.py"
+    },
+    {
+      "sha256": "20a27c33dc761a0c6a87275c779f8d2a8f184d7851b3db11b83945b67bc3e728",
+      "relative_source_path": "scripts/kvm_io_probe.py"
+    },
+    {
+      "sha256": "e7b18f6e8f972f39e7a78beea0dcae2a32350c45ad21b044384ace3d2b5994bc",
+      "relative_source_path": "scripts/kvm_mixed_load.py"
+    },
+    {
+      "sha256": "b5cc105212016eaf414b4e904eec8cb7f8deb694fce6fac90574018cc68edfb1",
+      "relative_source_path": "scripts/kvm_nested_host.py"
+    },
+    {
+      "sha256": "f16dbf19503218acf358eb117108141a21773483331d6a7dc4e5b272458de379",
+      "relative_source_path": "scripts/kvm_resources.py"
+    },
+    {
+      "sha256": "192c4e49f3180f0098c34dc51b61c585d114cf61d06c2fcf00bdbba4778eccea",
+      "relative_source_path": "scripts/kvm_session_load.py"
+    },
+    {
+      "sha256": "35324bf3a2b9f8731fe4f3a1ba7d14c0ed1281da68c1213bd848c758092c4e5b",
+      "relative_source_path": "scripts/kvm_snapshot_faults.py"
+    },
+    {
+      "sha256": "39d5dd0e12763be9b7613e1c720d1a56a463a5395280d86624708668fb03aea8",
+      "relative_source_path": "scripts/kvm_snapshot_smoke.py"
+    },
+    {
+      "sha256": "ee978dad4bc4a1c727b8e2151ed9ebb2bcaf495832f63c86678a20dde1200f43",
+      "relative_source_path": "scripts/kvm_storage.py"
+    },
+    {
+      "sha256": "a296e4926a7f02284240324a410a8d0f7b65cb629a1f17f002f1ae5c8c54f39d",
+      "relative_source_path": "scripts/kvm_storage_faults.py"
+    },
+    {
+      "sha256": "7c7a0a17b33349842a7e272f82ab541707de78dd9b507aa9c9638f2ae3c3d297",
+      "relative_source_path": "scripts/kvm_systemd_host.py"
+    },
+    {
+      "sha256": "f4a0397f50c3a76b82efdbc932b4666738c7526304ba83c90665f1e94cf92645",
+      "relative_source_path": "scripts/managed_fixture_trace.py"
+    },
+    {
+      "sha256": "137036c5583ebd3c42a3027682748f28506f17e88c8721128b4a539eb8e77564",
+      "relative_source_path": "scripts/metadata_smoke.py"
+    },
+    {
+      "sha256": "7ec0ad3d3119521789c61828b74efa41ebfb002c241a6dffebd8bf5b30e16ba4",
+      "relative_source_path": "scripts/metrics_smoke.py"
+    },
+    {
+      "sha256": "7a837f91eb39c0e248ad5968d7e56025805beefafcc8a6f68e72ec9cbbaf0925",
+      "relative_source_path": "scripts/nested_host_assets.json"
+    },
+    {
+      "sha256": "931daf810900f423ead679511fb72779523144d03758b45dff549b388c5f7d56",
+      "relative_source_path": "scripts/node_control_smoke.py"
+    },
+    {
+      "sha256": "bfeb31463d9dd84c7f530be5295f4f808de454289a948c762e238f0b45fb9d20",
+      "relative_source_path": "scripts/process_exit.py"
+    },
+    {
+      "sha256": "94e2c2b705af01a2e96f564cdb2dbd1b676105c41a68062b9637f6e0740c3a54",
+      "relative_source_path": "scripts/readiness_fixture_gate.py"
+    },
+    {
+      "sha256": "26a7e2a270999caaaef2ddead7c5504b2776acf4bfc965683fcc517666f00d4f",
+      "relative_source_path": "scripts/secret_scan.py"
+    },
+    {
+      "sha256": "0a42f8132dece736dfbb29f7e1fac45bcc17206d372c38349114edbbf6acc4db",
+      "relative_source_path": "scripts/secret_scan_config.toml"
+    },
+    {
+      "sha256": "b1a1184b580c6e1066169e38b00d55a9cfb982aa4aa41fc82d7371498b08c8c4",
+      "relative_source_path": "scripts/secret_scan_smoke.py"
+    },
+    {
+      "sha256": "dc3bbe75e6b034f7b6ebccdc85e20a07ee40d44eb53ccf57b5060171b06bb7a1",
+      "relative_source_path": "scripts/secret_scanner.json"
+    },
+    {
+      "sha256": "a4f32b07922106223cd3004ac30ae52b651eaa4d57e5ea516f7493a417d701c7",
+      "relative_source_path": "scripts/session_smoke.py"
+    },
+    {
+      "sha256": "e65578eccd737ca1344e9d5b22724bbc17b46fff2dfdf3d87441f28af22bc425",
+      "relative_source_path": "scripts/smoke.py"
+    },
+    {
+      "sha256": "f6002ed587582b65c84c68b40252e6e6ec046e93b28ddc945a207d96533a0cf8",
+      "relative_source_path": "scripts/systemd_delegate_probe.py"
+    },
+    {
+      "sha256": "58c625a27ec0bf4bd8e78d86ce5876943f1e1beb9c74921ce770b21991a7b327",
+      "relative_source_path": "scripts/systemd_deployment_guest.py"
+    },
+    {
+      "sha256": "6b15f7f084d6e28200cbf54128e241b6a7a85ae168f914af93493709cb3c1ee1",
+      "relative_source_path": "scripts/systemd_drain_probe.py"
+    },
+    {
+      "sha256": "a84e197da24487f21ed1f87788c133d71c7ec696adc8c1e4b27fd265034f09d4",
+      "relative_source_path": "scripts/systemd_host_assets.json"
+    },
+    {
+      "sha256": "8049a2fc03f26a355d1c1d4097418d368f8bc240f4b1b74ba6e4bcb1a6de0b87",
+      "relative_source_path": "scripts/systemd_ingress_guest.py"
+    },
+    {
+      "sha256": "b89d3223fe0db0be444ac397b6364633bb99dfa4f299af8dbeff5f7047abef58",
+      "relative_source_path": "scripts/systemd_install_guest.py"
+    },
+    {
+      "sha256": "fabec8356939b08178168095fa4279cff64c09b2fefbc422419a0b7fccaeb236",
+      "relative_source_path": "scripts/systemd_managed_guest.py"
+    },
+    {
+      "sha256": "0544544867b9dfef86b9c84d967ab35bbc0b16e875d4d398e65ae27eef97b7a4",
+      "relative_source_path": "scripts/systemd_readiness_guest.py"
+    },
+    {
+      "sha256": "a3baa1a39df4a9e203ccb89fa9f56e632a91bfa1d579d73cf61ba680d868179b",
+      "relative_source_path": "scripts/systemd_release_guest.py"
+    },
+    {
+      "sha256": "9fcf748fb552d5df0df8a74abe3ee411a689859e496a96c9e439af76d88878e9",
+      "relative_source_path": "scripts/test_doctor_smoke.py"
+    },
+    {
+      "sha256": "6e3a066dfdb74e2d7b180e74c661d19a4888502ca1efe6ae9eda24a39fb6fc74",
+      "relative_source_path": "scripts/test_guest_fault_fixture.py"
+    },
+    {
+      "sha256": "b0233bde8599d210fae7653aad9e6c7e8262b876b1d20f09e33f4e628da7c9ba",
+      "relative_source_path": "scripts/test_guest_image.py"
+    },
+    {
+      "sha256": "7711e1f57611cb092b855c2515e5b513b2fcd1fc330d59095cb3ad72d606da8d",
+      "relative_source_path": "scripts/test_kvm_diagnostics.py"
+    },
+    {
+      "sha256": "f2deaee6b16f27d6a280051567e3c12ac31e6ed04ce682ea9152cbce3aa28909",
+      "relative_source_path": "scripts/test_kvm_driver_legacy.py"
+    },
+    {
+      "sha256": "c84ecddf4759e4073e6826202dd35202802e285d84a225489c8ceb11b14083f4",
+      "relative_source_path": "scripts/test_kvm_io.py"
+    },
+    {
+      "sha256": "67e44efd8505de9cf9121b004103b2e8888c5f2d4cb69b224c7b497e97a97d47",
+      "relative_source_path": "scripts/test_kvm_managed_draft.py"
+    },
+    {
+      "sha256": "0b4f9a902ccbc8c324676c5204d88276ed9fd60da128ad4ec0577486a7da0cb6",
+      "relative_source_path": "scripts/test_kvm_mixed_load.py"
+    },
+    {
+      "sha256": "3b84f391807ec549e848ab8bced87b1b7dc0b9158661c48ae5057d106f91f1fa",
+      "relative_source_path": "scripts/test_kvm_nested.py"
+    },
+    {
+      "sha256": "66ac5f30b3d083bbcf88a995f8b667dd77e75ff2bb91e6b20a7474cb5282cf90",
+      "relative_source_path": "scripts/test_kvm_node_operator.py"
+    },
+    {
+      "sha256": "88e41309565df42aa9a79221ce8819eb122787a924865f2d9ce8ead1354a67c9",
+      "relative_source_path": "scripts/test_kvm_node_prepare_cancel.py"
+    },
+    {
+      "sha256": "73104f6d8db6ad0009064969edc4b834dd8ec266a5855bfc2fb6a406bf8bcdf9",
+      "relative_source_path": "scripts/test_kvm_node_snapshot.py"
+    },
+    {
+      "sha256": "3c27375002e2c0ad4051371bacd8f65c432e64c2d5795d0b99555596355bbcde",
+      "relative_source_path": "scripts/test_kvm_operator_shutdown.py"
+    },
+    {
+      "sha256": "5a5b3496204404c09022b531c3215baf3d1dc7b3867ff81bf0aa3d875ea9649e",
+      "relative_source_path": "scripts/test_kvm_operator_store.py"
+    },
+    {
+      "sha256": "dcb2578eb9b7263cfb06f537fc91a91ca3eae8a40c7aca7f0fb32095a35302eb",
+      "relative_source_path": "scripts/test_kvm_receipts.py"
+    },
+    {
+      "sha256": "a5b0395628deefa645a8edaf1ce29e6869afdad67771a1049038e313ef3fcd74",
+      "relative_source_path": "scripts/test_kvm_resources.py"
+    },
+    {
+      "sha256": "aa4cd9f5d34df53bd541cddb7085bb6acf27be4d5ff1e704b6c8b0de37a65e9d",
+      "relative_source_path": "scripts/test_kvm_session_ticket.py"
+    },
+    {
+      "sha256": "de73c5e6dc2d3796245143ec8b48acac4eb431807ec3194386ae98f0b06b06c1",
+      "relative_source_path": "scripts/test_kvm_storage.py"
+    },
+    {
+      "sha256": "ba4ef07958df3ffc057c3dfa210503a306bba1cd7f81dc4d48db7a7e20024f90",
+      "relative_source_path": "scripts/test_kvm_systemd_deployment.py"
+    },
+    {
+      "sha256": "2e39c677aea4da1d9b3593b9d0adf81e4025a07b2c9ba881ce751473cc87c23b",
+      "relative_source_path": "scripts/test_kvm_systemd_drain.py"
+    },
+    {
+      "sha256": "a8029fe0b77df7ec3ca0de881cbb28c1d54ccb3615b5208b5251b4a4b719d7ca",
+      "relative_source_path": "scripts/test_kvm_systemd_host.py"
+    },
+    {
+      "sha256": "6ab2fd7a5334f76f8af3209490e454e58b178456a5b97885bc47d109d176895f",
+      "relative_source_path": "scripts/test_kvm_systemd_ingress.py"
+    },
+    {
+      "sha256": "886bb0138f815f186c0e6621a9a724207b495ca4eb48094078658fe21e95b7fb",
+      "relative_source_path": "scripts/test_kvm_systemd_install.py"
+    },
+    {
+      "sha256": "a90ace0946c49fdd804e40fb83f96afd540d2023af92328c1aae38179a3b8397",
+      "relative_source_path": "scripts/test_kvm_systemd_managed.py"
+    },
+    {
+      "sha256": "d1c35aecce5d3f601246323e64bf7df2a2c39e4169e1394a4df89d190c33e855",
+      "relative_source_path": "scripts/test_kvm_systemd_readiness.py"
+    },
+    {
+      "sha256": "5e6dfede419209af745101806653924419c3b19928d0642ffba0db244fd6603a",
+      "relative_source_path": "scripts/test_kvm_systemd_release.py"
+    },
+    {
+      "sha256": "73480551940571d077e31e0848a12b8d1edd313422647b311b9cf7f9bf33fc29",
+      "relative_source_path": "scripts/test_kvm_tls_gateway.py"
+    },
+    {
+      "sha256": "9ea55fc8a8b49f8f526cb6766a65977955c8d1ad7fc72b3a5b4a39a79285e5a9",
+      "relative_source_path": "scripts/test_kvm_tls_policy.py"
+    },
+    {
+      "sha256": "a5078f87c67a335eed1f03078e434f2a7763590ab07cd116b964f4b6612f86ea",
+      "relative_source_path": "scripts/test_node_oom.py"
+    },
+    {
+      "sha256": "db7daf6ed452cc871457d0355ee44c35af9a21fb7f3c05cb46204e2657a3c344",
+      "relative_source_path": "scripts/test_process_exit.py"
+    },
+    {
+      "sha256": "42b1466bd297ab8ee43f84d1cbe178992d12e7bb0fe03bdb8645ece4d3ec2210",
+      "relative_source_path": "scripts/test_secret_scan.py"
+    }
+  ],
+  "current_original_reports_sha256": {
+    "node-oom-baseline-v1.json": "ecf8446fafaf367ff93713fa097728342b6c223452f8b39e299bc2ae424bccdf",
+    "node-oom-host-cgroup-v1.json": "abdcc0aae8555ba697e84deffed6f38ea4e2db5a024b50130d3ffeacac0305d1"
+  },
+  "current_receipt_sha256": {
+    "baseline": "f3f17ffbcc1877969e5b28ed3154bfd205100a23f5740e262f3fd8c2edb12964",
+    "oom": "6268ad8519e4c58168a39b80116f5c355083f948c9d079ad3098910600acbb08"
+  },
+  "independent_read_only_audit": {
+    "read_only": true,
+    "current_and_prior_scope_roots_absent": 4,
+    "current_and_prior_globally_unique_outer_generations_absent": 7,
+    "all24_programs_rehashed": true,
+    "all82_script_inputs_rehashed": true,
+    "no_supplemental_cleanup": true,
+    "all_original_runners_absent": true
+  },
+  "current_qualified_scope_count": 2,
+  "current_qualified_l1_boots": 4,
+  "current_outer_oom_and_pids_limit_events_zero": true,
+  "predecessors": [
+    {
+      "class": "private_producer_path_type_error_before_harness_dispatch",
+      "actual_l1_boots": 0,
+      "declared_paths_never_created_and_runner_gone": true,
+      "raw_runner_sha256": "0c90bba67c9a09919a73190ccd803164c55924ab29e3d0618fd9796f73eee30f"
+    },
+    {
+      "class": "superseded_fixture_stop_expected202_actual200_contract_mismatch",
+      "source_revision": "20ed0bff6cd56ab0c2a0a74796045f749dfc31c7",
+      "baseline_passed_l1_boots": 2,
+      "failed_oom_l1_boots": 1,
+      "failed_original_report_sha256": "5953144c4d8f42febb9effba6256c81388020b39020ddb2864f3ea2195fbcfc4",
+      "not_production_stop_defect_or_full_oom_acceptance": true,
+      "all_three_prior_generations_independently_absent": true
+    },
+    {
+      "class": "optional_offline_elf_input_omitted_in_first_software_attempt",
+      "source_revision": "20ed0bff6cd56ab0c2a0a74796045f749dfc31c7",
+      "never_counted_skip_as_pass": true,
+      "full_suites_repeated_with_explicit_verified_input": true
+    },
+    {
+      "class": "private_auditor_initial_counter_filename_assumption",
+      "actual_case_rerun_needed": false,
+      "read_real_first_cut_and_final_generation_counter_files": true,
+      "no_counter_or_budget_override": true
+    }
+  ],
+  "limitations": [
+    "One trusted TEST helper causes actual host-cgroup OOM inside an owned disposable L1; not guest-origin, global node saturation, physical media fault or production isolation certification.",
+    "Fixed existing resources/deadlines and ordinary production binaries; no shared L0 configuration changes, host execution fallback, test hooks in production or synthetic OOM/kill evidence.",
+    "Early target event sample may precede all group victims; final node/global kill equality and ancestor/control/neighbor counters are independently checked.",
+    "Stop/empty and durable reclaim/capacity are separate; timing is one finite three-neighbor aggregate, not per-instance distribution, benchmark or SLO.",
+    "Healthy synced new-guest cold checkpoint after full OOM cleanup; not an in-flight OOM/metadata power cut, full sustained/open-arrival/fairness/upgrade/rollback/operator/production matrix.",
+    "Original console, receipts, process/resource/credential identities remain private; only privacy-reviewed producer bytes, counts and digests published."
+  ]
+}
