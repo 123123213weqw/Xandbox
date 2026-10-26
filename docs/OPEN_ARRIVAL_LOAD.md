@@ -289,3 +289,34 @@ prepare30秒及原40分钟/6360raw/240canary/100tail/cold门槛均不变。
 
 **这里描述候选实现，不是合格证据。** 合成机制负例、冻结原生软件验证及新的完整真实KVM
 运行仍需分别完成；不能用旧8僵尸负例或旧native/CI报告为修正后的fixture代签。
+
+### 第五次实际运行：八孤儿机制已修复，新的初始 session 失败仍阻断长测
+
+冻结源码 `2cec9052554b500c777804adf845d86aadf63a47` 的预算/OOM各两启动通过。
+原8轮生命周期前后census都完整/无读错/无僵尸；reaped从0到8，预检后Node/control
+PID charge同为14。测量中至首fatal累计精确回收352次、错误0，fatal census仍无收养僵尸；
+145次采样中Node PID为32..59，而不是此前随records增长到384。这证明本次测试init的
+八孤儿机制修正及这段观测效果，不能宣称所有历史500或整个40分钟已经根治。
+
+原完整尝试在 **1441011.256ms（约24分1秒）** 失败：相位2、第一租户canary144的
+session open收到 **HTTP503/SESSION_UNAVAILABLE**；该码是fenced session错误，仍必须
+失败，**不能放宽成普通UNAVAILABLE背压**。保留988结果行、354已接受key的内存计数和
+145采样，没有tail/cold通过。首fatal时prepare IO/quota/other均0；旧观察器没有保留
+session journal/内部abort cause，因此不能仅凭并发数和3.608ms reply确定实际内因。
+
+SSH观察连接退出255后，独立重连确认原runner已退出，远程原始状态为120，报告为false，
+不把传输退出误当测试结果或重跑理由。gzip/fresh verified SSH恢复同一原件；该批5代际、
+五批合计**25个唯一外层代际/15scope**均独立只读确认不存在，无补充清理。
+所有原始wire/capsule/partial保持私有且已严格detach逐字节匹配。
+
+源码检查发现一个可独立复现的生产broker错误分类问题：首次session attempt在Core尚未
+分配任何VM时遇到节点/租户实例容量拒绝，也被旧abort路径转成SESSION_UNAVAILABLE。
+合成Core容量/租户容量负例各三遍稳定复现此分类，**与真实canary错误类别相关，但旧原件
+没有足够证据证明它就是该次实测的唯一内因**。
+
+新候选只对精确Core实例容量sentinel、首次attempt、无Ref/无fence/未cancel/未关闭时，
+先撤销内存准入并持久提交CLOSED/FAILED，才保留普通容量错误；持久化不确定、已有
+candidate、wrapped/compound错误及其余故障继续fenced失败。永久key不重试、不回收既有
+实例容量；fixture允许的两个正常code和全部原40分钟/预算/公平/回收门槛不变。
+这改变普通broker，须新的冻结原生/CI及真实KVM、原盘cold和受影响普通程序复验；
+**旧5bfb或2cec的报告不能代签新程序**。
