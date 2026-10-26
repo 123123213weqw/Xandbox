@@ -13,6 +13,7 @@ build:
 	go build -o "$(BIN_DIR)/sandboxd" ./cmd/sandboxd
 	go build -o "$(BIN_DIR)/sandboxctl" ./cmd/sandboxctl
 	go build -o "$(BIN_DIR)/xandbox-node" ./cmd/xandbox-node
+	CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-doctor" ./cmd/xandbox-doctor
 	go build -o "$(BIN_DIR)/xandbox-launch" ./cmd/xandbox-launch
 	go build -o "$(BIN_DIR)/xandbox-ingress-launch" ./cmd/xandbox-ingress-launch
 	CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-ready" ./cmd/xandbox-ready
@@ -27,6 +28,7 @@ build:
 	@if [ "$$(go env GOOS)" = linux ]; then CGO_ENABLED=0 go build -o "$(BIN_DIR)/xandbox-gateway" ./cmd/xandbox-gateway; fi
 
 smoke: build
+	python3 scripts/doctor_smoke.py --doctor "$(BIN_DIR)/xandbox-doctor"
 	python3 scripts/smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl"
 	python3 scripts/auth_smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl" --keygen "$(BIN_DIR)/xandbox-keygen" --node "$(BIN_DIR)/xandbox-node"
 	python3 scripts/metadata_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"

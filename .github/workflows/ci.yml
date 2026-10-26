@@ -68,6 +68,7 @@ jobs:
         run: go test -tags=xandbox_managed_fixture -race -count=3 ./cmd/xandbox-managed-fixture
       - name: Python harness syntax and guest image extraction safety
         run: |
+          python3 -m unittest discover -s scripts -p test_doctor_smoke.py
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py
           python3 -m unittest discover -s scripts -p test_guest_fault_fixture.py
@@ -108,6 +109,7 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxd-$arch" ./cmd/sandboxd
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/sandboxctl-$arch" ./cmd/sandboxctl
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-node-$arch" ./cmd/xandbox-node
+            GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-doctor-$arch" ./cmd/xandbox-doctor
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-launch-$arch" ./cmd/xandbox-launch
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-ingress-launch-$arch" ./cmd/xandbox-ingress-launch
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-ready-$arch" ./cmd/xandbox-ready
