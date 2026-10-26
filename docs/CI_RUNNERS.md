@@ -83,3 +83,18 @@ race三遍仅固定旧ELF测试三次拒绝新daemon，native原始状态1，其
 
 这只是离线重新绑定，不是新live trace、KVM或全部生产验收。旧12/15事件和5bfb报告仍只
 证明各自旧程序；修正fixture须再次冻结/原生/CI，并为新普通程序另取真实验收证据。
+
+## 默认仓库回归：ring 有界读取不等于两秒磁盘排空
+
+冻结 91bfb12 的新会话/metrics 机制、完整 tagged fixture 及 root Python295 均通过，
+但完整默认 race 三遍的 `TestLiveReadHasBoundedRetryDuringWrap` 有一遍在收尾
+`Close` 返回 `ErrPending`，原始失败保留；后续 CGO-free/vet 未执行，整轮不算通过。
+旧测试把 lossy `Emit` 循环后的两秒排空当作 ring 读取保证，且没有保证实际发生 wrap。
+`Close` 的原契约允许调用者超时返回 pending 并保留 writer/FD/锁，不是磁盘吞吐 SLO。
+
+修正仅限测试：真实 ring 的单 writer 并发写入三个保留窗口和 terminal record，
+3000 次原有 live read 检查不变，随后 join writer 并核对精确窗口/覆盖计数。
+不放宽生产读取的三次重试、不改 Close 的截止时间/队列容量/fsync/锁或普通程序。
+另以合成 append gate 验证已取消调用者收到 pending、FD 与排他锁仍归原 writer、
+Read 不等待或虚构未提交记录、释放后正常终态和精确计数。它不是 kernel fsync 故障实测。
+原有 blocked-store/超时 Close 测试保留；新冻结源须重新完整验收，不能把失败改签为通过。

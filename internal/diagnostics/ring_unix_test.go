@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -322,23 +323,97 @@ func TestFormatRejectsCRCReservedVersionEnumsAndSequence(t *testing.T) {
 }
 func TestLiveReadHasBoundedRetryDuringWrap(t *testing.T) {
 	d := testDir(t)
-	l, e := Start(d)
-	if e != nil {
-		t.Fatal(e)
-	}
+	r := testRing(t, d)
+	// Exercise the actual ring writer concurrently, with a guaranteed wrap.
+	// A lossy asynchronous Emit loop does not guarantee wrap and Close's
+	// caller deadline is not a storage-drain throughput guarantee.
+	done := make(chan struct{})
+	var writeErr error
+	go func() {
+		defer close(done)
+		for i := int64(1); i <= 3*RetainedRecords; i++ {
+			if writeErr = r.append(testEvent(i)); writeErr != nil {
+				return
+			}
+		}
+		writeErr = r.append(Event{Kind: CollectorClosed, Reason: Other, TimeNS: time.Now().UnixNano()})
+	}()
+	// Join before the ring/file cleanup even if a reader assertion fails.
+	t.Cleanup(func() { <-done })
 	for range 3000 {
-		l.Emit(PrepareFailed, Other)
 		if v, e := Read(d); e == nil && (len(v.Records) > RetainedRecords || v.Overwritten > v.ObservedSequence) {
 			t.Fatal("unbounded live view")
 		}
 	}
-	closeTest(t, l)
+	<-done
+	if writeErr != nil {
+		t.Fatal(writeErr)
+	}
 	v, e := Read(d)
-	if e != nil || v.Records[len(v.Records)-1].Event.Kind != CollectorClosed {
+	if e != nil {
 		t.Fatal(e)
 	}
-	if len(v.Records) > RetainedRecords || l.Stats().WriteErrors != 0 {
-		t.Fatal("writer failed")
+	if v.ObservedSequence != 3*RetainedRecords+1 || v.Overwritten != 2*RetainedRecords+1 || len(v.Records) != RetainedRecords || v.Records[len(v.Records)-1].Event.Kind != CollectorClosed {
+		t.Fatal("missing wrapped committed window or terminal record")
+	}
+}
+
+// A synthetic append gate, not a blocked-kernel-fsync or hardware fault test.
+type pausedRingStore struct {
+	*ring
+	entered, release chan struct{}
+	once             sync.Once
+}
+
+func (s *pausedRingStore) append(e Event) error {
+	s.once.Do(func() { close(s.entered); <-s.release })
+	return s.ring.append(e)
+}
+
+func TestLiveReadAndPendingCloseRetainBlockedRingOwnership(t *testing.T) {
+	d := testDir(t)
+	r, e := openRing(d)
+	if e != nil {
+		t.Fatal(e)
+	}
+	s := &pausedRingStore{ring: r, entered: make(chan struct{}), release: make(chan struct{})}
+	l := newLogger(s)
+	var release sync.Once
+	unblock := func() { release.Do(func() { close(s.release) }) }
+	t.Cleanup(func() { unblock(); _ = l.Close(context.Background()) })
+	if !l.Emit(PrepareFailed, Other) {
+		t.Fatal("first observation rejected")
+	}
+	<-s.entered
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if e = l.Close(ctx); !errors.Is(e, ErrPending) {
+		t.Fatal("pending storage became a successful close", e)
+	}
+	if _, e = r.file.Stat(); e != nil {
+		t.Fatal("pending close revoked the writer descriptor", e)
+	}
+	if other, e := openRing(d); e == nil {
+		other.close()
+		t.Fatal("pending writer lost exclusive ring ownership")
+	}
+	if l.Emit(ProcessStopped, Other) {
+		t.Fatal("pending close admitted a new observation")
+	}
+	if v, e := Read(d); e != nil || v.ObservedSequence != 0 || len(v.Records) != 0 {
+		t.Fatal("read waited for or invented the pending append", e)
+	}
+	unblock()
+	if e = l.Close(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	v, e := Read(d)
+	if e != nil || v.ObservedSequence != 2 || len(v.Records) != 2 || v.Records[1].Event.Kind != CollectorClosed {
+		t.Fatal("released writer lost its terminal record", e)
+	}
+	st := l.Stats()
+	if st.Enqueued != 1 || st.Dropped != 1 || st.Written != 2 || st.Queued != 0 || st.WriteErrors != 0 {
+		t.Fatal("released writer accounting changed", st)
 	}
 }
 func TestClosedViewContainsNoInputPaths(t *testing.T) {
