@@ -29,3 +29,27 @@ GitHub 的[官方退役公告](https://github.blog/changelog/2026-10-01-github-a
 
 macOS CI 验证控制面/模拟后端的跨平台行为，不证明 macOS 支持 Linux/KVM 隔离。
 本次迁移也不认证 macOS 14 兼容性、硬件长稳或完整生产验收。
+
+## 后续真实单测失败：等待 relay 完成，而不是延长客户端期限
+
+`ce677b932e91ba189bf06743ec87d7d2fa5fc04b` 的
+[PR run](https://github.com/123123213weqw/Xandbox/actions/runs/40311634592)
+六项成功；[push run](https://github.com/123123213weqw/Xandbox/actions/runs/40311629701)
+保留为失败/attempt1，其他五项成功。唯一失败是 Linux/Go1.27 的普通 race 测试，
+不是 runner 容量，也不是只读 PID1 census 的测试。
+
+原始日志为 `TestInitializationFaultRelayModesSyntheticOnly/after_sealed_before_ready`
+读取尚不存在的 `barrier.json`。合成 relay 在实际完成文件提交前已增加 sealed-response
+计数；客户端的200ms deadline返回也不保证后台 writer 已完成。测试把早期计数/客户端结束
+误当作 barrier 发布完成，存在观察顺序竞态。
+
+修正仅在 `_test.go`：合成测试在读错误和 receipt 前明确关闭并 join relay writers；
+新增受控“发布前挂起”，先验证 receipt 尚未发布，再放行并等待真实 writer 完成。
+所有原有故障断言和200ms客户端期限不变，没有加入 sleep 来掩盖竞态。
+真实 KVM 调用仍使用默认构造器、没有这个合成 gate；普通生产程序不变。
+临时路径遵守调用者的短私有 TMPDIR，便于验证测试退出后无残留。
+
+同一未提交 overlay 已在 Linux 非特权环境定向跑过 race/CGO-free各100遍、五种模式每种
+每构建100遍，无失败、data race或skip，临时目录仅剩自有marker。它是明确的合成开发证据，
+不是新冻结源码的完整CI、实际KVM或生产认证；新源码仍须另跑完整对应门槛。
+原始失败不重标成功、不重跑覆盖，也不将此独立单测问题混作测试PID1孤儿回收的修复。
