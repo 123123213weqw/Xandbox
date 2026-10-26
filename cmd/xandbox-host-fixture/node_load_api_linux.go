@@ -44,7 +44,7 @@ func nodeLoadReply(status int, body []byte, want int, out any) (string, error) {
 	if status == 503 && failure.Error.Code == "UNAVAILABLE" {
 		return "service_unavailable503", nil
 	}
-	return "", fmt.Errorf("unexpected fixed load API status %d", status)
+	return "", fmt.Errorf("unexpected fixed load API status %d code=%s", status, nodeLoadClosedAPICode(failure.Error.Code))
 }
 
 func nodeLoadCall(ctx context.Context, c *switchAPI, method, path, key string, body, out any, want int) (string, error) {
@@ -182,4 +182,12 @@ func nodeLoadRevoke(ctx context.Context, c *switchAPI, b session.Result) error {
 		return errors.New("session revoke is not durable Stop/GC proof")
 	}
 	return budgetDestroyed(ctx, c, b.Current)
+}
+
+func nodeLoadClosedAPICode(code string) string {
+	switch code {
+	case "INTERNAL", "INVALID_JSON", "INVALID_REQUEST", "UNAUTHORIZED", "NOT_FOUND", "STALE_SESSION", "SESSION_BUSY", "SESSION_GONE", "SESSION_HISTORY_LIMIT", "TENANT_SESSION_QUOTA", "SESSION_CAPACITY", "SESSION_UNAVAILABLE", "STALE_GENERATION", "NOT_READY", "IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_GONE", "JOB_LIMIT", "TENANT_QUOTA", "METADATA_CAPACITY", "TENANT_METADATA_QUOTA", "NODE_DRAINING", "UNAVAILABLE":
+		return code
+	}
+	return "UNCLASSIFIED"
 }

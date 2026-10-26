@@ -163,3 +163,50 @@ NodeRoot 移除另证。inventory 不恢复任务或修补生产元数据。
 不输出 guest 内容。不重试丢失序号来凑进展，不缩短窗口、改相位/worker/预算或放宽门槛。
 修正源码仍须重新原生编译验证、完整真实运行/cold 和独立清理审计；旧软件/运行结果
 只为各自原始源码作证。
+
+### 第二次原始运行：创建返回 500，根因尚未确定
+
+源码 `b5c198d4b71156c0416623a4ef5c5a8bdfd72405` 的第二次完整尝试中，
+同批旧预算/OOM 各两次启动通过；新 load 在 **1363507.797 ms**（约 22 分 43 秒）
+失败。首个失败为相位 2、第二租户 raw intent 627 的 create：普通 API 返回 HTTP 500，
+该请求观察耗时 **30007.487 ms**。保留 825 个结果行、330 个已接受 key 的内存计数、
+137 个资源采样及私有原始证据；没有完成 40 分钟、串行 tail 或 cold 验收。
+
+该批 5 个唯一外层代际/3 个场景 scope 均经独立只读无残留核对；两次失败合计
+**10 个唯一外层代际/6 个 scope** 全部不存在，无补充清理，外层 OOM/pids-limit 事件为零。
+这些是失败后的清理证据，不是长稳成功、容量或 SLO 证据。
+
+这个失败不同于第一次心跳失败。耗时接近现有 30 秒 prepare deadline，
+但旧 helper 没有保留解析后的 API error code，daemon 的私有日志/诊断环留在已清理的 L1
+磁盘中，**不能仅凭耗时断言是 IO、排队或 guest 启动根因，也不能声称心跳修正解决了它**。
+
+## 候选有界诊断，不以重试或调参代替修复
+
+新增诊断仍只存在于 opt-in 测试构建中，普通生产 Go/依赖不变，尚须新的源码绑定验证。
+HTTP 500 仍是失败；仅保留普通 API 的闭集 code，未知值记 `UNCLASSIFIED`，不把原始
+message/code、凭证或 guest 输出写入公共指标。30 秒 prepare、35 秒 actor、40 分钟窗口、
+各到达率、worker、预算和公平/回收门槛均未放宽。
+
+- 原有 10 秒采样增加 Node/control 的真实 pids/current/max-events、CPU usage/throttle、
+  **仅配置的 L1 虚拟块设备** IO 计数、controller thread 数及三个现有 prepare-failure
+  producer 计数。设备行缺失有独立 `observed=0`，不是测得零 IO；不叠加映射层/底层设备，
+  不声称唯一物理 IO 或已退出子组计数单调。通过报告要求非故障负载的 pids-limit/prepare-failure
+  计数为零，错误不能成为吞掉内部故障的“正常背压”。
+- 单次 raw create 仍在等待时，20 秒触发只读观察；整次实验最多 8 次，有显式 omitted 数，
+  每次使用 2 秒协作式 context budget。底层文件读并非可强制中断的 syscall deadline，
+  外层硬存活上限保持不变。覆盖 8 次串行预检、offered raw 和串行 tail；预检只用私有
+  kind3，`offered_origin_known=false`，不伪造 offered elapsed、不加入 6700 个测量结果行。
+  API reply/due-to-reply 在等待观察器退出**之前**记录；total iteration 仍包含实际观察开销。
+- 绑定同一 controller incarnation，只读现有 CRC 校验诊断环的末 16 条数值记录；最多检查
+  最近 40 秒、64 个有界 ledger 文件，按租户和 create-key hash 查找正在创建的实例，
+  观察 owner/cgroup/jail/workspace/socket 是否存在和 workspace 逻辑大小。没有锁定生产 store、
+  启动第二个控制器、ptrace、重试工作、quota sync 或 `syncfs`。首个 fatal error 在清理前另作
+  有界快照，原始 ledger error 最多 4 条/每条约 512 字节且**只留私有通道**。
+  非原子、截断或缺失的观察必须显式标记，不能当作确切故障阶段或根因证明。
+- 整个私有诊断 capsule 至多 192 KiB。L0 在公共投影/成功校验前分离成独占创建的 0600
+  sidecar；另先保留最多 1 MiB 输入帧的私有解码副本（ASCII 重编码上限 6 MiB），即使后续
+  schema 校验失败也不丢原始原因。仅回包后写入 L0 私有日志目录，不在 offered 窗口主动刷
+  L1 磁盘。失败 partial、raw frame 和诊断 sidecar 不得作为公共合格报告上传。
+
+后续必须冻结新源码、重跑完整原生软件门槛、旧场景兼容和完整 40 分钟/cold。
+若某次复测偶然通过但没有确定/修复第二次失败的实际原因，也不能据此宣称该 500 已根治。

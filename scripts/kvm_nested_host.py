@@ -18,7 +18,7 @@ import re
 
 from build_nested_host import build_initrd, digest, validate_manifest, static_elf
 from kvm_resources import cgroup_empty
-from node_load_contract import (NODE_LOAD_MAX_FRAME, node_load_profile, nested_node_load_resources, node_load_policy, validate_node_load_result, NODE_LOAD_RECOVERY_FLAGS)
+from node_load_contract import (NODE_LOAD_MAX_FRAME, node_load_profile, nested_node_load_resources, node_load_policy, validate_node_load_result, NODE_LOAD_RECOVERY_FLAGS, detach_node_load_private)
 from kvm_driver_smoke import wait
 from kvm_snapshot_smoke import private_json, sync_dir
 
@@ -45,6 +45,22 @@ class JSONSocket:
         return json.loads(line)
     def send(self, value): self.sock.sendall(json.dumps(value,separators=(',',':')).encode() + b'\n')
     def close(self): self.file.close(); self.sock.close()
+
+
+def preserve_node_load_reply(value, logs):
+    """Preserve the bounded decoded frame privately even if validation fails.
+
+    JSONSocket has already bounded the input to1MiB. ASCII re-encoding can
+    expand Unicode, so bound this private re-encoding separately to6MiB.
+    Never pass the raw capsule or raw error text into a public report.
+    """
+    assert type(value) is dict and type(value.get('result')) is dict
+    assert len(json.dumps(value).encode()) <= 6 * NODE_LOAD_MAX_FRAME
+    private_json(logs/'node-load-wire-private.json', value)
+    clean, private = detach_node_load_private(value['result'])
+    if private is not None:
+        private_json(logs/'node-load-diagnostics-private.json', private)
+    return {**value, 'result': clean}
 
 
 def qmp_probe(path, memory_mib=None):
@@ -918,6 +934,8 @@ def main():
             if not out['ok'] and driver_profile and operation=='recover' and 'quota_diagnostic' in out:
                 result['quota_coldboot_failure_diagnostic']=out['quota_diagnostic']
             if args.quota_switch and not out['ok'] and 'result' in out:result['switch_partial_result']=out['result']
+            if args.node_load and operation == 'node-load-run' and 'result' in out:
+                out = preserve_node_load_reply(out, logs)
             if args.node_load and not out['ok'] and 'result' in out:
                 private_json(logs/'node-load-partial-private.json',out)
                 result['node_load_private_partial_reply_preserved']=True

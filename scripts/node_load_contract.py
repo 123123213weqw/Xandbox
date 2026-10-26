@@ -1,5 +1,6 @@
 """TEST ONLY closed forty-minute offered-load protocol, never a tenant API."""
 import math
+import json
 
 NODE_LOAD_MAX_FRAME = 1 << 20
 NODE_LOAD_PHASE_COUNTS = (60, 300, 1200, 4800)
@@ -22,6 +23,85 @@ NODE_LOAD_SUCCESS_FLAGS = (
 NODE_LOAD_RECOVERY_FLAGS = (
     'all_accepted_raw_and_session_keys_cold_replayed410_before_new_guest',
     'private_load_inventory_validated_without_restoration')
+
+NODE_LOAD_KERNEL_FIELDS = {
+    'controller_threads', 'prepare_failed_io', 'prepare_failed_quota', 'prepare_failed_other',
+} | {f'{group}_pids' for group in ('node', 'control')} | {
+    f'{group}_pids_max_events' for group in ('node', 'control')
+} | {f'{group}_cpu_{name}' for group in ('node', 'control')
+     for name in ('usage_usec', 'throttled_usec', 'nr_throttled')} | {
+    f'{group}_io_{name}' for group in ('node', 'control')
+    for name in ('observed', 'rbytes', 'wbytes', 'rios', 'wios')}
+NODE_LOAD_OBSERVATION_FIELDS = {
+    'available', 'elapsed_ms', 'offered_origin_known', 'capture_ms', 'complete', 'record_found', 'record_state',
+    'owner_present', 'cgroup_present', 'jail_present', 'workspace_present',
+    'api_socket_present', 'vsocket_present', 'workspace_logical_bytes',
+    'last_error_private', 'recent_errors_private', 'kernel',
+    'diagnostic_sequence', 'diagnostic_records', 'stream_kind', 'intent_index', 'tenant',
+    'diagnostic_read_ok', 'ledger_scan_truncated', 'ledger_candidates', 'ledger_inspected', 'ledger_read_errors'}
+
+
+def validate_node_load_kernel(v):
+    assert type(v) is dict and set(v) == NODE_LOAD_KERNEL_FIELDS
+    for value in v.values():
+        integer(value, 0, 1 << 50)
+    assert v['node_pids'] <= 384 and v['control_pids'] <= 128
+    integer(v['controller_threads'], 1, 128)
+    for group in ('node', 'control'):
+        integer(v[f'{group}_io_observed'], 0, 1)
+        if v[f'{group}_io_observed'] == 0:
+            assert all(v[f'{group}_io_{field}'] == 0 for field in ('rbytes', 'wbytes', 'rios', 'wios'))
+
+
+def detach_node_load_private(value):
+    """Return a public candidate plus an explicitly private, bounded sidecar.
+
+    Detach BEFORE the ordinary success validator or producer report. This is
+    also used on failure, so the original row/error survives outer cleanup.
+    """
+    assert type(value) is dict
+    public = dict(value)
+    private = public.pop('private_load_diagnostics', None)
+    if private is None:
+        integer(public.get('slow_create_probes_started', 0), 0, 0)
+        integer(public.get('slow_create_probes_omitted', 0), 0, 0)
+        return public, None
+    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure'}
+    assert len(json.dumps(private, ensure_ascii=True).encode()) <= 192 << 10
+    slow = [] if private['slow'] is None else private['slow']
+    assert type(slow) is list and len(slow) <= 8
+    integer(private['omitted'], 0, 6468)  # raw6360 + tail100 + preflight8; no canary Create probes
+    integer(public['slow_create_probes_started'], len(slow), len(slow))
+    integer(public['slow_create_probes_omitted'], private['omitted'], private['omitted'])
+    observations = slow + ([] if private['failure'] is None else [private['failure']])
+    for row in observations:
+        assert type(row) is dict and set(row) == NODE_LOAD_OBSERVATION_FIELDS
+        for name in ('available', 'complete', 'record_found', 'owner_present',
+                     'cgroup_present', 'jail_present', 'workspace_present',
+                     'api_socket_present', 'vsocket_present', 'diagnostic_read_ok', 'ledger_scan_truncated', 'offered_origin_known'):
+            assert type(row[name]) is bool
+        finite(row['elapsed_ms']); finite(row['capture_ms'])
+        if not row['offered_origin_known']:
+            assert row['elapsed_ms'] == 0  # preflight has no offered-clock origin
+        integer(row['stream_kind'], -1, 3); integer(row['intent_index'], -1, 6359); integer(row['tenant'], -1, 1)
+        integer(row['ledger_candidates'], 0, 10000); integer(row['ledger_inspected'], 0, 64); integer(row['ledger_read_errors'], 0, 64)
+        assert row['record_state'] in ('', 'CREATING', 'READY', 'STOPPING', 'STOPPED', 'DESTROYED')
+        integer(row['workspace_logical_bytes'], 0, 128 << 20)
+        assert type(row['last_error_private']) is str and len(row['last_error_private'].encode()) <= 515
+        errors = [] if row['recent_errors_private'] is None else row['recent_errors_private']
+        assert type(errors) is list and len(errors) <= 4
+        assert all(type(error) is str and len(error.encode()) <= 515 for error in errors)
+        if row['kernel'] is not None:
+            validate_node_load_kernel(row['kernel'])
+        integer(row['diagnostic_sequence'], 0, (1 << 64) - 1)
+        records = [] if row['diagnostic_records'] is None else row['diagnostic_records']
+        assert type(records) is list and len(records) <= 16
+        for record in records:
+            assert type(record) is dict and set(record) == {'sequence', 'kind', 'reason', 'time_unix_ns', 'dropped_before'}
+            for name, high in (('sequence', (1 << 64) - 1), ('kind', 255), ('reason', 255),
+                               ('time_unix_ns', (1 << 63) - 1), ('dropped_before', (1 << 64) - 1)):
+                integer(record[name], 0, high)
+    return public, private
 
 
 def node_load_profile(enabled, *others):
@@ -65,7 +145,8 @@ def validate_node_load_result(v):
             'quotas_checked_only_quiescent_not_attributed_across_active_reuse',
             'full_offered_window_ms', 'fixed_workers_each_tenant',
             'fixed_client_queue_each_tenant', 'production_slo_claim',
-            'full_production_acceptance', 'load_window_completed', 'run_passed'} | set(NODE_LOAD_SUCCESS_FLAGS)
+            'full_production_acceptance', 'load_window_completed', 'run_passed',
+            'slow_create_probes_started', 'slow_create_probes_omitted'} | set(NODE_LOAD_SUCCESS_FLAGS)
     assert type(v) is dict and set(v) == keys
     for key in NODE_LOAD_SUCCESS_FLAGS + ('nearest_rank_no_zero_latency_for_drops',
                                          'quotas_checked_only_quiescent_not_attributed_across_active_reuse',
@@ -79,6 +160,8 @@ def validate_node_load_result(v):
                           'fixed_client_queue_each_tenant': 16}.items():
         integer(v[key], expected, expected)
     integer(v['accepted_replay_inventory_count'], 108, 7200)
+    integer(v['slow_create_probes_started'], 0, 8)
+    integer(v['slow_create_probes_omitted'], 0, 6468)
     groups = v['groups']
     assert type(groups) is list and len(groups) == 18
     expected = {(kind, phase, tenant) for kind in (0, 1) for phase in range(4) for tenant in (0, 1)}
@@ -134,15 +217,17 @@ def validate_node_load_result(v):
                        'ControllerRSS', 'ControllerFDs', 'RootFree', 'QuotaSpace',
                        'QuotaInodes', 'QuotaNonempty', 'NodeMaxEvents', 'NodeOOM',
                        'NodeOOMKills', 'NodeOOMGroups', 'ControlMaxEvents', 'ControlOOM',
-                       'ControlOOMKills', 'ControlOOMGroups'}
+                       'ControlOOMKills', 'ControlOOMGroups', 'kernel'}
     previous = -1
     for sample in samples:
         assert type(sample) is dict and set(sample) == resource_fields
         finite(sample['elapsed_ms']); finite(sample['observation_ms'], high=5000)
         assert sample['elapsed_ms'] >= previous
         previous = sample['elapsed_ms']
-        for key in resource_fields - {'elapsed_ms', 'observation_ms'}:
+        for key in resource_fields - {'elapsed_ms', 'observation_ms', 'kernel'}:
             integer(sample[key], 0, 1 << 50)
+        validate_node_load_kernel(sample['kernel'])
+        assert all(sample['kernel'][field] == 0 for field in ('node_pids_max_events', 'control_pids_max_events', 'prepare_failed_io', 'prepare_failed_quota', 'prepare_failed_other'))
         assert sample['Allocated'] <= 4 and sample['Records'] <= 10000
         assert sample['StopQueued'] <= 4 and sample['CleanupQueued'] <= 4
         assert sample['StopRunning'] <= 4 and sample['CleanupRunning'] <= 2

@@ -77,6 +77,9 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 		if retErr != nil {
 			state.fail(nodeLoadRow{Stage: "load_setup_or_finalization"}, retErr)
 		}
+		if retErr != nil {
+			state.captureFailure(ctx)
+		}
 		partial, e := state.summary()
 		if e != nil {
 			retErr = e
@@ -101,14 +104,22 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 			out = nil
 		}
 	}()
+	identity, e := processStart(n.process.Process.Pid)
+	if e != nil {
+		return nil, e
+	}
+	state.observe = func(ctx context.Context, tenant int, key string) nodeLoadObservation {
+		return n.nodeLoadObserve(ctx, tenant, key, identity, measuredStart)
+	}
 	tokens := [2]string{n.token, n.loadTokenB}
 	// Eight serial preflight lifecycles exercise the exact guest/Stop/quota wire
 	// contracts BEFORE the long window; none are added to its percentile rows.
-	warm := &nodeLoadState{}
 	for i := 0; i < 8; i++ {
 		api := newSwitchAPI("/srv/state/api.sock", tokens[i%2])
 		actor, cancel := context.WithTimeout(ctx, 35*time.Second)
-		row, e := nodeLoadRaw(actor, api, warm, time.Now(), nodeLoadArrival{Index: i, Phase: 4, Tenant: i % 2}, 2, true)
+		// Kind3 is private preflight identity only; it is never recorded as a
+		// measured result row. Join its probe before setting measuredStart.
+		row, e := nodeLoadRaw(actor, api, state, time.Now(), nodeLoadArrival{Index: i, Phase: 4, Tenant: i % 2}, 3, true)
 		cancel()
 		api.close()
 		if e != nil || row.Outcome != "completed" {
@@ -116,11 +127,6 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 				e = errors.New("preflight unexpectedly admission refused")
 			}
 			state.fail(row, e)
-			return nil, e
-		}
-	}
-	for _, key := range warm.keys {
-		if e := state.addKey(key); e != nil {
 			return nil, e
 		}
 	}
@@ -160,10 +166,6 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 			return nil, e
 		}
 	}
-	identity, e := processStart(n.process.Process.Pid)
-	if e != nil {
-		return nil, e
-	}
 	measuredStart = time.Now()
 	baseline, e := n.nodeLoadSample(ctx, measuredStart, identity)
 	if e != nil {
@@ -187,7 +189,9 @@ func (n *node) nodeLoadRun(ctx context.Context) (out map[string]any, retErr erro
 	canaryQueue := [2]chan nodeLoadArrival{make(chan nodeLoadArrival, nodeLoadQueue), make(chan nodeLoadArrival, nodeLoadQueue)}
 	fail := func(row nodeLoadRow, err error) {
 		if err != nil {
-			state.fail(row, err)
+			if state.fail(row, err) {
+				state.captureFailure(ctx)
+			}
 			nodeLoadWorkerFailure(row.Tenant, row, err)
 			cancelRun()
 		}

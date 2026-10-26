@@ -30,10 +30,12 @@ func nodeLoadRaw(ctx context.Context, api *switchAPI, state *nodeLoadState, star
 	}
 	var record sandbox.Record
 	origin := time.Now()
+	stopProbe := state.startCreateProbe(ctx, a.Tenant, key, kind, a.Index)
 	outcome, e := nodeLoadCall(ctx, api, "POST", "/v1/sandboxes", key, nodeSpec(), &record, 201)
 	row.ReplyMS = switchMS(origin)
 	row.DueReplyMS = nodeLoadMS(time.Now().Sub(due))
 	row.APIObserved = true
+	stopProbe()
 	if e != nil {
 		return row, e
 	}

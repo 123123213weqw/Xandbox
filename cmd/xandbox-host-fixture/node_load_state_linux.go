@@ -37,14 +37,18 @@ type nodeLoadInventory struct {
 	Keys    []nodeLoadKey
 }
 type nodeLoadState struct {
-	mu       sync.Mutex
-	rows     []nodeLoadRow
-	keys     []nodeLoadKey
-	seen     map[int]bool
-	seenKeys map[string]bool
-	first    error
-	firstRow *nodeLoadRow
-	samples  []nodeLoadResource
+	mu                           sync.Mutex
+	rows                         []nodeLoadRow
+	keys                         []nodeLoadKey
+	seen                         map[int]bool
+	seenKeys                     map[string]bool
+	first                        error
+	firstRow                     *nodeLoadRow
+	observe                      func(context.Context, int, string) nodeLoadObservation
+	probesStarted, probesOmitted int
+	privateDiagnostics           nodeLoadPrivateDiagnostics
+
+	samples []nodeLoadResource
 }
 
 func (s *nodeLoadState) record(row nodeLoadRow) error {
@@ -72,9 +76,9 @@ func (s *nodeLoadState) record(row nodeLoadRow) error {
 	s.rows = append(s.rows, row)
 	return nil
 }
-func (s *nodeLoadState) fail(row nodeLoadRow, e error) {
+func (s *nodeLoadState) fail(row nodeLoadRow, e error) bool {
 	if e == nil {
-		return
+		return false
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -82,7 +86,9 @@ func (s *nodeLoadState) fail(row nodeLoadRow, e error) {
 		s.first = e
 		copy := row
 		s.firstRow = &copy
+		return true
 	}
+	return false
 }
 func (s *nodeLoadState) addKey(k nodeLoadKey) error {
 	s.mu.Lock()
@@ -172,6 +178,14 @@ func (s *nodeLoadState) summary() (map[string]any, error) {
 		}
 	}
 	out := map[string]any{"planned_raw_intents": nodeLoadRawTotal, "planned_canary_intents": nodeLoadCanaryTotal, "planned_quiescent_tail": nodeLoadTailTotal, "observed_result_rows": len(s.rows), "accepted_replay_inventory_count": len(s.keys), "groups": groups, "resource_samples": append([]nodeLoadResource(nil), s.samples...), "nearest_rank_no_zero_latency_for_drops": true, "quotas_checked_only_quiescent_not_attributed_across_active_reuse": true}
+	out["slow_create_probes_started"], out["slow_create_probes_omitted"] = s.probesStarted, s.probesOmitted
+	s.privateDiagnostics.Omitted = s.probesOmitted
+	if len(s.privateDiagnostics.Slow) > 0 || s.privateDiagnostics.Failure != nil {
+		if e := nodeLoadPrivateBound(s.privateDiagnostics); e != nil {
+			return nil, e
+		}
+		out["private_load_diagnostics"] = s.privateDiagnostics
+	}
 	if s.firstRow != nil {
 		out["first_failure"] = *s.firstRow
 	}
@@ -179,8 +193,9 @@ func (s *nodeLoadState) summary() (map[string]any, error) {
 }
 
 type nodeLoadResource struct {
-	ElapsedMS                                                       float64 `json:"elapsed_ms"`
-	DurationMS                                                      float64 `json:"observation_ms"`
+	Kernel                                                          map[string]uint64 `json:"kernel"`
+	ElapsedMS                                                       float64           `json:"elapsed_ms"`
+	DurationMS                                                      float64           `json:"observation_ms"`
 	Allocated, Records                                              uint64
 	StopQueued, CleanupQueued, StopRunning, CleanupRunning          uint64
 	NodeCurrent, NodePeak, ControlCurrent, ControlPeak              uint64
@@ -246,6 +261,13 @@ func (n *node) nodeLoadSample(ctx context.Context, start time.Time, identity str
 	resp.Body.Close()
 	if e != nil || resp.StatusCode != 200 {
 		return row, errors.New("load metrics unavailable")
+	}
+	row.Kernel, e = n.nodeLoadKernelCounters(b)
+	if e != nil {
+		return row, e
+	}
+	if row.Kernel["node_pids"] > 384 || row.Kernel["control_pids"] > 128 || row.Kernel["node_pids_max_events"] != 0 || row.Kernel["control_pids_max_events"] != 0 {
+		return row, errors.New("node/control PID policy hit during non-fault load")
 	}
 	row.Records, e = nodeLoadMetric(string(b), "xandbox_records")
 	if e != nil || row.Records > 10000 {

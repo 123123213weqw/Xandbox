@@ -2,16 +2,20 @@
 import copy
 import io
 import math
+import json
+from pathlib import Path
+import stat
+import tempfile
 import unittest
 from unittest import mock
 
 from build_nested_host import init_scripts
-from kvm_nested_host import JSONSocket, nested_group_limits, node_budget_policy
+from kvm_nested_host import JSONSocket, nested_group_limits, node_budget_policy, preserve_node_load_reply
 from node_load_contract import (NODE_LOAD_MAX_FRAME, NODE_LOAD_PHASE_COUNTS,
                                 NODE_LOAD_OUTCOMES, NODE_LOAD_METRICS,
                                 NODE_LOAD_SUCCESS_FLAGS, node_load_profile,
                                 nested_node_load_resources, node_load_policy,
-                                validate_node_load_result)
+                                validate_node_load_result, NODE_LOAD_KERNEL_FIELDS, detach_node_load_private)
 
 
 class NodeLoadTests(unittest.TestCase):
@@ -42,13 +46,15 @@ class NodeLoadTests(unittest.TestCase):
                                 'QuotaSpace', 'QuotaInodes', 'QuotaNonempty', 'NodeMaxEvents',
                                 'NodeOOM', 'NodeOOMKills', 'NodeOOMGroups', 'ControlMaxEvents',
                                 'ControlOOM', 'ControlOOMKills', 'ControlOOMGroups'), 0)
-        sample.update(observation_ms=10, Allocated=2, Records=100,
+        sample.update(kernel={**dict.fromkeys(NODE_LOAD_KERNEL_FIELDS, 0), 'controller_threads': 2},
+                      observation_ms=10, Allocated=2, Records=100,
                       NodeCurrent=256 << 20, NodePeak=512 << 20,
                       ControlCurrent=128 << 20, ControlPeak=256 << 20,
                       ControllerRSS=64 << 20, ControllerFDs=10, RootFree=1 << 30)
         samples = [{**sample, 'elapsed_ms': i * 10000} for i in range(240)]
         samples.append({**sample, 'elapsed_ms': 2401000, 'Allocated': 0})
         return {**dict.fromkeys(NODE_LOAD_SUCCESS_FLAGS, True),
+                'slow_create_probes_started': 0, 'slow_create_probes_omitted': 0,
                 'planned_raw_intents': 6360, 'planned_canary_intents': 240,
                 'planned_quiescent_tail': 100, 'observed_result_rows': 6700,
                 'accepted_replay_inventory_count': 1000, 'groups': groups,
@@ -219,6 +225,147 @@ class NodeLoadTests(unittest.TestCase):
         channel.file = io.BytesIO(b' ' * (NODE_LOAD_MAX_FRAME + 1) + b'\n')
         with self.assertRaises(AssertionError):
             channel.read()
+
+    def private_observation(self):
+        return {
+            'available': True, 'elapsed_ms': 20000, 'offered_origin_known': True, 'capture_ms': 10, 'complete': True,
+            'record_found': True, 'record_state': 'CREATING', 'stream_kind': 0,
+            'intent_index': 627, 'tenant': 1, 'diagnostic_read_ok': True,
+            'ledger_scan_truncated': False, 'ledger_candidates': 3, 'ledger_inspected': 1,
+            'ledger_read_errors': 0, 'owner_present': True, 'cgroup_present': True,
+            'jail_present': True, 'workspace_present': True, 'api_socket_present': False,
+            'vsocket_present': False, 'workspace_logical_bytes': 128 << 20,
+            'last_error_private': 'private-error-sentinel',
+            'recent_errors_private': ['private-error-sentinel'],
+            'kernel': copy.deepcopy(self.good()['resource_samples'][0]['kernel']),
+            'diagnostic_sequence': 1,
+            'diagnostic_records': [{'sequence': 1, 'kind': 2, 'reason': 1,
+                                    'time_unix_ns': 1, 'dropped_before': 0}]}
+
+    def test_private_shadow_is_detached_before_any_passing_public_projection(self):
+        value = self.good()
+        value['slow_create_probes_started'] = 1
+        value['private_load_diagnostics'] = {'slow': [self.private_observation()],
+                                             'omitted': 0, 'failure': None}
+        with self.assertRaises(AssertionError):
+            validate_node_load_result(value)
+        public, sidecar = detach_node_load_private(value)
+        validate_node_load_result(public)
+        self.assertNotIn('private_load_diagnostics', public)
+        self.assertNotIn('private-error-sentinel', __import__('json').dumps(public))
+        self.assertEqual(sidecar['slow'][0]['last_error_private'], 'private-error-sentinel')
+        self.assertIn('private_load_diagnostics', value)  # no mutation/hidden loss
+        public, sidecar = detach_node_load_private(self.good())
+        self.assertIsNone(sidecar)
+        validate_node_load_result(public)
+        value = self.good()
+        value['run_passed'] = False
+        value['private_load_diagnostics'] = {'slow': None, 'omitted': 0,
+                                             'failure': self.private_observation()}
+        public, sidecar = detach_node_load_private(value)
+        self.assertEqual(sidecar['failure']['intent_index'], 627)
+        with self.assertRaises(AssertionError):
+            validate_node_load_result(public)
+
+    def test_private_capsule_limits_unknown_fields_and_false_null_aliases_rejected(self):
+        good = self.good()
+        good['slow_create_probes_started'] = 1
+        good['private_load_diagnostics'] = {'slow': [self.private_observation()],
+                                            'omitted': 0, 'failure': None}
+        for name in ('extra', 'oversized', 'boolean_count', 'too_many', 'private_field',
+                     'false_errors', 'false_records', 'bad_kind', 'bad_kernel'):
+            bad = copy.deepcopy(good)
+            cap = bad['private_load_diagnostics']
+            row = cap['slow'][0]
+            if name == 'extra':
+                cap['unreviewed'] = 'private'
+            elif name == 'oversized':
+                row['last_error_private'] = 'x' * 516
+            elif name == 'boolean_count':
+                bad['slow_create_probes_started'] = True
+            elif name == 'too_many':
+                cap['slow'] *= 9
+                bad['slow_create_probes_started'] = 9
+            elif name == 'private_field':
+                row['token'] = 'private'
+            elif name == 'false_errors':
+                row['recent_errors_private'] = False
+            elif name == 'false_records':
+                row['diagnostic_records'] = False
+            elif name == 'bad_kind':
+                row['stream_kind'] = -2
+            else:
+                row['kernel']['controller_threads'] = True
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                detach_node_load_private(bad)
+        bad = self.good()
+        bad['slow_create_probes_started'] = False
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(bad)
+        bad = copy.deepcopy(good)
+        bad['private_load_diagnostics']['slow'] = False
+        bad['slow_create_probes_started'] = 0
+        with self.assertRaises(AssertionError):
+            detach_node_load_private(bad)
+
+    def test_private_reply_survives_schema_failure_without_overwrite_or_public_leak(self):
+        value = self.good()
+        value['private_load_diagnostics'] = {'slow': None, 'omitted': 0,
+                                            'failure': self.private_observation()}
+        reply = {'ok': False, 'result': value}
+        for malformed in (False, True):
+            sample = copy.deepcopy(reply)
+            if malformed:
+                sample['result']['private_load_diagnostics']['failure']['token'] = 'private'
+            with tempfile.TemporaryDirectory() as root:
+                logs = Path(root)
+                if malformed:
+                    with self.assertRaises(AssertionError):
+                        preserve_node_load_reply(sample, logs)
+                    self.assertFalse((logs/'node-load-diagnostics-private.json').exists())
+                else:
+                    clean = preserve_node_load_reply(sample, logs)
+                    self.assertFalse(clean['ok'])
+                    self.assertNotIn('private-error-sentinel', json.dumps(clean))
+                    self.assertIn('private-error-sentinel', (logs/'node-load-diagnostics-private.json').read_text())
+                saved = logs/'node-load-wire-private.json'
+                self.assertEqual(json.loads(saved.read_text()), sample)
+                self.assertEqual(stat.S_IMODE(saved.stat().st_mode), 0o600)
+                with self.assertRaises(FileExistsError):
+                    preserve_node_load_reply(sample, logs)
+                self.assertEqual(json.loads(saved.read_text()), sample)
+
+    def test_preflight_private_time_never_impersonates_offered_window_origin(self):
+        row = self.private_observation()
+        row.update(stream_kind=3, offered_origin_known=False, elapsed_ms=0)
+        value = {**self.good(), 'slow_create_probes_started': 1,
+                 'private_load_diagnostics': {'slow': [row], 'omitted': 0, 'failure': None}}
+        public, private = detach_node_load_private(value)
+        validate_node_load_result(public)
+        self.assertEqual(private['slow'][0]['stream_kind'], 3)
+        for field, val in (('elapsed_ms', 1), ('offered_origin_known', 0), ('stream_kind', 4)):
+            bad = copy.deepcopy(value)
+            bad['private_load_diagnostics']['slow'][0][field] = val
+            with self.subTest(field=field), self.assertRaises(AssertionError):
+                detach_node_load_private(bad)
+
+    def test_kernel_series_reports_exact_device_observation_and_closed_counts(self):
+        for name, value in (('controller_threads', 0), ('controller_threads', True),
+                            ('node_pids', 385), ('control_pids', 129),
+                            ('node_pids_max_events', 1), ('prepare_failed_other', 1),
+                            ('node_io_observed', 2), ('control_io_wbytes', -1)):
+            bad = self.good()
+            bad['resource_samples'][10]['kernel'][name] = value
+            with self.subTest(name=name, value=value), self.assertRaises(AssertionError):
+                validate_node_load_result(bad)
+        bad = self.good()
+        bad['resource_samples'][10]['kernel']['node_io_wbytes'] = 9000
+        with self.assertRaises(AssertionError):
+            validate_node_load_result(bad)  # no observed row is not measured zero/9000
+        good = self.good()
+        good['resource_samples'][10]['kernel'].update(node_io_observed=1,
+                                                      node_io_wbytes=9000)
+        validate_node_load_result(good)
 
 
 if __name__ == '__main__':
