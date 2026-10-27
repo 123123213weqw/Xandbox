@@ -20,8 +20,10 @@ helper 的合成反例中，原稠密循环 oracle ×3 通过、稀疏候选 ×3
 
 ## 只提前发起已写范围的回写
 
-普通 writer 对**新目标 FD** 执行 Fstatfs：ext4 使用分段回写 sink；其他文件系统保持
-普通稠密 writer，检查失败则 fail closed。不是请求/身份/fixture 选择器，没有新 API
+普通 writer 对**新目标 FD** 执行 Fstatfs：匹配 ext 家族魔数 `0xEF53` 时使用分段
+回写 sink，其他魔数保持普通稠密 writer，检查失败则 fail closed。ext2/3/4 共用这个
+魔数，**它不是精确的 ext4 身份验证**；quota 模式仍由原 mount ID/UUID/mountinfo
+完整验证严格的 ext4 部署，不能用本 hint 选择代替。不是请求/身份/fixture 选择器，没有新 API
 或性能 override。sink 不创建 worker、队列或重试，仅保留 written/submitted 两个
 游标及首个错误；每写入约 8 MiB 后，对已经写入的连续范围发起
 `sync_file_range(..., SYNC_FILE_RANGE_WRITE)`，短读越过段边界时仍拆成每段不超过 8 MiB。
@@ -34,8 +36,9 @@ helper 的合成反例中，原稠密循环 oracle ×3 通过、稀疏候选 ×3
 参见 [Linux man-pages](https://man7.org/linux/man-pages/man2/sync_file_range.2.html)。
 
 没有修改 cgroup、IO/BPS/IOPS、project hard limit、fsize、Prepare worker、deadline、
-FIFO、身份绑定或 Stop/回收权限。只在 ext4 使用该 hint；不同文件系统/挂载模式的
+FIFO、身份绑定或 Stop/回收权限。该 hint 仅按上述魔数预选；不同文件系统/挂载模式的
 writeback 归属仍须按实际内核及部署验证，不能从函数返回推断 IO 已被正确计费或完成。
+魔数定义见 [内核 UAPI](https://github.com/torvalds/linux/blob/v6.8/include/uapi/linux/magic.h)，
 背景见 [内核 writeback 文档](https://docs.kernel.org/admin-guide/cgroup-v2.html#writeback)。
 
 ## 失败与验证边界
