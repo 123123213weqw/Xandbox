@@ -39,13 +39,34 @@ NODE_LOAD_OBSERVATION_FIELDS = {
     'api_socket_present', 'vsocket_present', 'workspace_logical_bytes',
     'last_error_private', 'recent_errors_private', 'kernel', 'capacity',
     'diagnostic_sequence', 'diagnostic_records', 'stream_kind', 'intent_index', 'tenant',
-    'diagnostic_read_ok', 'ledger_scan_truncated', 'ledger_candidates', 'ledger_inspected', 'ledger_read_errors', 'pid1_census'}
+    'diagnostic_read_ok', 'ledger_scan_truncated', 'ledger_candidates', 'ledger_inspected', 'ledger_read_errors', 'pid1_census', 'creation_activity_status', 'creation_activity'}
 NODE_LOAD_CENSUS_FIELDS = {
     'available', 'complete', 'truncated', 'capture_ms', 'candidates', 'scanned',
     'vanished', 'read_errors', 'adopted_zombies', 'managed_controller_zombie',
     'vmm_zombies', 'warden_zombies', 'jailer_zombies', 'other_zombies',
     'reserved_uid_zombies', 'node_scoped_zombies', 'deleted_scoped_zombies',
     'membership_unknown_zombies', 'node_pids', 'control_pids'}
+
+
+def validate_node_load_creation_activity(status, value):
+    # New observation subprotocol; actor version2/13 timings and all byte bounds
+    # stay unchanged. Old wire needs its frozen validator, not reinterpretation.
+    assert type(status) is str and status in ('observed', 'missing', 'disabled', 'invalid', 'malformed')
+    if status != 'observed':
+        assert value is None  # Unavailable is NOT a zero-valued observation.
+        return
+    assert type(value) is dict and set(value) == {'version', 'requests', 'phases'}
+    assert type(value['version']) is int and value['version'] == 1
+    assert type(value['requests']) is list and len(value['requests']) == 3
+    assert type(value['phases']) is list and len(value['phases']) == 3
+    for n in value['requests']:
+        integer(n, 0, 1 << 20)
+    for phases in value['phases']:
+        assert type(phases) is list and len(phases) == 15
+        for n in phases:
+            integer(n, 0, 1 << 20)
+    # Independent atomic samples can cross a transition; no cross-field
+    # request/phase inequality or per-actor causation is valid here.
 
 
 def validate_node_load_census(v, require_clean=False):
@@ -259,7 +280,8 @@ def detach_node_load_private(value):
         integer(public.get('slow_create_probes_started', 0), 0, 0)
         integer(public.get('slow_create_probes_omitted', 0), 0, 0)
         return public, None
-    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure', 'pid1_preflight_before', 'pid1_preflight_after', 'actors'}
+    assert type(private) is dict and set(private) == {'slow', 'omitted', 'failure', 'pid1_preflight_before', 'pid1_preflight_after', 'actors', 'creation_activity_version'}
+    assert type(private['creation_activity_version']) is int and private['creation_activity_version'] == 1
     assert len(json.dumps(private, ensure_ascii=True).encode()) <= 192 << 10
     validate_node_load_actors(private['actors'], public)
     slow = [] if private['slow'] is None else private['slow']
@@ -300,6 +322,7 @@ def detach_node_load_private(value):
             validate_node_load_capacity(row['capacity'])
         if row['complete']:
             assert row['capacity'] is not None
+        validate_node_load_creation_activity(row['creation_activity_status'], row['creation_activity'])
         if row['pid1_census'] is not None:
             validate_node_load_census(row['pid1_census'])
         if row['complete']:

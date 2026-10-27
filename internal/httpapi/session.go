@@ -26,7 +26,8 @@ func (a *API) openSession(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	ctx := telemetry.WithCreationTrace(r.Context())
+	ctx := a.manager.WithCreationTrace(r.Context(), telemetry.CreationSessionOpen)
+	defer telemetry.EndCreationTrace(ctx)
 	result, e := a.sessions.Open(ctx, identity(r), key, req)
 	creationTiming(w, ctx)
 	if e != nil {
@@ -45,7 +46,8 @@ func (a *API) switchSession(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	ctx := telemetry.WithCreationTrace(r.Context())
+	ctx := a.manager.WithCreationTrace(r.Context(), telemetry.CreationSessionSwitch)
+	defer telemetry.EndCreationTrace(ctx)
 	result, e := a.sessions.Switch(ctx, identity(r), r.PathValue("id"), key, req)
 	creationTiming(w, ctx)
 	if e != nil {

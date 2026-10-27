@@ -1,5 +1,5 @@
 // Package telemetry provides fixed-cardinality, process-local observations.
-// Registry writers perform only atomic additions. Request-local creation
+// Registry writers perform only atomic operations. Request-local creation
 // observations use their own bounded memory lock, never I/O or lifecycle locks.
 package telemetry
 
@@ -35,7 +35,10 @@ type histogram struct {
 	sumUS atomic.Uint64                  // Microsecond precision, not nanosecond uptime wrap.
 }
 
-type Registry struct{ operations [operationCount][2]histogram }
+type Registry struct {
+	operations [operationCount][2]histogram
+	creation   creationActivityRegistry
+}
 
 // Observe ignores invalid/negative observations. A nil registry is disabled.
 // Labels are sealed enums; no tenant, Ref, path, key, argv or error string enters it.
@@ -124,5 +127,6 @@ func (r *Registry) Render(g Gauges) []byte {
 	}{{"io", g.Diagnostics.PrepareIO}, {"quota", g.Diagnostics.PrepareQuota}, {"other", g.Diagnostics.PrepareOther}} {
 		fmt.Fprintf(&b, "xandbox_prepare_failed_total{reason=%q} %d\n", v.name, v.value)
 	}
+	r.renderCreationActivity(&b)
 	return b.Bytes()
 }

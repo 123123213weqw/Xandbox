@@ -18,7 +18,7 @@ from node_load_contract import (NODE_LOAD_MAX_FRAME, NODE_LOAD_PHASE_COUNTS,
                                 nested_node_load_resources, node_load_policy,
                                 validate_node_load_result, NODE_LOAD_KERNEL_FIELDS, detach_node_load_private,
                                 NODE_LOAD_CENSUS_FIELDS, validate_node_load_census,
-                                validate_node_load_actors, validate_node_load_capacity)
+                                validate_node_load_actors, validate_node_load_capacity, validate_node_load_creation_activity)
 from node_load_contract import NODE_LOAD_SERVER_PHASES
 
 
@@ -414,6 +414,7 @@ class NodeLoadTests(unittest.TestCase):
         after = self.private_census()
         after['init_reaper']['reaped'] = 8
         return {'slow': slow, 'omitted': 0, 'failure': failure, 'actors': self.private_actors(),
+                'creation_activity_version': 1,
                 'pid1_preflight_before': self.private_census(),
                 'pid1_preflight_after': after}
 
@@ -430,9 +431,81 @@ class NodeLoadTests(unittest.TestCase):
             'recent_errors_private': ['private-error-sentinel'],
             'kernel': copy.deepcopy(self.good()['resource_samples'][0]['kernel']),
             'capacity': {'queued': 3, 'capacity': 8, 'class_capacity': 4},
+            'creation_activity_status': 'missing', 'creation_activity': None,
             'pid1_census': self.private_census(), 'diagnostic_sequence': 1,
             'diagnostic_records': [{'sequence': 1, 'kind': 2, 'reason': 1,
                                     'time_unix_ns': 1, 'dropped_before': 0}]}
+
+    def activity_value(self):
+        return {'version': 1, 'requests': [0, 0, 1], 'phases': [[0] * 15 for _ in range(3)]}
+
+    def test_creation_activity_sealed_subprotocol_is_not_transactional(self):
+        value = self.activity_value()
+        value['requests'][2] = 0
+        value['phases'][2][13] = 1
+        validate_node_load_creation_activity('observed', value)
+        # Independent loads can cross a request/phase transition; this is NOT
+        # evidence of an impossible request or a uniquely identified actor.
+        self.assertEqual(value['phases'][2][13], 1)
+
+    def test_creation_activity_unknown_is_null_not_zero(self):
+        for status in ('missing', 'disabled', 'invalid', 'malformed'):
+            validate_node_load_creation_activity(status, None)
+            with self.assertRaises(AssertionError):
+                validate_node_load_creation_activity(status, self.activity_value())
+        with self.assertRaises(AssertionError):
+            validate_node_load_creation_activity('observed', None)
+        with self.assertRaises(AssertionError):
+            validate_node_load_creation_activity('unreviewed-secret', None)
+
+    def test_creation_activity_refuses_version_labels_dimensions_and_bad_counts(self):
+        variants = []
+        for field, replacement in (('version', True), ('version', 2), ('requests', [0, 1]),
+                                   ('phases', [[0] * 15] * 2), ('phases', [[0] * 14] * 3)):
+            value = self.activity_value(); value[field] = replacement; variants.append(value)
+        for replacement in (True, -1, 1.5, float('nan'), 1048577, '1'):
+            value = self.activity_value(); value['requests'][0] = replacement; variants.append(value)
+            value = self.activity_value(); value['phases'][0][0] = replacement; variants.append(value)
+        value = self.activity_value(); value['tenant-key'] = 'private'; variants.append(value)
+        for value in variants:
+            with self.assertRaises(AssertionError):
+                validate_node_load_creation_activity('observed', value)
+
+    def test_creation_activity_new_observation_fields_do_not_reinterpret_old_wire(self):
+        value = self.good(); value['slow_create_probes_started'] = 1
+        value['private_load_diagnostics'] = self.private_capsule(slow=[self.private_observation()])
+        detach_node_load_private(value)
+        for field in ('creation_activity_status', 'creation_activity'):
+            old = copy.deepcopy(value)
+            del old['private_load_diagnostics']['slow'][0][field]
+            with self.assertRaises(AssertionError):
+                detach_node_load_private(old)  # old wire needs its frozen parser
+
+    def test_creation_activity_version_discriminates_empty_old_capsules(self):
+        value = self.good()
+        value['private_load_diagnostics'] = self.private_capsule()
+        detach_node_load_private(value)
+        for version in (None, True, 0, 2, '1'):
+            old = copy.deepcopy(value)
+            if version is None:
+                del old['private_load_diagnostics']['creation_activity_version']
+            else:
+                old['private_load_diagnostics']['creation_activity_version'] = version
+            with self.assertRaises(AssertionError):
+                detach_node_load_private(old)
+
+    def test_creation_activity_is_detached_and_keeps_all_original_byte_bounds(self):
+        value = self.good(); value['slow_create_probes_started'] = 1
+        row = self.private_observation(); row['creation_activity_status'] = 'observed'
+        row['creation_activity'] = self.activity_value()
+        row['creation_activity']['phases'][2][14] = 1
+        value['private_load_diagnostics'] = self.private_capsule(slow=[row])
+        public, private = detach_node_load_private(value)
+        validate_node_load_result(public)
+        self.assertNotIn('creation_activity', json.dumps(public))
+        self.assertEqual(private['slow'][0]['creation_activity']['phases'][2][14], 1)
+        self.assertEqual(NODE_LOAD_MAX_FRAME, 1 << 20)
+        self.assertLessEqual(len(json.dumps(private, ensure_ascii=True).encode()), 192 << 10)
 
     def test_private_shadow_is_detached_before_any_passing_public_projection(self):
         value = self.good()

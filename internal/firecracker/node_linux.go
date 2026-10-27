@@ -13,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -322,12 +324,20 @@ func checkNodeAncestors(p NodePolicy) error {
 	}
 }
 func (n *nodeEnvelope) acquirePrepare(ctx context.Context) error {
-	if e := n.preparing.acquire(ctx); e != nil {
-		return e
+	waitActivity := telemetry.StartCreationActivity(ctx, telemetry.CreationPermitWait)
+	defer waitActivity.End()
+	acquireErr := n.preparing.acquire(ctx)
+	waitActivity.End()
+	if acquireErr != nil {
+		return acquireErr
 	}
-	if e := n.check(true); e != nil {
+	checkActivity := telemetry.StartCreationActivity(ctx, telemetry.CreationNodeCheck)
+	defer checkActivity.End()
+	checkErr := n.check(true)
+	checkActivity.End()
+	if checkErr != nil {
 		n.preparing.release()
-		return e
+		return checkErr
 	}
 	return nil
 }

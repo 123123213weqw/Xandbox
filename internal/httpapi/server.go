@@ -169,7 +169,8 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 		failure(w, sandbox.ErrInvalid)
 		return
 	}
-	ctx := telemetry.WithCreationTrace(r.Context())
+	ctx := a.manager.WithCreationTrace(r.Context(), telemetry.CreationRaw)
+	defer telemetry.EndCreationTrace(ctx)
 	record, err := a.manager.CreateScoped(ctx, identity(r), key, req)
 	creationTiming(w, ctx)
 	if err != nil {

@@ -211,43 +211,46 @@ type nodeLoadDiagnosticRow struct {
 	Dropped  uint64 `json:"dropped_before"`
 }
 type nodeLoadObservation struct {
-	StreamKind            int                     `json:"stream_kind"`
-	IntentIndex           int                     `json:"intent_index"`
-	Tenant                int                     `json:"tenant"`
-	DiagnosticReadOK      bool                    `json:"diagnostic_read_ok"`
-	LedgerScanTruncated   bool                    `json:"ledger_scan_truncated"`
-	LedgerCandidates      int                     `json:"ledger_candidates"`
-	LedgerInspected       int                     `json:"ledger_inspected"`
-	LedgerReadErrors      int                     `json:"ledger_read_errors"`
-	Available             bool                    `json:"available"`
-	ElapsedMS             float64                 `json:"elapsed_ms"`
-	OfferedOriginKnown    bool                    `json:"offered_origin_known"`
-	CaptureMS             float64                 `json:"capture_ms"`
-	Complete              bool                    `json:"complete"`
-	RecordFound           bool                    `json:"record_found"`
-	RecordState           string                  `json:"record_state"`
-	Owner                 bool                    `json:"owner_present"`
-	Group                 bool                    `json:"cgroup_present"`
-	Jail                  bool                    `json:"jail_present"`
-	Workspace             bool                    `json:"workspace_present"`
-	APISocket             bool                    `json:"api_socket_present"`
-	VSocket               bool                    `json:"vsocket_present"`
-	WorkspaceLogicalBytes int64                   `json:"workspace_logical_bytes"`
-	LastError             string                  `json:"last_error_private"`
-	RecentErrors          []string                `json:"recent_errors_private"`
-	Kernel                map[string]uint64       `json:"kernel"`
-	Capacity              map[string]uint64       `json:"capacity"`
-	DiagnosticSequence    uint64                  `json:"diagnostic_sequence"`
-	DiagnosticRecords     []nodeLoadDiagnosticRow `json:"diagnostic_records"`
-	PID1                  *nodeLoadCensus         `json:"pid1_census"`
+	StreamKind             int                       `json:"stream_kind"`
+	IntentIndex            int                       `json:"intent_index"`
+	Tenant                 int                       `json:"tenant"`
+	DiagnosticReadOK       bool                      `json:"diagnostic_read_ok"`
+	LedgerScanTruncated    bool                      `json:"ledger_scan_truncated"`
+	LedgerCandidates       int                       `json:"ledger_candidates"`
+	LedgerInspected        int                       `json:"ledger_inspected"`
+	LedgerReadErrors       int                       `json:"ledger_read_errors"`
+	Available              bool                      `json:"available"`
+	ElapsedMS              float64                   `json:"elapsed_ms"`
+	OfferedOriginKnown     bool                      `json:"offered_origin_known"`
+	CaptureMS              float64                   `json:"capture_ms"`
+	Complete               bool                      `json:"complete"`
+	RecordFound            bool                      `json:"record_found"`
+	RecordState            string                    `json:"record_state"`
+	Owner                  bool                      `json:"owner_present"`
+	Group                  bool                      `json:"cgroup_present"`
+	Jail                   bool                      `json:"jail_present"`
+	Workspace              bool                      `json:"workspace_present"`
+	APISocket              bool                      `json:"api_socket_present"`
+	VSocket                bool                      `json:"vsocket_present"`
+	WorkspaceLogicalBytes  int64                     `json:"workspace_logical_bytes"`
+	LastError              string                    `json:"last_error_private"`
+	RecentErrors           []string                  `json:"recent_errors_private"`
+	Kernel                 map[string]uint64         `json:"kernel"`
+	Capacity               map[string]uint64         `json:"capacity"`
+	DiagnosticSequence     uint64                    `json:"diagnostic_sequence"`
+	DiagnosticRecords      []nodeLoadDiagnosticRow   `json:"diagnostic_records"`
+	PID1                   *nodeLoadCensus           `json:"pid1_census"`
+	CreationActivityStatus string                    `json:"creation_activity_status"`
+	CreationActivity       *nodeLoadCreationActivity `json:"creation_activity"`
 }
 type nodeLoadPrivateDiagnostics struct {
-	Actors          nodeLoadActorsSnapshot `json:"actors"`
-	Slow            []nodeLoadObservation  `json:"slow"`
-	Omitted         int                    `json:"omitted"`
-	Failure         *nodeLoadObservation   `json:"failure"`
-	PreflightBefore *nodeLoadCensus        `json:"pid1_preflight_before"`
-	PreflightAfter  *nodeLoadCensus        `json:"pid1_preflight_after"`
+	CreationActivityVersion int                    `json:"creation_activity_version"`
+	Actors                  nodeLoadActorsSnapshot `json:"actors"`
+	Slow                    []nodeLoadObservation  `json:"slow"`
+	Omitted                 int                    `json:"omitted"`
+	Failure                 *nodeLoadObservation   `json:"failure"`
+	PreflightBefore         *nodeLoadCensus        `json:"pid1_preflight_before"`
+	PreflightAfter          *nodeLoadCensus        `json:"pid1_preflight_after"`
 }
 
 func nodeLoadClip(s string) string {
@@ -258,7 +261,7 @@ func nodeLoadClip(s string) string {
 	return strings.ToValidUTF8(s, "?")
 }
 func (n *node) nodeLoadObserve(ctx context.Context, tenant int, key, identity string, start time.Time) nodeLoadObservation {
-	out := nodeLoadObservation{StreamKind: -1, IntentIndex: -1, Tenant: tenant, OfferedOriginKnown: !start.IsZero()}
+	out := nodeLoadObservation{StreamKind: -1, IntentIndex: -1, Tenant: tenant, OfferedOriginKnown: !start.IsZero(), CreationActivityStatus: "missing"}
 	if out.OfferedOriginKnown {
 		out.ElapsedMS = switchMS(start)
 	}
@@ -386,6 +389,7 @@ func (n *node) nodeLoadObserve(ctx context.Context, tenant int, key, identity st
 	if e == nil && resp.StatusCode == 200 {
 		out.Kernel, _ = n.nodeLoadKernelCounters(b)
 		out.Capacity, _ = nodeLoadCapacityMetrics(b)
+		out.CreationActivityStatus, out.CreationActivity = nodeLoadReadCreationActivity(b)
 	}
 	census := n.nodeLoadPID1Census(ctx, identity)
 	out.PID1 = &census
@@ -422,6 +426,7 @@ func (s *nodeLoadState) nodeLoadProbe(ctx context.Context, trigger <-chan time.T
 		s.mu.Unlock()
 		bounded, stop := context.WithTimeout(watch, nodeLoadProbeBudget)
 		out := observe(bounded, tenant, key)
+		out.CreationActivity = nodeLoadCloneCreationActivity(out.CreationActivity)
 		out.StreamKind, out.IntentIndex, out.Tenant = kind, index, tenant
 		stop()
 		s.mu.Lock()
@@ -451,6 +456,7 @@ func (s *nodeLoadState) captureFailure(ctx context.Context) {
 	}
 	bounded, cancel := context.WithTimeout(ctx, nodeLoadProbeBudget)
 	out := observe(bounded, -1, "")
+	out.CreationActivity = nodeLoadCloneCreationActivity(out.CreationActivity)
 	cancel()
 	s.mu.Lock()
 	if s.firstRow != nil {

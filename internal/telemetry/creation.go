@@ -44,8 +44,12 @@ type creationObservation struct {
 	total time.Duration
 }
 type creationTrace struct {
-	mu     sync.Mutex // Independent, bounded memory only; never a lifecycle lock.
-	values [creationPhaseCount]creationObservation
+	mu               sync.Mutex // Independent, bounded memory only; never a lifecycle lock.
+	values           [creationPhaseCount]creationObservation
+	activityRegistry *Registry
+	kind             CreationKind
+	requestCounter   *atomic.Int64
+	finished         atomic.Bool
 }
 
 // WithCreationTrace starts a fresh, fixed-size request-local observation. It
@@ -68,10 +72,11 @@ func CarryCreationTrace(destination, source context.Context) context.Context {
 // CreationSpan has one fixed phase, no payload and no callbacks. End is safe to
 // defer AND call at the boundary; it records at most once, even concurrently.
 type CreationSpan struct {
-	trace *creationTrace
-	phase CreationPhase
-	start time.Time
-	ended atomic.Bool
+	trace           *creationTrace
+	phase           CreationPhase
+	start           time.Time
+	ended           atomic.Bool
+	activityCounter *atomic.Int64
 }
 
 // StartCreation is allocation-free when no request observer is installed.
@@ -81,7 +86,8 @@ func StartCreation(ctx context.Context, phase CreationPhase) *CreationSpan {
 	if !ok || trace == nil || phase >= creationPhaseCount {
 		return nil
 	}
-	return &CreationSpan{trace: trace, phase: phase, start: time.Now()}
+	counter := startCreationActivityCounter(trace, CreationActivityPhase(phase))
+	return &CreationSpan{trace: trace, phase: phase, start: time.Now(), activityCounter: counter}
 }
 
 func (span *CreationSpan) End() {
@@ -89,6 +95,7 @@ func (span *CreationSpan) End() {
 		return
 	}
 	elapsed := time.Since(span.start) // Monotonic duration, not a wall-clock delta.
+	span.trace.activityRegistry.endCreationCounter(span.activityCounter)
 	if elapsed < 0 {
 		return
 	}
