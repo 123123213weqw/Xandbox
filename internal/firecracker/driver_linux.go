@@ -483,7 +483,7 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		}
 		initializationHash = health.InitializationHash
 	} else {
-		bootArgs := "console=ttyS0 reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.id=" + ref.ID + " xandbox.generation=" + ref.Generation
+		bootArgs := "console=ttyS0 quiet reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.id=" + ref.ID + " xandbox.generation=" + ref.Generation
 		for _, put := range []struct {
 			path string
 			body any
