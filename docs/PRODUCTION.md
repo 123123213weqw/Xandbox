@@ -5,6 +5,12 @@
 
 最后更新：2026-10-27。
 
+最新[第十一批原始负载仍失败](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)：
+冻结 f286/DA42 的完整软件/CI、基线/OOM各两启动有限正例已独立核对，但原35秒
+actor 在 phase1 耗尽；未完成完整40分钟/tail/checkpoint/原盘cold。全部55个实际
+代际/33个scope的声明资源只读确认不存在，无补清理；这不使失败负载合格。
+后续[quiet 冷启动候选](QUIET_COLD_BOOT.md)仍待自己的完整验收，不改变下方生产里程碑。
+
 另有[有界活动创建观测候选](CREATION_ACTIVITY.md)：固定 3 类/15 阶段的原子 gauges、
 断连后真实返回边界，以及原 metrics 读取内的版本化私有捕获。它改变普通 ELF，
 不是性能修复；需新程序自身完整软件/原生/CI/KVM 长测与受影响矩阵验收。

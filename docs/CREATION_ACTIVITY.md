@@ -1,5 +1,11 @@
 # 有界活动创建观测（候选，不是超时修复）
 
+后续 f286/DA42 的[第十一批原始负载](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)
+也未通过。活动 capsule version1 的 8slow+1failure 均严格观测成功；失败快照中
+switch 类别的 request/CoreAdmission 计数各1，但独立聚合数仍不能标识失败 actor、
+其阶段时长或唯一根因。新[quiet 冷启动候选](QUIET_COLD_BOOT.md)改变普通 ELF，
+不继承这些旧版本的软件、CI 或硬件正例。
+
 旧 `31ae3175…` 的[原始第十批长测](validation/kvm-open-arrival-attempt10-failed-2026-10-27.json)
 仍失败。失败 switch 没有响应，不能从缺席的 Server-Timing 推断内部阶段或零耗时。
 本候选为普通程序增加**当前活动**的固定基数 gauges，不是调度/性能改动；新 ELF

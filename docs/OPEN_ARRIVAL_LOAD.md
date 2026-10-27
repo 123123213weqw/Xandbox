@@ -1,6 +1,17 @@
 # 固定到达率双租户持续负载门槛（候选，未验收）
 
-## 最新原始结果：第十批仍失败
+## 最新原始结果：第十一批仍失败
+
+冻结 f286/DA42 的[原始第十一批](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)
+在 offered677280.273ms、canary64/phase1、原35秒 actor 处失败；仅167行/68周期样本/
+156项内存 inventory，未完成完整40分钟、100tail、同步 checkpoint/原盘 cold。
+基线/OOM各两启动独立通过；包括全部旧失败在内的55个实际代际/33个scope的声明资源
+只读确认不存在，无补清理。新活动 capsule1 的8slow+1failure均已严格观测，但类别
+计数不标识失败 actor，node-check0也不证明该阶段不存在或很快。失败 switch 没有
+响应头，其内部请求局部阶段仍未知。后续[quiet 参数候选](QUIET_COLD_BOOT.md)不是
+已证实修复，原全部参数与公平性门槛不变。
+
+## 前序原始结果：第十批仍失败
 
 冻结源 `65ddde80f851966d13d0f6c1a2d2c1bd72571c5b` / 普通实现 `49f7651` / daemon
 `31ae3175…` 的原始任务已退出1，未重跑。基线/OOM各两次真实KVM启动通过并独立核对；

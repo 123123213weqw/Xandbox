@@ -1308,5 +1308,21 @@
     "report": "docs/validation/creation-activity-mechanisms-2026-10-27.json",
     "scope": "15 focused parents each100 race/CGO0 plus full153 fixture each3 both and rootPython308 zero skips; NOT full43/all24/CI/KVM/load qualification",
     "production_ready": false
+  },
+  "open_arrival_attempt11_failure": {
+    "source_revision": "f286dc2e7cf0a4113fd823c9bf0aa405a54010ed",
+    "ordinary_daemon_sha256": "da42c6b260a8db3aad841cbc141fd7a46730507051b6cca3fad1185f80d7d1eb",
+    "report": "docs/validation/kvm-open-arrival-attempt11-failed-2026-10-27.json",
+    "status": "failed_original_not_rerun",
+    "production_ready": false,
+    "scope": "Baseline/OOM each2 real KVM boots independently passed. Full original load failed at canary64/phase1/35s actor;167 rows/68 samples/156 memory inventory, no40m/tail/checkpoint/cold. All55 actual generations33scopes declared paths read-only absent. Class activity observed, not failed actor identity/duration/root cause."
+  },
+  "quiet_cold_boot_candidate": {
+    "source_revision": "6ea28eaf491f2863884db176af94936544620f37",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/quiet-console-mechanisms-2026-10-27.json",
+    "status": "limited_software_mechanisms_only",
+    "scope": "18 parents each100 race/CGO0, fullfixture153 each3 both zero skips/fixed9 ELF active, rootPython312 zero/vet/mod,5native==cross,35raw; NOT full43/all24/newCI/VM/latency qualification. All original full Goal gates remain.",
+    "production_ready": false
   }
 }
