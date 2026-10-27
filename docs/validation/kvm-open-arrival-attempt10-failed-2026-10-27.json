@@ -1,0 +1,218 @@
+{
+  "version": 1,
+  "validation_date": "2026-10-27",
+  "status": "FAILED_ORIGINAL_NOT_RERUN",
+  "source_revision": "65ddde80f851966d13d0f6c1a2d2c1bd72571c5b",
+  "production_code_commit": "49f7651a1081740a4e9825d0a9eb80e44b54d123",
+  "ordinary_daemon_sha256": "31ae31757c4211e07de1865e243cf8d188772dcc33c3d4323d6361a9250f931a",
+  "production_ready": false,
+  "goal_complete": false,
+  "full_production_acceptance": false,
+  "software_scope": {
+    "linux_amd64_toolchain": "go1.27.3",
+    "frozen_source_files": 1205,
+    "native_artifacts_equal_to_independent_cross": 24,
+    "default_packages_race_and_cgo0_each_count": 3,
+    "default_linux_packages": 43,
+    "root_python_tests": 302,
+    "root_python_skipped": 0,
+    "default_expected_named_skips_not_kvm_evidence": {
+      "default-race3.log": {
+        "TestAssetCopyProductionWrapperRoot": 3,
+        "TestCatalogProcessHelper": 3,
+        "TestKVMInitializationFault": 3,
+        "TestKVMQueueIsolation": 3,
+        "TestKVMPristineBootstrapSnapshot": 3,
+        "TestKVMFaultFixtureSnapshotExport": 3,
+        "TestRootRejectsForeignDirectoriesAndFiles": 3,
+        "TestKVMSessionCommitIOIsolation": 3,
+        "TestQuotaMutationFilterIsInheritedAcrossExec": 3
+      },
+      "default-cgo0_3.log": {
+        "TestAssetCopyProductionWrapperRoot": 3,
+        "TestCatalogProcessHelper": 3,
+        "TestKVMInitializationFault": 3,
+        "TestKVMQueueIsolation": 3,
+        "TestKVMPristineBootstrapSnapshot": 3,
+        "TestKVMFaultFixtureSnapshotExport": 3,
+        "TestRootRejectsForeignDirectoriesAndFiles": 3,
+        "TestKVMSessionCommitIOIsolation": 3
+      }
+    },
+    "current_source_ci_run_ids": [
+      40433276573,
+      40433271042
+    ],
+    "ci_attempt": 1,
+    "ci_jobs_each_success": 6,
+    "independent_metadata_and_job_step_readback_verified": true
+  },
+  "actual_named_cases": {
+    "baseline": {
+      "passed": true,
+      "l1_boots": 2,
+      "independently_audited_owned_paths_absent": true
+    },
+    "oom": {
+      "passed": true,
+      "l1_boots": 2,
+      "independently_audited_owned_paths_absent": true
+    },
+    "load": {
+      "passed": false,
+      "l1_boots": 1,
+      "independently_audited_owned_paths_absent": true
+    }
+  },
+  "original_scope": {
+    "offered_window_ms": 2400000,
+    "raw_intents": 6360,
+    "canary_intents": 240,
+    "quiescent_tail_intents": 100,
+    "actor_budget_ms": 35000,
+    "node_instances": 4,
+    "prepare_workers": 1,
+    "resource_profile_allowlist_fairness_and_order_unchanged": true
+  },
+  "original_load": {
+    "load_window_completed": false,
+    "observed_result_rows": 167,
+    "resource_samples": 68,
+    "accepted_replay_inventory_count_not_synced_cold_inventory": 156,
+    "first_failure": {
+      "Kind": 1,
+      "Index": 64,
+      "Phase": 1,
+      "Tenant": 0,
+      "Outcome": "failed",
+      "Stage": "canary_switch",
+      "APIObserved": true,
+      "QueueMS": 2682.617064,
+      "ReplyMS": 12658.552,
+      "DueReplyMS": 37683.404908,
+      "TotalMS": 35000.789,
+      "FinishedMS": 677683.406
+    },
+    "failed_actor_phase_rows": [
+      {
+        "phase": "canary_rotate_close",
+        "begin_ms": 0.006091,
+        "end_ms": 137.487395,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "canary_open_http",
+        "begin_ms": 137.499726,
+        "end_ms": 21857.424458,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "canary_open_verify",
+        "begin_ms": 21857.441745,
+        "end_ms": 21858.949909,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "canary_open_fresh",
+        "begin_ms": 21858.952029,
+        "end_ms": 21882.645283,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "canary_open_work",
+        "begin_ms": 21882.655916,
+        "end_ms": 22175.881002,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "busy_prepare",
+        "begin_ms": 22175.888582,
+        "end_ms": 22198.553062,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "busy_start",
+        "begin_ms": 22198.556923,
+        "end_ms": 22199.174821,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "busy_progress",
+        "begin_ms": 22199.177639,
+        "end_ms": 22341.788871,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "busy_verify",
+        "begin_ms": 22341.791599,
+        "end_ms": 22342.227723,
+        "ended": true,
+        "outcome": "ok"
+      },
+      {
+        "phase": "canary_switch_http",
+        "begin_ms": 22342.263195,
+        "end_ms": 35000.787206,
+        "ended": true,
+        "outcome": "deadline"
+      }
+    ],
+    "completed_open_http_ms": 21719.924732,
+    "completed_open_server_spans_ms": {
+      "xa_core_admission": 9372.945,
+      "xa_core_owner_commit": 3.042,
+      "xa_core_driver": 12328.328,
+      "xa_core_ready_commit": 4.77,
+      "xa_driver_slot": 9221.217,
+      "xa_driver_owner": 3.537,
+      "xa_driver_quota_reserve": 241.549,
+      "xa_driver_copy": 895.781,
+      "xa_driver_quota_verify": 0.875,
+      "xa_driver_activation": 1961.239,
+      "xa_session_intent_commit": 3.635,
+      "xa_session_prepared_commit": 2.763,
+      "xa_session_active_commit": 3.393
+    },
+    "core_admission_plus_composite_acquirePrepare_ms": 18594.162,
+    "core_admission_plus_composite_acquirePrepare_fraction": 0.8560877732971695,
+    "these_composite_spans_are_not_pure_queue_wait": true,
+    "separate_permit_wait_and_node_check_ms": null,
+    "failed_switch_response_observed": false,
+    "failed_switch_internal_stage": null,
+    "null_means_unknown_not_zero": true,
+    "tail_checkpoint_original_disk_cold_completed": false,
+    "writeback_hint_not_a_proven_fix_or_causal_speedup": true,
+    "first_failure_generic_reply_column_is_not_stop_confirmation": true,
+    "unobserved_first_command_stop_empty_namespace_full_quota_revoke_ms": null,
+    "first_failure_APIObserved_is_actor_activity_not_switch_response": true
+  },
+  "cleanup": {
+    "current_original_exit_code": 1,
+    "original_wrapper_and_runner_gone": true,
+    "current_actual_outer_generations": 5,
+    "current_owned_scopes": 3,
+    "all_nine_prior_failed_original_attempts_retained": true,
+    "global_actual_outer_generations": 50,
+    "global_owned_scopes": 30,
+    "all_declared_paths_independently_read_only_confirmed_absent": true,
+    "supplemental_cleanup_performed": false,
+    "outer_oom_and_pids_limit_event_sets_zero": true
+  },
+  "evidence_boundary": {
+    "report_is_sanitized_failure_projection_not_raw_or_kvm_qualification": true,
+    "private_original_wire_partial_capsule_and_receipts_retained_not_published": true,
+    "original_load_report_sha256": "9dee66e85e31ba3c0838ab9bebd45c214eede6b27608840240407d0815828d0b",
+    "global_independent_audit_sha256": "cf8e80544059c8f23b2c4befd7336ed7d326a3a7dfab5a4e843132d183df0e52",
+    "no_unchanged_failed_binary_rerun": true,
+    "unchanged_program_still_requires_affected_runtime_and_systemd_matrices": true,
+    "full_production_goal_items_remain_incomplete": true
+  }
+}

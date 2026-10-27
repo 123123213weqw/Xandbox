@@ -1292,5 +1292,14 @@
     "hardware_prepare_permit_trace_claim": false,
     "offline_builder_outside_NodeRoot_not_a_physical_node_pressure_proof": true,
     "scope": "TEST external consumer in owned L1, not normal admitted usage/enforced external budget/nodewide quota. Separate exact guards, ordinary control-placement daemon+admin, low-free originaldisk cold, no owner/guest restoration, fresh2guest/pinsGC/q0/reaped. Not fullN4 RAM/OOM, actual blocked-copy permit trace, uniqueRAM, longduration/fairness/operator/SLO or complete production."
+  },
+  "open_arrival_attempt10_failed": {
+    "validated_on": "2026-10-27",
+    "source_revision": "65ddde80f851966d13d0f6c1a2d2c1bd72571c5b",
+    "ordinary_daemon_sha256": "31ae31757c4211e07de1865e243cf8d188772dcc33c3d4323d6361a9250f931a",
+    "report": "docs/validation/kvm-open-arrival-attempt10-failed-2026-10-27.json",
+    "status": "failed_original_not_rerun",
+    "production_ready": false,
+    "scope": "Baseline/OOM each two KVM boots independently verified. Original fixed 40-minute load failed at canary64/phase1/35s actor; only167 rows/68 periodic samples, no tail/checkpoint/cold. Composite creation spans are not pure wait. Global50 actual generations/30scopes read-only absent; no supplemental cleanup. All original full Goal gates remain."
   }
 }

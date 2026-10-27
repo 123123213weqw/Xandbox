@@ -57,12 +57,21 @@ Linux test 执行真实 syscall 和 FD/filesystem 选择检查；root wrapper �
 
 ## 仍未证明提速或生产就绪
 
-e0ea5a3 的第九次原始 KVM 长测仍失败：已完成 open 的准入 + prepare slot 共约
-18.526 秒，占约 83%；直接 copy 约 0.866 秒不是主导阶段，失败 switch 的内部阶段
-仍未知。提前回写可能改变后续 filesystem-wide barrier 的等待分布，但这只是待验证
-的耦合假设，**不宣称修复原 35 秒 actor 超时、提升吞吐或获得时延 SLO**。
+第十批原始 KVM（冻结源 `65ddde8`，普通实现 `49f7651`，daemon `31ae3175…`）
+的完整 Linux 软件和 CI20 已独立核对通过，基线/OOM 也各两启动通过，但固定负载
+在 offered clock 677683.406 ms、第64个 canary/相位1 的 `canary_switch` 耗尽原35秒
+actor预算。仅167行/68周期样本，无完整40分钟、100tail、同步checkpoint/原盘cold。
+[公开脱敏失败投影](validation/kvm-open-arrival-attempt10-failed-2026-10-27.json)不是合格证书。
 
-改变后的普通 ELF 需自身的探针校准、完整软件/原生 Linux/CI 及 KVM 验收；旧 e0、
-dfc 和其他程序的证书不代签。保留完整 [配额](PROJECT_QUOTA.md)、[存储故障](STORAGE.md)、
-40 分钟/6360 raw/240 canary/100 tail、checkpoint/原盘 cold、N4/prepare1、历史失败
-及完整生产 Goal；不据局部软件正例认定生产就绪。
+该次已完成 open HTTP 约21.720秒：Core准入与node acquirePrepare合成边界共18.594秒，
+约85.6%；后者含permit后的节点复核，**不是已量出的纯排队时间**。直接copy约0.896秒、
+activation约1.961秒；失败switch无响应、内部阶段未知，详见[观测边界](CREATION_TIMING.md)。
+因此提前回写未满足原长测门槛，不宣称修复35秒超时、吞吐提升或时延SLO。第九批旧 e0
+结果仍按旧冻结来源保留；跨运行差值不是受控因果证据。
+
+全部十次原始失败保留；实际receipt导出的累计50代际/30scope已独立只读确认无残留，
+无补充清理，不把计划51代际冒充实际。软件、清理与两项有限正例都不能代替长测或完整
+运行矩阵。新程序仍需受影响的systemd、16MiB复制边界、18秒取消、quota/errno/cold等
+原门槛；保持 [配额](PROJECT_QUOTA.md)、[存储故障](STORAGE.md)、40分钟/6360raw/
+240canary/100tail、checkpoint/原盘cold、N4/prepare1、所有失败与完整生产Goal。
+不对同一失败二进制重跑碰运气，不放宽预算、allowlist或公平性。

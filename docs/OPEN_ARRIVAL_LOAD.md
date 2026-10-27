@@ -1,5 +1,19 @@
 # 固定到达率双租户持续负载门槛（候选，未验收）
 
+## 最新原始结果：第十批仍失败
+
+冻结源 `65ddde80f851966d13d0f6c1a2d2c1bd72571c5b` / 普通实现 `49f7651` / daemon
+`31ae3175…` 的原始任务已退出1，未重跑。基线/OOM各两次真实KVM启动通过并独立核对；
+load一次启动，在offered clock **677683.406ms**、canary64/相位1的switch耗尽原35秒actor。
+仅167行、68周期样本、156个仅内存accepted inventory，无完整40分钟、100tail、同步
+checkpoint/原盘cold。包含九次旧失败，实际50代际/30scope已只读确认消失，无补充清理。
+见[脱敏原始失败投影](validation/kvm-open-arrival-attempt10-failed-2026-10-27.json)。
+
+完成的open HTTP为21.720秒；Core准入与node acquirePrepare合成阶段共约85.6%，
+**不是85.6%纯排队**，后者还含节点资源复核。失败switch无响应/内部阶段未知，详见
+[创建观测边界](CREATION_TIMING.md)。稠密复制/回写hint并未通过本门槛；没有缩短负载、
+放宽预算、改allowlist/FIFO或以软件/回收通过替代失败。以下旧结果按各自来源保留。
+
 新的普通路径稠密复制/分段回写候选见 [ASSET_COPY.md](ASSET_COPY.md)，不改变本实验负载、
 资源或验收标准；此前所有原始失败保留，不能将旧报告作为新 ELF 的合格证据。
 

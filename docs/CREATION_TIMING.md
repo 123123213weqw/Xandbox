@@ -1,10 +1,27 @@
-# 有界创建阶段观测（开发候选，未实机验收）
+# 有界创建阶段观测（开发候选，完整负载未通过）
 
 后续普通链路的稠密复制/分段回写候选见 [ASSET_COPY.md](ASSET_COPY.md)；无条件
 零写入消除已撤回，当前也不是已证实的超时修复。下文保留阶段设计及其历史来源，不为后续普通 ELF 代签。
 
 **本候选没有完整 Linux/KVM、负载或 cold 合格证据。** 这是普通路径的可观测性改动，
 不是调度/性能修复，改变后的普通 ELF 不能继承旧 `c2e7ffed…` 的运行报告。
+
+## 当前 31ae 程序的失败样本与解释边界
+
+冻结源 `65ddde8`（普通实现 `49f7651`）的完整 Linux 软件/CI 已通过，真实基线与 OOM
+各两启动有限正例已独立核对；第十批固定负载仍失败。公开脱敏投影见
+[原始失败报告](validation/kvm-open-arrival-attempt10-failed-2026-10-27.json)。
+
+该次已完成 open HTTP 21.720 秒，`xa_core_admission` 9.373 秒、`xa_driver_slot`
+9.221 秒，合计约 85.6%。**两者都是复合边界，不能解释成 85.6% 纯排队**：
+前者包含锁/检查等；后者的普通 `nodeEnvelope.acquirePrepare` 在获得 permit 后还执行
+`n.check(true)`，校验节点/祖先 cgroup、FD/挂载、控制器位置、CPU/内存与磁盘余量。
+本样本未分别计量 permit 等待及这段复核。早期“slot 等待”措辞不能代替这项缺失测量。
+
+随后 switch 在共同 35 秒预算剩余约 12.659 秒耗尽；没有响应/头，其内部阶段未知而非零。
+不能把成功 open 的分解转嫁给失败 switch，也不能由两个独立原始运行的时差宣称因果提速。
+原 13 槽位、schema2、192 KiB/1 MiB、调用/预算/验收全部不变；本次只修正解释，
+没有修改或重签旧 raw，也未把复合阶段改名为某个已证明根因。
 
 ## 动机与历史失败
 
@@ -36,7 +53,7 @@ JSON body、鉴权、错误码与操作返回值不变；不反射输入头、�
 | `xa_core_admission` | Core 准入循环：锁/检查、容量或幂等 prepared 等待；不是纯队列等待 |
 | `xa_core_owner_commit` / `xa_core_ready_commit` | ownership Save / READY saveLocked |
 | `xa_core_driver` | driver Prepare 整体调用 |
-| `xa_driver_slot` | node acquirePrepare |
+| `xa_driver_slot` | node acquirePrepare：permit acquire **及其后的节点复核**，不是纯队列等待 |
 | `xa_driver_owner` | registry reserveContext，含自身等待/提交 |
 | `xa_driver_quota_reserve` | quota reserve，含原 markQuotaAttempt 回调 |
 | `xa_driver_copy` | 原资产复制循环；错误返回也结束观测 |
