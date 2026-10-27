@@ -810,34 +810,18 @@ func copyAsset(ctx context.Context, asset Asset, path string) error {
 		return err
 	}
 	defer dest.Close()
-	h := sha256.New()
-	buf := make([]byte, 128<<10)
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		n, err := source.Read(buf)
-		if n > 0 {
-			if _, err := io.MultiWriter(dest, h).Write(buf[:n]); err != nil {
-				return err
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-	}
-	if hex.EncodeToString(h.Sum(nil)) != asset.SHA256 {
-		return errors.New("staged image digest mismatch")
+	if err := copyAssetBytes(ctx, source, dest, asset.SHA256); err != nil {
+		return err
 	}
 	// The reserved VMM UID must read cold kernel/initrd regardless of umask.
 	// Workspace callers subsequently restrict and chown their private copy.
 	if err := dest.Chmod(0444); err != nil {
 		return err
 	}
-	return dest.Close()
+	if err := dest.Close(); err != nil {
+		return err
+	}
+	return ctx.Err()
 }
 
 func hasWords(s string, words ...string) bool {
