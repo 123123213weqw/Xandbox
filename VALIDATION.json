@@ -1301,5 +1301,12 @@
     "status": "failed_original_not_rerun",
     "production_ready": false,
     "scope": "Baseline/OOM each two KVM boots independently verified. Original fixed 40-minute load failed at canary64/phase1/35s actor; only167 rows/68 periodic samples, no tail/checkpoint/cold. Composite creation spans are not pure wait. Global50 actual generations/30scopes read-only absent; no supplemental cleanup. All original full Goal gates remain."
+  },
+  "creation_activity_software_candidate": {
+    "source_revision": "59205036eb6636c4124472526384215081da6cdf",
+    "ordinary_daemon_sha256": "da42c6b260a8db3aad841cbc141fd7a46730507051b6cca3fad1185f80d7d1eb",
+    "report": "docs/validation/creation-activity-mechanisms-2026-10-27.json",
+    "scope": "15 focused parents each100 race/CGO0 plus full153 fixture each3 both and rootPython308 zero skips; NOT full43/all24/CI/KVM/load qualification",
+    "production_ready": false
   }
 }

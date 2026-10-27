@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "date": "2026-10-27",
+  "status": "LIMITED_SOFTWARE_MECHANISMS_PASSED_NOT_KVM",
+  "source_revision": "59205036eb6636c4124472526384215081da6cdf",
+  "source_files": 1214,
+  "source_archive_sha256": "9de27b73dcd42ac4f0c93e24ee3d5a52f886e804ed5901590f9e654e87678029",
+  "ordinary_daemon_sha256": "da42c6b260a8db3aad841cbc141fd7a46730507051b6cca3fad1185f80d7d1eb",
+  "toolchain": "go1.27.3 linux/amd64",
+  "selected_mechanisms": {
+    "telemetry_parent_tests": 8,
+    "real_http_disconnect_parent_tests": 1,
+    "real_http_disconnect_kinds": 3,
+    "node_gate_cancel_check_failure_parent_tests": 1,
+    "fixture_parser_and_wiring_parent_tests": 5,
+    "each_parent_race_count": 100,
+    "each_parent_cgo_free_count": 100,
+    "skipped": 0,
+    "native_cgo_free_artifacts_equal_to_independent_cross": 5,
+    "compiled_old_http_and_node_behavior_negative_each_build_count": 3,
+    "physical_old_source_guards_negative_each_build_count": 3
+  },
+  "fixture_full_package": {
+    "parent_tests": 153,
+    "race_count_each": 3,
+    "cgo_free_count_each": 3,
+    "skipped": 0,
+    "fixed_nine_elf_symbol_instruction_checks_active": true,
+    "live_instruction_probe_or_vm_claim": false
+  },
+  "root_python": {
+    "tests": 308,
+    "skipped": 0
+  },
+  "vet_all_and_tagged_fixture_and_mod_verify": "passed",
+  "original_wrapper_and_runner_gone": true,
+  "independently_rehashed_private_raw_files": 33,
+  "empty_legacy_capsule_regression": {
+    "initial_same_frozen_payload_missed_rejection_count": 3,
+    "same_payload_rejected_count_after_fix": 3,
+    "mandatory_capsule_creation_activity_version": 1,
+    "actor_version_unchanged": 2,
+    "header_phase_slots_unchanged": 13,
+    "private_max_bytes_unchanged": 196608,
+    "frame_max_bytes_unchanged": 1048576
+  },
+  "observations": {
+    "request_kind_count": 3,
+    "activity_phase_count": 15,
+    "fixed_numeric_series_count": 50,
+    "no_identity_label_history_worker_queue_or_new_management_request": true,
+    "independent_atomic_samples_not_actor_attribution_or_durations": true,
+    "unknown_is_null_not_zero": true,
+    "no_latency_fix_or_improvement_claim": true
+  },
+  "still_pending": {
+    "full_default43_linux_race3_cgo_free3": true,
+    "all24_native_cross_rebuild": true,
+    "new_commit_ci": true,
+    "real_kvm_and_full_original40minute_tail_checkpoint_cold": true,
+    "affected_runtime_and_systemd_fault_matrices": true,
+    "full_production_goal": true
+  },
+  "production_ready": false,
+  "full_production_acceptance": false
+}

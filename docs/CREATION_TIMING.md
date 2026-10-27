@@ -1,5 +1,9 @@
 # 有界创建阶段观测（开发候选，完整负载未通过）
 
+后续[固定基数活动 gauges 候选](CREATION_ACTIVITY.md)在拿不到响应头时仍可观察
+尚未返回的聚合边界，区分 permit acquire 与节点复核；不是单 actor 的根因记录。
+它不改变本文 13 个 timing/actor version2，也不宣称已修复原长测失败。
+
 后续普通链路的稠密复制/分段回写候选见 [ASSET_COPY.md](ASSET_COPY.md)；无条件
 零写入消除已撤回，当前也不是已证实的超时修复。下文保留阶段设计及其历史来源，不为后续普通 ELF 代签。
 

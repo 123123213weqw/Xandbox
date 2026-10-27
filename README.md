@@ -6,6 +6,9 @@
 安装前可用 [`xandbox-doctor` 只读预检](docs/NODE_PREFLIGHT.md)检查节点基本缺项；
 不会自动升级宿主、修改服务或创建 VM，检查通过也不等于部署/生产验收通过。
 
+开发分支新增[有界活动创建观测候选](docs/CREATION_ACTIVITY.md)，用于响应丢失时观察
+尚未返回的聚合边界；不是原长测超时的已证实修复，也不代表生产就绪。
+
 > 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 
 新增[固定清单 Go 启动器](docs/GO_LAUNCHER.md)：真实systemd→普通UDS→四并行KVM、忙碌Stop/GC、main SIGKILL与原盘cold有限验证通过；5 scopes/7代际独立清理复核。普通 sandboxd 信号注册已前移；新daemon的[25个全新命名运行scope](docs/FIVEB_RUNTIME.md)已另行通过；[fixture320的live trace两组与十边界](docs/FIVEB_BOUNDARIES.md)也已独立通过，完整部署门槛仍未完成，不能继承旧矩阵或宣称生产就绪。
