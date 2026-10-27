@@ -1,45 +1,65 @@
-# 私有镜像全零块写入消除（候选，未完成运行时验收）
+# 私有镜像稠密复制与分段回写（候选，未完成运行时验收）
 
-普通 Firecracker `copyAsset` 改用逐字节等价的稀疏复制：仍读取并 SHA256 校验
-**全部**源字节，仅对全零的读取缓冲区移动目标 offset；其他缓冲区完整写入。
-读取缓冲区上限仍为 128 KiB。正确 digest 后 Truncate 到精确逻辑 EOF，覆盖空文件、
-全零文件、短读和尾部零区。不是依赖源文件 SEEK_HOLE 的复制：稠密源中的零也能消除写入。
+普通 Firecracker `copyAsset` 继续读取、SHA256 校验并**写入全部字节，含零字节**，
+单次缓冲区仍为 128 KiB。不使用 sparse、reflink、硬链接或共享可写源，不缩小逻辑
+镜像、guest 工作量或物理分配模型。目标仍是 `O_CREATE|O_EXCL` 创建的独立新 inode；
+额外拒绝非空、非普通或 offset 非零的目标，错误留给原 ownership/fence/GC 路径处理。
 
-目标仍是 `O_CREATE|O_EXCL` 创建的独立新 inode；额外拒绝非空、非普通或 offset 非零
-目标。没有 reflink、硬链接、共享可写 extent、源修改、额外准备并发或重试。复制/校验阶段失败保留
-0600 的已归属文件交由原 fence/GC 处理，不自行撤销 ownership、配额或容量。
-成功后仍使用原只读 staged mode，workspace 仍由原调用者限制 mode/chown。
+## 撤回无条件零写入消除
 
-SHA、逻辑镜像大小、guest 工作量、project ID/继承检查、配额上限、IO/fsize 限制、
-持久化 barrier、N4/prepare1、超时、FIFO、公平性、Stop/回收边界均不放宽。
-错误仍 fail closed：处理 `Read` 同时返回的字节后，写入/seek 错误优先于读取错误，
-原 IO 错误优先于并发取消；EOF 同时取消不能返回成功。digest 不匹配或取消不能被
-当成已验证 EOF；Truncate、Chmod、Close 的错误继续返回。
+历史候选 [`dfc89bc`](https://github.com/123123213weqw/Xandbox/commit/dfc89bc0d2ac7656dc54fc1bfdd0039ed74abc4e)
+虽然保持最终字节/SHA/EOF，却会跳过原 `quota_copy_notify` / `node_prepare_cancel`
+需要的 **16 MiB WRITE offset、写入前文件前缀及相应配额** 边界。私有 overlay 对其普通
+helper 的合成反例中，原稠密循环 oracle ×3 通过、稀疏候选 ×3 失败；后来原生软件
+或 CI 通过不能消除该反例。该版本未进入新的 KVM 批次、未合并或部署。
 
-## 不是已证实的超时根因修复
+当前撤回的是整个无条件稀疏策略，不是给测试、租户、路径或 profile 加分支，也不
+通过只写一个人为稠密前缀来迁就观察器。新回归 `TestAssetCopyPreservesFrozenPartialWriteBoundary`
+保留原 WRITE 大小、offset 和之前的文件大小；真实 ext4 quota、18 秒准备取消、cold
+及所有旧故障场景仍需实际验证，不由这个软件检查代签。
 
-上一冻结源 e0ea5a3 的第九次原始 KVM 长测仍失败。失败 actor 的已完成 open 中，
-准入和 prepare slot 两段共约 18.526 秒，占 open 约 83%；直接复制阶段约 0.866 秒，
-**不是 open 的主导阶段**。未返回响应的 switch 内部分段仍未知。
-因此这项修改仅是通用的写入工作减少候选，不宣称解决 35 秒 actor 超时或已获得
-吞吐/时延改善。阶段定义及父子区间限制见 [CREATION_TIMING.md](CREATION_TIMING.md)。
+## 只提前发起已写范围的回写
 
-## 稀疏文件的真实含义
+普通 writer 对**新目标 FD** 执行 Fstatfs：ext4 使用分段回写 sink；其他文件系统保持
+普通稠密 writer，检查失败则 fail closed。不是请求/身份/fixture 选择器，没有新 API
+或性能 override。sink 不创建 worker、队列或重试，仅保留 written/submitted 两个
+游标及首个错误；每写入约 8 MiB 后，对已经写入的连续范围发起
+`sync_file_range(..., SYNC_FILE_RANGE_WRITE)`，短读越过段边界时仍拆成每段不超过 8 MiB。
+正确 digest 后的 EOF finalization
+提交不足一段的尾部；不发送零长度的“整个文件”请求，不覆盖未写范围。
 
-逻辑工作盘容量不缩小，但预先分配的物理数据块会减少。后续 guest 向 hole 写入时
-仍需在原 project hard limit 和宿主可用空间内实际分配；稀疏不是磁盘容量预留，
-更不是绕过 EDQUOT/ENOSPC 的保证。保留完整 [配额](PROJECT_QUOTA.md)、
-[存储故障](STORAGE.md)、原盘 cold/崩溃回收以及持续负载验收，不用单元测试代替。
-目前也不增加物理磁盘超售、免费容量或性能 SLO 的承诺。
+8 MiB 是提交节奏，**不是 dirty pages、物理 IO 队列或完成时间上限**。WRITE 可能
+在内核中阻塞，也不代表数据已持久、更不提交元数据或磁盘易失缓存。
+原 quota + filesystem `syncfs` 持久化屏障完整保留，不以回写提交替代。
+参见 [Linux man-pages](https://man7.org/linux/man-pages/man2/sync_file_range.2.html)。
 
-## 验证边界
+没有修改 cgroup、IO/BPS/IOPS、project hard limit、fsize、Prepare worker、deadline、
+FIFO、身份绑定或 Stop/回收权限。只在 ext4 使用该 hint；不同文件系统/挂载模式的
+writeback 归属仍须按实际内核及部署验证，不能从函数返回推断 IO 已被正确计费或完成。
+背景见 [内核 writeback 文档](https://docs.kernel.org/admin-guide/cgroup-v2.html#writeback)。
 
-`TestAssetCopy*` 覆盖精确字节/SHA/EOF、独立 inode 与并发隔离、零缓冲区写入计数、
-短读与 `n>0+EOF/EIO`、错误优先级、EIO/ENOSPC/EDQUOT/short-write/seek/Truncate、
-取消、坏目标及普通 wrapper 的物理接线。Linux root-only wrapper 测试只在自身
-`/run` 临时目录验证原可信路径、O_EXCL、mode、源不变与失败保留，不是 KVM/配额实测。
-非 root 环境明确 skip 该项，不能把 skip 算作运行时通过。
+## 失败与验证边界
 
-新普通 ELF 需要独立的固定探针校准、软件构建/原生 Linux/CI 及真实 KVM 验收；
-旧 e0ea5a3 的软件证书和第九次失败记录不为本修改代签。原 40 分钟负载、100 次 tail、
-checkpoint/cold、全部历史失败与完整生产 Goal 均保留。当前不宣称生产就绪。
+所有源字节仍参与 SHA；字节写入后才计入回写游标，只有提交成功才前进 submitted。
+EIO/ENOSPC/EDQUOT/short-write、提交失败或 Truncate 失败保留原错误并封存 sink，
+后续误调用也不重试或追加 IO。`n>0+EIO/EOF`、并发取消的 IO 优先级及 EOF 不能误报
+成功；digest 不匹配或读取时取消不能提交最终尾部。Chmod/Close 仍由原 wrapper 返回。
+成功后的只读 staged mode、workspace 的原 chown/mode 流程不变。
+
+`TestAssetCopy*` / `TestAssetWriteback*` 分别验证真实普通文件的字节/SHA/EOF/独立副本、
+原 16 MiB WRITE 边界、状态机的提交范围/尾部/首错封存、取消/错误优先级及物理接线。
+Linux test 执行真实 syscall 和 FD/filesystem 选择检查；root wrapper 测试只在自己的
+`/run` 临时目录验证可信路径、O_EXCL、mode、源不变及已确认删除，不是 KVM/quota/cold
+证据。非 root 明确 skip 该 wrapper 项，不能把 skip 当作通过。
+
+## 仍未证明提速或生产就绪
+
+e0ea5a3 的第九次原始 KVM 长测仍失败：已完成 open 的准入 + prepare slot 共约
+18.526 秒，占约 83%；直接 copy 约 0.866 秒不是主导阶段，失败 switch 的内部阶段
+仍未知。提前回写可能改变后续 filesystem-wide barrier 的等待分布，但这只是待验证
+的耦合假设，**不宣称修复原 35 秒 actor 超时、提升吞吐或获得时延 SLO**。
+
+改变后的普通 ELF 需自身的探针校准、完整软件/原生 Linux/CI 及 KVM 验收；旧 e0、
+dfc 和其他程序的证书不代签。保留完整 [配额](PROJECT_QUOTA.md)、[存储故障](STORAGE.md)、
+40 分钟/6360 raw/240 canary/100 tail、checkpoint/原盘 cold、N4/prepare1、历史失败
+及完整生产 Goal；不据局部软件正例认定生产就绪。

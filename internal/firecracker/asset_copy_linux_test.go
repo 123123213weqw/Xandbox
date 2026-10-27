@@ -20,7 +20,13 @@ func TestAssetCopyProductionWrapperRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(root)
+	t.Cleanup(func() {
+		if err := os.RemoveAll(root); err != nil {
+			t.Error("owned wrapper test directory removal failed", err)
+		} else if _, err := os.Lstat(root); !os.IsNotExist(err) {
+			t.Error("owned wrapper test directory still exists", err)
+		}
+	})
 	input := make([]byte, 3*assetCopyBlockSize+7)
 	input[9], input[2*assetCopyBlockSize+3] = 3, 8
 	source := filepath.Join(root, "source")

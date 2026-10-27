@@ -5,6 +5,11 @@
 
 最后更新：2026-10-27。
 
+当前另有[稠密资产复制/分段回写候选](ASSET_COPY.md)：无条件稀疏版本因旧 16 MiB
+故障边界的兼容性反例撤回；新路径保留全部字节写入，回写 hint 不替代 quota/syncfs
+持久化屏障。**尚未完成自身的 Linux/KVM、持续负载/cold 或完整运行矩阵验收**，
+不继承旧程序的证书；下文较早报告仍按各自冻结来源保留。
+
 最新开发工作另有[有界容量 FIFO 准入候选](CAPACITY_ADMISSION.md)：raw / managed
 共用顺序、独立对称等待上限，不保留 VM 容量，等待不叠加 Prepare deadline。
 它改变普通 Manager；**尚无该新程序的 Linux/KVM、持续负载/cold 或完整运行矩阵

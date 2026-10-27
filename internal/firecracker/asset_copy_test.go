@@ -137,7 +137,7 @@ func (f *assetCopyFaults) Truncate(n int64) error {
 	return f.File.Truncate(n)
 }
 
-func TestAssetCopyElidesOnlyZeroWriteWork(t *testing.T) {
+func TestAssetCopyWritesDenseZerosWithoutSeekElision(t *testing.T) {
 	input := make([]byte, 16*assetCopyBlockSize+7)
 	for _, start := range []int{0, 8 * assetCopyBlockSize} {
 		for i := start; i < start+assetCopyBlockSize; i++ {
@@ -149,7 +149,7 @@ func TestAssetCopyElidesOnlyZeroWriteWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	assetCopyCheck(t, f.File, input)
-	if f.writes != 2 || f.written != 2*assetCopyBlockSize || f.holes != 15 || f.skipped != len(input)-f.written || !f.truncated {
+	if f.writes != 17 || f.written != len(input) || f.holes != 0 || f.skipped != 0 || !f.truncated {
 		t.Fatalf("wrong write work: %+v", f)
 	}
 	// This is write-call/byte evidence, not a latency, quota, or KVM benchmark.
@@ -237,7 +237,7 @@ func TestAssetCopyRejectsReusedAdvancedOrNonregularDestination(t *testing.T) {
 }
 
 func TestAssetCopyIOFailuresNeverBecomeVerifiedEOF(t *testing.T) {
-	for _, mode := range []string{"write-eio", "write-enospc", "write-edquot", "short-write", "hole-seek-eio", "bad-offset", "truncate-eio", "truncate-enospc", "truncate-edquot", "read-eio", "read-data-eio", "no-progress"} {
+	for _, mode := range []string{"write-eio", "write-enospc", "write-edquot", "short-write", "zero-write-eio", "zero-read-data-eio", "truncate-eio", "truncate-enospc", "truncate-edquot", "read-eio", "read-data-eio", "no-progress"} {
 		t.Run(mode, func(t *testing.T) {
 			input := []byte{1, 2, 3}
 			f := &assetCopyFaults{File: assetCopyFile(t)}
@@ -252,14 +252,13 @@ func TestAssetCopyIOFailuresNeverBecomeVerifiedEOF(t *testing.T) {
 				f.writeErr, want = syscall.EDQUOT, syscall.EDQUOT
 			case "short-write":
 				f.short, want = true, io.ErrShortWrite
-			case "hole-seek-eio":
+			case "zero-write-eio":
 				input = make([]byte, 3)
 				reader = bytes.NewReader(input)
-				f.holeSeekErr, want = syscall.EIO, syscall.EIO
-			case "bad-offset":
+				f.writeErr, want = syscall.EIO, syscall.EIO
+			case "zero-read-data-eio":
 				input = make([]byte, 3)
-				reader = bytes.NewReader(input)
-				f.badOffset = true
+				reader, want = &assetCopyReadResult{data: input, err: syscall.EIO}, syscall.EIO
 			case "truncate-eio":
 				f.truncateErr, want = syscall.EIO, syscall.EIO
 			case "truncate-enospc":
@@ -291,7 +290,7 @@ func TestAssetCopyIOFailuresNeverBecomeVerifiedEOF(t *testing.T) {
 }
 
 func TestAssetCopyCancellationCannotHideIOErrorsOrSucceedAtEOF(t *testing.T) {
-	for _, mode := range []string{"pre-cancel", "data-eof", "zero-eof", "empty-eof", "data-eio", "empty-eio", "data-eio-write-enospc", "data-eof-short-write", "zero-eof-seek-eio", "truncate", "truncate-error"} {
+	for _, mode := range []string{"pre-cancel", "data-eof", "zero-eof", "empty-eof", "data-eio", "empty-eio", "data-eio-write-enospc", "data-eof-short-write", "zero-eof-write-eio", "truncate", "truncate-error"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -315,9 +314,9 @@ func TestAssetCopyCancellationCannotHideIOErrorsOrSucceedAtEOF(t *testing.T) {
 				src.err, f.writeErr, want = syscall.EIO, syscall.ENOSPC, syscall.ENOSPC
 			case "data-eof-short-write":
 				f.short, want = true, io.ErrShortWrite
-			case "zero-eof-seek-eio":
+			case "zero-eof-write-eio":
 				input = make([]byte, 3)
-				src.data, f.holeSeekErr, want = input, syscall.EIO, syscall.EIO
+				src.data, f.writeErr, want = input, syscall.EIO, syscall.EIO
 			case "truncate":
 				src.hook, f.truncateHook = nil, cancel
 			case "truncate-error":
@@ -384,7 +383,7 @@ func TestAssetCopyProductionWiringUsesExclusiveVerifiedCopy(t *testing.T) {
 	if body == nil {
 		t.Fatal("ordinary copyAsset absent")
 	}
-	calls, exclusive := 0, false
+	calls, sinkCalls, exclusive := 0, 0, false
 	ast.Inspect(body, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
 		if !ok {
@@ -395,7 +394,7 @@ func TestAssetCopyProductionWiringUsesExclusiveVerifiedCopy(t *testing.T) {
 			if len(call.Args) != 4 {
 				t.Fatal("ordinary helper inputs changed")
 			}
-			for i, want := range []string{"ctx", "source", "dest"} {
+			for i, want := range []string{"ctx", "source", "copyDest"} {
 				arg, ok := call.Args[i].(*ast.Ident)
 				if !ok || arg.Name != want {
 					t.Fatal("ordinary helper input disconnected")
@@ -404,6 +403,20 @@ func TestAssetCopyProductionWiringUsesExclusiveVerifiedCopy(t *testing.T) {
 			arg, ok := call.Args[3].(*ast.SelectorExpr)
 			if !ok || arg.Sel.Name != "SHA256" {
 				t.Fatal("trusted digest disconnected")
+			}
+			owner, ok := arg.X.(*ast.Ident)
+			if !ok || owner.Name != "asset" {
+				t.Fatal("trusted digest source disconnected")
+			}
+		}
+		if f, ok := call.Fun.(*ast.Ident); ok && f.Name == "assetCopySink" {
+			sinkCalls++
+			if len(call.Args) != 1 {
+				t.Fatal("owned sink input changed")
+			}
+			arg, ok := call.Args[0].(*ast.Ident)
+			if !ok || arg.Name != "dest" {
+				t.Fatal("writeback sink is not bound to the owned descriptor")
 			}
 		}
 		if f, ok := call.Fun.(*ast.SelectorExpr); ok && f.Sel.Name == "OpenFile" && len(call.Args) == 3 {
@@ -418,7 +431,7 @@ func TestAssetCopyProductionWiringUsesExclusiveVerifiedCopy(t *testing.T) {
 		}
 		return true
 	})
-	if calls != 1 || !exclusive {
-		t.Fatal("ordinary copy does not use exclusive verified zero-elision", calls, exclusive)
+	if calls != 1 || sinkCalls != 1 || !exclusive {
+		t.Fatal("ordinary copy does not use exclusive verified dense writeback", calls, sinkCalls, exclusive)
 	}
 }

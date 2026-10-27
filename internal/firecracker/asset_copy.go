@@ -1,7 +1,6 @@
 package firecracker
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -20,10 +19,10 @@ type assetCopyDestination interface {
 	Truncate(int64) error
 }
 
-// copyAssetBytes hashes every source byte, but represents all-zero buffers as
-// holes in a NEW, exclusive private file. It never shares source extents or
-// changes logical image bytes/size. The caller must use O_CREATE|O_EXCL: the
-// empty-file checks alone are not a substitute for exclusive ownership.
+// copyAssetBytes hashes and WRITES every source byte, including zeros. The
+// original dense allocation/write boundaries remain available to fault tests;
+// final logical equality alone is not a substitute for that storage contract.
+// The caller must use O_CREATE|O_EXCL: empty-file checks do not prove ownership.
 // Failed partial copies remain owned by the ordinary fail-closed GC path.
 func copyAssetBytes(ctx context.Context, source io.Reader, dest assetCopyDestination, digest string) error {
 	if err := ctx.Err(); err != nil {
@@ -61,23 +60,12 @@ func copyAssetBytes(ctx context.Context, source io.Reader, dest assetCopyDestina
 				return errors.New("asset logical size overflow")
 			}
 			logical += int64(n)
-			// Count handles short buffers too; a nonzero byte is never elided.
-			if bytes.Count(buf[:n], []byte{0}) == n {
-				position, err := dest.Seek(int64(n), io.SeekCurrent)
-				if err != nil {
-					return err
-				}
-				if position != logical {
-					return errors.New("unexpected asset copy seek offset")
-				}
-			} else {
-				wrote, err := dest.Write(buf[:n])
-				if err != nil {
-					return err
-				}
-				if wrote != n {
-					return io.ErrShortWrite
-				}
+			wrote, err := dest.Write(buf[:n])
+			if err != nil {
+				return err
+			}
+			if wrote != n {
+				return io.ErrShortWrite
 			}
 			_, _ = h.Write(buf[:n]) // SHA256's Write cannot fail.
 		} else if readErr == nil {
@@ -102,8 +90,8 @@ func copyAssetBytes(ctx context.Context, source io.Reader, dest assetCopyDestina
 	if hex.EncodeToString(h.Sum(nil)) != digest {
 		return errors.New("staged image digest mismatch")
 	}
-	// Seek alone does not establish EOF for trailing/wholly-zero images.
-	// Only verified, uncanceled bytes reach this finalization syscall.
+	// Explicitly finalize the verified logical EOF. Any destination writeback
+	// wrapper may submit a final partial range here, but not assert durability.
 	if err := dest.Truncate(logical); err != nil {
 		return err
 	}

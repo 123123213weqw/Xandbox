@@ -810,7 +810,11 @@ func copyAsset(ctx context.Context, asset Asset, path string) error {
 		return err
 	}
 	defer dest.Close()
-	if err := copyAssetBytes(ctx, source, dest, asset.SHA256); err != nil {
+	copyDest, err := assetCopySink(dest)
+	if err != nil {
+		return err
+	}
+	if err := copyAssetBytes(ctx, source, copyDest, asset.SHA256); err != nil {
 		return err
 	}
 	// The reserved VMM UID must read cold kernel/initrd regardless of umask.
