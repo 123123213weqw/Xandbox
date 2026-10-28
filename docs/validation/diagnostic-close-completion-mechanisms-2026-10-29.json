@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "published_on": "2026-10-29",
+  "status": "LIMITED_COMPONENT_EVIDENCE_NOT_FULL_PROGRAM_ACCEPTANCE",
+  "publication_code_commit": "b3f9461b077ee99f1f926858be13a5af1926fbb8",
+  "ordinary_daemon_sha256": "896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768",
+  "tested_component_input_sha256": {
+    "internal/diagnostics/event.go": "d4a5c89f27a45d69239bb7bd5304c5850c3ee68a83eaf18b5badb42bcf1513f5",
+    "internal/diagnostics/close_completion_test.go": "5fc455f7b272590af79b67ae5ec42533f996c9dc7668667db9c3249dc6ba4066"
+  },
+  "test_scope": {
+    "linux_full_parent_tests": 21,
+    "darwin_full_parent_tests": 21,
+    "full_each_build_count": 3,
+    "focused_parent_tests": 3,
+    "focused_each_build_count": 100,
+    "builds": [
+      "race",
+      "CGO0"
+    ],
+    "skipped": 0,
+    "compiled_old_component_clean_and_write_error_negatives_each_build_count": 3,
+    "native_linux_artifacts_independently_rehashed": 5,
+    "linux_raw_files_independently_rehashed": 25,
+    "current_primary_cross_daemon_equals_independent_native_linux": true
+  },
+  "darwin_extra_full100": {
+    "status": "INCOMPLETE_DEFAULT_PACKAGE_TIMEOUT_NOT_PASSED",
+    "each_build_default_timeout_seconds": 600,
+    "original_logs_preserved": true,
+    "not_a_durable_io_latency_slo": true
+  },
+  "provenance": {
+    "private_test_archive_sha256": "c1e68966542fa3c4a595d5d38ce6fc8fb0e1c564dd519a205ddadf01f892c97e",
+    "native_wrapper_start_pinned_at_dispatch": true,
+    "native_runner_pid_observed_only_after_terminal": true,
+    "component_only_no_kvm_or_service_deployment": true
+  },
+  "fixed_probe_metadata": {
+    "whole_elf_sha256": "896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768",
+    "fixed_entry_sites": 9,
+    "all_three_target_functions_source_relative_assembly_unchanged": true,
+    "all_nine_exact_opcode_boundaries_and_register_roles_paired": true,
+    "no_uretprobe_or_user_memory_read": true,
+    "node_ok_is_before_return_not_a_function_return": true,
+    "offline_only_not_live_calibration": true
+  },
+  "original_ci25": {
+    "pr_run": 40716931860,
+    "push_run": 40716918410,
+    "attempt": 1,
+    "pr_failed": true,
+    "push_success_does_not_substitute": true,
+    "failed_job": 122917049427,
+    "failed_step": "Build and process smoke test",
+    "fixture": "diagnostics_smoke",
+    "restart_cycle": 25,
+    "observed_exit_status": 1,
+    "current_cycle_observed_events": [
+      "service_mock",
+      "process_stopped",
+      "collector_closed"
+    ],
+    "observed_header_is_not_fsync_or_worker_completion_ack": true,
+    "exact_ErrPending_vs_ErrWrite_unknown": true,
+    "independent_counterexample_not_unique_original_CI_cause_proof": true,
+    "original_log_retained_privately": true
+  },
+  "shutdown_budget_ms": 250,
+  "no_extra_wait_or_pending_error_suppression": true,
+  "full43_packages_all24_native_artifacts_current_fixture_new_ci_and_affected_hardware_acceptance": false,
+  "original_sustained_load_gate_still_required_and_no_performance_fix_claim": true,
+  "production_ready": false,
+  "goal_complete": false
+}

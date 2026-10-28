@@ -1340,5 +1340,21 @@
     "status": "one_original_named_runtime_scope_passed_not_full_matrix",
     "production_ready": false,
     "scope": "Original six errno and repeated clear minimum3; running/stopped/destroyed checkpoints and original disk recovery,4KVMboots.19raw independently rehashed; new4+prior60 actual outer generations globally disjoint/37scopes declared read-only absent. Other36 named scopes/systemd/full sustained load and all production gaps still required."
+  },
+  "diagnostic_close_completion_candidate": {
+    "publication_code_commit": "b3f9461b077ee99f1f926858be13a5af1926fbb8",
+    "ordinary_daemon_sha256": "896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768",
+    "report": "docs/validation/diagnostic-close-completion-mechanisms-2026-10-29.json",
+    "status": "limited_component_evidence_full_new_program_pending",
+    "production_ready": false,
+    "scope": "Darwin/Linux full21 parents each3 and focused3 each100 both builds zero skip, Linux old compiled negatives3 each,25raw/5artifacts; extra Darwin full100 default10m timeouts retained incomplete. Original CI25 cause unknown; no full Native21/new CI/KVM certificate."
+  },
+  "quiet_runtime_core_nine_frozen_e2bb": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/quiet-runtime-core-nine-2026-10-29.json",
+    "status": "nine_original_named_scopes_passed_not_new_8968_qualification",
+    "production_ready": false,
+    "scope": "Original9 scopes,27 L1 boots18 cold transitions,104raw independent;91 cumulative unique generations46 resource scopes declared readonly absent. Frozen4ddd named matrix10/37, remaining27+systemd/all broad gaps. Unenforced startup is one non-cold case/no L2; local validator correction never reran producer. Load12/CI25 failures retained."
   }
 }

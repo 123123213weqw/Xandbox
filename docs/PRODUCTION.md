@@ -1,5 +1,10 @@
 # Xandbox 生产化计划与发布门槛
 
+新增[诊断 writer 完成结果优先候选](DIAGNOSTIC_CLOSE_COMPLETION.md)：修正已结束writer
+遇取消context仍误报pending的独立反例，保留真实pending/ErrWrite及原250ms预算。
+已有有限组件软件证据，但当前新ELF仍待完整原生/CI/硬件验收；原CI25失败不被单独push成功替代。
+历史4ddd的9项runtime有限正例不为新8968代签，不因此合并、部署或宣称生产就绪。
+
 ## 2026-10-28 当前证据：负载失败与一项 runtime 正例分开
 
 当前4ddd的[第十二批原始负载](validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)
@@ -17,7 +22,7 @@ StopReplyMS是switch响应别名，namespace/fullquota零值未观测；不构�
 新增[初始安装事务](INITIAL_INSTALL.md)已有[独立真实双启动有限验收](INITIAL_INSTALL_KVM.md)：固定文件事务、cap0 提交前闸门、缺源精确协调、TLS/KVM/drain/cold，保留所有失败原件并修正静态 PIE 消费校验。仅完成具名子项，不是已有报告重签、升级/轮换/备份或完整生产里程碑完成。
 
 
-最后更新：2026-10-28。
+最后更新：2026-10-29。
 
 最新[第十一批原始负载仍失败](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)：
 冻结 f286/DA42 的完整软件/CI、基线/OOM各两启动有限正例已独立核对，但原35秒

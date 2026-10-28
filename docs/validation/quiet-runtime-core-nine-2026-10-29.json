@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "published_on": "2026-10-29",
+  "status": "NINE_ORIGINAL_NAMED_SCOPES_PASSED_FROZEN_SOURCE_ONLY",
+  "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+  "production_code_commit": "6ea28eaf491f2863884db176af94936544620f37",
+  "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+  "resource_profile": {
+    "l1_memory_mib": 2048,
+    "l1_vcpus": 4,
+    "l1_disk_bytes": 2147483648,
+    "outer_memory_max_bytes": 3221225472,
+    "original_each_scope_flags_and_limits_unchanged": true,
+    "serial_no_failed_case_retry": true
+  },
+  "scopes": [
+    {
+      "name": "default-power",
+      "passed": true,
+      "real_l1_kvm_boots": 4,
+      "phases": [
+        "running",
+        "stopped",
+        "destroyed"
+      ],
+      "cold_transitions": 3
+    },
+    {
+      "name": "quota-preclear",
+      "passed": true,
+      "real_l1_kvm_boots": 2,
+      "phases": [
+        "release-preclear-quota-syncfs-held"
+      ],
+      "cold_transitions": 1
+    },
+    {
+      "name": "quota-postclear",
+      "passed": true,
+      "real_l1_kvm_boots": 2,
+      "phases": [
+        "release-postclear-quota-syncfs-held"
+      ],
+      "cold_transitions": 1
+    },
+    {
+      "name": "quota-reserve",
+      "passed": true,
+      "real_l1_kvm_boots": 2,
+      "phases": [
+        "reserve-quota-syncfs-held"
+      ],
+      "cold_transitions": 1
+    },
+    {
+      "name": "quota-io",
+      "passed": true,
+      "real_l1_kvm_boots": 5,
+      "phases": [
+        "eio-busy",
+        "eio-idle",
+        "hang-busy",
+        "hang-idle"
+      ],
+      "cold_transitions": 4,
+      "original_stop_guard_ms": 1500,
+      "original_new_exec_refusal_guard_ms": 500,
+      "measured": [
+        {
+          "phase": "eio-busy",
+          "host_stop_observed_ms": 46.382,
+          "new_exec_refusal_ms": 0.35
+        },
+        {
+          "phase": "eio-idle",
+          "host_stop_observed_ms": 38.888,
+          "new_exec_refusal_ms": 0.786
+        },
+        {
+          "phase": "hang-busy",
+          "host_stop_observed_ms": 42.105,
+          "new_exec_refusal_ms": 7.778
+        },
+        {
+          "phase": "hang-idle",
+          "host_stop_observed_ms": 39.898,
+          "new_exec_refusal_ms": 1.872
+        }
+      ]
+    },
+    {
+      "name": "default-io",
+      "passed": true,
+      "real_l1_kvm_boots": 5,
+      "phases": [
+        "eio-busy",
+        "eio-idle",
+        "hang-busy",
+        "hang-idle"
+      ],
+      "cold_transitions": 4,
+      "original_stop_guard_ms": 1500,
+      "original_new_exec_refusal_guard_ms": 500,
+      "measured": [
+        {
+          "phase": "eio-busy",
+          "host_stop_observed_ms": 38.38,
+          "new_exec_refusal_ms": 0.74
+        },
+        {
+          "phase": "eio-idle",
+          "host_stop_observed_ms": 42.715,
+          "new_exec_refusal_ms": 1.034
+        },
+        {
+          "phase": "hang-busy",
+          "host_stop_observed_ms": 33.187,
+          "new_exec_refusal_ms": 0.681
+        },
+        {
+          "phase": "hang-idle",
+          "host_stop_observed_ms": 49.888,
+          "new_exec_refusal_ms": 1.529
+        }
+      ]
+    },
+    {
+      "name": "quota-negative",
+      "passed": true,
+      "real_l1_kvm_boots": 4,
+      "phases": [
+        "running",
+        "stopped",
+        "destroyed"
+      ],
+      "cold_transitions": 3
+    },
+    {
+      "name": "quota-unenforced",
+      "passed": true,
+      "real_l1_kvm_boots": 1,
+      "phases": [
+        "unenforced-ext4-startup"
+      ],
+      "cold_transitions": 0,
+      "no_l2_vm_expected": true,
+      "startup_refusal_not_a_cold_checkpoint": true
+    },
+    {
+      "name": "quota-eio",
+      "passed": true,
+      "real_l1_kvm_boots": 2,
+      "phases": [
+        "reserve-quota-syncfs-real-eio"
+      ],
+      "cold_transitions": 1
+    }
+  ],
+  "distinct_l1_kvm_boots": 27,
+  "cold_transitions": 18,
+  "independent_raw_files_rehashed": 104,
+  "all1220_source24_programs9_inputs_rechecked": true,
+  "resource_closure": {
+    "current_actual_generations": 27,
+    "current_owned_scopes": 9,
+    "global_actual_generations": 91,
+    "global_owned_resource_scopes": 46,
+    "all_declared_paths_read_only_absent": true,
+    "no_supplemental_cleanup": true,
+    "all_outer_oom_and_pid_limit_events_zero": true
+  },
+  "frozen_4ddd_named_matrix": {
+    "original_runtime_scopes": 25,
+    "original_boundary_scopes": 12,
+    "qualified_runtime_scopes_including_prior_syscalls": 10,
+    "remaining_named_scopes": 27,
+    "global_resource_scope_count_is_not_passed_named_matrix_count": true
+  },
+  "original_validator_failure_retained": {
+    "cause": "validator initially treated the unenforced startup report as zero cases; frozen harness emits one non-cold startup case, zero checkpoint transitions, one L1 boot",
+    "same104_raw_files_locally_revalidated": true,
+    "no_producer_or_workload_retry": true
+  },
+  "original_load12_still_failed": true,
+  "ci25_pr_failure_not_overridden": true,
+  "does_not_certify_new_b3f9461_8968_program": true,
+  "extra_systemd_all_other_fault_windows_and_all_broad_goal_gaps_still_required": true,
+  "production_ready": false,
+  "goal_complete": false
+}

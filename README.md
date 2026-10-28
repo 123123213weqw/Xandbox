@@ -1,5 +1,10 @@
 # Xandbox
 
+新增[诊断 writer 完成结果优先候选](docs/DIAGNOSTIC_CLOSE_COMPLETION.md)：修正已结束writer
+遇取消context仍误报pending的独立反例，保留真实pending/ErrWrite及原250ms预算。
+已有有限组件软件证据，但当前新ELF仍待完整原生/CI/硬件验收；原CI25失败不被单独push成功替代。
+历史4ddd的9项runtime有限正例不为新8968代签，不因此合并、部署或宣称生产就绪。
+
 **开始试用：[构建、带鉴权的本地示例，以及真实 Linux/KVM 部署入口](docs/GETTING_STARTED.md)。**
 主分支合并不等于生产认证；mock 不执行任意代码，真实执行需要单独准备 Linux/KVM 节点。
 
