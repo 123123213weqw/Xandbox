@@ -258,11 +258,27 @@ func (l *Logger) Close(ctx context.Context) error {
 		return nil
 	}
 	l.once.Do(func() { l.mu.Lock(); l.closing = true; l.mu.Unlock(); close(l.stop) })
+	// Completed storage owns no unfinished worker. A canceled caller must not
+	// turn its already-published result (including ErrWrite) into ErrPending.
+	select {
+	case <-l.done:
+		return l.err
+	default:
+	}
 	select {
 	case <-l.done:
 		return l.err
 	case <-ctx.Done():
-		return ErrPending
+		// Completion and cancellation may become ready together while this
+		// goroutine is descheduled. Check the actual completion WITHOUT waiting
+		// or extending the caller's budget; genuinely blocked storage remains
+		// pending and keeps its descriptors and exclusive state ownership.
+		select {
+		case <-l.done:
+			return l.err
+		default:
+			return ErrPending
+		}
 	}
 }
 
