@@ -1,9 +1,23 @@
 # Xandbox 生产化计划与发布门槛
 
+## 2026-10-28 当前证据：负载失败与一项 runtime 正例分开
+
+当前4ddd的[第十二批原始负载](validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)
+在第22分钟、canary129/phase2的old_gc阶段耗尽原35秒actor；734行/133周期样本，
+不是完整40分钟/100tail/SYNCEDcheckpoint/原盘cold。open与switch均已返回，fresh命令
+结束仅余4.225ms；不能据old_gc标签断言GC很慢。该失败行EmptyMS即使错误也计elapsed，
+StopReplyMS是switch响应别名，namespace/fullquota零值未观测；不构成物理Stop/回收证明。
+基线/OOM各2启动有限通过、原负载批次60代际/36scope声明资源只读无残留不替代负载验收。
+
+另有同一程序的[一项quota runtime复验](QUIET_RUNTIME_QUOTA.md)：6类errno/重复clear、
+三个原盘cold检查点/4启动及独立19原件通过；包含此前批次64代际/37scope只读无残留。
+这只完成原37具名矩阵之一，不完成剩余36项/systemd或完整生产Goal。软件/CI来源仍按
+各自冻结源记录，不借用其他ELF；保留全部原参数、失败与公平性门槛，不合并、不部署。
+
 新增[初始安装事务](INITIAL_INSTALL.md)已有[独立真实双启动有限验收](INITIAL_INSTALL_KVM.md)：固定文件事务、cap0 提交前闸门、缺源精确协调、TLS/KVM/drain/cold，保留所有失败原件并修正静态 PIE 消费校验。仅完成具名子项，不是已有报告重签、升级/轮换/备份或完整生产里程碑完成。
 
 
-最后更新：2026-10-27。
+最后更新：2026-10-28。
 
 最新[第十一批原始负载仍失败](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)：
 冻结 f286/DA42 的完整软件/CI、基线/OOM各两启动有限正例已独立核对，但原35秒

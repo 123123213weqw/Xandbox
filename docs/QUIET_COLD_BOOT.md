@@ -1,5 +1,19 @@
 # 安静冷启动控制台候选（不是已证实的延迟修复）
 
+## 2026-10-28 当前证据：负载失败与一项 runtime 正例分开
+
+当前4ddd的[第十二批原始负载](validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)
+在第22分钟、canary129/phase2的old_gc阶段耗尽原35秒actor；734行/133周期样本，
+不是完整40分钟/100tail/SYNCEDcheckpoint/原盘cold。open与switch均已返回，fresh命令
+结束仅余4.225ms；不能据old_gc标签断言GC很慢。该失败行EmptyMS即使错误也计elapsed，
+StopReplyMS是switch响应别名，namespace/fullquota零值未观测；不构成物理Stop/回收证明。
+基线/OOM各2启动有限通过、原负载批次60代际/36scope声明资源只读无残留不替代负载验收。
+
+另有同一程序的[一项quota runtime复验](QUIET_RUNTIME_QUOTA.md)：6类errno/重复clear、
+三个原盘cold检查点/4启动及独立19原件通过；包含此前批次64代际/37scope只读无残留。
+这只完成原37具名矩阵之一，不完成剩余36项/systemd或完整生产Goal。软件/CI来源仍按
+各自冻结源记录，不借用其他ELF；保留全部原参数、失败与公平性门槛，不合并、不部署。
+
 代码 `6ea28eaf491f2863884db176af94936544620f37` 的普通 daemon 为
 `4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218`。
 普通冷启动的 `/boot-source` 参数只增加一个 `quiet`：保留 `console=ttyS0`、
@@ -36,7 +50,7 @@ stdout 不等于请求 guest 少输出信息。[固定 Firecracker 1.17.0 FAQ](h
 固定九点探针的 Go/Python whole-ELF pin 已离线配对到 4ddd，三个目标函数的
 相对指令与旧 DA42 一致；这不是新程序的 live trace 证明。
 
-只有新 source 的全部软件/原生 Linux/CI 门槛完成后，才可运行原完整 KVM 三组。
+上述早期有限报告不包含后续完整门槛。冻结e2bb已另完成全部软件/原生Linux/CI后运行原完整KVM三组；第十二批负载仍失败，见顶部新报告。
 保持 N4/prepare1、35 秒 actor、40分钟/6360 raw/240 canary/100 tail、
 SYNCED inventory/checkpoint、原盘 cold、配额/TTL/history、allowlist/FIFO/公平性
 及全部资源边界不变。旧十一批失败均保留，不重跑未修改的失败 DA42 凑绿。

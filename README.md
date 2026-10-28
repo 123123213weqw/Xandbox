@@ -9,9 +9,10 @@
 开发分支新增[有界活动创建观测候选](docs/CREATION_ACTIVITY.md)，用于响应丢失时观察
 尚未返回的聚合边界；不是原长测超时的已证实修复，也不代表生产就绪。
 
-该观测候选的[第十一批原始长测仍失败](docs/validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)，
-基线/OOM有限正例与完整回收不替代负载验收。后续[安静冷启动参数候选](docs/QUIET_COLD_BOOT.md)
-正在独立验证，尚无已证实延迟改善；未合并、未部署。
+[quiet冷启动候选](docs/QUIET_COLD_BOOT.md)的[第十二批原始长测仍失败](docs/validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)：
+第22分钟耗尽原35秒actor，未完成40分钟/tail/checkpoint/原盘cold；基线/OOM正例及无残留不替代负载验收。
+另有当前程序[一项quota runtime复验](docs/QUIET_RUNTIME_QUOTA.md)的6类errno/重复clear/三cold检查点通过，
+只完成原37具名矩阵之一。全部原失败保留，不原样重跑或放宽门槛；未合并、未部署，仍未生产就绪。
 
 > 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 

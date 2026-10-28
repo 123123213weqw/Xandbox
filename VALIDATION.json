@@ -1324,5 +1324,21 @@
     "status": "limited_software_mechanisms_only",
     "scope": "18 parents each100 race/CGO0, fullfixture153 each3 both zero skips/fixed9 ELF active, rootPython312 zero/vet/mod,5native==cross,35raw; NOT full43/all24/newCI/VM/latency qualification. All original full Goal gates remain.",
     "production_ready": false
+  },
+  "open_arrival_attempt12_failure": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/kvm-open-arrival-attempt12-failed-2026-10-28.json",
+    "status": "failed_original_not_rerun",
+    "production_ready": false,
+    "scope": "Baseline/OOM each2 real KVM boots passed; original load failed at22min/canary129/phase2/35s actor.734 rows133 samples; no40m/tail/checkpoint/cold.60 actual generations36scopes declared absent. Failed-row elapsed/alias/zeros do not prove physical stop, namespace or fullquota. Open and switch responses observed, no unique cause or controlled speedup."
+  },
+  "quiet_runtime_quota_syscalls": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/quiet-runtime-quota-syscalls-2026-10-28.json",
+    "status": "one_original_named_runtime_scope_passed_not_full_matrix",
+    "production_ready": false,
+    "scope": "Original six errno and repeated clear minimum3; running/stopped/destroyed checkpoints and original disk recovery,4KVMboots.19raw independently rehashed; new4+prior60 actual outer generations globally disjoint/37scopes declared read-only absent. Other36 named scopes/systemd/full sustained load and all production gaps still required."
   }
 }

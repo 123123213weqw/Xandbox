@@ -1,6 +1,20 @@
 # 固定到达率双租户持续负载门槛（候选，未验收）
 
-## 最新原始结果：第十一批仍失败
+## 2026-10-28 当前证据：负载失败与一项 runtime 正例分开
+
+当前4ddd的[第十二批原始负载](validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)
+在第22分钟、canary129/phase2的old_gc阶段耗尽原35秒actor；734行/133周期样本，
+不是完整40分钟/100tail/SYNCEDcheckpoint/原盘cold。open与switch均已返回，fresh命令
+结束仅余4.225ms；不能据old_gc标签断言GC很慢。该失败行EmptyMS即使错误也计elapsed，
+StopReplyMS是switch响应别名，namespace/fullquota零值未观测；不构成物理Stop/回收证明。
+基线/OOM各2启动有限通过、原负载批次60代际/36scope声明资源只读无残留不替代负载验收。
+
+另有同一程序的[一项quota runtime复验](QUIET_RUNTIME_QUOTA.md)：6类errno/重复clear、
+三个原盘cold检查点/4启动及独立19原件通过；包含此前批次64代际/37scope只读无残留。
+这只完成原37具名矩阵之一，不完成剩余36项/systemd或完整生产Goal。软件/CI来源仍按
+各自冻结源记录，不借用其他ELF；保留全部原参数、失败与公平性门槛，不合并、不部署。
+
+## 前序原始结果：第十一批仍失败
 
 冻结 f286/DA42 的[原始第十一批](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)
 在 offered677280.273ms、canary64/phase1、原35秒 actor 处失败；仅167行/68周期样本/
