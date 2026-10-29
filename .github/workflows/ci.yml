@@ -102,6 +102,17 @@ jobs:
         with:
           go-version: 1.27.x
           cache: false
+      - name: Verify fixed fixture pins against fresh canonical ordinary ELFs
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/xandbox-fixture-calibration"
+          for program in sandboxd xandbox-gateway; do
+            GOENV=off GOFLAGS='' GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 \
+              go build -trimpath -buildvcs=false -o "$RUNNER_TEMP/xandbox-fixture-calibration/$program" "./cmd/$program"
+          done
+          python3 scripts/verify_fixture_calibration.py \
+            --daemon "$RUNNER_TEMP/xandbox-fixture-calibration/sandboxd" \
+            --gateway "$RUNNER_TEMP/xandbox-fixture-calibration/xandbox-gateway"
       - name: Compile opt-in test-only guest observer
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_guest_fixture -trimpath -o /tmp/xandbox-fixture-observer ./cmd/xandbox-fixture-observer
       - name: Compile opt-in nested host fixture

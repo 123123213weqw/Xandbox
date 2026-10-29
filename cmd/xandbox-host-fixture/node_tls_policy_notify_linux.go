@@ -34,7 +34,10 @@ type tlsPolicyMode string
 
 const tlsPolicyPre tlsPolicyMode = "pre-file"
 const tlsPolicyPost tlsPolicyMode = "post-commit"
-const tlsPolicyGatewaySHA = "41e9735696072936388d5481b7dcd595e38e2346437379b0f2999b5cc47b730a"
+
+// Canonical Go1.27.3 linux/amd64/v1 CGO0, trimpath and buildvcs=false.
+// Verify freshly built ordinary artifacts with scripts/verify_fixture_calibration.py.
+const tlsPolicyGatewaySHA = "17e2e0d524cd86acb576a26e10b78869ca345370347fd564fe8fcbdc8cbf641f"
 const tlsPolicyRoot = gatewayDir + "/policy"
 const tlsPolicyReceipt = gatewayDir + "/policy-fault-receipt.json"
 const tlsPolicyMemfd = "xandbox-gateway-policy"
