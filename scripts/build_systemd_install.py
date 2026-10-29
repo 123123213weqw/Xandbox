@@ -12,7 +12,7 @@ MARKER='Xandbox owned initial installer fixture v1\n'
 CONFIG='etc/xandbox-install-fixture'
 # These thirteen program/data inputs retain the actual byte-equal production
 # source qualification. The outer report separately binds this new harness.
-PRODUCTION_SOURCE='4167804f75f6daf0169d22f5cb9b9f1cdf75c110'
+from systemd_fixture_provenance import SOURCE_REVISION as PRODUCTION_SOURCE
 SCRIPTS=('systemd_install_guest.py','install_fixture_trace.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
 
 def load_assets(path):

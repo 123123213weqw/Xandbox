@@ -113,6 +113,18 @@ jobs:
           python3 scripts/verify_fixture_calibration.py \
             --daemon "$RUNNER_TEMP/xandbox-fixture-calibration/sandboxd" \
             --gateway "$RUNNER_TEMP/xandbox-fixture-calibration/xandbox-gateway"
+          for program in xandbox-ingress-launch xandbox-launch xandbox-node xandbox-ready xandbox-template xandbox-warden xandbox-install xandbox-release; do
+            GOENV=off GOFLAGS='' GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 \
+              go build -trimpath -buildvcs=false -o "$RUNNER_TEMP/xandbox-fixture-calibration/$program" "./cmd/$program"
+          done
+          for kind in deploy install managed; do
+            output=deploy-helper
+            if [ "$kind" = install ]; then output=setup; fi
+            if [ "$kind" = managed ]; then output=managed-setup; fi
+            GOENV=off GOFLAGS='' GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 \
+              go build -tags="xandbox_${kind}_fixture" -trimpath -buildvcs=false -o "$RUNNER_TEMP/xandbox-fixture-calibration/$output" "./cmd/xandbox-${kind}-fixture"
+          done
+          python3 scripts/systemd_fixture_provenance.py --programs-dir "$RUNNER_TEMP/xandbox-fixture-calibration"
       - name: Compile opt-in test-only guest observer
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_guest_fixture -trimpath -o /tmp/xandbox-fixture-observer ./cmd/xandbox-fixture-observer
       - name: Compile opt-in nested host fixture

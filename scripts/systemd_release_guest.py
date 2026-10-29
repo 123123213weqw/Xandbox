@@ -22,7 +22,7 @@ base=ready.base;ingress=ready.ingress
 ROOT=Path('/srv/xandbox-releases');CONFIG=Path('/etc/xandbox-release');INCOMING=Path('/srv/xandbox-release-incoming');PARKED=Path('/srv/xandbox-release-parked');CHECKPOINT=CONFIG/'checkpoint.json'
 ROLES=('daemon','firecracker','gateway','ingress','initrd','jailer','kernel','launcher','node','ready','template','warden','workspace')
 CLI='/usr/libexec/xandbox-release'
-NATIVE_SOURCES=('9e4da26d1ec4bda9b678966e88c7adb0b3133965','0a51f39893fd8d317c4905a603294d6028f92dcf')
+from systemd_fixture_provenance import RELEASE_SOURCES as NATIVE_SOURCES
 ERROR=b'xandbox-release: publication unconfirmed; preserve inputs and retry the identical request\n'
 ENV={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C','GOMAXPROCS':'2'}
 PROBE_FLAGS=('publisher_actual_pin_and_thirteen_real_asset_roles_checked','publication_is_not_node_install_activation_or_admission_authority')
