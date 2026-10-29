@@ -8,11 +8,16 @@
 独立静态比较确认三目标函数207条指令的相对边界、源码行、寄存器及符号化控制流一致，
 九点仍在原精确地址且opcode相同（delta=0）。保留 whole-ELF、符号、精确字节、owned-L1/TGID/inode守卫；
 不增加任意selector、return probe或L0 tracing。静态配对不是新程序实机trace/取消/隔离验收。
-systemd完整13角色/外部图像及双source/CAS约束仍需按真实构建记录绑定，不以改一个hash冒充全部校准。
+systemd的13个程序在 `ee77e8e2dc7c2be0d03647dfa2b99c3b50ae26af` 和
+`bdcfef042396b920c345bcd74b8428b31d074009` 两个实际源码快照均独立原生构建、逐项字节相同。
+固定声明绑定后一源码及这两个发布源码；完整角色闭集9/12/13/15/16/16、外部图像pin、
+独立setup及双source/CAS约束不放宽。它只认证13程序组合，不给整个后续harness/CI源码或硬件代签。
+[有限组件与静态校准报告](validation/diagnostic-exit-codes-component-v1.json)。
 
 新普通 daemon 在 Go1.25.14和1.27.3 下各完成一次原45次重启协议，root Python357零skip、
 新增4个分类父测试和5个pipe/真实child状态父测试各3次双构建通过；这些只是有限组件证据。
 原CI30退出1仍无法事后判定为74或75；新状态不增加250ms预算，也没有修复I/O尾延迟或创建成本的证明。
+旧97f2的28/37具名实机记录只属旧程序；新d748目前尚无具名KVM合格记录。
 完整新软件、CI、受影响KVM、原37项及完整生产Goal仍待完成。下面原有章节按原日期/源码冻结，不重新签名。
 
 ---

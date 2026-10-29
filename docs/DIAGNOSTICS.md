@@ -95,6 +95,11 @@ CRC 是撕裂/损坏检测，不是抗恶意同 UID/root 修改的认证。
 250ms 等待、未完成 writer 的 FD/state-lock 所有权、独立生命周期清理机会及所有
 ring 提交屏障保持不变。旧普通程序只报告的 `exit1` 不能事后重分类为 74 或 75。
 
+针对明确保持 ring fsync 未回复的 TEST 模式，新协议精确要求实际 `EXIT_GROUP75`
+及 reaped 状态75，拒绝旧1、74或任意非零值；普通 state-lock contender 和
+control-store 关闭错误的原1契约不变。原80 producers、64队列、15 drops、
+20s hold及完整原盘cold恢复协议不变。旧KVM报告保持原源码/退出1记录，不代签。
+
 原 [CI30 push](https://github.com/123123213weqw/Xandbox/actions/runs/40843830620)
 在诊断第25次重启失败的事实保留；此改动提供未来普通失败的分类证据，
 **没有证明修复原故障、存储尾延迟或服务创建成本**。当前候选仍需新工件校准、

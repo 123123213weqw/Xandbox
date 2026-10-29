@@ -52,6 +52,13 @@ jobs:
       - name: Verify installer output bounds in CGO-free child processes
         if: runner.os == 'Linux'
         run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -count=3 -run 'TestManagerWriter|TestManagerCaptureActualChild' ./internal/installtxn
+      - name: Verify closed diagnostic shutdown and opt-in pipe guards
+        run: |
+          umask 077
+          CGO_ENABLED=0 go test -count=3 -timeout=90s -run '^TestDiagnosticShutdown' ./cmd/sandboxd
+          go test -race -tags=xandbox_diagnostics_fixture -count=3 -timeout=90s -run '^TestDiagnosticsProbeUnit' ./cmd/sandboxd
+          CGO_ENABLED=0 go test -tags=xandbox_diagnostics_fixture -count=3 -timeout=90s -run '^TestDiagnosticsProbeUnit' ./cmd/sandboxd
+          CGO_ENABLED=0 go test -tags=xandbox_host_fixture -count=3 -timeout=90s -run '^TestDiagnostic' ./cmd/xandbox-host-fixture
       - name: Build and process smoke test
         run: make smoke
       - name: Test opt-in nested host fixture only on Linux

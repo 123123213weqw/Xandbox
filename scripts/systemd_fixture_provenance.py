@@ -11,8 +11,8 @@ import os
 from pathlib import Path
 import stat
 
-SOURCE_REVISION = '9e2b5c9f772c5df673a0d71876da0ff286672d8c'
-RELEASE_SOURCES = ('9aab936a09ed120f2050083f4664aae0a28bc228', SOURCE_REVISION)
+SOURCE_REVISION = 'bdcfef042396b920c345bcd74b8428b31d074009'
+RELEASE_SOURCES = ('ee77e8e2dc7c2be0d03647dfa2b99c3b50ae26af', SOURCE_REVISION)
 PROGRAM_FILES = {
     'daemon': 'sandboxd', 'gateway': 'xandbox-gateway',
     'ingress': 'xandbox-ingress-launch', 'launcher': 'xandbox-launch',
@@ -22,7 +22,7 @@ PROGRAM_FILES = {
     'helper': 'deploy-helper', 'setup': 'setup', 'managed-setup': 'managed-setup',
 }
 PINS = {
-    'daemon': '97f2b7a83c90d877e06aa20a943c71632e142c469c392f52970a9903b25ebd0b',
+    'daemon': 'd748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01',
     'gateway': 'f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c',
     'ingress': 'ee23ee79d9e795a5972530ba14f2057184637a0023e203bd5bf06a3525ebc076',
     'launcher': '7518d65924fb05470bc86f305b97e25dc7aa5817ff6723870e7b49b056c6cf88',

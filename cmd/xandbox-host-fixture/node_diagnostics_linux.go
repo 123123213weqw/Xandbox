@@ -32,6 +32,9 @@ import (
 const diagnosticProducers = 80 // Fixed before the first hardware run; NOT changed to hide a missed hold.
 const diagnosticRecords = diagnosticProducers + 2
 const diagnosticReceipt = "/srv/fixture/diagnostic-receipt.json"
+const diagnosticPendingExitCode = 75
+
+func diagnosticPendingExitStatus(status uint64) bool { return status == diagnosticPendingExitCode }
 
 type diagnosticSaved struct {
 	Version                                  int
@@ -565,8 +568,8 @@ func (n *node) diagnosticCheckpoint(ctx context.Context, mode diagnosticHoldMode
 	select {
 	case e = <-n.exited:
 		var ex *exec.ExitError
-		if !errors.As(e, &ex) || ex.ExitCode() != 1 {
-			return nil, errors.New("diagnostic ordinary daemon did not really exit1")
+		if !errors.As(e, &ex) || !diagnosticPendingExitStatus(uint64(ex.ExitCode())) {
+			return nil, errors.New("diagnostic ordinary daemon did not exit with the classified pending status")
 		}
 		n.process = nil
 	case <-ctx.Done():
@@ -595,7 +598,7 @@ func (n *node) diagnosticCheckpoint(ctx context.Context, mode diagnosticHoldMode
 	if e = privateWrite(diagnosticReceipt, saved); e != nil {
 		return nil, e
 	}
-	return map[string]any{"real_nested_kvm": true, "fixed_closed_ring_phase_and_original_inode_checked": true, "actual_ring_fsync_held_without_target_reply": true, "real_failed_prepare_producers_with_only_owned_input_mode_fault": true, "queue64_full_drops_explicit_no_producer_storage_wait": true, "accepted_raw_job_progress_and_session_route_preserved": true, "both_guests_stopped_durable_gc_and_quota0_while_ring_fsync_held": true, "actual_sigterm_close_budget_then_exit_group1": true, "same_ordinary_contender_original_lock_refused_no_authority_or_ring_change": true, "actual_exit1_reaped_then_ids_enoent_listener_open": true, "only_exit_group_continued_no_ring_reply": true, "inputs_restored_bytes_unchanged_no_authority_repair": true, "no_inherited_output_fallback": true, "mode": string(mode), "producer_failures": diagnosticProducers, "queued": 64, "dropped": 15, "observed_sequence_before_cold": mode.observed(), "ring_fsync_entries": snap.RingEntries, "data_fsync_continue_submissions": snap.DataContinued, "target_reply_submissions": 0, "exit_group_continue_submissions": 1, "other_continue_submissions": snap.OtherContinued, "other_continue_while_held": snap.OtherWhileHeld, "hold_bound_ms": 20000, "delete_to_execution_empty_observed_ms": stopMS, "delete_to_private_quota0_observed_ms": reclaimMS, "signal_to_exit_group_entry_observed_ms": float64(snap.ExitAt.Sub(snap.SignalAt)) / float64(time.Millisecond), "filesystem_d_or_physical_media_fault_claim": false, "durable_audit_or_production_slo_claim": false}, nil
+	return map[string]any{"real_nested_kvm": true, "fixed_closed_ring_phase_and_original_inode_checked": true, "actual_ring_fsync_held_without_target_reply": true, "real_failed_prepare_producers_with_only_owned_input_mode_fault": true, "queue64_full_drops_explicit_no_producer_storage_wait": true, "accepted_raw_job_progress_and_session_route_preserved": true, "both_guests_stopped_durable_gc_and_quota0_while_ring_fsync_held": true, "actual_sigterm_close_budget_then_exit_group75": true, "same_ordinary_contender_original_lock_refused_no_authority_or_ring_change": true, "actual_exit75_reaped_then_ids_enoent_listener_open": true, "only_exit_group_continued_no_ring_reply": true, "inputs_restored_bytes_unchanged_no_authority_repair": true, "no_inherited_output_fallback": true, "mode": string(mode), "ordinary_process_exit_code": diagnosticPendingExitCode, "producer_failures": diagnosticProducers, "queued": 64, "dropped": 15, "observed_sequence_before_cold": mode.observed(), "ring_fsync_entries": snap.RingEntries, "data_fsync_continue_submissions": snap.DataContinued, "target_reply_submissions": 0, "exit_group_continue_submissions": 1, "other_continue_submissions": snap.OtherContinued, "other_continue_while_held": snap.OtherWhileHeld, "hold_bound_ms": 20000, "delete_to_execution_empty_observed_ms": stopMS, "delete_to_private_quota0_observed_ms": reclaimMS, "signal_to_exit_group_entry_observed_ms": float64(snap.ExitAt.Sub(snap.SignalAt)) / float64(time.Millisecond), "filesystem_d_or_physical_media_fault_claim": false, "durable_audit_or_production_slo_claim": false}, nil
 }
 func (n *node) diagnosticRecover(ctx context.Context, mode diagnosticHoldMode) (map[string]any, error) {
 	if !mode.valid() {

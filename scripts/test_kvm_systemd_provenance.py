@@ -36,11 +36,11 @@ class SystemdProvenanceControls(unittest.TestCase):
                 for role in p.PROFILES[profile]}
 
     def test_one_qualified_source_and_two_byte_equal_publication_sources(self):
-        self.assertEqual(p.SOURCE_REVISION, '9e2b5c9f772c5df673a0d71876da0ff286672d8c')
+        self.assertEqual(p.SOURCE_REVISION, 'bdcfef042396b920c345bcd74b8428b31d074009')
         self.assertEqual(initial.PRODUCTION_SOURCE, p.SOURCE_REVISION)
         self.assertEqual(managed.PRODUCTION_SOURCE, p.SOURCE_REVISION)
         self.assertEqual(guest.NATIVE_SOURCES, p.RELEASE_SOURCES)
-        self.assertEqual(p.RELEASE_SOURCES, ('9aab936a09ed120f2050083f4664aae0a28bc228', p.SOURCE_REVISION))
+        self.assertEqual(p.RELEASE_SOURCES, ('ee77e8e2dc7c2be0d03647dfa2b99c3b50ae26af', p.SOURCE_REVISION))
         self.assertEqual(len(p.PUBLICATION), 13)
         self.assertEqual(len(p.PROGRAM_FILES), 13)
         self.assertEqual(len(set(p.PROGRAM_FILES.values())), 13)

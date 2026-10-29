@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "scope": "finite component and fixed artifact calibration, not production acceptance",
+  "feature_source": "ee77e8e2dc7c2be0d03647dfa2b99c3b50ae26af",
+  "second_program_equal_source": "bdcfef042396b920c345bcd74b8428b31d074009",
+  "source_count_each": 1242,
+  "canonical_toolchain": {
+    "version": "go1.27.3",
+    "target": "linux/amd64/v1",
+    "cgo": false,
+    "trimpath": true,
+    "buildvcs": false
+  },
+  "canonical_programs": {
+    "sandboxd": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "xandbox-gateway": "f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c",
+    "xandbox-ingress-launch": "ee23ee79d9e795a5972530ba14f2057184637a0023e203bd5bf06a3525ebc076",
+    "xandbox-launch": "7518d65924fb05470bc86f305b97e25dc7aa5817ff6723870e7b49b056c6cf88",
+    "xandbox-node": "41015af6af5c6594f4ceea08a03766898e004575d27aa4f44dc175a2cae3586a",
+    "xandbox-ready": "60da9aeccb2a1bc9c5ae4fcb694fcd5346265998f0fac491331cde30ae0ea776",
+    "xandbox-template": "5da61709cff42dc4eb39ed4edaba68c8f640b1520d7d5e981f5d16b930ec5cfe",
+    "xandbox-warden": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+    "xandbox-install": "bd8114ba0b8b12fd7cf1a0d80195ef2a299ab648d99a9303008bd2e46855c30f",
+    "xandbox-release": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+    "deploy-helper": "06e1ef60f8c381bbb05a35e86ea74ea2ba536cca2b318bcd03d32b7cac2c8247",
+    "setup": "cb133da908d65c77042f7cf24eb45bba4cd834d8f924f4123a2d277589cb7769",
+    "managed-setup": "d938564bf1ad1a1d98ce02dcc28a69c44059535b223b86282b0c43ff5b980be1"
+  },
+  "both_sources_actual13_native_byte_equal": true,
+  "first_source_all29_independent_cross_changed_only_daemon": true,
+  "component": {
+    "actual_linux_compilers": [
+      "go1.25.14",
+      "go1.27.3"
+    ],
+    "main_parents": 4,
+    "pipe_process_parents": 5,
+    "count_each": 3,
+    "both_race_and_cgo_free": true,
+    "ordinary_daemon_restart_cycles_each": 45,
+    "ordinary_original_records_each": 135,
+    "full_inherited_output_undrained": true,
+    "root_python_tests": 357,
+    "root_python_skipped": 0,
+    "close_budget_ms_unchanged": 250,
+    "process_wait_seconds_unchanged": 10
+  },
+  "offline_instruction_sites": [
+    {
+      "name": "enter",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c1f2",
+      "new_address": "0x74c1f2",
+      "delta": 0,
+      "opcode": "4889842480000000",
+      "register": "ax"
+    },
+    {
+      "name": "selected",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c265",
+      "new_address": "0x74c265",
+      "delta": 0,
+      "opcode": "4885c0",
+      "register": "ax"
+    },
+    {
+      "name": "ok",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c2b5",
+      "new_address": "0x74c2b5",
+      "delta": 0,
+      "opcode": "31c0",
+      "register": "ax"
+    },
+    {
+      "name": "cancel",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c2d5",
+      "new_address": "0x74c2d5",
+      "delta": 0,
+      "opcode": "4883c470",
+      "register": "ax"
+    },
+    {
+      "name": "race_release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c2a5",
+      "new_address": "0x74c2a5",
+      "delta": 0,
+      "opcode": "488b442438",
+      "register": "ax"
+    },
+    {
+      "name": "node_ok",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "old_address": "0x749ba1",
+      "new_address": "0x749ba1",
+      "delta": 0,
+      "opcode": "440f117c2430",
+      "register": "ax"
+    },
+    {
+      "name": "node_reject_release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "old_address": "0x749b4c",
+      "new_address": "0x749b4c",
+      "delta": 0,
+      "opcode": "488b01",
+      "register": "cx"
+    },
+    {
+      "name": "release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "old_address": "0x7560b2",
+      "new_address": "0x7560b2",
+      "delta": 0,
+      "opcode": "488b01",
+      "register": "cx"
+    },
+    {
+      "name": "released",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "old_address": "0x7560bc",
+      "new_address": "0x7560bc",
+      "delta": 0,
+      "opcode": "4883c410",
+      "register": "ax"
+    }
+  ],
+  "offline_total_instructions": 207,
+  "no_probe_addresses_changed": true,
+  "no_L0_or_live_trace": true,
+  "second_source_fixed_pair_and_nine_site_parent3_passed": true,
+  "systemd_role_counts_unchanged": {
+    "deployment": 9,
+    "ingress": 12,
+    "readiness": 13,
+    "release": 15,
+    "install": 16,
+    "managed": 16
+  },
+  "release_two_source_CAS_not_relaxed": true,
+  "known_held_diagnostic_future_protocol_exact_exit75": true,
+  "no_current_KVM_for_exit75": true,
+  "exit_code_definitions": {
+    "0": "clean",
+    "1": "bootstrap_or_generic_or_unknown",
+    "74": "qualified_diagnostic_Close_ErrWrite",
+    "75": "qualified_diagnostic_Close_ErrPending"
+  },
+  "failures_remain_nonzero": true,
+  "ordinary_original_CI30": {
+    "url": "https://github.com/123123213weqw/Xandbox/actions/runs/40843830620",
+    "failed_cycle": 25,
+    "exit_status": 1,
+    "cause_type_still_unknown": true,
+    "not_resigned_by_new_codes_or_component_success": true
+  },
+  "full_current_source_native_ci_and_hardware_pending": true,
+  "no_latency_or_creation_cost_fix_claim": true,
+  "private_component_scope_receipt_sha256": "7ace9e55ebb8040b2e94e86b055520464e9289d86635e86790496252aec694ac",
+  "no_raw_runtime_data_or_credentials": true,
+  "production_ready": false,
+  "goal_complete": false
+}
