@@ -1,9 +1,9 @@
 """TEST ONLY fixed, qualified systemd composition; never execute an input.
 
-00dc Native22 and BF Native21 independently qualified byte-equal publication
-roles. These declarations do not re-sign their hardware records or certify a
-new build: CI must reproduce the program bytes, and KVM inputs must pass the
-complete role/hash gate before an owned image is assembled.
+The two revisions below have actual byte-equal native canonical publication
+programs. This is source/artifact coherence, not full software or KVM acceptance.
+Old hardware records keep their original sources. CI must reproduce all program
+bytes; KVM inputs must pass the full role/hash gate before image assembly.
 """
 import argparse
 import hashlib
@@ -11,8 +11,8 @@ import os
 from pathlib import Path
 import stat
 
-SOURCE_REVISION = '00dc99de10b52d6988b52f12760f61e3fd43fb3d'
-RELEASE_SOURCES = ('bf405dccbead973eacadfa89a0c6866fcc266e36', SOURCE_REVISION)
+SOURCE_REVISION = '9e2b5c9f772c5df673a0d71876da0ff286672d8c'
+RELEASE_SOURCES = ('9aab936a09ed120f2050083f4664aae0a28bc228', SOURCE_REVISION)
 PROGRAM_FILES = {
     'daemon': 'sandboxd', 'gateway': 'xandbox-gateway',
     'ingress': 'xandbox-ingress-launch', 'launcher': 'xandbox-launch',
@@ -22,19 +22,19 @@ PROGRAM_FILES = {
     'helper': 'deploy-helper', 'setup': 'setup', 'managed-setup': 'managed-setup',
 }
 PINS = {
-    'daemon': '896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768',
-    'gateway': '17e2e0d524cd86acb576a26e10b78869ca345370347fd564fe8fcbdc8cbf641f',
-    'ingress': 'b325c8d44987a46308933e7e62d2b6d839a504c4a39694c7c745b71197a7f94c',
-    'launcher': 'e1146b304a82c60ecb301d57e388417755e7d5bedcc1d1170c804c72e495a160',
-    'node': '5b5476c793fa41e3d11ed66e3bacd2a5dfc1780e1b0fa8f394cb26a1e3926ba3',
-    'ready': 'ae66e173f45a1609150fd58d78c52ad69557c04be417d6952895aa6d965af8cf',
-    'template': 'b3f623dd633041be12a7727ee21614d11bfeeb4c02569e748323c4e6caa976d6',
+    'daemon': '97f2b7a83c90d877e06aa20a943c71632e142c469c392f52970a9903b25ebd0b',
+    'gateway': 'f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c',
+    'ingress': 'ee23ee79d9e795a5972530ba14f2057184637a0023e203bd5bf06a3525ebc076',
+    'launcher': '7518d65924fb05470bc86f305b97e25dc7aa5817ff6723870e7b49b056c6cf88',
+    'node': '41015af6af5c6594f4ceea08a03766898e004575d27aa4f44dc175a2cae3586a',
+    'ready': '60da9aeccb2a1bc9c5ae4fcb694fcd5346265998f0fac491331cde30ae0ea776',
+    'template': '5da61709cff42dc4eb39ed4edaba68c8f640b1520d7d5e981f5d16b930ec5cfe',
     'warden': 'b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0',
-    'install': 'd6236fd2fd169b4bac0041f489bdc58a604c58bfaf69b815c94dd57b09ce31f7',
+    'install': 'bd8114ba0b8b12fd7cf1a0d80195ef2a299ab648d99a9303008bd2e46855c30f',
     'release': 'fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb',
-    'helper': '784902b72a868f897fb8c58d4ee5ff971c0447edc296e8f68114680470d9a80b',
-    'setup': '19d4cd28460608766bb361c7b096ae4ebeb016d8b1e6529de9f846a963b3d122',
-    'managed-setup': '0af1b6ec635316488cdab9a1ef3f7b63cd9bf3432db5d49007887240a14d6007',
+    'helper': '06e1ef60f8c381bbb05a35e86ea74ea2ba536cca2b318bcd03d32b7cac2c8247',
+    'setup': 'cb133da908d65c77042f7cf24eb45bba4cd834d8f924f4123a2d277589cb7769',
+    'managed-setup': 'd938564bf1ad1a1d98ce02dcc28a69c44059535b223b86282b0c43ff5b980be1',
     'firecracker': '99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5',
     'jailer': '65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f',
     'kernel': '1e86630c63d61fd37b5a4d23cb66056286bdcc00ebca217c7ef95689575a4bb3',
@@ -76,7 +76,7 @@ def read_pinned(path, expected, *, program, workspace=False):
         if len(data) != before.st_size or identity(before) != identity(after):
             raise ValueError('fixed input changed during read')
         if hashlib.sha256(data).hexdigest() != expected:
-            raise ValueError('fixed qualified input differs')
+            raise ValueError('fixed source-bound input differs')
         if program:
             # Lazy import: the release guest imports only the declaration above.
             from build_guest_fault_fixture import static_elf
@@ -95,7 +95,7 @@ def validate_assets(value, profile):
     for role, item in value.items():
         pin_role = 'managed-setup' if role == 'setup' and profile == 'managed' else role
         if type(item) is not dict or set(item) != {'path', 'sha256'} or item['sha256'] != PINS[pin_role] or type(item['path']) is not str:
-            raise ValueError('fixed qualified role declaration differs')
+            raise ValueError('fixed source-bound role declaration differs')
     for role, item in value.items():
         read_pinned(item['path'], item['sha256'], program=role in PROGRAM_FILES or role in ('firecracker', 'jailer'), workspace=role == 'workspace')
     return SOURCE_REVISION

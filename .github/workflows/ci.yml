@@ -125,6 +125,12 @@ jobs:
               go build -tags="xandbox_${kind}_fixture" -trimpath -buildvcs=false -o "$RUNNER_TEMP/xandbox-fixture-calibration/$output" "./cmd/xandbox-${kind}-fixture"
           done
           python3 scripts/systemd_fixture_provenance.py --programs-dir "$RUNNER_TEMP/xandbox-fixture-calibration"
+      - name: Verify all nine fixed instruction sites without live tracing
+        run: |
+          umask 077
+          GOENV=off GOFLAGS='' GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 \
+            XANDBOX_PREPARE_PROBE_ELF="$RUNNER_TEMP/xandbox-fixture-calibration/sandboxd" \
+            go test -tags=xandbox_host_fixture -count=3 -v -run '^TestPrepareProbePinnedOrdinaryELF$' ./cmd/xandbox-host-fixture
       - name: Compile opt-in test-only guest observer
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags=xandbox_guest_fixture -trimpath -o /tmp/xandbox-fixture-observer ./cmd/xandbox-fixture-observer
       - name: Compile opt-in nested host fixture

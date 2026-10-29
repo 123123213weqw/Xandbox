@@ -57,3 +57,14 @@ gateway 为 `f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c`�
 当前源码 CI 和真实 KVM 矩阵也仍待完成。本报告仅为软件工件的一致性检查，
 不证明压力吞吐、停止百分位、共享内存 pristine、生产 SLO 或整个 Goal 完成；
 不能仅凭新摘要重放原失败40分钟负载。
+
+### 九点地址校准的真实失败与修复
+
+`9e2b5c9` 的首个原生批次在13份程序构建和新 pair gate 成功后，
+`TestPrepareProbePinnedOrdinaryELF` 三次均拒绝了旧绝对指令地址；批次 exit1，
+后续 CGO0/vet 未执行，原始62份库存完整保留，不能记为整个夹具通过。
+[独立离线比对](validation/scoped-revoke-nine-sites-calibration-v1.json)
+逐条核对三函数共207条指令，源码行、函数相对指令边界、寄存器和符号化控制流相同。
+九点地址均需加64字节，opcode/register 不变；保持整个 ELF 摘要、符号归属和
+精确指令字节门槛，未挂载 tracefs、注册 probe 或改动 L0。
+这只是新程序的定位校准，仍需原有完整 Linux 软件和真实 owned-L1 验证。

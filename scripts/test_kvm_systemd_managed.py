@@ -18,7 +18,7 @@ from kvm_systemd_host import harness_files,validate_managed_reply
 class ManagedControls(unittest.TestCase):
     def test_exclusive_fresh_composition_and_source_boundary(self):
         self.assertEqual(len(builder.ASSETS),16);self.assertEqual(len(builder.ROLES),13)
-        self.assertEqual(builder.PRODUCTION_SOURCE,'00dc99de10b52d6988b52f12760f61e3fd43fb3d')
+        self.assertEqual(builder.PRODUCTION_SOURCE,'9e2b5c9f772c5df673a0d71876da0ff286672d8c')
         names=harness_files(True,False,False,managed=True)
         self.assertEqual(len(names),16);self.assertEqual(len(set(names)),16)
         self.assertIn('systemd_fixture_provenance.py',names)
