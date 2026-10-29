@@ -37,7 +37,7 @@ const tlsPolicyPost tlsPolicyMode = "post-commit"
 
 // Canonical Go1.27.3 linux/amd64/v1 CGO0, trimpath and buildvcs=false.
 // Verify freshly built ordinary artifacts with scripts/verify_fixture_calibration.py.
-const tlsPolicyGatewaySHA = "17e2e0d524cd86acb576a26e10b78869ca345370347fd564fe8fcbdc8cbf641f"
+const tlsPolicyGatewaySHA = "f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c"
 const tlsPolicyRoot = gatewayDir + "/policy"
 const tlsPolicyReceipt = gatewayDir + "/policy-fault-receipt.json"
 const tlsPolicyMemfd = "xandbox-gateway-policy"

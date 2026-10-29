@@ -124,7 +124,7 @@ func TestTLSPolicyFixedCheckedSequence(t *testing.T) {
 	}
 }
 func TestTLSPolicyFilterOnlyFsyncMemfdAndArchitecture(t *testing.T) {
-	if tlsPolicyGatewaySHA != "17e2e0d524cd86acb576a26e10b78869ca345370347fd564fe8fcbdc8cbf641f" {
+	if tlsPolicyGatewaySHA != "f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c" {
 		t.Fatal("fixed current gateway calibration changed")
 	}
 	p, e := tlsPolicyProgram()

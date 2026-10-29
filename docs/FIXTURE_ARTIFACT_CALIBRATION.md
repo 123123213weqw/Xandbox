@@ -38,3 +38,22 @@ GOENV=off、空GOFLAGS、`-trimpath -buildvcs=false`，新构建普通sandboxd�
 也不能把旧硬件记录重新签成新夹具或新源码通过。普通daemon仍为
 `896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768`；
 此次修正没有证明降低open/switch服务成本，不允许因此重放原失败40分钟负载。
+
+## 2026-10-29：即时撤销候选的当前校准（未验收）
+
+生产改动 `9aab936a09ed120f2050083f4664aae0a28bc228` 在准入栅栏之后直接尝试
+已有租约 capability 的有界撤销，不再仅等待下一轮 reconcile；Stop/持久化/回收
+与容量释放门槛不变。它不是创建服务成本或高负载失败已经解决的证据。
+
+[新候选的实际程序校准](validation/scoped-revoke-program-calibration-v1.json)
+记录全1234份源码绑定、同一 V100 的13个实际原生构建及独立交叉编译摘要相等。
+规范参数仍为 Go1.27.3 / linux/amd64/v1 / CGO0 / trimpath / buildvcs=false。
+本节新 daemon 为 `97f2b7a83c90d877e06aa20a943c71632e142c469c392f52970a9903b25ebd0b`，
+gateway 为 `f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c`。
+本次只更新当前固定探针/通知 pin 及其断言，不增加可选摘要、不扩大通知目标或改变预算。
+
+前述 BF、00dc、5b 等旧记录仍保留各自源码、程序及范围，不重新签成新候选。
+完整 systemd 组合门槛仍需独立校准：旧来源不能冒称具有新程序字节；完整原生套件、
+当前源码 CI 和真实 KVM 矩阵也仍待完成。本报告仅为软件工件的一致性检查，
+不证明压力吞吐、停止百分位、共享内存 pristine、生产 SLO 或整个 Goal 完成；
+不能仅凭新摘要重放原失败40分钟负载。
