@@ -58,7 +58,9 @@ jobs:
           CGO_ENABLED=0 go test -count=3 -timeout=90s -run '^TestDiagnosticShutdown' ./cmd/sandboxd
           go test -race -tags=xandbox_diagnostics_fixture -count=3 -timeout=90s -run '^TestDiagnosticsProbeUnit' ./cmd/sandboxd
           CGO_ENABLED=0 go test -tags=xandbox_diagnostics_fixture -count=3 -timeout=90s -run '^TestDiagnosticsProbeUnit' ./cmd/sandboxd
-          CGO_ENABLED=0 go test -tags=xandbox_host_fixture -count=3 -timeout=90s -run '^TestDiagnostic' ./cmd/xandbox-host-fixture
+      - name: Verify held diagnostic writer requires exact pending exit on Linux
+        if: runner.os == 'Linux'
+        run: CGO_ENABLED=0 go test -tags=xandbox_host_fixture -count=3 -timeout=90s -run '^TestDiagnostic' ./cmd/xandbox-host-fixture
       - name: Build and process smoke test
         run: make smoke
       - name: Test opt-in nested host fixture only on Linux
