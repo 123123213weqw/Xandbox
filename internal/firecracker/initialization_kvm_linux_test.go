@@ -33,6 +33,13 @@ type initializationFixture struct {
 	StateDir, ConfigPath, RefPath, BarrierPath, ResultPath, SourceRevision, Mode, CreateKey string
 }
 
+// Synthetic regression only: pause before publishing the durable barrier.
+// Real KVM callers use the ordinary constructor below, which always passes nil.
+type initializationBarrierGate struct {
+	entered chan<- struct{}
+	release <-chan struct{}
+}
+
 // A TEST-ONLY bridge replaces the pathname after the real ownership fsync, when
 // waitPristine has already finished and before NewRequest/Initialize. Production
 // constructors, Prepare and Initialize are unmodified. The real Firecracker
@@ -50,6 +57,7 @@ type initializationFaultBridge struct {
 	hash, bootID                            string
 	barrierOnce                             sync.Once
 	failure                                 error
+	barrierGate                             *initializationBarrierGate
 }
 
 func (p *initializationFaultBridge) fail(e error) {
@@ -66,6 +74,9 @@ func (p *initializationFaultBridge) close() {
 	p.wg.Wait()
 }
 func newInitializationFaultBridge(socket, mode, barrier string, ref sandbox.Ref) (*initializationFaultBridge, error) {
+	return newInitializationFaultBridgeWithGate(socket, mode, barrier, ref, nil)
+}
+func newInitializationFaultBridgeWithGate(socket, mode, barrier string, ref sandbox.Ref, gate *initializationBarrierGate) (*initializationFaultBridge, error) {
 	real := filepath.Join(filepath.Dir(socket), "o.sock")
 	if _, e := os.Lstat(real); !os.IsNotExist(e) {
 		return nil, errors.New("fault relay destination already exists")
@@ -79,7 +90,7 @@ func newInitializationFaultBridge(socket, mode, barrier string, ref sandbox.Ref)
 	}
 	l.SetUnlinkOnClose(false)
 	ctx, cancel := context.WithCancel(context.Background())
-	p := &initializationFaultBridge{listener: l, realSocket: real, mode: mode, barrier: barrier, ref: ref, ctx: ctx, cancel: cancel}
+	p := &initializationFaultBridge{listener: l, realSocket: real, mode: mode, barrier: barrier, ref: ref, ctx: ctx, cancel: cancel, barrierGate: gate}
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -231,6 +242,10 @@ func (p *initializationFaultBridge) serve(client *net.UnixConn) {
 		switch p.mode {
 		case "after_sealed_before_ready":
 			p.barrierOnce.Do(func() {
+				if p.barrierGate != nil {
+					close(p.barrierGate.entered)
+					<-p.barrierGate.release
+				}
 				p.failIf(durableJSON(p.barrier, map[string]any{"phase": "after_sealed_before_ready", "ref": p.ref, "guest_sealed_confirmed": true}))
 			})
 			<-p.ctx.Done()
@@ -488,7 +503,7 @@ func TestInitializationFaultFixtureJSONIsPrivateOnly(t *testing.T) {
 func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 	for _, mode := range []string{"drop_claim_ack", "drop_health_ack", "wrong_health_epoch", "after_sealed_before_ready", "drop_initialize_request"} {
 		t.Run(mode, func(t *testing.T) {
-			root, e := os.MkdirTemp("/tmp", "xif")
+			root, e := os.MkdirTemp("", "xif")
 			if e != nil {
 				t.Fatal(e)
 			}
@@ -555,17 +570,44 @@ func TestInitializationFaultRelayModesSyntheticOnly(t *testing.T) {
 				}
 			}()
 			defer func() { l.Close(); <-done; handlers.Wait() }()
-			proxy, e := newInitializationFaultBridge(socket, mode, filepath.Join(root, "barrier.json"), req.Ref)
+			var gate *initializationBarrierGate
+			var barrierEntered, barrierRelease chan struct{}
+			if mode == "after_sealed_before_ready" {
+				barrierEntered, barrierRelease = make(chan struct{}), make(chan struct{})
+				gate = &initializationBarrierGate{barrierEntered, barrierRelease}
+			}
+			proxy, e := newInitializationFaultBridgeWithGate(socket, mode, filepath.Join(root, "barrier.json"), req.Ref, gate)
 			if e != nil {
 				t.Fatal(e)
 			}
-			defer proxy.close()
+			var releaseOnce sync.Once
+			release := func() {
+				if barrierRelease != nil {
+					releaseOnce.Do(func() { close(barrierRelease) })
+				}
+			}
+			defer func() { release(); proxy.close() }()
 			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			defer cancel()
 			_, e = guestbridge.Initialize(ctx, socket, req)
 			if (e == nil) != (mode == "drop_claim_ack") {
 				t.Fatal("wrong relay fault outcome", e)
 			}
+			if gate != nil {
+				select {
+				case <-barrierEntered:
+				case <-time.After(time.Second):
+					t.Fatal("synthetic relay never reached the held publication point")
+				}
+				if _, e := os.Lstat(filepath.Join(root, "barrier.json")); !os.IsNotExist(e) {
+					t.Fatal("held barrier was published before release")
+				}
+				release()
+			}
+			// Client expiry and sealedReplies are NOT barrier publication. Join
+			// the actual relay writers before observing their errors or receipt.
+			// Keep the original 200ms client deadline and all fault predicates.
+			proxy.close()
 			if proxy.err() != nil || proxy.initializeRequests.Load() != 1 {
 				t.Fatal("relay evidence incomplete")
 			}

@@ -13,8 +13,14 @@ import (
 func main() {
 	mode := flag.String("mode", "", "internal test-only mode")
 	config := flag.String("config", "", "root-owned fixture launch policy")
+	costMode := flag.String("creation-cost-mode", "off", "TEST ONLY explicit owned-L1 diagnostics: off, observe, maximum")
 	flag.Parse()
-	var err error
+	selected, err := parseCreationCostMode(*costMode, *mode, *config, flag.NArg())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	configuredCreationCostMode = selected
 	switch *mode {
 	case "launch":
 		err = launch(*config)
@@ -30,6 +36,18 @@ func main() {
 		}
 	case "node-budget":
 		err = runNodeBudgetProfiles(false, false, true, false, false, false, true)
+	case "node-load":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed load PID1 accepts no arguments")
+		} else {
+			err = runNodeLoadProfile()
+		}
+	case "node-load-daemon":
+		if *config != "" || flag.NArg() != 0 {
+			err = fmt.Errorf("fixed load daemon accepts no arguments")
+		} else {
+			err = runNodeLoadDaemon()
+		}
 	case "node-oom-pressure":
 		if *config != "" || flag.NArg() != 0 {
 			err = fmt.Errorf("fixed OOM child accepts no arguments")

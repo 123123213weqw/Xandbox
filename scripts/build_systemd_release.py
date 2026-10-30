@@ -46,6 +46,7 @@ def configure(root,assets):
     p=config/'assets.json';p.write_text(json.dumps(source,sort_keys=True)+'\n');p.chmod(0o600)
     (root/'etc/xandbox-systemd-release-fixture').write_text(MARKER)
     p=root/'opt/xandbox/systemd_release_guest.py';shutil.copyfile(Path(__file__).with_name(p.name),p);p.chmod(0o444)
+    p=root/'opt/xandbox/systemd_fixture_provenance.py';shutil.copyfile(Path(__file__).with_name(p.name),p);p.chmod(0o444)
     unit=root/'etc/systemd/system/xandbox-ingress-operator.service';raw=unit.read_text()
     if raw.count('systemd_readiness_guest.py')!=1:raise ValueError('one fixed readiness operator required')
     unit.write_text(raw.replace('systemd_readiness_guest.py','systemd_release_guest.py'))

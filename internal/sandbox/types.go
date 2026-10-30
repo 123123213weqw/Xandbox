@@ -146,18 +146,21 @@ type Store interface {
 }
 
 type Stats struct {
-	Records              int    `json:"records"`
-	RecordCapacity       int    `json:"record_capacity"`
-	TenantRecordCapacity int    `json:"tenant_record_capacity"`
-	Backend              string `json:"backend"`
-	Active               int    `json:"active"`
-	Capacity             int    `json:"capacity"`
-	Recovering           int    `json:"recovering"`
-	StopQueued           int    `json:"stop_queued"`
-	CleanupQueued        int    `json:"cleanup_queued"`
-	StopRunning          int    `json:"stop_running"`
-	CleanupRunning       int    `json:"cleanup_running"`
-	StopWorkers          int    `json:"stop_workers"`
-	CleanupWorkers       int    `json:"cleanup_workers"`
-	QueueCapacity        int    `json:"queue_capacity_per_pool"`
+	Records                  int    `json:"records"`
+	RecordCapacity           int    `json:"record_capacity"`
+	TenantRecordCapacity     int    `json:"tenant_record_capacity"`
+	Backend                  string `json:"backend"`
+	Active                   int    `json:"active"`
+	Capacity                 int    `json:"capacity"`
+	Recovering               int    `json:"recovering"`
+	StopQueued               int    `json:"stop_queued"`
+	CleanupQueued            int    `json:"cleanup_queued"`
+	StopRunning              int    `json:"stop_running"`
+	CleanupRunning           int    `json:"cleanup_running"`
+	StopWorkers              int    `json:"stop_workers"`
+	CleanupWorkers           int    `json:"cleanup_workers"`
+	QueueCapacity            int    `json:"queue_capacity_per_pool"`
+	CreateQueued             int    `json:"create_queued"`
+	CreateQueueCapacity      int    `json:"create_queue_capacity"`
+	CreateClassQueueCapacity int    `json:"create_queue_capacity_per_class"`
 }

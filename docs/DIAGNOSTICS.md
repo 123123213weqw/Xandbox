@@ -73,6 +73,63 @@ CRC 是撕裂/损坏检测，不是抗恶意同 UID/root 修改的认证。
 
 ## 退出和只读观察
 
+### 诊断关闭退出码（开发候选，尚未完整验收）
+
+普通 `sandboxd` 的退出状态增加闭集分类，不向可能填满的继承 stdout/stderr
+写入补充错误文本，不增加文件、等待或后台 worker：
+
+| 状态 | 含义 |
+|---|---|
+| `0` | 普通成功退出 |
+| `1` | bootstrap、其他或无法确定分类的失败；原 bootstrap 消息契约不变 |
+| `74` | 已启动进程的最终诊断 `Close` 明确返回 `ErrWrite` |
+| `75` | 已启动进程的最终诊断 `Close` 明确返回 `ErrPending` |
+
+只有最终诊断关闭边界创建的私有 origin marker 才能产生 `74/75`；其他子系统中
+相同 sentinel、未知或混合错误不能冒充这个分类。原 `diagnostics.Fault` 原因及
+`errors.Is/As` 链保留。若已有 bootstrap 失败，仍返回 `1`。
+
+**74/75 仍是失败，smoke 必须拒绝，不能解释成正常退出或自动重试许可。**
+74 没有定位具体 write/fsync/close syscall；75 没有证明永久卡死、worker 已结束、
+虚拟机已停止或配额已清零。若同时存在其他关闭错误，此分类也不证明其他子系统成功。
+250ms 等待、未完成 writer 的 FD/state-lock 所有权、独立生命周期清理机会及所有
+ring 提交屏障保持不变。旧普通程序只报告的 `exit1` 不能事后重分类为 74 或 75。
+
+针对明确保持 ring fsync 未回复的 TEST 模式，新协议精确要求实际 `EXIT_GROUP75`
+及 reaped 状态75，拒绝旧1、74或任意非零值；普通 state-lock contender 和
+control-store 关闭错误的原1契约不变。原80 producers、64队列、15 drops、
+20s hold及完整原盘cold恢复协议不变。旧KVM报告保持原源码/退出1记录，不代签。
+
+原 [CI30 push](https://github.com/123123213weqw/Xandbox/actions/runs/40843830620)
+在诊断第25次重启失败的事实保留；此改动提供未来普通失败的分类证据，
+**没有证明修复原故障、存储尾延迟或服务创建成本**。当前候选仍需新工件校准、
+完整软件/CI及受影响的 Linux/KVM 验收，未部署，不是生产就绪声明。
+
+### 可选 TEST 观察器
+
+`xandbox_diagnostics_fixture` 只编译到 `_test.go` 测试可执行文件。
+普通 `go build` 不含观察 FD/env 开关，即使提供该 tag 也不包含测试文件。
+该观察器执行真实 `runArgs`，保留完整45次重启、135记录、128保留容量、
+16,768逻辑字节、同一ring/lock inode、填满且不读取的继承输出、250ms诊断等待、
+10s进程等待及原 Stop/GC/metrics/隐私/拒绝检查。
+
+```sh
+umask 077
+work_dir=$(mktemp -d /tmp/xd.XXXXXXXX)
+go build -o "$work_dir/sandboxd" ./cmd/sandboxd
+CGO_ENABLED=0 go build -o "$work_dir/xandbox-node" ./cmd/xandbox-node
+go test -c -tags=xandbox_diagnostics_fixture -o "$work_dir/helper.test" ./cmd/sandboxd
+TMPDIR="$work_dir" python3 scripts/diagnostics_close_probe.py \
+  --daemon "$work_dir/sandboxd" --helper "$work_dir/helper.test" --node "$work_dir/xandbox-node"
+```
+
+使用私有且短的临时路径，避免超出 Unix socket 路径上限；失败时保留证据，
+不要通过删除生产状态绕过失败。单独的父进程 owned 非阻塞 pipe 只传两个字节的
+固定 `clean/pending/write_error/other_error` 结果，不能写普通文件或继承标准流；
+丢失/无效结果仍导致观察器失败，非零退出绝不改成成功。post-loop 拒绝检查
+仍运行普通 daemon。测试 helper 含不同的测试 runtime，**不是普通 binary/CI/KVM
+验收替代品，也不能重建过去已丢失的原始错误类型**。
+
 生命周期 / session / control 的独立清理机会 **先于**诊断 drain。
 随后 daemon 给诊断 Close 自己的 **250 ms 等待预算**；这不是磁盘 syscall 截止时间。
 超时或错误则退出失败并保留 controller state-lock 的可达引用到进程实际退出，

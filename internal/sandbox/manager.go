@@ -19,20 +19,21 @@ import (
 )
 
 type Options struct {
-	AdmissionGate    *AdmissionGate
-	Metrics          *telemetry.Registry
-	MaxRecords       int
-	MaxTenantRecords int
-	MaxInstances     int
-	OperationTimeout time.Duration
-	PrepareTimeout   time.Duration
-	StopTimeout      time.Duration
-	CleanupTimeout   time.Duration
-	ReapInterval     time.Duration
-	RetryDelay       time.Duration
-	StopWorkers      int
-	CleanupWorkers   int
-	WorkQueueSize    int
+	AdmissionGate       *AdmissionGate
+	Metrics             *telemetry.Registry
+	MaxRecords          int
+	MaxTenantRecords    int
+	MaxInstances        int
+	OperationTimeout    time.Duration
+	PrepareTimeout      time.Duration
+	CapacityWaitTimeout time.Duration // May shorten, but never extend, the shared prepare envelope.
+	StopTimeout         time.Duration
+	CleanupTimeout      time.Duration
+	ReapInterval        time.Duration
+	RetryDelay          time.Duration
+	StopWorkers         int
+	CleanupWorkers      int
+	WorkQueueSize       int
 }
 
 type execution struct {
@@ -65,27 +66,30 @@ type instance struct {
 }
 
 type Manager struct {
-	metricRecords   atomic.Int64
-	metricAllocated atomic.Int64
-	mu              sync.Mutex
-	records         map[string]*instance
-	createKeys      map[string]*instance
-	active          map[string]*instance // Capacity is returned only after durable cleanup.
-	tenantRecords   map[string]int       // Includes permanent tombstones and uncertain writes.
-	closing         bool
-	driver          Driver
-	store           Store
-	opts            Options
-	ctx             context.Context
-	cancel          context.CancelFunc
-	wake            chan struct{}
-	workerDone      chan struct{}
-	workMu          sync.Mutex
-	workers         sync.WaitGroup
-	stopQueue       chan *instance
-	cleanupQueue    chan *instance
-	stopRunning     atomic.Int32
-	cleanupRunning  atomic.Int32
+	metricRecords      atomic.Int64
+	metricAllocated    atomic.Int64
+	metricCreateQueued atomic.Int64
+	mu                 sync.Mutex
+	records            map[string]*instance
+	createKeys         map[string]*instance
+	active             map[string]*instance // Capacity is returned only after durable cleanup.
+	tenantRecords      map[string]int       // Includes permanent tombstones and uncertain writes.
+	closing            bool
+	createQueue        []*createWaiter // Manager.mu; bounded waiting for future capacity, no resource ownership.
+	createChanged      chan struct{}
+	driver             Driver
+	store              Store
+	opts               Options
+	ctx                context.Context
+	cancel             context.CancelFunc
+	wake               chan struct{}
+	workerDone         chan struct{}
+	workMu             sync.Mutex
+	workers            sync.WaitGroup
+	stopQueue          chan *instance
+	cleanupQueue       chan *instance
+	stopRunning        atomic.Int32
+	cleanupRunning     atomic.Int32
 }
 
 func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
@@ -112,6 +116,12 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	}
 	if opts.PrepareTimeout <= 0 {
 		opts.PrepareTimeout = opts.OperationTimeout
+	}
+	if opts.CapacityWaitTimeout == 0 {
+		opts.CapacityWaitTimeout = opts.PrepareTimeout
+	}
+	if opts.CapacityWaitTimeout < 0 || opts.CapacityWaitTimeout > opts.PrepareTimeout {
+		return nil, errors.New("capacity wait timeout must fit within prepare timeout")
 	}
 	if opts.StopTimeout <= 0 {
 		opts.StopTimeout = opts.OperationTimeout
@@ -167,7 +177,8 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 		tenantRecords: make(map[string]int),
 		driver:        driver, store: store, opts: opts, ctx: ctx, cancel: cancel,
 		wake: make(chan struct{}, 1), workerDone: make(chan struct{}),
-		stopQueue: make(chan *instance, opts.WorkQueueSize), cleanupQueue: make(chan *instance, opts.WorkQueueSize),
+		createChanged: make(chan struct{}),
+		stopQueue:     make(chan *instance, opts.WorkQueueSize), cleanupQueue: make(chan *instance, opts.WorkQueueSize),
 	}
 	for _, r := range records {
 		if _, exists := m.records[r.ID]; exists {
@@ -348,83 +359,138 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		return Record{}, err
 	}
 	defer i.opMu.release()
-	m.mu.Lock()
-	if m.closing {
-		m.mu.Unlock()
-		return Record{}, ErrClosing
-	}
-	index := owner.TenantID + "\x00" + keyHash
-	if keyHash != "" {
-		if existing := m.createKeys[index]; existing != nil {
+	// Capacity waiting and actual preparation share ONE existing timeout. A
+	// timeout before reservation is an ordinary capacity refusal, never an
+	// allocation retry. After reservation all failures retain the usual fence.
+	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.PrepareTimeout)
+	opCtx = telemetry.CarryCreationTrace(opCtx, ctx)
+	stopCancel := context.AfterFunc(ctx, cancel)
+	defer cancel()
+	defer stopCancel()
+	waitCtx, cancelWait := context.WithTimeout(opCtx, m.opts.CapacityWaitTimeout)
+	defer cancelWait()
+	var waiter *createWaiter
+	defer func() {
+		if waiter != nil {
+			m.mu.Lock()
+			m.removeCreateWaiterLocked(waiter)
 			m.mu.Unlock()
-			select {
-			case <-ctx.Done():
-				return Record{}, ctx.Err()
-			case <-existing.prepared:
-			}
-			existing.mu.Lock()
-			defer existing.mu.Unlock()
-			r := existing.record
-			if r.CreateSpecHash != specHash {
-				return Record{}, ErrIdempotencyConflict
-			}
-			if existing.admission != admission || !existing.usable() {
-				return Record{}, ErrIdempotencyGone
-			}
-			return r, nil
 		}
-	}
-	if ticket == nil && !m.opts.AdmissionGate.Open() {
-		m.mu.Unlock()
-		return Record{}, ErrDraining
-	}
-	if len(m.records) >= m.opts.MaxRecords {
-		m.mu.Unlock()
-		return Record{}, ErrMetadataCapacity
-	}
-	if m.tenantRecords[owner.TenantID] >= m.opts.MaxTenantRecords {
-		m.mu.Unlock()
-		return Record{}, ErrTenantMetadataCapacity
-	}
-	if len(m.active) >= m.opts.MaxInstances {
-		m.mu.Unlock()
-		return Record{}, ErrCapacity
-	}
-	tenantActive := 0
-	for _, active := range m.active {
-		if active.tenantID == owner.TenantID {
-			tenantActive++
+	}()
+	index := owner.TenantID + "\x00" + keyHash
+	admissionSpan := telemetry.StartCreation(ctx, telemetry.CoreAdmission)
+	defer admissionSpan.End()
+	for {
+		m.mu.Lock()
+		if m.closing {
+			m.mu.Unlock()
+			return Record{}, ErrClosing
 		}
-	}
-	if tenantActive >= owner.MaxInstances {
-		m.mu.Unlock()
-		return Record{}, ErrTenantCapacity
-	}
-	if m.records[id] != nil {
-		m.mu.Unlock()
-		return Record{}, errors.New("random identity collision")
-	}
-	err = m.opts.AdmissionGate.reserve(ticket, func() {
-		m.records[id], m.active[id] = i, i
-		m.metricRecords.Add(1)
-		m.metricAllocated.Add(1)
-		m.tenantRecords[owner.TenantID]++
 		if keyHash != "" {
-			m.createKeys[index] = i
+			if existing := m.createKeys[index]; existing != nil {
+				m.removeCreateWaiterLocked(waiter)
+				m.mu.Unlock()
+				select {
+				case <-ctx.Done():
+					return Record{}, ctx.Err()
+				case <-existing.prepared:
+				}
+				existing.mu.Lock()
+				defer existing.mu.Unlock()
+				r := existing.record
+				if r.CreateSpecHash != specHash {
+					return Record{}, ErrIdempotencyConflict
+				}
+				if existing.admission != admission || !existing.usable() {
+					return Record{}, ErrIdempotencyGone
+				}
+				return r, nil
+			}
 		}
-	})
-	if err != nil {
+		gateChanged, gateErr := m.opts.AdmissionGate.inspect(ticket)
+		if gateErr != nil {
+			m.mu.Unlock()
+			return Record{}, gateErr
+		}
+		if len(m.records) >= m.opts.MaxRecords {
+			m.mu.Unlock()
+			return Record{}, ErrMetadataCapacity
+		}
+		if m.tenantRecords[owner.TenantID] >= m.opts.MaxTenantRecords {
+			m.mu.Unlock()
+			return Record{}, ErrTenantMetadataCapacity
+		}
+		if err := ctx.Err(); err != nil {
+			m.mu.Unlock()
+			return Record{}, err
+		}
+		counts := m.activeTenantsLocked()
+		capacityErr := m.capacityErrorLocked(owner, counts)
+		// Preserve one-shot raw admission when no transactional demand is
+		// waiting. Once a capacity queue exists, raw may JOIN its FIFO instead
+		// of being starved by a continuous managed stream. Neither class can
+		// steal an eligible waiter's turn, or reserve VM capacity in advance.
+		if waiter == nil && admission == nil && len(m.createQueue) == 0 && capacityErr != nil {
+			m.mu.Unlock()
+			return Record{}, capacityErr
+		}
+		if waitCtx.Err() != nil {
+			m.mu.Unlock()
+			if capacityErr != nil {
+				return Record{}, capacityErr
+			}
+			return Record{}, ErrCapacity // Deadline while waiting for our fair turn.
+		}
+		first := m.firstCreateWaiterLocked(counts)
+		if capacityErr == nil && (first == nil || first == waiter) {
+			if m.records[id] != nil {
+				m.mu.Unlock()
+				return Record{}, errors.New("random identity collision")
+			}
+			err = m.opts.AdmissionGate.reserve(ticket, func() {
+				m.records[id], m.active[id] = i, i
+				m.metricRecords.Add(1)
+				m.metricAllocated.Add(1)
+				m.tenantRecords[owner.TenantID]++
+				if keyHash != "" {
+					m.createKeys[index] = i
+				}
+				if len(m.createQueue) != 0 {
+					m.signalCreatesLocked() // Wake duplicate-key and metadata-limit observers too.
+				}
+			})
+			m.removeCreateWaiterLocked(waiter)
+			m.mu.Unlock()
+			if err != nil {
+				return Record{}, err
+			}
+			break
+		}
+		if waiter == nil {
+			waiter = &createWaiter{owner: owner, ctx: waitCtx, ticket: ticket, managed: admission != nil}
+			if err := m.enqueueCreateLocked(waiter); err != nil {
+				m.mu.Unlock()
+				return Record{}, err
+			}
+		}
+		changed := m.createChanged
 		m.mu.Unlock()
-		return Record{}, err
+		select {
+		case <-waitCtx.Done():
+		case <-gateChanged:
+		case <-changed:
+		}
 	}
-	m.mu.Unlock()
+	admissionSpan.End()
 	if reserved != nil {
 		reserved(i.ref)
 	}
 	// Ownership is durable BEFORE the driver can allocate any resource.
 	i.mu.Lock()
 	ref := i.record.Ref
+	ownershipSpan := telemetry.StartCreation(ctx, telemetry.CoreOwnershipCommit)
 	err = m.store.Save(i.record)
+	ownershipSpan.End()
 	i.mu.Unlock()
 	if err != nil {
 		// Save may have committed before reporting a durability error. Keep the
@@ -437,8 +503,6 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		m.notify()
 		return Record{}, fmt.Errorf("persist ownership before prepare: %w", err)
 	}
-	opCtx, cancel := context.WithTimeout(m.ctx, m.opts.PrepareTimeout)
-	stopCancel := context.AfterFunc(ctx, cancel)
 	i.mu.Lock()
 	i.prepareCancel = cancel
 	if i.record.State != Creating || i.record.DeleteRequested || i.intent.Load() != 0 || i.expired() {
@@ -446,7 +510,9 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 	}
 	i.mu.Unlock()
 	if err = opCtx.Err(); err == nil {
+		driverSpan := telemetry.StartCreation(ctx, telemetry.CoreDriver)
 		err = m.driver.Prepare(opCtx, ref, Preparation{Limits: req.Limits, DeadlineNS: i.expiresNS})
+		driverSpan.End()
 	}
 	stopCancel()
 	cancel()
@@ -458,7 +524,9 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 	if err == nil {
 		next := i.record
 		next.State = Ready
+		readySpan := telemetry.StartCreation(ctx, telemetry.CoreReadyCommit)
 		err = m.saveLocked(i, next)
+		readySpan.End()
 	}
 	// Stop intent is atomic and can arrive while READY's fsync owns record.mu.
 	// A completed disk write must not reopen admission/renewal after revocation.
@@ -803,6 +871,7 @@ func (m *Manager) cleanupLocked(i *instance) (retErr error) {
 		if _, exists := m.active[ref.ID]; exists {
 			delete(m.active, ref.ID)
 			m.metricAllocated.Add(-1)
+			m.signalCreatesLocked()
 		}
 		m.mu.Unlock()
 	}
@@ -868,6 +937,7 @@ func (m *Manager) Stats() Stats {
 	s.StopQueued, s.CleanupQueued = len(m.stopQueue), len(m.cleanupQueue)
 	s.StopRunning, s.CleanupRunning = int(m.stopRunning.Load()), int(m.cleanupRunning.Load())
 	s.StopWorkers, s.CleanupWorkers, s.QueueCapacity = m.opts.StopWorkers, m.opts.CleanupWorkers, m.opts.WorkQueueSize
+	s.CreateQueued, s.CreateQueueCapacity, s.CreateClassQueueCapacity = int(m.metricCreateQueued.Load()), m.createQueueCapacity(), m.createClassQueueCapacity()
 	return s
 }
 
@@ -882,6 +952,7 @@ func (m *Manager) LifecycleDone() <-chan struct{} { return m.workerDone }
 func (m *Manager) Close(ctx context.Context) error {
 	m.mu.Lock()
 	m.closing = true
+	m.signalCreatesLocked()
 	m.mu.Unlock()
 	m.notify() // Scheduler fences/cancels without serial storage I/O in Close.
 	ticker := time.NewTicker(10 * time.Millisecond)
@@ -911,5 +982,5 @@ func (m *Manager) Close(ctx context.Context) error {
 // Metrics reads only atomics/channel lengths/immutable bounds, never lifecycle
 // mutexes, records, files, driver RPCs or runtime heap inspection.
 func (m *Manager) Metrics() telemetry.Gauges {
-	return telemetry.Gauges{Records: m.metricRecords.Load(), RecordCapacity: int64(m.opts.MaxRecords), Allocated: m.metricAllocated.Load(), Capacity: int64(m.opts.MaxInstances), StopQueued: int64(len(m.stopQueue)), CleanupQueued: int64(len(m.cleanupQueue)), StopRunning: int64(m.stopRunning.Load()), CleanupRunning: int64(m.cleanupRunning.Load()), StopWorkers: int64(m.opts.StopWorkers), CleanupWorkers: int64(m.opts.CleanupWorkers), QueueCapacity: int64(m.opts.WorkQueueSize)}
+	return telemetry.Gauges{Records: m.metricRecords.Load(), RecordCapacity: int64(m.opts.MaxRecords), Allocated: m.metricAllocated.Load(), Capacity: int64(m.opts.MaxInstances), StopQueued: int64(len(m.stopQueue)), CleanupQueued: int64(len(m.cleanupQueue)), StopRunning: int64(m.stopRunning.Load()), CleanupRunning: int64(m.cleanupRunning.Load()), StopWorkers: int64(m.opts.StopWorkers), CleanupWorkers: int64(m.opts.CleanupWorkers), QueueCapacity: int64(m.opts.WorkQueueSize), CreateQueued: m.metricCreateQueued.Load(), CreateQueueCapacity: int64(m.createQueueCapacity()), CreateClassQueueCapacity: int64(m.createClassQueueCapacity())}
 }

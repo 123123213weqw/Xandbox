@@ -2,6 +2,9 @@
 
 **不是生产可观测性验收。** 指标不是审计账本，不证明任务成功、宿主停止或物理擦除。结构化审计、告警闭环、独立操作员部署及真正持续/并发负载仍未完成。
 
+新增的有界请求阶段响应头见 [CREATION_TIMING.md](CREATION_TIMING.md)。它不同于下述
+Registry，不新增管理请求或持久审计；当前仍是未实机验收的开发候选。
+
 ## 独立管理面
 
 显式 `sandboxd ... -metrics` 才创建私有 `state-dir/metrics.sock`（0600），不监听TCP，不在tenant API注册 `/metrics`，不提供pprof、环境、堆或对象调试接口。状态目录仍须0700且由controller独占。离线migration不能同时开启指标。退出移除socket，重启重建gauges、清零进程计数。

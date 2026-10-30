@@ -42,6 +42,9 @@ type nodeReceipt struct {
 type node struct {
 	quotaDriver     bool
 	nodeBudget      bool
+	nodeLoad        bool
+	loadInit        *nodeLoadInit
+	loadTokenB      string
 	nodeSnapshot    bool
 	quotaSnapshot   bool
 	quotaSwitch     bool
@@ -87,7 +90,7 @@ func (q nodeRequest) validate() error {
 		if !operatorStoreMode(q.Phase).valid() {
 			return errors.New("fixed operator store phase required")
 		}
-	case "node-tls-gateway-checkpoint", "node-tls-gateway-recover", "node-operator-shutdown-checkpoint", "node-operator-shutdown-recover", "node-session-ticket-checkpoint", "node-session-ticket-recover", "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-oom-checkpoint", "node-oom-recover", "node-budget-checkpoint", "node-budget-recover", "node-operator-checkpoint", "node-operator-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
+	case "node-tls-gateway-checkpoint", "node-tls-gateway-recover", "node-operator-shutdown-checkpoint", "node-operator-shutdown-recover", "node-session-ticket-checkpoint", "node-session-ticket-recover", "probe", "recover", "quota-probe", "quota-snapshot-setup", "quota-copy-setup", "quota-copy-cut-checkpoint", "quota-owner-cut-checkpoint", "node-load-run", "node-load-recover", "node-oom-checkpoint", "node-oom-recover", "node-budget-checkpoint", "node-budget-recover", "node-operator-checkpoint", "node-operator-recover", "node-snapshot-checkpoint", "node-snapshot-recover", "node-prepare-cancel", "quota-switch-setup", "quota-switch-run", "quota-switch-checkpoint", "quota-switch-recover", "quota-negative-setup", "quota-syscall-setup", "quota-listener-reserve-checkpoint", "quota-listener-reserve-recover", "quota-listener-release-checkpoint", "quota-listener-release-recover", "quota-barrier-checkpoint", "quota-barrier-recover", "quota-commit-eio-checkpoint", "quota-commit-eio-recover", "quota-preclear-hold-checkpoint", "quota-preclear-hold-recover", "quota-postclear-hold-checkpoint", "quota-postclear-hold-recover", "quota-unenforced", "quota-clear-checkpoint", "quota-clear-recover":
 		if q.Phase != "" {
 			return errors.New("unexpected phase")
 		}
@@ -198,6 +201,11 @@ func (n *node) initialize() error {
 			return e
 		}
 	}
+	if n.nodeLoad {
+		if e = n.initializeNodeLoadAuth(); e != nil {
+			return e
+		}
+	}
 	capacity := 1
 	if n.quotaSnapshot {
 		capacity = 2
@@ -221,7 +229,9 @@ func (n *node) initialize() error {
 		return e
 	}
 	if n.nodeBudget {
-		if n.nodeSnapshot {
+		if n.nodeLoad {
+			e = n.initializeNodeLoad()
+		} else if n.nodeSnapshot {
 			e = n.initializeNodeSnapshotBudget()
 		} else {
 			e = n.initializeNodeBudget()
@@ -272,6 +282,9 @@ func (n *node) start(ctx context.Context) error {
 		}
 		if n.nodeBudget {
 			mode = "node-budget-daemon"
+			if n.nodeLoad {
+				mode = "node-load-daemon"
+			}
 			if n.nodeSnapshot {
 				mode = "node-snapshot-daemon"
 			}
@@ -292,7 +305,18 @@ func (n *node) start(ctx context.Context) error {
 		return e
 	}
 	n.exited = make(chan error, 1)
-	go func() { n.exited <- n.process.Wait() }()
+	// Capture this exact child; an init sweep must never consume its status.
+	cmd, exited, childDone := n.process, n.exited, make(chan struct{})
+	go func() {
+		err := cmd.Wait()
+		close(childDone)
+		exited <- err
+	}()
+	if n.nodeLoad {
+		if e = n.startNodeLoadInit(ctx, childDone); e != nil {
+			return e
+		}
+	}
 	return waitNode(ctx, func() (bool, error) {
 		var h struct {
 			Backend         string `json:"backend"`
@@ -553,6 +577,15 @@ func runNodeBudgetProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quot
 	return runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget, false)
 }
 func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget, nodeSnapshot bool) error {
+	return runNodeProfileSet(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget, nodeSnapshot, false)
+}
+func runNodeLoadProfile() error {
+	return runNodeProfileSet(false, false, true, false, false, false, true, false, true)
+}
+func runNodeProfileSet(stateIO, quotaProbe, quotaDriver, quotaSnapshot, quotaStateIO, quotaSwitch, nodeBudget, nodeSnapshot, nodeLoad bool) error {
+	if nodeLoad && (!nodeBudget || !quotaDriver || stateIO || quotaProbe || quotaSnapshot || quotaStateIO || quotaSwitch || nodeSnapshot) {
+		return errors.New("exclusive fixed node-load image required")
+	}
 	if nodeSnapshot && (stateIO || quotaProbe || quotaDriver || quotaSnapshot || quotaStateIO || quotaSwitch || nodeBudget) {
 		return errors.New("exclusive node snapshot profile required")
 	}
@@ -609,7 +642,7 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 	if e = unix.IoctlSetTermios(int(serial.Fd()), unix.TCSETS, t); e != nil {
 		return e
 	}
-	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, quotaSwitch: quotaSwitch, mapper: mapper, nodeBudget: nodeBudget, nodeSnapshot: nodeSnapshot}
+	n := &node{quotaDriver: quotaDriver, quotaSnapshot: quotaSnapshot, quotaStateIO: quotaStateIO, quotaSwitch: quotaSwitch, mapper: mapper, nodeBudget: nodeBudget, nodeSnapshot: nodeSnapshot, nodeLoad: nodeLoad}
 	if e = n.initialize(); e != nil {
 		return e
 	}
@@ -633,6 +666,12 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 			}
 			if q.Operation == "quota-switch-run" {
 				timeout = switchRunBudget
+			}
+			if q.Operation == "node-load-run" {
+				timeout = nodeLoadRunBudget
+			}
+			if q.Operation == "node-load-recover" {
+				timeout = 200 * time.Second
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			var result map[string]any
@@ -686,6 +725,10 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 				result, e = n.nodeOperatorCheckpoint(ctx)
 			case "node-operator-recover":
 				result, e = n.nodeOperatorRecover(ctx)
+			case "node-load-run":
+				result, e = n.nodeLoadRun(ctx)
+			case "node-load-recover":
+				result, e = n.nodeLoadRecover(ctx)
 			case "node-oom-checkpoint":
 				result, e = n.nodeOOMCheckpoint(ctx)
 			case "node-oom-recover":
@@ -800,6 +843,9 @@ func runNodeEnvelopeProfiles(stateIO, quotaProbe, quotaDriver, quotaSnapshot, qu
 				}
 			}
 			cancel()
+			if q.Operation == "node-load-run" && result != nil {
+				out["result"] = result
+			}
 			if e == nil {
 				out["ok"] = true
 				out["result"] = result

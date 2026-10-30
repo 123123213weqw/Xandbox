@@ -51,7 +51,7 @@ func main() {
 		if errors.As(err, &bootstrap) {
 			fmt.Fprintln(os.Stderr, bootstrapMessage(bootstrap.reason))
 		}
-		os.Exit(1)
+		os.Exit(processExitCode(err))
 	}
 }
 
@@ -212,7 +212,7 @@ func runArgs(args []string) (retErr error) {
 		defer cancel()
 		if e := diagnostic.Close(ctx); e != nil {
 			unfinishedCleanup = true
-			retErr = errors.Join(retErr, &diagnostics.Fault{Reason: diagnostics.DiagnosticsUnavailable, Cause: e})
+			retErr = errors.Join(retErr, diagnosticShutdownFault(e))
 		}
 	}()
 	store, err := sandbox.NewFileStore(filepath.Join(absDir, "ledger"))

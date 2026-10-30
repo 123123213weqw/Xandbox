@@ -115,9 +115,9 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
+  "validation_history_note": "Legacy top-level date/platform/mock/isolation fields and service validation pointers are historical source-specific entries, not current whole-head capability or production claims. The new current_status.latest_test_tool_runtime_validation points only to the separately source-bound three-mode diagnostic tool. Existing report entries retain their old source attribution and failures. Original historical note: All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
   "current_status": {
-    "updated_on": "2026-10-23",
+    "updated_on": "2026-10-30",
     "backends": [
       "mock",
       "experimental firecracker-linux-kvm"
@@ -125,12 +125,17 @@
     "production_ready": false,
     "goal_complete": false,
     "latest_runtime_validation": "schema3_snapshot_space_admission_pressure",
-    "latest_component_validation": "pristine_bootstrap_component",
+    "latest_component_validation": "creation_cost_selected_stages_test_tool",
     "snapshot_execution_enabled_in_verified_baseline": false,
     "snapshot_execution_enabled_by_default": false,
     "latest_frozen_runtime_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
     "full_new_runtime_requalification": "frozen2e_new3ea_default_io_and_quota240_dual_live_cold_named_failure_matrices_passed_schema3_pressure_and_full_production_acceptance_remaining",
-    "latest_frozen_fixture_source": "d432e091c3110c069efa0bf44839f958c97c81aa"
+    "latest_frozen_fixture_source": "d432e091c3110c069efa0bf44839f958c97c81aa",
+    "latest_test_tool_runtime_validation": "creation_cost_selected_stages_test_tool",
+    "latest_service_validation_pointer_is_retained_historical_not_whole_current_head": true,
+    "current_ordinary_program_base_revision": "599121b05c128053432eacab4b9abee7e79d8fbb",
+    "current_ordinary_program_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "current_test_fixture_sha256": "9637fe5916a5934f589c2021f51c7d9a13b572a32075adbeeb1a5db521c5ffe1"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -1292,5 +1297,90 @@
     "hardware_prepare_permit_trace_claim": false,
     "offline_builder_outside_NodeRoot_not_a_physical_node_pressure_proof": true,
     "scope": "TEST external consumer in owned L1, not normal admitted usage/enforced external budget/nodewide quota. Separate exact guards, ordinary control-placement daemon+admin, low-free originaldisk cold, no owner/guest restoration, fresh2guest/pinsGC/q0/reaped. Not fullN4 RAM/OOM, actual blocked-copy permit trace, uniqueRAM, longduration/fairness/operator/SLO or complete production."
+  },
+  "open_arrival_attempt10_failed": {
+    "validated_on": "2026-10-27",
+    "source_revision": "65ddde80f851966d13d0f6c1a2d2c1bd72571c5b",
+    "ordinary_daemon_sha256": "31ae31757c4211e07de1865e243cf8d188772dcc33c3d4323d6361a9250f931a",
+    "report": "docs/validation/kvm-open-arrival-attempt10-failed-2026-10-27.json",
+    "status": "failed_original_not_rerun",
+    "production_ready": false,
+    "scope": "Baseline/OOM each two KVM boots independently verified. Original fixed 40-minute load failed at canary64/phase1/35s actor; only167 rows/68 periodic samples, no tail/checkpoint/cold. Composite creation spans are not pure wait. Global50 actual generations/30scopes read-only absent; no supplemental cleanup. All original full Goal gates remain."
+  },
+  "creation_activity_software_candidate": {
+    "source_revision": "59205036eb6636c4124472526384215081da6cdf",
+    "ordinary_daemon_sha256": "da42c6b260a8db3aad841cbc141fd7a46730507051b6cca3fad1185f80d7d1eb",
+    "report": "docs/validation/creation-activity-mechanisms-2026-10-27.json",
+    "scope": "15 focused parents each100 race/CGO0 plus full153 fixture each3 both and rootPython308 zero skips; NOT full43/all24/CI/KVM/load qualification",
+    "production_ready": false
+  },
+  "open_arrival_attempt11_failure": {
+    "source_revision": "f286dc2e7cf0a4113fd823c9bf0aa405a54010ed",
+    "ordinary_daemon_sha256": "da42c6b260a8db3aad841cbc141fd7a46730507051b6cca3fad1185f80d7d1eb",
+    "report": "docs/validation/kvm-open-arrival-attempt11-failed-2026-10-27.json",
+    "status": "failed_original_not_rerun",
+    "production_ready": false,
+    "scope": "Baseline/OOM each2 real KVM boots independently passed. Full original load failed at canary64/phase1/35s actor;167 rows/68 samples/156 memory inventory, no40m/tail/checkpoint/cold. All55 actual generations33scopes declared paths read-only absent. Class activity observed, not failed actor identity/duration/root cause."
+  },
+  "quiet_cold_boot_candidate": {
+    "source_revision": "6ea28eaf491f2863884db176af94936544620f37",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/quiet-console-mechanisms-2026-10-27.json",
+    "status": "limited_software_mechanisms_only",
+    "scope": "18 parents each100 race/CGO0, fullfixture153 each3 both zero skips/fixed9 ELF active, rootPython312 zero/vet/mod,5native==cross,35raw; NOT full43/all24/newCI/VM/latency qualification. All original full Goal gates remain.",
+    "production_ready": false
+  },
+  "open_arrival_attempt12_failure": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/kvm-open-arrival-attempt12-failed-2026-10-28.json",
+    "status": "failed_original_not_rerun",
+    "production_ready": false,
+    "scope": "Baseline/OOM each2 real KVM boots passed; original load failed at22min/canary129/phase2/35s actor.734 rows133 samples; no40m/tail/checkpoint/cold.60 actual generations36scopes declared absent. Failed-row elapsed/alias/zeros do not prove physical stop, namespace or fullquota. Open and switch responses observed, no unique cause or controlled speedup."
+  },
+  "quiet_runtime_quota_syscalls": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/quiet-runtime-quota-syscalls-2026-10-28.json",
+    "status": "one_original_named_runtime_scope_passed_not_full_matrix",
+    "production_ready": false,
+    "scope": "Original six errno and repeated clear minimum3; running/stopped/destroyed checkpoints and original disk recovery,4KVMboots.19raw independently rehashed; new4+prior60 actual outer generations globally disjoint/37scopes declared read-only absent. Other36 named scopes/systemd/full sustained load and all production gaps still required."
+  },
+  "diagnostic_close_completion_candidate": {
+    "publication_code_commit": "b3f9461b077ee99f1f926858be13a5af1926fbb8",
+    "ordinary_daemon_sha256": "896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768",
+    "report": "docs/validation/diagnostic-close-completion-mechanisms-2026-10-29.json",
+    "status": "limited_component_evidence_full_new_program_pending",
+    "production_ready": false,
+    "scope": "Darwin/Linux full21 parents each3 and focused3 each100 both builds zero skip, Linux old compiled negatives3 each,25raw/5artifacts; extra Darwin full100 default10m timeouts retained incomplete. Original CI25 cause unknown; no full Native21/new CI/KVM certificate."
+  },
+  "quiet_runtime_core_nine_frozen_e2bb": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+    "report": "docs/validation/quiet-runtime-core-nine-2026-10-29.json",
+    "status": "nine_original_named_scopes_passed_not_new_8968_qualification",
+    "production_ready": false,
+    "scope": "Original9 scopes,27 L1 boots18 cold transitions,104raw independent;91 cumulative unique generations46 resource scopes declared readonly absent. Frozen4ddd named matrix10/37, remaining27+systemd/all broad gaps. Unenforced startup is one non-cold case/no L2; local validator correction never reran producer. Load12/CI25 failures retained."
+  },
+  "creation_cost_diagnostics_public_tool": {
+    "report": "docs/validation/creation-cost-tools-functional-2026-10-30.json",
+    "status": "three_source_bound_test_only_full_healthy_KVM_modes_passed_not_production",
+    "ordinary_daemon_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "test_fixture_sha256": "45ec211bc5b8f5c8f0d3ccbe6cafadc0b9c3e25d7f4dc01f422cf94c7dc848cd",
+    "code_binding_sha256": "86972442dcb7cb39e13ceecd08e3db9b02a1cfa7c66e0d9c67a623ef1822e64b",
+    "production_ready": false,
+    "scope": "Only defaultOFF/observe/maximum complete original healthy node-budget functional/transport cases. Earlier source-specific failures and all12original40m remain unchanged;1MiB finite benefit rejected. Not whole source/deployment/performance qualification.",
+    "published_source_code_binding_sha256": "e3abbb218b14463478cfa8da80d335d2f7ac6870052dca0448d18a601ac53f8d",
+    "runtime_Go_and_nontest_Python_code_binding_sha256": "6e850cc0395872ba29006d36a99597551793ade7aa89485368a3dd2b78d2fb0a",
+    "test_only_trailing_blank_line_delta_AST_equal": true
+  },
+  "creation_cost_selected_stages_test_tool": {
+    "report": "docs/validation/creation-cost-stages-functional-2026-10-30.json",
+    "status": "source_bound_schema4_defaultoff_observe_maximum_full_healthy6KVM3cold_passed_not_production",
+    "ordinary_daemon_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "test_fixture_sha256": "9637fe5916a5934f589c2021f51c7d9a13b572a32075adbeeb1a5db521c5ffe1",
+    "all502_measured_and_publication_code_binding_sha256": "2727f89b2d36a8540c82f100294eff0298befaa1ff5a4075883165311c188d30",
+    "production_ready": false,
+    "scope": "Test-only selected-CREATE stage observation; new tool itself qualified, not ordinary daemon change or performance gain. Source-specific old records and all12original40m failures retained; once1MiB experiment rejected, keep8MiB. New commit CI pending at publication, no merge/deploy."
   }
 }

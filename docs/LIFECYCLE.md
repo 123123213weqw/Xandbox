@@ -11,7 +11,7 @@
   → 返还实例配额
 ```
 
-- reconcile 扫描不执行存储或阻塞式 driver I/O；唯一新增的 driver IPC 是 [guardian](GUARDIAN.md) 的有界、非阻塞续租写入。对每代 mutex 使用 TryLock，跳过被自身存储操作卡住的记录。每个池使用轮转游标，不一直从固定最小 ID 抢队列位置。
+- reconcile 扫描不执行存储或阻塞式 driver I/O；driver IPC 仅有 [guardian](GUARDIAN.md) 的有界、非阻塞续租和已拥有租约的撤销。对每代 mutex 使用 TryLock，跳过被自身存储操作卡住的记录。每个池使用轮转游标，不一直从固定最小 ID 抢队列位置。
 - 一个 generation 最多有一项后台工作处于排队/执行状态；同代 Prepare/Stop/Cleanup 仍串行。等待同代操作的显式 Stop 可被请求 context 中止；后台 worker 不停车等待 Prepare/GC 占用的同代 gate。
 - 每池队列独立、有界。队列满时保留账本/内存意图，后续扫描继续调度，不丢 ownership，不启动“一请求一后台 goroutine”，不提前归还配额。清理堵塞会使新建最终得到 capacity/tenant quota 背压，而不是积累无限实例。
 - DELETE 的同步持久化仍决定能否返回 202，不依赖队列空闲。TTL/Close 的内部栅栏先在内存取消任务，worker 随后持久化。进程丢失后，非终态账本全部栅栏并重建队列；队列本身不是另一份持久真相。
@@ -78,3 +78,9 @@ guardian 版本源码 `2f7ac5d` 已重跑同一 [服务回归](validation/kvm-gu
 ## 整状态盘卡住的后续专项
 
 [STATE_IO.md](STATE_IO.md) 在停止/清理池之外增加有界 `RevokeLease`，先按原子intent关闭已经拥有的活pipe，不等待record I/O、代际gate或worker。原子intent对应的新Exec也不再排在该record mutex之后才返回409。普通Stop/调用drain、持久STOPPED、Cleanup及DESTROYED仍必须完成，物理停止不释放配额；本轮四场景不证明所有worker/监督者失效或内核不可中断I/O的上界。
+
+## 会话撤销的直接租约信号（待实机重新验收）
+
+`RevokeScoped` 先核对不可变租户/Ref，再单调设置内存删除意图、撤销执行准入和续租资格，并唤醒 reconcile；随后直接调用同一个有界 `Driver.RevokeLease`，不必等下一次扫描才尝试关闭该 Ref 已拥有的 live pipe。它不读归属文件、扫描 PID/cgroup、执行 Stop 或 Cleanup，也不创建新 goroutine。驱动 TryLock 争用、尚未发布的 Prepare 仍由原有 reconcile 反复尝试；直接信号失败只保留失效标记，不抹掉意图或改变原有返回语义。
+
+这是消除一次控制面调度依赖，不是提前发布 STOPPED/DESTROYED、返还容量或跳过持久化。普通测试在不启动 reaper、持有 record/generation/worker 锁的条件下检查直接信号、错租户/旧代隔离、失败保留和并发幂等；这些确定性检查不是 KVM、压力吞吐或停止时延证据。原有高负载失败和所有预算、FIFO、公平性、资源/配额及回收门槛不变；该改动尚不能证明解决创建路径的排队或服务成本。

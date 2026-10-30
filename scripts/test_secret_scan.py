@@ -1,5 +1,8 @@
 """Pure fail-closed installation/environment tests; no network or credentials."""
+import ast
+from collections import Counter
 import hashlib
+import inspect
 import io
 import os
 from pathlib import Path
@@ -11,9 +14,48 @@ from unittest.mock import patch
 
 from install_secret_scanner import binary_from_archive, digest, install, InstallError, native_pin, read_archive, HTTPSOnly
 from secret_scan import environment, scanner_path, scan, ScanError
+import secret_scan_smoke
 
 
 class SecretGateUnitTests(unittest.TestCase):
+    def test_positive_fixture_shapes_are_fixed_and_distinct(self):
+        provider, raw_hex, merge_hex = secret_scan_smoke.synthetic_values()
+        self.assertTrue(provider.startswith('gh' + 'p_') and len(provider) == 40)
+        self.assertTrue(provider[4:].isascii() and provider[4:].isalnum())
+        self.assertTrue(len(raw_hex) == len(merge_hex) == 64)
+        self.assertTrue(all(c in '0123456789abcdef' for c in raw_hex + merge_hex))
+        self.assertTrue(raw_hex != merge_hex)
+
+    def test_positive_fixture_entropy_is_structural_not_a_random_draw(self):
+        provider, raw_hex, merge_hex = secret_scan_smoke.synthetic_values()
+        self.assertEqual(len(Counter(provider[4:])), 36)
+        for value in (raw_hex, merge_hex):
+            self.assertEqual(len(Counter(value)), 16)
+            self.assertTrue(all(count == 4 for count in Counter(value).values()))
+        self.assertTrue('abcdefghijklmnopqrstuvwxyz' not in provider.lower())
+
+    def test_positive_fixtures_never_consult_random_secret_generators(self):
+        with patch('os.urandom', side_effect=AssertionError('unexpected randomness')), \
+                patch('secrets.choice', side_effect=AssertionError('unexpected randomness')), \
+                patch('secrets.token_hex', side_effect=AssertionError('unexpected randomness')):
+            first = secret_scan_smoke.synthetic_values()
+            second = secret_scan_smoke.synthetic_values()
+        self.assertTrue(first == second)
+
+    def test_actual_smoke_wires_all_three_fixed_values_without_random_reassignment(self):
+        tree = ast.parse(inspect.getsource(secret_scan_smoke.main))
+        assignments = []
+        calls = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Tuple):
+                assignments.append(([n.id for n in node.targets[0].elts if isinstance(n, ast.Name)], node.value))
+            if isinstance(node, ast.Call): calls.append(node.func)
+        self.assertTrue(any(names == ['fake_pat', 'fake_hex', 'merge_secret'] and isinstance(value, ast.Call)
+                            and isinstance(value.func, ast.Name) and value.func.id == 'synthetic_values'
+                            for names, value in assignments))
+        self.assertFalse(any(isinstance(call, ast.Attribute) and isinstance(call.value, ast.Name)
+                             and call.value.id == 'secrets' for call in calls))
+
     def archive(self, name='gitleaks', kind=tarfile.REGTYPE):
         output = io.BytesIO(); data = b'nonexecuted-test-artifact'
         with tarfile.open(fileobj=output, mode='w:gz') as t:

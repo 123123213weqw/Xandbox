@@ -482,7 +482,36 @@ func (b *Broker) failClosed(e *entry, a *attempt) error {
 	b.closeEntry(e)
 	return ErrUnavailable
 }
+
+// rejectInitialCapacity preserves only definitive Core instance-capacity
+// denials before any candidate reservation. The CLOSED/FAILED intent must be
+// durably saved before returning ordinary overload; an uncertain journal or
+// any allocated/fenced/cancelled attempt remains SESSION_UNAVAILABLE.
+func (b *Broker) rejectInitialCapacity(e *entry, a *attempt, cause error) (bool, error) {
+	// Exact sentinels only: a wrapped/compound backend error is not proof of
+	// a pre-reservation admission refusal, even if errors.Is matches capacity.
+	if a.index != 0 || (cause != sandbox.ErrCapacity && cause != sandbox.ErrTenantCapacity) {
+		return false, nil
+	}
+	a.phaseMu.Lock()
+	safe := zeroRef(a.ref) && !a.fenced && !a.cancelled && e.closed.CompareAndSwap(false, true)
+	a.phaseMu.Unlock()
+	if !safe {
+		return false, nil
+	}
+	// No route or VM exists; preserve the permanent failed key instead of
+	// retrying it or freeing any live instance's resource/metadata reservation.
+	_ = b.failClosed(e, a)
+	if err := b.persist(e, b.copy(e)); err != nil {
+		return true, ErrUnavailable
+	}
+	return true, cause
+}
+
 func (b *Broker) abort(e *entry, a *attempt, cause error) (Result, error) {
+	if handled, err := b.rejectInitialCapacity(e, a, cause); handled {
+		return Result{}, err
+	}
 	ref := b.refOf(a)
 	r := b.copy(e)
 	if !zeroRef(ref) {
@@ -513,7 +542,10 @@ func (b *Broker) mutate(ctx context.Context, owner sandbox.Owner, e *entry, a *a
 	r := b.copy(e)
 	expected := r.Attempts[a.index].ExpectedRevision
 	desired := expected + 1
-	if err := b.persist(e, r); err != nil {
+	intentSpan := telemetry.StartCreation(ctx, telemetry.SessionIntentCommit)
+	intentErr := b.persist(e, r)
+	intentSpan.End()
+	if intentErr != nil {
 		return Result{}, b.failClosed(e, a)
 	}
 	if e.closed.Load() {
@@ -523,6 +555,7 @@ func (b *Broker) mutate(ctx context.Context, owner sandbox.Owner, e *entry, a *a
 		return b.abort(e, a, err)
 	}
 	opCtx, cancel := context.WithCancel(b.lifeCtx)
+	opCtx = telemetry.CarryCreationTrace(opCtx, ctx)
 	stopCaller := context.AfterFunc(ctx, cancel)
 	cancelDone := make(chan struct{})
 	stopCandidate := context.AfterFunc(opCtx, func() { defer close(cancelDone); b.cancelCandidate(e, a) })
@@ -557,7 +590,10 @@ func (b *Broker) mutate(ctx context.Context, owner sandbox.Owner, e *entry, a *a
 	r.Attempts[a.index].State = Prepared
 	r.Attempts[a.index].Target = candidate.Ref
 	r.Attempts[a.index].ReadyAt = time.Now().UTC()
-	if err := b.persist(e, r); err != nil {
+	preparedSpan := telemetry.StartCreation(ctx, telemetry.SessionPreparedCommit)
+	preparedErr := b.persist(e, r)
+	preparedSpan.End()
+	if preparedErr != nil {
 		return Result{}, b.failClosed(e, a)
 	}
 	// This short phase lock linearizes pre-fence cancellation. After fencing,
@@ -587,7 +623,10 @@ func (b *Broker) mutate(ctx context.Context, owner sandbox.Owner, e *entry, a *a
 	r.Attempts[a.index].State = "COMMITTED"
 	r.Attempts[a.index].FencedAt = time.Now().UTC()
 	r.Attempts[a.index].CommitStartedAt = time.Now().UTC()
-	if err := b.persist(e, r); err != nil {
+	activeSpan := telemetry.StartCreation(ctx, telemetry.SessionActiveCommit)
+	activeErr := b.persist(e, r)
+	activeSpan.End()
+	if activeErr != nil {
 		return Result{}, b.failClosed(e, a)
 	}
 	commitNS, commitClockErr := hostclock.NowNS()

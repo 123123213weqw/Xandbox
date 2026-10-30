@@ -1,9 +1,67 @@
 # Xandbox 生产化计划与发布门槛
 
+新增[诊断 writer 完成结果优先候选](DIAGNOSTIC_CLOSE_COMPLETION.md)：修正已结束writer
+遇取消context仍误报pending的独立反例，保留真实pending/ErrWrite及原250ms预算。
+已有有限组件软件证据，但当前新ELF仍待完整原生/CI/硬件验收；原CI25失败不被单独push成功替代。
+历史4ddd的9项runtime有限正例不为新8968代签，不因此合并、部署或宣称生产就绪。
+
+## 2026-10-28 当前证据：负载失败与一项 runtime 正例分开
+
+当前4ddd的[第十二批原始负载](validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)
+在第22分钟、canary129/phase2的old_gc阶段耗尽原35秒actor；734行/133周期样本，
+不是完整40分钟/100tail/SYNCEDcheckpoint/原盘cold。open与switch均已返回，fresh命令
+结束仅余4.225ms；不能据old_gc标签断言GC很慢。该失败行EmptyMS即使错误也计elapsed，
+StopReplyMS是switch响应别名，namespace/fullquota零值未观测；不构成物理Stop/回收证明。
+基线/OOM各2启动有限通过、原负载批次60代际/36scope声明资源只读无残留不替代负载验收。
+
+另有同一程序的[一项quota runtime复验](QUIET_RUNTIME_QUOTA.md)：6类errno/重复clear、
+三个原盘cold检查点/4启动及独立19原件通过；包含此前批次64代际/37scope只读无残留。
+这只完成原37具名矩阵之一，不完成剩余36项/systemd或完整生产Goal。软件/CI来源仍按
+各自冻结源记录，不借用其他ELF；保留全部原参数、失败与公平性门槛，不合并、不部署。
+
 新增[初始安装事务](INITIAL_INSTALL.md)已有[独立真实双启动有限验收](INITIAL_INSTALL_KVM.md)：固定文件事务、cap0 提交前闸门、缺源精确协调、TLS/KVM/drain/cold，保留所有失败原件并修正静态 PIE 消费校验。仅完成具名子项，不是已有报告重签、升级/轮换/备份或完整生产里程碑完成。
 
 
-最后更新：2026-10-24。
+最后更新：2026-10-29。
+
+最新[第十一批原始负载仍失败](validation/kvm-open-arrival-attempt11-failed-2026-10-27.json)：
+冻结 f286/DA42 的完整软件/CI、基线/OOM各两启动有限正例已独立核对，但原35秒
+actor 在 phase1 耗尽；未完成完整40分钟/tail/checkpoint/原盘cold。全部55个实际
+代际/33个scope的声明资源只读确认不存在，无补清理；这不使失败负载合格。
+后续[quiet 冷启动候选](QUIET_COLD_BOOT.md)仍待自己的完整验收，不改变下方生产里程碑。
+
+另有[有界活动创建观测候选](CREATION_ACTIVITY.md)：固定 3 类/15 阶段的原子 gauges、
+断连后真实返回边界，以及原 metrics 读取内的版本化私有捕获。它改变普通 ELF，
+不是性能修复；需新程序自身完整软件/原生/CI/KVM 长测与受影响矩阵验收。
+原 31ae 的第十批失败不被覆盖，旧绿灯/清理也不给新程序代签，里程碑勾选不变。
+
+当前[稠密资产复制/分段回写候选](ASSET_COPY.md)保留全部字节写入及原quota/syncfs
+持久化屏障；无条件稀疏版本因旧16MiB故障边界反例撤回。冻结源65dd/普通实现49f的
+完整Linux软件/CI20、真实基线与OOM各两启动有限正例已独立核对，但**第十批原始
+固定长测仍失败**：canary64/相位1耗尽原35秒actor，仅167行/68周期样本，无完整
+40分钟、tail/checkpoint/原盘cold。全部原始失败保留，累计实际50代际/30scope只读
+无残留，不等于长测通过或生产就绪。见[失败投影](validation/kvm-open-arrival-attempt10-failed-2026-10-27.json)。
+创建复合阶段不能称纯排队，失败switch内部仍未知；受影响完整运行矩阵/systemd及
+其他生产里程碑仍未完成。下文旧报告保留各自冻结来源，不给后续程序代签。
+
+最新开发工作另有[有界容量 FIFO 准入候选](CAPACITY_ADMISSION.md)：raw / managed
+共用顺序、独立对称等待上限，不保留 VM 容量，等待不叠加 Prepare deadline。
+它改变普通 Manager；**尚无该新程序的 Linux/KVM、持续负载/cold 或完整运行矩阵
+合格证据**。b370de1 的第六次长测跑完 offered window / tail，但高负载 canary
+进展为零而失败；独立回收确认共30代际/18scope无残留。不是长测通过或生产就绪。
+下段7ccb及更早报告为各自历史来源，不给这一新候选代签；完整里程碑勾选不变。
+
+fc4/C2的第七批已有自身的预算与单实例OOM两启动有限正例，但load在约11分20.7秒
+耗尽原35秒actor预算，仍失败、未进入完整tail/cold；含六批旧失败35代际/21scope
+独立只读无残留。新TEST ONLY私有actor阶段取证只用于分解后续现场，不修改预算或
+生产FIFO策略、不把软件/清理通过当完整长测通过，详见[负载失败与诊断边界](OPEN_ARRIVAL_LOAD.md)。
+
+当前分支另有普通 broker 的[初始实例容量拒绝候选](SESSIONS.md)：仅在未分配 Ref 且
+CLOSED/FAILED 持久提交成功后保留精确容量拒绝，其他不确定情形继续失败关闭。
+该候选改变普通 daemon 为 `7ccb2720…`，**尚未取得该新程序的完整 Linux/KVM、
+持续负载与受影响运行矩阵合格证据**；Draft PR 的软件测试失败及修正分开保留于
+[CI 说明](CI_RUNNERS.md)。未合并、未部署，不因局部回归或公开仓库认定生产就绪。
+下文“当前 5bfb”等较早描述是各自历史来源，不给本分支新程序代签；完整里程碑勾选不变。
 
 ## 当前状态
 
@@ -41,6 +99,8 @@
 新 TEST fixture 的原节点预算与真实 group OOM 各两次启动、邻居任务继续/普通 Stop/
 独立物理停止/完整回收/复用/cold 通过，含失败前序七个唯一外层代际独立只读无残留。
 仅一个明确 host-cgroup 故障，不是 guest-origin、全节点 RAM 饱和、持续负载或完整 M2。
+
+新增[固定到达率双租户持续负载候选](OPEN_ARRIVAL_LOAD.md)：独立 offered clock、40 分钟/6360 raw intents、240 session canaries、100 次独立串行 quota tail 与原盘 cold 协议已加入 TEST fixture；**尚无该新场景实机合格证据**，不据此认定长稳、公平性、生产 SLO 或完整 M2/M4 通过。
 
 部署与恢复的操作员边界、systemd层级限制及尚未实现的备份/回滚门槛见[OPERATIONS.md](OPERATIONS.md)。文档不是已经通过的安装器/操作员验收。[systemd接口冲突与部署契约](DEPLOYMENT_CONSTRAINTS.md)记录 `.control` 边界；后续[真实 systemd L1 地基](SYSTEMD_HOST_FIXTURE.md)已通过两次启动、独立 operator/委派/reload/stop-start，136项原生Python零skip及含失败前序5代际只读复核。选择 nested node 布局，后续Go启动器与普通UDS/KVM有限通过见上方新报告；自动安装仍未完成；自动readiness与TLS→KVM有限组合已另取上方独立证据，不据此勾选M4。
 

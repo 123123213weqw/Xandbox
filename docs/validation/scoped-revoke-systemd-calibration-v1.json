@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "scope": "two actual canonical program source sets; not full suite, CI, KVM or production acceptance",
+  "source_sets": [
+    {
+      "source_revision": "9aab936a09ed120f2050083f4664aae0a28bc228",
+      "verified_source_files": 1234,
+      "program_builds": 13,
+      "program_builds_returncode": 0,
+      "original_batch_returncode": 0,
+      "independent_audit_sha256": "1cb757d49a7e9d530a19ff10213c78795983271afcf8dcf39661a6aa331127a0"
+    },
+    {
+      "source_revision": "9e2b5c9f772c5df673a0d71876da0ff286672d8c",
+      "verified_source_files": 1235,
+      "program_builds": 13,
+      "program_builds_returncode": 0,
+      "original_batch_returncode": 1,
+      "subsequent_unit_failure": {
+        "test": "TestPrepareProbePinnedOrdinaryELF",
+        "count": 3,
+        "reason": "whole new ELF matched; nine old absolute instruction addresses no longer matched",
+        "full_fixture_suite_qualified": false
+      },
+      "independent_partial_audit_sha256": "12ddd4a4589c94d0113689bbc8ed0c673230486bd919a7ddd897f1869da1ee19"
+    }
+  ],
+  "toolchain": "go1.27.3",
+  "target": "linux/amd64/v1",
+  "cgo_enabled": false,
+  "build_flags": [
+    "-trimpath",
+    "-buildvcs=false"
+  ],
+  "all_thirteen_programs_byte_equal_between_source_sets": true,
+  "actual_programs": [
+    {
+      "role": "daemon",
+      "program": "sandboxd",
+      "sha256": "97f2b7a83c90d877e06aa20a943c71632e142c469c392f52970a9903b25ebd0b",
+      "bytes": 12669327
+    },
+    {
+      "role": "gateway",
+      "program": "xandbox-gateway",
+      "sha256": "f30f69852a8d7a2db133d0abda7478767b9d1bb6816ef8bc30806fbffda5a84c",
+      "bytes": 12499155
+    },
+    {
+      "role": "ingress",
+      "program": "xandbox-ingress-launch",
+      "sha256": "ee23ee79d9e795a5972530ba14f2057184637a0023e203bd5bf06a3525ebc076",
+      "bytes": 7807733
+    },
+    {
+      "role": "launcher",
+      "program": "xandbox-launch",
+      "sha256": "7518d65924fb05470bc86f305b97e25dc7aa5817ff6723870e7b49b056c6cf88",
+      "bytes": 7810072
+    },
+    {
+      "role": "node",
+      "program": "xandbox-node",
+      "sha256": "41015af6af5c6594f4ceea08a03766898e004575d27aa4f44dc175a2cae3586a",
+      "bytes": 10471297
+    },
+    {
+      "role": "ready",
+      "program": "xandbox-ready",
+      "sha256": "60da9aeccb2a1bc9c5ae4fcb694fcd5346265998f0fac491331cde30ae0ea776",
+      "bytes": 10537478
+    },
+    {
+      "role": "template",
+      "program": "xandbox-template",
+      "sha256": "5da61709cff42dc4eb39ed4edaba68c8f640b1520d7d5e981f5d16b930ec5cfe",
+      "bytes": 7590231
+    },
+    {
+      "role": "warden",
+      "program": "xandbox-warden",
+      "sha256": "b290a5edda8115f99aaf67cc339fa299ba0fe62817ab366001eaecc09780c7c0",
+      "bytes": 3180685
+    },
+    {
+      "role": "install",
+      "program": "xandbox-install",
+      "sha256": "bd8114ba0b8b12fd7cf1a0d80195ef2a299ab648d99a9303008bd2e46855c30f",
+      "bytes": 9345422
+    },
+    {
+      "role": "release",
+      "program": "xandbox-release",
+      "sha256": "fa3538fd2ea124f86f147c883127b070918e370796f4c5e4a5ddc63913336dfb",
+      "bytes": 5061526
+    },
+    {
+      "role": "helper",
+      "program": "deploy-helper",
+      "sha256": "06e1ef60f8c381bbb05a35e86ea74ea2ba536cca2b318bcd03d32b7cac2c8247",
+      "bytes": 8430155
+    },
+    {
+      "role": "setup",
+      "program": "setup",
+      "sha256": "cb133da908d65c77042f7cf24eb45bba4cd834d8f924f4123a2d277589cb7769",
+      "bytes": 8378045
+    },
+    {
+      "role": "managed-setup",
+      "program": "managed-setup",
+      "sha256": "d938564bf1ad1a1d98ce02dcc28a69c44059535b223b86282b0c43ff5b980be1",
+      "bytes": 8518121
+    }
+  ],
+  "role_counts": {
+    "deployment": 9,
+    "ingress": 12,
+    "readiness": 13,
+    "release": 15,
+    "install": 16,
+    "managed": 16
+  },
+  "old_hardware_records_resigned": false,
+  "hardware_acceptance": false,
+  "production_ready": false,
+  "private_paths_pids_credentials_or_raw_logs_exported": false
+}

@@ -32,9 +32,9 @@ class ReadinessControls(unittest.TestCase):
             with self.assertRaises(ValueError):build(ubuntu=None,alpine=None,probe=None,output_disk=None,output_initrd=None,**pair)
     def test_new_source_hash_set_is_complete_legacy_names_unchanged(self):
         self.assertEqual(len(harness_files(False,False,False)),5)
-        self.assertEqual(len(harness_files(True,False,False)),7)
-        self.assertEqual(len(harness_files(True,True,False)),10)
-        names=harness_files(True,False,True);self.assertEqual(len(set(names)),14)
+        self.assertEqual(len(harness_files(True,False,False)),8)
+        self.assertEqual(len(harness_files(True,True,False)),11)
+        names=harness_files(True,False,True);self.assertEqual(len(set(names)),15)
         for name in ('build_systemd_readiness.py','systemd_readiness_guest.py','readiness_fixture_gate.py'):self.assertIn(name,names)
     def test_typed_closed_results_do_not_claim_old_explicit_start(self):
         self.assertIn('explicit_start_after_backend_ready_not_automatic_install',INGRESS_CHECKPOINT_FLAGS)

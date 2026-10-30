@@ -1,10 +1,29 @@
 # Xandbox
 
+[创建阶段观测扩展](docs/CREATION_COST_STAGES.md)：默认关闭，从原 CREATE 响应保存十项固定阶段；新 fixture 已完成自己限定三模式完整 KVM 健康流程与原盘 cold、186 组 Go 两种构建各 3 遍及 424 项原生 Python 验证。[范围与证据](docs/validation/creation-cost-stages-functional-2026-10-30.json)独立绑定，不是性能修复或生产就绪；新提交 CI 单独核对。
+
+[默认关闭的创建成本诊断工具](docs/CREATION_COST_DIAGNOSTICS.md)：显式 observe / maximum、私有完整性校验与生成式回归；先前 `ce47a8b` 的 schema3 Go/脚本已完成限定三模式完整 KVM 健康基线与原盘 cold 验证，**不为上述新 schema4 fixture 代签**。不代表性能提升或生产就绪，普通写回仍为 8 MiB；新提交 CI 与原长负载门槛单独核对。
+
+> 下列旧候选与历史验收条目按其原源码保留，不为当前测试 fixture 代签；最新工具的限定范围见上述链接。
+
+新增[诊断 writer 完成结果优先候选](docs/DIAGNOSTIC_CLOSE_COMPLETION.md)：修正已结束writer
+遇取消context仍误报pending的独立反例，保留真实pending/ErrWrite及原250ms预算。
+已有有限组件软件证据，但当前新ELF仍待完整原生/CI/硬件验收；原CI25失败不被单独push成功替代。
+历史4ddd的9项runtime有限正例不为新8968代签，不因此合并、部署或宣称生产就绪。
+
 **开始试用：[构建、带鉴权的本地示例，以及真实 Linux/KVM 部署入口](docs/GETTING_STARTED.md)。**
 主分支合并不等于生产认证；mock 不执行任意代码，真实执行需要单独准备 Linux/KVM 节点。
 
 安装前可用 [`xandbox-doctor` 只读预检](docs/NODE_PREFLIGHT.md)检查节点基本缺项；
 不会自动升级宿主、修改服务或创建 VM，检查通过也不等于部署/生产验收通过。
+
+开发分支新增[有界活动创建观测候选](docs/CREATION_ACTIVITY.md)，用于响应丢失时观察
+尚未返回的聚合边界；不是原长测超时的已证实修复，也不代表生产就绪。
+
+[quiet冷启动候选](docs/QUIET_COLD_BOOT.md)的[第十二批原始长测仍失败](docs/validation/kvm-open-arrival-attempt12-failed-2026-10-28.json)：
+第22分钟耗尽原35秒actor，未完成40分钟/tail/checkpoint/原盘cold；基线/OOM正例及无残留不替代负载验收。
+另有当前程序[一项quota runtime复验](docs/QUIET_RUNTIME_QUOTA.md)的6类errno/重复clear/三cold检查点通过，
+只完成原37具名矩阵之一。全部原失败保留，不原样重跑或放宽门槛；未合并、未部署，仍未生产就绪。
 
 > 历史 d163 daemon 已完成[闭集诊断12组回归](docs/DIAGNOSTICS.md)、[DEFAULT/IO/quota240命名兼容矩阵](docs/D163_RUNTIME.md)及[十个命名边界复验](docs/D163_BOUNDARIES.md)；完整验收仍未完成，旧 ELF 报告不代表新版本通过全量硬件验收。
 

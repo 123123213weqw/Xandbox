@@ -6,7 +6,7 @@ from kvm_nested_host import (DIAGNOSTIC_CHECKPOINT_FLAGS, DIAGNOSTIC_RECOVERY_FL
 
 def checkpoint(mode):
     return {**{k: True for k in DIAGNOSTIC_CHECKPOINT_FLAGS}, 'mode': mode,
-        'producer_failures': 80, 'queued': 64, 'dropped': 15,
+        'ordinary_process_exit_code':75, 'producer_failures': 80, 'queued': 64, 'dropped': 15,
         'observed_sequence_before_cold': 5 if mode == 'header-publish' else 4,
         'ring_fsync_entries': 2 if mode == 'header-publish' else 1,
         'data_fsync_continue_submissions': int(mode == 'header-publish'),
@@ -52,3 +52,11 @@ class DiagnosticsTests(unittest.TestCase):
                     for key in DIAGNOSTIC_RECOVERY_FLAGS:
                         bad = copy.deepcopy(good); bad[key] = False
                         with self.assertRaises(AssertionError): validate_diagnostic_recovery(bad, mode)
+
+    def test_held_writer_requires_classified_pending_not_old_generic_exit(self):
+        for mode in ('record-data','header-publish'):
+            for status in (0,1,74,76,True,None):
+                bad = checkpoint(mode);bad['ordinary_process_exit_code']=status
+                with self.assertRaises(AssertionError):validate_diagnostic_checkpoint(bad,mode)
+            old = checkpoint(mode);del old['ordinary_process_exit_code']
+            with self.assertRaises(AssertionError):validate_diagnostic_checkpoint(old,mode)

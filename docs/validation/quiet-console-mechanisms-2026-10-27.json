@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "date": "2026-10-27",
+  "status": "LIMITED_SOFTWARE_MECHANISMS_PASSED_NOT_VM_OR_LATENCY",
+  "source_revision": "6ea28eaf491f2863884db176af94936544620f37",
+  "source_files": 1217,
+  "source_archive_sha256": "cf1a729a931b2b3282696909c81641800073a63eb5b2b9813a2e9a453ff4cb57",
+  "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+  "toolchain": "go1.27.3 linux/amd64",
+  "focused": {
+    "quiet_actual_cold_branch_api_argument_source_guard_parents": 3,
+    "creation_activity_parent_tests": 15,
+    "each_parent_race_count": 100,
+    "each_parent_cgo_free_count": 100,
+    "skipped": 0,
+    "native_cgo_free_artifacts_equal_to_fresh_cross": 5,
+    "compiled_old_http_and_node_behavior_negative_each_build_count": 3,
+    "physical_old_activity_source_guards_negative_each_build_count": 3,
+    "physical_old_quiet_source_two_guards_negative_each_build_count": 3,
+    "physical_source_guards_not_actual_compiled_old_kernel_or_performance_counterfactual": true
+  },
+  "full_fixture": {
+    "parents": 153,
+    "race_each": 3,
+    "cgo_free_each": 3,
+    "skipped": 0,
+    "fixed_nine_elf_instruction_checks_active": true,
+    "not_live_instruction_trace": true
+  },
+  "root_python": {
+    "tests": 312,
+    "skipped": 0
+  },
+  "vet_default_and_tagged_fixture_mod_verify": "passed",
+  "original_software_wrapper_and_runner_gone": true,
+  "owned_temporary_scope_removed": true,
+  "private_raw_files_independently_rehashed": 35,
+  "scope": {
+    "production_boot_args_only_add_quiet": true,
+    "tty_panic_reboot_init_marker_and_refs_preserved": true,
+    "snapshot_branch_unchanged": true,
+    "old13_response_timings_actor2_activity_capsule1_50_series_unchanged": true,
+    "no_new_selector_api_request_worker_queue_or_policy": true,
+    "no_latency_or_unique_root_cause_claim": true
+  },
+  "still_pending": [
+    "full_default43_linux_race3_cgo_free3",
+    "all24_current_native_cross_rebuild",
+    "new_head_ci_and_independent_verification",
+    "real_kvm_and_complete_original40minute_tail_checkpoint_cold",
+    "all_affected_runtime_systemd_fault_matrices",
+    "complete_production_goal"
+  ],
+  "production_ready": false,
+  "full_production_acceptance": false
+}

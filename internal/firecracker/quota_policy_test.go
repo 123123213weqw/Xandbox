@@ -195,8 +195,8 @@ func TestSlowQuotaClearDoesNotHoldCatalogPinLock(t *testing.T) {
 		t.Fatal("quota barrier not entered")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
 	status, e := r.catalog.status(ctx)
+	cancel()
 	if e != nil {
 		t.Fatal("unrelated catalog status waited for quota I/O", e)
 	}
@@ -206,17 +206,29 @@ func TestSlowQuotaClearDoesNotHoldCatalogPinLock(t *testing.T) {
 	if _, e = os.Stat(filepath.Join(r.dir, k+".json")); e != nil {
 		t.Fatal("durable owner removed before quota proof", e)
 	}
+	// Each unrelated operation gets the SAME bounded lock-isolation budget.
+	// Reusing the status context charges its earlier file/fsync work against
+	// later calls and can report an already-expired caller as a lock stall.
+	// The original quota-release barrier remains held across ALL four calls.
+	ctx, cancel = context.WithTimeout(context.Background(), 300*time.Millisecond)
 	other, e := r.reserveContext(ctx, reference("2"))
+	cancel()
 	if e != nil {
 		t.Fatal("new prepare waited for another quota clear", e)
 	}
 	if other.UID == first.UID || other.ProjectID == first.ProjectID {
 		t.Fatal("pending quota slot reused")
 	}
-	if e = r.catalog.retire(ctx, id); e != nil {
+	ctx, cancel = context.WithTimeout(context.Background(), 300*time.Millisecond)
+	e = r.catalog.retire(ctx, id)
+	cancel()
+	if e != nil {
 		t.Fatal(e)
 	}
-	if removed, e := r.catalog.collect(ctx); e != nil || len(removed) != 0 {
+	ctx, cancel = context.WithTimeout(context.Background(), 300*time.Millisecond)
+	removed, e := r.catalog.collect(ctx)
+	cancel()
+	if e != nil || len(removed) != 0 {
 		t.Fatal("old and new pins not retained", e)
 	}
 	once.Do(func() { close(release) })

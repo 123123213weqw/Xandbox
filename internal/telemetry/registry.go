@@ -1,5 +1,6 @@
 // Package telemetry provides fixed-cardinality, process-local observations.
-// Writers perform only atomic additions: no I/O, callbacks or lifecycle locks.
+// Registry writers perform only atomic operations. Request-local creation
+// observations use their own bounded memory lock, never I/O or lifecycle locks.
 package telemetry
 
 import (
@@ -34,7 +35,10 @@ type histogram struct {
 	sumUS atomic.Uint64                  // Microsecond precision, not nanosecond uptime wrap.
 }
 
-type Registry struct{ operations [operationCount][2]histogram }
+type Registry struct {
+	operations [operationCount][2]histogram
+	creation   creationActivityRegistry
+}
 
 // Observe ignores invalid/negative observations. A nil registry is disabled.
 // Labels are sealed enums; no tenant, Ref, path, key, argv or error string enters it.
@@ -59,11 +63,12 @@ func (r *Registry) Observe(op Operation, elapsed time.Duration, failed bool) {
 }
 
 type Gauges struct {
-	Diagnostics                                            diagnostics.Stats
-	Records, RecordCapacity, Allocated, Capacity           int64
-	StopQueued, CleanupQueued, StopRunning, CleanupRunning int64
-	StopWorkers, CleanupWorkers, QueueCapacity             int64
-	Sessions, SessionCapacity                              int64
+	Diagnostics                                                 diagnostics.Stats
+	Records, RecordCapacity, Allocated, Capacity                int64
+	StopQueued, CleanupQueued, StopRunning, CleanupRunning      int64
+	StopWorkers, CleanupWorkers, QueueCapacity                  int64
+	Sessions, SessionCapacity                                   int64
+	CreateQueued, CreateQueueCapacity, CreateClassQueueCapacity int64
 }
 
 // Render takes independent atomic observations, not a transactional snapshot.
@@ -98,6 +103,7 @@ func (r *Registry) Render(g Gauges) []byte {
 		{"stop_queued", g.StopQueued}, {"cleanup_queued", g.CleanupQueued}, {"stop_running", g.StopRunning}, {"cleanup_running", g.CleanupRunning},
 		{"stop_workers", g.StopWorkers}, {"cleanup_workers", g.CleanupWorkers}, {"queue_capacity_per_pool", g.QueueCapacity},
 		{"session_records", g.Sessions}, {"session_capacity", g.SessionCapacity},
+		{"create_queued", g.CreateQueued}, {"create_queue_capacity", g.CreateQueueCapacity}, {"create_queue_capacity_per_class", g.CreateClassQueueCapacity},
 	}
 	for _, v := range values {
 		fmt.Fprintf(&b, "# TYPE xandbox_%s gauge\nxandbox_%s %d\n", v.name, v.name, v.value)
@@ -121,5 +127,6 @@ func (r *Registry) Render(g Gauges) []byte {
 	}{{"io", g.Diagnostics.PrepareIO}, {"quota", g.Diagnostics.PrepareQuota}, {"other", g.Diagnostics.PrepareOther}} {
 		fmt.Fprintf(&b, "xandbox_prepare_failed_total{reason=%q} %d\n", v.name, v.value)
 	}
+	r.renderCreationActivity(&b)
 	return b.Bytes()
 }

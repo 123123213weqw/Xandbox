@@ -19,7 +19,8 @@ class InstallControls(unittest.TestCase):
     def test_exact_fresh_assets_and_independent_harness(self):
         self.assertEqual(len(builder.ASSETS),16);self.assertEqual(len(set(builder.ASSETS)),16)
         names=harness_files(True,False,False,False,True)
-        self.assertEqual(len(names),12)
+        self.assertEqual(len(names),13)
+        self.assertIn('systemd_fixture_provenance.py',names)
         self.assertIn('build_systemd_deployment.py',names) # reused validator, not its configure
         self.assertNotIn('base_configure',inspect.getsource(builder.configure))
         for deployed,ingress,readiness,release in ((False,False,False,False),(True,True,False,False),(True,False,True,False),(True,False,False,True)):

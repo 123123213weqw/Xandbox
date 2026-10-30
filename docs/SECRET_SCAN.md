@@ -54,11 +54,12 @@ Git patch 处理见[官方 Git source](https://github.com/gitleaks/gitleaks/blob
 尤其不把所有 64 位 hex 当“安全 hash”：本项目真实 token 也可能是 64 位 hex。
 默认上游规则自带的 allowlist 仍存在，不能称所有文件/模式都覆盖。
 
-`test_secret_scan.py` 的 10 个纯控制覆盖安装摘要/regular member/链接/独占目标、
+`test_secret_scan.py` 的 14 个纯控制覆盖安装摘要/regular member/链接/独占目标、
 环境隔离、TLS redirect、错误 console 即使退出 0 也拒绝，以及非法/未脱敏/不一致报告。
+其中四项固定正例的形状、结构化字符分布、无 RNG 依赖及实际 smoke 接线。
 `secret_scan_smoke.py` 实际执行固定二进制，12 项控制包括：
 
-- 随机生成的 provider-format 假 PAT、raw64hex api_key 检出；inline allow 无效；
+- 固定、均衡字符分布的 provider-format 假 PAT、raw64hex api_key 检出；inline allow 无效；
   精确字母表放行但同一行旁边的假 token 仍检出；普通文本零 finding。
 - 真实临时 Git 中：标记 binary 后已删除的假 token，在仓库/环境 allow-all config 及
   inline allow 存在时仍检出；仓库 ignore、graft、shallow 拒绝；merge-only 新秘密检出。
@@ -68,6 +69,25 @@ Git patch 处理见[官方 Git source](https://github.com/gitleaks/gitleaks/blob
 该固定扫描器可能记录 Git 错误但仍返回 0 与空报告。修正为移除环境 graft 覆盖并拒绝
 实际 graft 文件，同时将任何错误级 console 视为失败；没有将失败前序当 clean 证据。
 完整历史最终结果必须另跑，不能从正例通过推断。
+
+### 固定正例，保留失败
+
+源码 `789cdd4` 的原始 PR CI `40448607978` 在实际扫描器自检步骤失败，其他五个
+job 通过；同头 push CI `40448602834` 六个 job 通过。失败不能用另一条绿灯替代，
+也不直接重跑。原日志只有失败关闭的通用消息，原随机值与具体失败断言不可恢复，
+因此**不能确认这次原始失败的唯一原因**。
+
+另一个可重复的软件反例已确认：原正例使用随机字符，不保证符合固定默认规则的
+熵下限。[上游固定规则](https://github.com/gitleaks/gitleaks/blob/v8.30.1/config/gitleaks.toml)
+对 generic-api-key 使用 3.5、github-pat 使用 3 的阈值；形状正确的低熵假值可能不检出。
+固定一个可能的旧 RNG 输出，旧实际 smoke 三次失败；改为构造确定的均衡假值后，
+同一 RNG stub 下完整十二项实际控制三次通过。它证明原控制的随机假设有漏洞，
+不是还原原 CI 输入或代签新头 CI。
+
+修正只作用于测试正例：两份 hex 各16字符均出现4次，provider 后缀36字符互异，
+并避开默认规则的有序字母表 stopword。所有值仅为测试构造，不是凭证生成器。
+没有修改扫描器、阈值、项目例外、扫描范围或失败关闭政策；所有原控制继续执行。
+新提交仍需自己的 CI 与完整历史扫描，原失败记录不删除。
 
 ## 不覆盖
 

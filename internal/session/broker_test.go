@@ -27,6 +27,11 @@ func (d *probeDriver) Prepare(ctx context.Context, ref sandbox.Ref, p sandbox.Pr
 }
 func fixture(t *testing.T, opts Options, wrap func(Store) Store) (*Broker, *sandbox.Manager, *probeDriver, *FileStore) {
 	t.Helper()
+	return fixtureWithCoreOptions(t, opts, wrap, sandbox.Options{MaxInstances: 4, ReapInterval: time.Millisecond, RetryDelay: time.Millisecond})
+}
+
+func fixtureWithCoreOptions(t *testing.T, opts Options, wrap func(Store) Store, coreOpts sandbox.Options) (*Broker, *sandbox.Manager, *probeDriver, *FileStore) {
+	t.Helper()
 	dir := t.TempDir()
 	vmStore, e := sandbox.NewFileStore(filepath.Join(dir, "ledger"))
 	if e != nil {
@@ -37,7 +42,7 @@ func fixture(t *testing.T, opts Options, wrap func(Store) Store) (*Broker, *sand
 		t.Fatal(e)
 	}
 	driver := &probeDriver{Driver: mock}
-	core, e := sandbox.NewManager(vmStore, driver, sandbox.Options{MaxInstances: 4, ReapInterval: time.Millisecond, RetryDelay: time.Millisecond})
+	core, e := sandbox.NewManager(vmStore, driver, coreOpts)
 	if e != nil {
 		t.Fatal(e)
 	}

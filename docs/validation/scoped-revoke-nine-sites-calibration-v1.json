@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "scope": "offline canonical ELF instruction-location calibration only; no live probe or KVM execution",
+  "old_elf_sha256": "896840d6d41066bb222d617f9a65cec463bc1a93918ae29e41eecd0e0028d768",
+  "new_elf_sha256": "97f2b7a83c90d877e06aa20a943c71632e142c469c392f52970a9903b25ebd0b",
+  "toolchain": "go1.27.3",
+  "target": "linux/amd64/v1",
+  "fixed_entry_probes": 9,
+  "target_functions": [
+    {
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "old_base": 7641536,
+      "new_base": 7641600,
+      "instructions_compared": 121,
+      "same_instruction_boundaries_source_lines_registers_and_symbolic_control_flow": true
+    },
+    {
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_base": 7651744,
+      "new_base": 7651808,
+      "instructions_compared": 72,
+      "same_instruction_boundaries_source_lines_registers_and_symbolic_control_flow": true
+    },
+    {
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "old_base": 7692384,
+      "new_base": 7692448,
+      "instructions_compared": 14,
+      "same_instruction_boundaries_source_lines_registers_and_symbolic_control_flow": true
+    }
+  ],
+  "probes": [
+    {
+      "name": "enter",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c1b2",
+      "new_address": "0x74c1f2",
+      "relative_offset": "0x12",
+      "opcode": "4889842480000000",
+      "register": "ax",
+      "old_instruction": "MOVQ AX, 0x80(SP)",
+      "new_instruction": "MOVQ AX, 0x80(SP)"
+    },
+    {
+      "name": "selected",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c225",
+      "new_address": "0x74c265",
+      "relative_offset": "0x85",
+      "opcode": "4885c0",
+      "register": "ax",
+      "old_instruction": "TESTQ AX, AX",
+      "new_instruction": "TESTQ AX, AX"
+    },
+    {
+      "name": "ok",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c275",
+      "new_address": "0x74c2b5",
+      "relative_offset": "0xd5",
+      "opcode": "31c0",
+      "register": "ax",
+      "old_instruction": "XORL AX, AX",
+      "new_instruction": "XORL AX, AX"
+    },
+    {
+      "name": "cancel",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c295",
+      "new_address": "0x74c2d5",
+      "relative_offset": "0xf5",
+      "opcode": "4883c470",
+      "register": "ax",
+      "old_instruction": "ADDQ $0x70, SP",
+      "new_instruction": "ADDQ $0x70, SP"
+    },
+    {
+      "name": "race_release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "old_address": "0x74c265",
+      "new_address": "0x74c2a5",
+      "relative_offset": "0xc5",
+      "opcode": "488b442438",
+      "register": "ax",
+      "old_instruction": "MOVQ 0x38(SP), AX",
+      "new_instruction": "MOVQ 0x38(SP), AX"
+    },
+    {
+      "name": "node_ok",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "old_address": "0x749b61",
+      "new_address": "0x749ba1",
+      "relative_offset": "0x1a1",
+      "opcode": "440f117c2430",
+      "register": "ax",
+      "old_instruction": "MOVUPS X15, 0x30(SP)",
+      "new_instruction": "MOVUPS X15, 0x30(SP)"
+    },
+    {
+      "name": "node_reject_release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "old_address": "0x749b0c",
+      "new_address": "0x749b4c",
+      "relative_offset": "0x14c",
+      "opcode": "488b01",
+      "register": "cx",
+      "old_instruction": "MOVQ 0(CX), AX",
+      "new_instruction": "MOVQ 0(CX), AX"
+    },
+    {
+      "name": "release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "old_address": "0x756072",
+      "new_address": "0x7560b2",
+      "relative_offset": "0x12",
+      "opcode": "488b01",
+      "register": "cx",
+      "old_instruction": "MOVQ 0(CX), AX",
+      "new_instruction": "MOVQ 0(CX), AX"
+    },
+    {
+      "name": "released",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "old_address": "0x75607c",
+      "new_address": "0x7560bc",
+      "relative_offset": "0x1c",
+      "opcode": "4883c410",
+      "register": "ax",
+      "old_instruction": "ADDQ $0x10, SP",
+      "new_instruction": "ADDQ $0x10, SP"
+    }
+  ],
+  "whole_elf_symbol_and_exact_opcode_guards_retained": true,
+  "only_current_addresses_updated": true,
+  "return_probes_or_target_selection_added": false,
+  "hardware_acceptance": false,
+  "production_ready": false
+}

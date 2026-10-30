@@ -23,6 +23,14 @@ import (
 )
 
 func TestDiagnosticNoL0OrGenericRPC(t *testing.T) {
+	if !diagnosticPendingExitStatus(75) {
+		t.Fatal("classified pending exit refused")
+	}
+	for _, status := range []uint64{0, 1, 74, 76, 1 << 63} {
+		if diagnosticPendingExitStatus(status) {
+			t.Fatal("unclassified or different failure accepted as pending")
+		}
+	}
 	n := &node{nodeBudget: true, quotaDriver: true}
 	ctx := context.Background()
 	for _, m := range []diagnosticHoldMode{diagnosticData, diagnosticHeader} {
