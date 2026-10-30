@@ -243,7 +243,7 @@ type budgetCheckpoint struct {
 	Quota  driverQuotaReceipt
 }
 
-func (n *node) nodeBudgetCheckpoint(ctx context.Context) (map[string]any, error) {
+func (n *node) nodeBudgetCheckpoint(ctx context.Context) (checkpointResult map[string]any, checkpointError error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
@@ -259,8 +259,14 @@ func (n *node) nodeBudgetCheckpoint(ctx context.Context) (map[string]any, error)
 	if e := n.start(ctx); e != nil {
 		return nil, e
 	}
+	costProbe, e := startCreationCostTrace(n.process.Process.Pid, "checkpoint")
+	if e != nil {
+		return nil, e
+	}
+	defer mergeCreationCostFinish(costProbe, &checkpointError)
 	api := newSwitchAPI("/srv/state/api.sock", n.token)
 	defer api.close()
+	api.costProbe = costProbe
 	cfg, e := fixedBudgetConfig()
 	if e != nil {
 		return nil, e
@@ -372,6 +378,9 @@ func (n *node) nodeBudgetCheckpoint(ctx context.Context) (map[string]any, error)
 	if e = n.budgetFreshCheckpoint(ctx, api, nil, nodeBudgetCheckpointPhase); e != nil {
 		return nil, e
 	}
+	if e = collectCreationCostIfEnabled(costProbe, "checkpoint"); e != nil {
+		return nil, e
+	}
 	return map[string]any{"real_nested_kvm": true, "checkpoint_receipt_fsynced": true, "node_schema3_exact_frontend_counts_and_parent_control_placement_enforced": true, "wrong_limits_and_wrong_control_subtree_rejected_before_binding_and_api": true, "four_simultaneous_actual_kvm_guests_uid_data_and_filters_checked": true, "fifth_create503_then_full_quota_reclaim_checked": true, "parent_limit_drift_refused_new_preparation_without_fallback": true, "stop_cleanup_and_existing_exec_continue_during_stricter_parent_drift": true, "failed_prepare_key410_and_same_policy_restored_before_fresh_guest": true, "healthy_synced_checkpoint_not_inflight_metadata_fault": true, "guest_memory_touched_bytes_each": 8 << 20, "node_memory_max_bytes": cfg.Node.MemoryMax, "controller_memory_max_bytes": cfg.Node.ControllerMemoryMax, "node_cpu_quota_us": cfg.Node.CPUQuota, "node_pids_max": cfg.Node.PidsMax, "prepare_workers": cfg.Node.PrepareWorkers, "node_io_bytes_per_second": cfg.Node.IOBytesPerSecond, "node_io_operations_per_second": cfg.Node.IOOperationsPerSecond}, nil
 }
 func (n *node) budgetFreshCheckpoint(ctx context.Context, api *switchAPI, oldBoots []string, phase string) error {
@@ -462,7 +471,7 @@ func (n *node) nodeBudgetRecover(ctx context.Context) (map[string]any, error) {
 func (n *node) nodeOOMRecover(ctx context.Context) (map[string]any, error) {
 	return n.recoverBudgetCheckpoint(ctx, nodeOOMCheckpointPhase)
 }
-func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[string]any, error) {
+func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (checkpointResult map[string]any, checkpointError error) {
 	if e := requireNode(); e != nil {
 		return nil, e
 	}
@@ -511,8 +520,14 @@ func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[s
 	if e = n.start(ctx); e != nil {
 		return nil, e
 	}
+	costProbe, e := startCreationCostTrace(n.process.Process.Pid, "cold")
+	if e != nil {
+		return nil, e
+	}
+	defer mergeCreationCostFinish(costProbe, &checkpointError)
 	api := newSwitchAPI("/srv/state/api.sock", n.token)
 	defer api.close()
+	api.costProbe = costProbe
 	if e = budgetDestroyed(ctx, api, saved.Node.Ref); e != nil {
 		return nil, e
 	}
@@ -565,6 +580,9 @@ func (n *node) recoverBudgetCheckpoint(ctx context.Context, phase string) (map[s
 		if e = n.loadInit.stop(ctx); e != nil {
 			return nil, e
 		}
+	}
+	if e = collectCreationCostIfEnabled(costProbe, "cold"); e != nil {
+		return nil, e
 	}
 	if e = n.process.Process.Signal(os.Interrupt); e != nil {
 		return nil, e

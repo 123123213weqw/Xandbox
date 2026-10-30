@@ -66,6 +66,9 @@ jobs:
       - name: Test opt-in nested host fixture only on Linux
         if: runner.os == 'Linux'
         run: go test -tags=xandbox_host_fixture -race -count=3 ./cmd/xandbox-host-fixture
+      - name: Verify default-off creation-cost fixture controls in CGO-free build
+        if: runner.os == 'Linux'
+        run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -tags=xandbox_host_fixture -count=3 -run '^TestCreationCost' ./cmd/xandbox-host-fixture
       - name: Verify OOM fixture guards and Stop contract in CGO-free build
         if: runner.os == 'Linux'
         run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -tags=xandbox_host_fixture -count=3 -run '^TestNodeOOM' ./cmd/xandbox-host-fixture
@@ -86,6 +89,7 @@ jobs:
           python3 -m unittest discover -s scripts -p test_doctor_smoke.py
           python3 -m unittest discover -s scripts -p test_node_oom.py
           python3 -m unittest discover -s scripts -p test_node_load.py
+          python3 -B -m unittest discover -s scripts -p 'test_creation_cost*.py'
           python3 -m py_compile scripts/node_load_contract.py
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py

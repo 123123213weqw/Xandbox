@@ -115,9 +115,9 @@
     ],
     "scope": "Historical standalone component validation before service integration; see firecracker_driver for current status."
   },
-  "validation_history_note": "All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
+  "validation_history_note": "Legacy top-level date/platform/mock/isolation fields and service validation pointers are historical source-specific entries, not current whole-head capability or production claims. The new current_status.latest_test_tool_runtime_validation points only to the separately source-bound three-mode diagnostic tool. Existing report entries retain their old source attribution and failures. Original historical note: All named validation entries are source-specific historical snapshots. current_status.latest_runtime_validation points to the most recent actual service evidence (pristine_cold_service_regression, source ec4e56e), NOT validation of the new development head. The snapshot catalog/driver development path and its updated cold code have not been run on real KVM; see snapshot_catalog_development. Historical reports, including the forty-switch observability sample, are not rewritten.",
   "current_status": {
-    "updated_on": "2026-10-23",
+    "updated_on": "2026-10-30",
     "backends": [
       "mock",
       "experimental firecracker-linux-kvm"
@@ -125,12 +125,17 @@
     "production_ready": false,
     "goal_complete": false,
     "latest_runtime_validation": "schema3_snapshot_space_admission_pressure",
-    "latest_component_validation": "pristine_bootstrap_component",
+    "latest_component_validation": "creation_cost_diagnostics_public_tool",
     "snapshot_execution_enabled_in_verified_baseline": false,
     "snapshot_execution_enabled_by_default": false,
     "latest_frozen_runtime_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
     "full_new_runtime_requalification": "frozen2e_new3ea_default_io_and_quota240_dual_live_cold_named_failure_matrices_passed_schema3_pressure_and_full_production_acceptance_remaining",
-    "latest_frozen_fixture_source": "d432e091c3110c069efa0bf44839f958c97c81aa"
+    "latest_frozen_fixture_source": "d432e091c3110c069efa0bf44839f958c97c81aa",
+    "latest_test_tool_runtime_validation": "creation_cost_diagnostics_public_tool",
+    "latest_service_validation_pointer_is_retained_historical_not_whole_current_head": true,
+    "current_ordinary_program_base_revision": "599121b05c128053432eacab4b9abee7e79d8fbb",
+    "current_ordinary_program_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "current_test_fixture_sha256": "45ec211bc5b8f5c8f0d3ccbe6cafadc0b9c3e25d7f4dc01f422cf94c7dc848cd"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -1356,5 +1361,17 @@
     "status": "nine_original_named_scopes_passed_not_new_8968_qualification",
     "production_ready": false,
     "scope": "Original9 scopes,27 L1 boots18 cold transitions,104raw independent;91 cumulative unique generations46 resource scopes declared readonly absent. Frozen4ddd named matrix10/37, remaining27+systemd/all broad gaps. Unenforced startup is one non-cold case/no L2; local validator correction never reran producer. Load12/CI25 failures retained."
+  },
+  "creation_cost_diagnostics_public_tool": {
+    "report": "docs/validation/creation-cost-tools-functional-2026-10-30.json",
+    "status": "three_source_bound_test_only_full_healthy_KVM_modes_passed_not_production",
+    "ordinary_daemon_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "test_fixture_sha256": "45ec211bc5b8f5c8f0d3ccbe6cafadc0b9c3e25d7f4dc01f422cf94c7dc848cd",
+    "code_binding_sha256": "86972442dcb7cb39e13ceecd08e3db9b02a1cfa7c66e0d9c67a623ef1822e64b",
+    "production_ready": false,
+    "scope": "Only defaultOFF/observe/maximum complete original healthy node-budget functional/transport cases. Earlier source-specific failures and all12original40m remain unchanged;1MiB finite benefit rejected. Not whole source/deployment/performance qualification.",
+    "published_source_code_binding_sha256": "e3abbb218b14463478cfa8da80d335d2f7ac6870052dca0448d18a601ac53f8d",
+    "runtime_Go_and_nontest_Python_code_binding_sha256": "6e850cc0395872ba29006d36a99597551793ade7aa89485368a3dd2b78d2fb0a",
+    "test_only_trailing_blank_line_delta_AST_equal": true
   }
 }

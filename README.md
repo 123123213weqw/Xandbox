@@ -1,5 +1,9 @@
 # Xandbox
 
+[默认关闭的创建成本诊断工具](docs/CREATION_COST_DIAGNOSTICS.md)：显式 observe / maximum、私有完整性校验与生成式回归；当前 Go/脚本已完成限定三模式完整 KVM 健康基线与原盘 cold 验证。**不代表性能提升或生产就绪**，普通写回仍为 8 MiB；新提交 CI 与原长负载门槛单独核对。
+
+> 下列旧候选与历史验收条目按其原源码保留，不为当前测试 fixture 代签；最新工具的限定范围见上述链接。
+
 新增[诊断 writer 完成结果优先候选](docs/DIAGNOSTIC_CLOSE_COMPLETION.md)：修正已结束writer
 遇取消context仍误报pending的独立反例，保留真实pending/ErrWrite及原250ms预算。
 已有有限组件软件证据，但当前新ELF仍待完整原生/CI/硬件验收；原CI25失败不被单独push成功替代。

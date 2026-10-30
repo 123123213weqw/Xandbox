@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "kind": "test-only-creation-cost-diagnostics-functional-acceptance",
+  "observed_on": "2026-10-30",
+  "production_ready": false,
+  "goal_complete": false,
+  "ordinary_program_base_revision": "599121b05c128053432eacab4b9abee7e79d8fbb",
+  "ordinary_daemon_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+  "ordinary_writeback_window_bytes": 8388608,
+  "qualified_test_fixture_sha256": "45ec211bc5b8f5c8f0d3ccbe6cafadc0b9c3e25d7f4dc01f422cf94c7dc848cd",
+  "code_binding": {
+    "algorithm": "SHA256 of sorted repository-relative .go/.py/go.mod/go.sum entries, each UTF-8 CODE_FILE + space + path + LF + unchanged file bytes + LF; docs/reports/CI metadata excluded",
+    "file_count": 498,
+    "not_a_whole_commit_or_other_fixture_qualification": true,
+    "measured_source_sha256": "86972442dcb7cb39e13ceecd08e3db9b02a1cfa7c66e0d9c67a623ef1822e64b",
+    "published_source_sha256": "e3abbb218b14463478cfa8da80d335d2f7ac6870052dca0448d18a601ac53f8d",
+    "runtime_Go_and_nontest_Python_file_count": 460,
+    "runtime_Go_and_nontest_Python_sha256": "6e850cc0395872ba29006d36a99597551793ade7aa89485368a3dd2b78d2fb0a",
+    "runtime_Go_and_nontest_Python_bytes_equal_actual_measurements": true,
+    "publication_only_test_trivia_delta": {
+      "path": "scripts/test_creation_cost_trace_analyzer.py",
+      "qualified_original_sha256": "fb25b50ac43311ff4c26697c6a6e4e82acf47dee35101367ac6d8e33df2c45e2",
+      "publication_sha256": "0f7dcf84a2c22425367d2cee9cf16d35818f382f78ba58d52464f52fb09f1b88",
+      "only_extra_trailing_blank_line_removed": true,
+      "complete_Python_AST_including_positions_equal": true
+    }
+  },
+  "native_components": {
+    "go_toolchain": "go1.27.3",
+    "build": "linux/amd64/v1 CGO0 trimpath buildvcs=false",
+    "go_fixture_top_level_parents": 178,
+    "go_each_parent_runs_in_each_of_CGO0_and_race": 3,
+    "go_skip_or_fail": 0,
+    "go_vet_exit": 0,
+    "native_fixture_equals_independent_canonical_cross_build": true,
+    "production_daemon_bytes_unchanged": true,
+    "python_tests": 415,
+    "python_skips_or_failures": 0,
+    "explicit_synthetic_root_owned_UID_reader_mechanism_passed": true,
+    "local_python_tests": 415,
+    "local_python_passes": 414,
+    "local_existing_Linux_only_mincore_skips": 1,
+    "all11_legacy_default_bootstrap_service_outputs_match_original_D_golden_bytes": true,
+    "not_whole_native_or_new_production_qualification": true
+  },
+  "actual_KVM": {
+    "modes": [
+      "default_OFF_option_absent",
+      "observe",
+      "maximum"
+    ],
+    "original_terminal": 0,
+    "full_original_healthy_checkpoint_and_recovery_protocols_per_mode": true,
+    "actual_outer_KVM_generations": 6,
+    "original_disk_cold_transitions": 3,
+    "canonical_ordinary_A_only_no_B_ABBA_or40m": true,
+    "geometry": {
+      "l1_memory_mib": 8192,
+      "l1_cpus": 8,
+      "l1_disk_gib": 12,
+      "outer_memory_gib": 10,
+      "outer_pids": 256,
+      "swap_max": 0,
+      "outer_seconds": 900,
+      "node_memory_gib": 7,
+      "controller_memory_gib": 1,
+      "per_VM_memory_mib": 768,
+      "max_instances": 4,
+      "prepare_workers": 1,
+      "no_outer_network": true
+    },
+    "original_dense_copy_quota_QSYNC_Syncfs_keys410_zero_before_reuse_and_cleanup_not_relaxed": true,
+    "default_OFF_no_actual_diagnostic_frames_mode_field_or_host_delivery_receipts": true,
+    "default_OFF_source_callback_noop_and_original_startup_regressions_not_a_trace_of_all_host_syscalls": true,
+    "enabled_scope_summaries": [
+      {
+        "label": "OBSERVE",
+        "scope": "checkpoint",
+        "payload_bytes": {
+          "abi": 5700,
+          "normal": 85018
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 42
+        },
+        "normal_JSON_prefix_bytes": 85018,
+        "explicit_synthetic_ASCIIspace_bytes": 0,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 13.580308994278312,
+        "not_API_Stop_or_performance_time": true
+      },
+      {
+        "label": "OBSERVE",
+        "scope": "cold",
+        "payload_bytes": {
+          "abi": 5694,
+          "normal": 23884
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 12
+        },
+        "normal_JSON_prefix_bytes": 23884,
+        "explicit_synthetic_ASCIIspace_bytes": 0,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 4.757110000355169,
+        "not_API_Stop_or_performance_time": true
+      },
+      {
+        "label": "MAXIMUM",
+        "scope": "checkpoint",
+        "payload_bytes": {
+          "abi": 5700,
+          "normal": 1048576
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 512
+        },
+        "normal_JSON_prefix_bytes": 84705,
+        "explicit_synthetic_ASCIIspace_bytes": 963871,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 91.49418800370768,
+        "not_API_Stop_or_performance_time": true
+      },
+      {
+        "label": "MAXIMUM",
+        "scope": "cold",
+        "payload_bytes": {
+          "abi": 5694,
+          "normal": 1048576
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 512
+        },
+        "normal_JSON_prefix_bytes": 23904,
+        "explicit_synthetic_ASCIIspace_bytes": 1024672,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 71.4591050054878,
+        "not_API_Stop_or_performance_time": true
+      }
+    ],
+    "actual_pre_cut_explicit_launch_UID_bound_private_regular_singlelink8field_FD_receipts": true,
+    "all4_enabled_scope_ABI_raw_lineage_pairs_CPUloss_and_selected_returns_valid": true,
+    "all4_enabled_scopes_complete_on_first_host_snapshot": true,
+    "no_delayed_tail_or_stochastic_loss_congestion_or_SLO_claim": true,
+    "maximum_only_preserves_actual_JSON_prefix_and_appends_explicit_ASCII_spaces_to_existing1MiB512frames": true,
+    "host_delivery_limit_seconds": 2,
+    "host_delivery_wait_not_API_Stop_or_performance_time_and_can_allow_background_IO": true
+  },
+  "negative_and_offline_controls": {
+    "actual9_native_CLI_startup_or_L0_guard_normal1_empty_stdout_exact_source_errors": true,
+    "actual1_unprivileged_host_profile_rejection_before_root_assets_allocation": true,
+    "negative_child_output_originals_saved_before_predicates": true,
+    "offline_on_actual_private_consoles_4success_4nooverwrite_4wrongmode_2OFF_rejections": true
+  },
+  "retained_failures": {
+    "initial_private_qualifier_exit1_before_any_VM": true,
+    "initial_failing_ordinal_and_child_stderr_not_retained_not_reconstructed": true,
+    "source_exact_main_error_prefix_fixed_only_in_private_qualifier_with_fresh_native_counterexample": true,
+    "no_started_KVM_case_replayed_to_obtain_green": true,
+    "earlier_ABBA1_2_invalid_and_UID_guard_failed_statuses_unchanged": true,
+    "all12_original40m_runs_still_failed": true,
+    "one_human_authorized_repaired_1MiB_ABBA_completed_but_finite_benefit_rejected_keep8MiB": true,
+    "no_further_performance_authorization_or_replay": true,
+    "local_publication_diff_check_rejected_extra_test_EOF_blank_line_then_format_only_corrected": true
+  },
+  "evidence_privacy": {
+    "all51_original_runtime_files_independently_recovered": true,
+    "original_runtime_bytes": 3268799,
+    "private_runtime_secret_scan_findings": 0,
+    "raw_traces_consoles_IDs_FD_metadata_receipts_and_native_logs_never_public": true,
+    "three_owned_component_archives_original_mode0664_retained_then_metadata_only_corrected_to0600": true,
+    "original_home_ancestor0700_observed_not_an_exposure_or_all_access_audit": true,
+    "future_explicit0600_exclusive_export_generated_native_control_passed": true,
+    "source_or_original_archive_bytes_statuses_or_inodes_not_rewritten": true
+  },
+  "fresh_reconciliation": {
+    "same_entire51_archive_freshly_recomputed_byte_equal": true,
+    "prior237_originals_and_all_source_program_seed_ABI_sets_rehashed": true,
+    "prior197_receipt_fingerprints_unchanged": true,
+    "known_historical_outer_generations": 391,
+    "typed_receipt_scopes": 200,
+    "declared_owned_paths_absent": 1013,
+    "declared_fault_images_loop_unbound": 8,
+    "direct_generation_inventories_unknown": 22,
+    "known_exact_process_births_gone": 95,
+    "unknown_start_handles_missing": 7,
+    "not200_passing_tests_not_all_host_process_memory_or_media_erasure": true,
+    "no_supplemental_workload_cleanup_or_shared_host_or_SSH_master_change": true
+  },
+  "uncompleted": [
+    "new-public-commit CI pending at publication",
+    "original40m/high-load and long-stability acceptance",
+    "production cost improvement and latency percentiles/SLO",
+    "full deployment/operator/storage-host-crash/release acceptance"
+  ],
+  "optional_features_not_provided": [
+    "multinode automatic scheduling",
+    "warm pool",
+    "live migration"
+  ]
+}

@@ -20,6 +20,7 @@ from build_nested_host import build_initrd, digest, validate_manifest, static_el
 from kvm_resources import cgroup_empty
 from node_load_contract import (NODE_LOAD_MAX_FRAME, node_load_profile, nested_node_load_resources, node_load_policy, validate_node_load_result, NODE_LOAD_RECOVERY_FLAGS, detach_node_load_private)
 from kvm_driver_smoke import wait
+from creation_cost_delivery import validate_creation_cost_profile, record_delivery
 from kvm_snapshot_smoke import private_json, sync_dir
 
 DISK_BYTES = 2 << 30
@@ -712,7 +713,9 @@ def main():
     profiles.add_argument('--quota-driver', action='store_true', help='TEST ONLY: ordinary-driver quota lifecycle and coldboot')
     profiles.add_argument('--quota-probe', action='store_true', help='TEST ONLY: ext4 project quota kernel prerequisites, NOT production enforcement')
     profiles.add_argument('--state-io', action='store_true', help='TEST ONLY: whole owned L1 disk EIO/suspended-IO matrix')
+    parser.add_argument("--creation-cost-diagnostics",choices=("observe","maximum"),help="TEST ONLY explicit healthy node-budget diagnostic mode; default OFF, not an API/Stop SLO or inflight crash profile")
     args = parser.parse_args(); os.umask(0o077)
+    validate_creation_cost_profile(args)
     node_load_profile(args.node_load,args.node_oom,args.node_operator,args.node_operator_store,args.node_session_ticket,args.node_operator_shutdown,args.node_diagnostics,args.node_tls_policy,args.node_tls_gateway,args.node_prepare_cancel,args.gateway)
     node_oom_profile(args.node_budget,args.node_oom,args.node_operator,args.node_operator_store,args.node_session_ticket,args.node_operator_shutdown,args.node_diagnostics,args.node_tls_policy,args.node_tls_gateway,args.node_snapshot,args.node_prepare_cancel,args.gateway)
     node_prepare_cancel_profile(args.node_snapshot,args.node_prepare_cancel)
@@ -787,6 +790,9 @@ def main():
             'No TCG fallback, outer QEMU migration/snapshot save/restore, or shared L0 host reboot; this does not prohibit real L2 Firecracker snapshot operations.',
             'Fixed trusted test control operations, not tenant commands executed on a host.',
             'Finite checkpoint cases, not every in-flight fsync/prepare window, production SLO or independent operator acceptance.']}
+    if args.creation_cost_diagnostics is not None:
+        result['creation_cost_diagnostics']=args.creation_cost_diagnostics
+        result['limitations'].append('TEST ONLY bounded private diagnostics; host export wait is not API/Stop latency and can allow background IO progress. maximum adds explicit synthetic ASCII JSON whitespace, not performance work; no congestion/loss/SLO qualification.')
     if args.node_load:
         result['limitations'] += ['NEW node-load-v1:8GiB/12GiB/CPU8/pids256/outer10GiB/noNIC/ONE-HOUR outer maximum; old profiles remain15min. Immutable Node7GiB/control3840MiB/N4/records10000/tenantrecords5000/sessions512/tenantsessions256/prepare1. Existing taskTTL300,execution60s,history64 unchanged.', 'Four fixed10min open offered phases:0.1/0.5/2/8 raw lifecycles/s,6360 total; due times independent of completion. Four fixed workers and queue16 per tenant. Generator queue/full/lateness drops counted separately, not service rejections or zero-latency successes. Scheduled-to-reply includes queue delay; API timings separate.', 'Two scheduled session canaries each120 at20s spacing; rotate8attempts or200s age, preserving64history/300TTL. Busy-old kernel stop before original60s/newguest/boot/committed replay/stale rejection. Backpressure responses are not completed switches.', 'No operator/root-observer Q_SYNC or syncfs during offered window; ordinary production fsync/quota-clear barriers and guest sync remain unchanged. Active reused projects prevent race-free per-generation project-zero attribution: report namespace/durable Destroyed latency only there. Separate100-cycle SERIAL quiescent tail observes exact full project0 timing. Final all4quota0 and cold replay mandatory, not inferred from outer disk deletion.', 'Equal workload/alternating equal offers; predeclared coarse each-tenant one-fifth successful-completion share per10min phase, not universal scheduling fairness/SLO. All errors/drop denominators and slow samples retained.', 'Kernel charges/RSS/FD/quota/free-space/pools sampled10s with observation cost; misses peaks, not unique RAM billing. Permanent tombstones planned/bounded by10k, not archival. TEST observer PID1 outside NodeRoot is overhead inside bounded L1.', 'Healthy synced distinct checkpoint after workload/quiescence; accepted private capabilities replay410 before fresh cold guest. No assigned restore/metadata repair/in-flight fault/physical media/full fault matrix/independent operator production claim.']
     if args.node_snapshot:
@@ -848,7 +854,7 @@ def main():
         shutil.copyfile(sources['fixture'],fixture); fixture.chmod(0o555)
         shutil.copyfile(sources['warden'],warden); warden.chmod(0o555)
         shutil.copyfile(l1kernel,root/'kernel'); (root/'kernel').chmod(0o444)
-        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls or listener_profile),quota_snapshot=(snapshot_profile and not (args.quota_switch or args.node_snapshot)),quota_switch=args.quota_switch,node_budget=args.node_budget,node_snapshot=args.node_snapshot,node_load=args.node_load,quota_unenforced=args.quota_unenforced,quota_state_io=(args.quota_state_io or args.quota_barrier_hang or commit_profile))
+        build_initrd(alpine=sources['alpine'],fixture=fixture,manifest=policy,output=root/'initrd.cpio.gz',state_io=args.state_io,quota_probe=args.quota_probe,quota_driver=(args.quota_driver or args.quota_negatives or args.quota_syscalls or listener_profile),quota_snapshot=(snapshot_profile and not (args.quota_switch or args.node_snapshot)),quota_switch=args.quota_switch,node_budget=args.node_budget,node_snapshot=args.node_snapshot,node_load=args.node_load,creation_cost_mode=args.creation_cost_diagnostics,quota_unenforced=args.quota_unenforced,quota_state_io=(args.quota_state_io or args.quota_barrier_hang or commit_profile))
         result['l1_initrd_sha256']=digest(root/'initrd.cpio.gz')
         staging = control/'disk-root'; (staging/'assets').mkdir(mode=0o755,parents=True); (staging/'config').mkdir(mode=0o700)
         backend = {'version':1,'runtime_root':'/srv/r','cgroup_root':'/sys/fs/cgroup/xandbox','uid_start':400000,'uid_count':8 if args.quota_switch else 4,'reserved_uid_range':True}
@@ -1005,6 +1011,10 @@ def main():
                 assert checkpoint['private_project_space_bytes']>=128<<20 and 0<checkpoint['private_project_inodes']<=128
                 assert checkpoint['quota_and_ownership_released_only_after_io_resumed' if phase.startswith('hang-') else 'quota_owner_retained_until_cold_recovery'] is True
             progress={'phase':phase,'checkpoint':checkpoint};result['checkpoint_progress'].append(progress)
+            if args.creation_cost_diagnostics:
+                delivery=record_delivery(root/'console.log',logs,'checkpoint',expected_uid=uid)
+                private_json(logs/'diagnostic-delivery-checkpoint.json',delivery)
+                progress['private_diagnostic_delivery']=delivery
             cut_began=time.monotonic()
             stopped=power_cut();progress['power_cut_to_l0_cgroup_empty_ms']=stopped
             if private_cut_profile:
@@ -1036,6 +1046,10 @@ def main():
             if driver_profile and not (args.quota_clear_crash or args.quota_barrier_hang or commit_profile or listener_profile or args.quota_switch or private_cut_profile or node_profile): assert recovered['quota_limits_and_ownership_survived_cold_boot'] and recovered['quota_accounting_matches_recovered_namespace'] and recovered['all_private_project_ids_cleared']
             if args.quota_clear_crash: validate_quota_clear_recovery(recovered)
             if args.quota_probe: assert recovered['quota_persisted_after_power_cut'] and recovered['all_fixture_project_records_cleared']
+            if args.creation_cost_diagnostics:
+                delivery=record_delivery(root/'console.log',logs,'cold',expected_uid=uid)
+                private_json(logs/'diagnostic-delivery-cold.json',delivery)
+                result['private_diagnostic_cold_delivery']=delivery
             guard = (checkpoint['host_stop_1500ms_guard_passed'] and checkpoint['new_exec_500ms_guard_passed']) if state_io_profile else True
             result['cases'].append({'phase':phase,'passed':guard,'checkpoint':checkpoint,'recovery':recovered,'power_cut_to_l0_cgroup_empty_ms':stopped})
         assert len(owned_groups)==len(phases)+1 and len(set(owned_groups))==len(phases)+1

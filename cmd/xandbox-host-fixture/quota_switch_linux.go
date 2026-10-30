@@ -43,8 +43,9 @@ const switchReceiptPath = "/srv/fixture/quota-switch-receipt.json"
 var switchTenants = [2]string{"switch-alpha", "switch-beta"}
 
 type switchAPI struct {
-	http  *http.Client
-	token string
+	costProbe *creationCostTrace
+	http      *http.Client
+	token     string
 }
 
 type switchHTTPStatusError struct{ Got, Want int }
@@ -226,7 +227,19 @@ func runQuotaSwitchDaemon() error {
 func (n *node) switchClients() [2]*switchAPI {
 	return [2]*switchAPI{newSwitchAPI("/srv/state/api.sock", n.token), newSwitchAPI("/srv/state/api.sock", n.switchTokenB)}
 }
-func (c *switchAPI) create(ctx context.Context, key string) (sandbox.Record, error) {
+func (c *switchAPI) create(ctx context.Context, key string) (result sandbox.Record, failure error) {
+	if p := c.costProbe; p != nil {
+		if e := p.beginCreate(); e != nil {
+			return result, e
+		}
+		started := time.Now()
+		defer func() {
+			if e := p.finishCreate(time.Since(started), failure == nil); e != nil {
+				failure = errors.Join(failure, e)
+			}
+		}()
+	}
+
 	var r sandbox.Record
 	e := c.call(ctx, "POST", "/v1/sandboxes", key, switchGuestSpec(), &r, 201)
 	if e == nil && (r.State != sandbox.Ready || r.Backend != "firecracker") {
