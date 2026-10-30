@@ -1,6 +1,8 @@
 # Xandbox
 
-[默认关闭的创建成本诊断工具](docs/CREATION_COST_DIAGNOSTICS.md)：显式 observe / maximum、私有完整性校验与生成式回归；当前 Go/脚本已完成限定三模式完整 KVM 健康基线与原盘 cold 验证。**不代表性能提升或生产就绪**，普通写回仍为 8 MiB；新提交 CI 与原长负载门槛单独核对。
+[创建阶段观测扩展](docs/CREATION_COST_STAGES.md)：默认关闭，从原 CREATE 响应保存十项固定阶段；新 fixture 已完成自己限定三模式完整 KVM 健康流程与原盘 cold、186 组 Go 两种构建各 3 遍及 424 项原生 Python 验证。[范围与证据](docs/validation/creation-cost-stages-functional-2026-10-30.json)独立绑定，不是性能修复或生产就绪；新提交 CI 单独核对。
+
+[默认关闭的创建成本诊断工具](docs/CREATION_COST_DIAGNOSTICS.md)：显式 observe / maximum、私有完整性校验与生成式回归；先前 `ce47a8b` 的 schema3 Go/脚本已完成限定三模式完整 KVM 健康基线与原盘 cold 验证，**不为上述新 schema4 fixture 代签**。不代表性能提升或生产就绪，普通写回仍为 8 MiB；新提交 CI 与原长负载门槛单独核对。
 
 > 下列旧候选与历史验收条目按其原源码保留，不为当前测试 fixture 代签；最新工具的限定范围见上述链接。
 

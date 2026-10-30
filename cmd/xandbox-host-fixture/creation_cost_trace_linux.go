@@ -36,6 +36,8 @@ type creationCostTrace struct {
 	scope, ordinaryELF                                      string
 	window                                                  int64
 	creates                                                 []costCreateElapsed
+	createServer                                            costCreateServer
+	serverObservationInvalid                                bool
 	createInFlight, published, abortPublished, abiQualified bool
 	initialAnchors                                          map[string]map[string]uint64
 	target                                                  prepareTrace
@@ -307,6 +309,9 @@ func (t *creationCostTrace) collect(scope string) (err error) {
 	if e := t.validateCreates(scope); e != nil {
 		return e
 	}
+	if e := t.validateCreateServers(); e != nil {
+		return e
+	}
 	if _, e := t.freeze(); e != nil {
 		return e
 	}
@@ -339,7 +344,7 @@ func (t *creationCostTrace) collect(scope string) (err error) {
 	if e != nil {
 		return e
 	}
-	packet := map[string]any{"schema": 3, "scope": scope, "ordinary_elf_sha256": t.ordinaryELF, "asset_writeback_window_bytes": t.window, "http_create_elapsed": t.creates, "target_pid": t.target.pid, "target_start_ticks": t.target.identity, "initial_stopped_threads": t.initialTasks, "event_pid_after": string(filter), "raw": base64.StdEncoding.EncodeToString(raw), "runtime_anchor_before": t.initialAnchors, "runtime_anchor_after": anchors, "cpu_stats": stats, "event_formats": t.formats, "setup_and_collection_outside_workload": true, "subtree_events_require_time_ordered_task_lineage_before_daemon_timings": true, "no_user_memory_read_or_dynamic_probe_or_L0_trace": true, "not_production_or_speedup_proof": true}
+	packet := map[string]any{"schema": 4, "scope": scope, "ordinary_elf_sha256": t.ordinaryELF, "asset_writeback_window_bytes": t.window, "http_create_elapsed": t.creates, "target_pid": t.target.pid, "target_start_ticks": t.target.identity, "initial_stopped_threads": t.initialTasks, "event_pid_after": string(filter), "raw": base64.StdEncoding.EncodeToString(raw), "runtime_anchor_before": t.initialAnchors, "runtime_anchor_after": anchors, "cpu_stats": stats, "event_formats": t.formats, "setup_and_collection_outside_workload": true, "subtree_events_require_time_ordered_task_lineage_before_daemon_timings": true, "no_user_memory_read_or_dynamic_probe_or_L0_trace": true, "not_production_or_speedup_proof": true}
 	b, e := json.Marshal(packet)
 	if e != nil {
 		return e

@@ -1,6 +1,7 @@
 """TEST ONLY offline diagnostic integrity. Kernel elapsed time is not pure IO or SLO."""
 import base64,collections,hashlib,json,math,re
 from creation_cost_delivery import inspect_console, InvalidDelivery, bounded_file_reader
+from creation_cost_server import validate_create_server
 
 MAX_RAW=512<<10
 PREFIX='XANDBOX_CREATION_COST_PRIVATE '
@@ -81,13 +82,18 @@ def summary(values):
  return dict(count=len(v),sum_ms=sum(v)/1e6,min_ms=v[0]/1e6,max_ms=v[-1]/1e6,p50_ms=rank(.5),p99_ms=rank(.99))
 
 def analyze(packet):
- need(packet.get('schema')==3 and type(packet.get('target_pid')) is int and packet['target_pid']>0,'fixed observer schema/target')
+ need(type(packet.get('schema')) is int and packet['schema'] in (3,4) and type(packet.get('target_pid')) is int and packet['target_pid']>0,'fixed observer schema/target')
+ schema=packet['schema']
  programs={'d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01':8<<20,'596a7db7480d57f904fa35240cddbc0bc8eb9f2ff8c4059f9335f83d25b71f69':1<<20}
  need(packet.get('ordinary_elf_sha256') in programs,'fixed A/B ordinary daemon only');window=programs[packet['ordinary_elf_sha256']];need(type(packet.get('asset_writeback_window_bytes')) is int and packet['asset_writeback_window_bytes']==window,'fixed source/ELF cadence')
  scope=packet['scope'];need(scope in ('checkpoint','cold'),'fixed observation scope');creates=packet.get('http_create_elapsed');need(type(creates) is list and len(creates)==(5 if scope=='checkpoint' else 1),'all original successful create timings required')
  for i,row in enumerate(creates):
   phase='cold-fresh' if scope=='cold' else 'checkpoint-fresh' if i==4 else 'initial'
-  need(type(row) is dict and set(row)=={'ordinal','phase','elapsed_ns','success'} and type(row['ordinal']) is int and row['ordinal']==i and row['phase']==phase and type(row['elapsed_ns']) is int and 0<row['elapsed_ns']<=900_000_000_000 and row['success'] is True,'invalid/failed/reordered/missing fixed create timing')
+  fields={'ordinal','phase','elapsed_ns','success'}|({'server_timing'} if schema==4 else set())
+  need(type(row) is dict and set(row)==fields and type(row['ordinal']) is int and row['ordinal']==i and row['phase']==phase and type(row['elapsed_ns']) is int and 0<row['elapsed_ns']<=900_000_000_000 and row['success'] is True,'invalid/failed/reordered/missing fixed create timing')
+  if schema==4:
+   try:validate_create_server(row['server_timing'],row['elapsed_ns'])
+   except ValueError as error:raise InvalidObservation('invalid fixed create server timings') from error
  need(set(packet['event_formats'])==EVENTS,'exact six syscall and one lineage formats')
  for path,text in packet['event_formats'].items():need('name: '+path.split('/')[1]+'\n' in text,'event format name mismatch')
  range_text=packet['event_formats']['syscalls/sys_enter_sync_file_range']
@@ -132,7 +138,7 @@ def analyze(packet):
   label='Q_SYNC' if v['name']=='quotactl_fd' and v['args']['cmd']==0x80000102 else 'quota_other' if v['name']=='quotactl_fd' else 'WRITE_range' if v['name']=='sync_file_range' else v['name'];groups[label].append(v)
  metrics={k:summary([v['elapsed_ns'] for v in values])|dict(return_counts=dict(collections.Counter(str(v['ret']) for v in values))) for k,values in groups.items()}
  need(set(metrics)=={'Q_SYNC','quota_other','syncfs','fsync','WRITE_range'},'missing selected syscall class')
- return dict(schema=3,asset_writeback_window_bytes=window,http_create_elapsed=creates,http_create_elapsed_sum_ns=sum(x['elapsed_ns'] for x in creates),writeback_requested_bytes=sum(v['args']['nbytes'] for v in completed if v['name']=='sync_file_range'),writeback_per_fd_lifetime_not_observed_no_file_identity_or_coverage_claim=True,scope=packet['scope'],ordinary_elf_sha256=packet['ordinary_elf_sha256'],raw_trace_sha256=hashlib.sha256(raw).hexdigest(),raw_trace_bytes=len(raw),total_trace_events=rows,matched_daemon_syscall_pairs=len(completed),recorded_task_newtask_events=newtasks,recorded_pid_reuse_transitions=pid_reuses,child_syscall_events_excluded_from_daemon_timings=foreign,all8_cpu_loss_counters_zero=True,all_raw_header_and_per_cpu_entry_counts_equal=True,all_daemon_pairs_closed=True,identity_reconstructed_from_time_ordered_kernel_clone_flags_not_cached_tgid=True,syncfs_anchor_before_after_verified=True,syncfs_observed_positive_quantum_overlap_lower_bound=positive_overlap(syncs),metrics=metrics,timestamps_quantized_ns=1000,kernel_syscall_elapsed_includes_scheduler_wait_not_pure_io=True,not_a_throughput_slo_or_original40m_or_causal_speedup_proof=True)
+ return dict(schema=schema,server_creation_stage_observations_available=(schema==4),server_spans_are_nested_and_not_pure_queue_or_physical_io=True,no_per_create_kernel_clock_anchors_or_syscall_critical_path_attribution=True,asset_writeback_window_bytes=window,http_create_elapsed=creates,http_create_elapsed_sum_ns=sum(x['elapsed_ns'] for x in creates),writeback_requested_bytes=sum(v['args']['nbytes'] for v in completed if v['name']=='sync_file_range'),writeback_per_fd_lifetime_not_observed_no_file_identity_or_coverage_claim=True,scope=packet['scope'],ordinary_elf_sha256=packet['ordinary_elf_sha256'],raw_trace_sha256=hashlib.sha256(raw).hexdigest(),raw_trace_bytes=len(raw),total_trace_events=rows,matched_daemon_syscall_pairs=len(completed),recorded_task_newtask_events=newtasks,recorded_pid_reuse_transitions=pid_reuses,child_syscall_events_excluded_from_daemon_timings=foreign,all8_cpu_loss_counters_zero=True,all_raw_header_and_per_cpu_entry_counts_equal=True,all_daemon_pairs_closed=True,identity_reconstructed_from_time_ordered_kernel_clone_flags_not_cached_tgid=True,syncfs_anchor_before_after_verified=True,syncfs_observed_positive_quantum_overlap_lower_bound=positive_overlap(syncs),metrics=metrics,timestamps_quantized_ns=1000,kernel_syscall_elapsed_includes_scheduler_wait_not_pure_io=True,not_a_throughput_slo_or_original40m_or_causal_speedup_proof=True)
 
 ABI_PREFIX='XANDBOX_CREATION_COST_ABI_PRIVATE '
 SETUP_FAILURE_PREFIX='XANDBOX_CREATION_COST_SETUP_FAILURE_PRIVATE '

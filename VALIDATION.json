@@ -125,17 +125,17 @@
     "production_ready": false,
     "goal_complete": false,
     "latest_runtime_validation": "schema3_snapshot_space_admission_pressure",
-    "latest_component_validation": "creation_cost_diagnostics_public_tool",
+    "latest_component_validation": "creation_cost_selected_stages_test_tool",
     "snapshot_execution_enabled_in_verified_baseline": false,
     "snapshot_execution_enabled_by_default": false,
     "latest_frozen_runtime_source": "2e514fe9d0b0ce8097b4baca67c9761afdfdbf48",
     "full_new_runtime_requalification": "frozen2e_new3ea_default_io_and_quota240_dual_live_cold_named_failure_matrices_passed_schema3_pressure_and_full_production_acceptance_remaining",
     "latest_frozen_fixture_source": "d432e091c3110c069efa0bf44839f958c97c81aa",
-    "latest_test_tool_runtime_validation": "creation_cost_diagnostics_public_tool",
+    "latest_test_tool_runtime_validation": "creation_cost_selected_stages_test_tool",
     "latest_service_validation_pointer_is_retained_historical_not_whole_current_head": true,
     "current_ordinary_program_base_revision": "599121b05c128053432eacab4b9abee7e79d8fbb",
     "current_ordinary_program_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
-    "current_test_fixture_sha256": "45ec211bc5b8f5c8f0d3ccbe6cafadc0b9c3e25d7f4dc01f422cf94c7dc848cd"
+    "current_test_fixture_sha256": "9637fe5916a5934f589c2021f51c7d9a13b572a32075adbeeb1a5db521c5ffe1"
   },
   "firecracker_driver": {
     "validated_on": "2026-10-22",
@@ -1373,5 +1373,14 @@
     "published_source_code_binding_sha256": "e3abbb218b14463478cfa8da80d335d2f7ac6870052dca0448d18a601ac53f8d",
     "runtime_Go_and_nontest_Python_code_binding_sha256": "6e850cc0395872ba29006d36a99597551793ade7aa89485368a3dd2b78d2fb0a",
     "test_only_trailing_blank_line_delta_AST_equal": true
+  },
+  "creation_cost_selected_stages_test_tool": {
+    "report": "docs/validation/creation-cost-stages-functional-2026-10-30.json",
+    "status": "source_bound_schema4_defaultoff_observe_maximum_full_healthy6KVM3cold_passed_not_production",
+    "ordinary_daemon_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+    "test_fixture_sha256": "9637fe5916a5934f589c2021f51c7d9a13b572a32075adbeeb1a5db521c5ffe1",
+    "all502_measured_and_publication_code_binding_sha256": "2727f89b2d36a8540c82f100294eff0298befaa1ff5a4075883165311c188d30",
+    "production_ready": false,
+    "scope": "Test-only selected-CREATE stage observation; new tool itself qualified, not ordinary daemon change or performance gain. Source-specific old records and all12original40m failures retained; once1MiB experiment rejected, keep8MiB. New commit CI pending at publication, no merge/deploy."
   }
 }

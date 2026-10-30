@@ -82,6 +82,11 @@ func (c *switchAPI) call(ctx context.Context, method, path, key string, body, ou
 		req.Header.Set("Idempotency-Key", key)
 	}
 	r, e := c.http.Do(req)
+	// The OFF path does not inspect headers. Enabled diagnostics observe ONLY
+	// this original create response, before its original error/body handling.
+	if p := c.costProbe; p != nil && p.createInFlight && method == "POST" && path == "/v1/sandboxes" {
+		p.captureCreateServer(r)
+	}
 	if e != nil {
 		return e
 	}

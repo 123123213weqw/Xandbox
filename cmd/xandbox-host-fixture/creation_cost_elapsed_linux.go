@@ -15,10 +15,11 @@ import (
 const costOrdinaryB = "596a7db7480d57f904fa35240cddbc0bc8eb9f2ff8c4059f9335f83d25b71f69"
 
 type costCreateElapsed struct {
-	Ordinal   int    `json:"ordinal"`
-	Phase     string `json:"phase"`
-	ElapsedNS int64  `json:"elapsed_ns"`
-	Success   bool   `json:"success"`
+	Ordinal      int              `json:"ordinal"`
+	Phase        string           `json:"phase"`
+	ElapsedNS    int64            `json:"elapsed_ns"`
+	Success      bool             `json:"success"`
+	ServerTiming costCreateServer `json:"server_timing"`
 }
 
 func costWindowForELF(h string) (int64, error) {
@@ -75,6 +76,7 @@ func (t *creationCostTrace) beginCreate() error {
 		return errors.New("fixed sequential create observation bound")
 	}
 	t.createInFlight = true
+	t.createServer = costCreateServer{Status: "not_observed", Entries: []nodeLoadServerEntry{}}
 	return nil
 }
 func (t *creationCostTrace) finishCreate(elapsed time.Duration, success bool) error {
@@ -87,7 +89,7 @@ func (t *creationCostTrace) finishCreate(elapsed time.Duration, success bool) er
 	} else if len(t.creates) == 4 {
 		phase = "checkpoint-fresh"
 	}
-	t.creates = append(t.creates, costCreateElapsed{Ordinal: len(t.creates), Phase: phase, ElapsedNS: int64(elapsed), Success: success})
+	t.creates = append(t.creates, costCreateElapsed{Ordinal: len(t.creates), Phase: phase, ElapsedNS: int64(elapsed), Success: success, ServerTiming: t.createServer})
 	t.createInFlight = false
 	return nil
 }
@@ -109,13 +111,26 @@ func (t *creationCostTrace) finish() error {
 	err := t.close()
 	if !t.published && !t.abortPublished {
 		t.abortPublished = true
-		b, e := json.Marshal(map[string]any{"schema": 1, "scope": t.scope, "ordinary_elf_sha256": t.ordinaryELF, "http_create_elapsed": t.creates, "create_in_flight": t.createInFlight, "valid_comparison": false})
-		if e == nil && len(b) <= 4096 {
+		b, e := t.failedCreatePayload()
+		if e == nil {
 			_, e = fmt.Fprintf(os.Stderr, "XANDBOX_CREATION_COST_FAILED_CREATES_PRIVATE %s\n", b)
 		}
 		err = errors.Join(err, e)
 	}
 	return err
+}
+
+func (t *creationCostTrace) failedCreatePayload() ([]byte, error) {
+	b, e := json.Marshal(map[string]any{"schema": 2, "scope": t.scope, "ordinary_elf_sha256": t.ordinaryELF, "http_create_elapsed": t.creates, "create_in_flight": t.createInFlight, "server_observation_invalid": t.serverObservationInvalid, "valid_comparison": false})
+	if e != nil {
+		return nil, e
+	}
+	// All five fixed ten-entry observations fit the original payload bound.
+	// An unexpected overflow is an explicit error, never a silent sample drop.
+	if len(b) > 4096 {
+		return nil, errors.New("bounded failed create observations exceeded")
+	}
+	return b, nil
 }
 
 // Fixed kernel syscall arguments use unsigned-long storage slots, independent

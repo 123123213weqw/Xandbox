@@ -1,7 +1,8 @@
 # 创建成本诊断：默认关闭的测试工具
 
-> **测试工具；当前 Go/脚本字节已完成限定 OFF / observe / maximum 的 Linux/KVM 完整健康基线与原盘冷恢复验证，不是生产就绪声明。**
-> 本次新 fixture 与脚本单独绑定并验收；先前私有原型不替新实现签发资格。整仓新提交 CI、长负载与完整生产验收仍需另行核对。
+> **当前[逐次创建阶段扩展](CREATION_COST_STAGES.md)使用 normal schema4，已另行完成自己限定三模式的完整 KVM 健康流程与原盘冷恢复；[新报告](validation/creation-cost-stages-functional-2026-10-30.json)绑定实际代码与新 fixture。**
+> 先前 `ce47a8b` 的 schema3 实测按原源码保留，不为后续程序代签。离线分析器明确区分两种版本，不补造旧运行缺失的阶段。
+> 测试工具不是生产就绪声明。整仓新提交 CI、长负载与完整生产验收仍需另行核对。
 > 现有 12 次原始 40 分钟负载失败、无效性能对照及失败记录均保留，不因诊断工具加入而变为通过。
 
 这些工具只属于 `xandbox_host_fixture` 构建标签和受信任的嵌套 KVM 验收路径，**不是生产 daemon / guest-agent 的新 API**，也不执行租户命令到宿主机。
@@ -21,7 +22,7 @@
 --creation-cost-diagnostics maximum
 ```
 
-- `observe`：传输真实、未填充的 schema3 JSON；记录五次 checkpoint create 和一次 cold-fresh create。
+- `observe`：传输真实、未填充的 JSON；记录五次 checkpoint create 和一次 cold-fresh create。旧实现为 schema3；当前独立验收的扩展为 schema4，另含每次原响应的固定阶段向量。
 - `maximum`：保留真实 JSON 的全部原始前缀字节，仅追加明确的 ASCII JSON 空格至**既有 1 MiB 上限**，形成 512 个 2048 字节片段。
   这是合成传输压力，不是 guest 数据、写回窗口优化或性能对照；ABI 包不填充。
 - 不支持任意 PID、事件、报文长度、期限选择器。不支持与 load、snapshot、OOM、诊断故障、operator、TLS 等修饰组合；分配资源和启动前拒绝。
