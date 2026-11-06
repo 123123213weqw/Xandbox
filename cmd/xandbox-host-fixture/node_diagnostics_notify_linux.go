@@ -2,7 +2,7 @@
 
 package main
 
-// TEST ONLY: exact ordinary daemon ring FSYNC entry and EXIT_GROUP(1) holds.
+// TEST ONLY: exact ordinary daemon ring FSYNC entry and classified EXIT_GROUP(75) holds.
 // A notification wait is not filesystem D, media failure or a durable audit ACK.
 import (
 	"context"
@@ -224,7 +224,7 @@ func (o *diagnosticObserver) selectExit(q quotaNotif) (bool, error) {
 		return false, e
 	}
 	v := o.snapshot()
-	if q.Data.Args[0] != 1 || v.ExitID != 0 || v.SignalAt.IsZero() || time.Since(v.SignalAt) < 250*time.Millisecond {
+	if !diagnosticPendingExitStatus(q.Data.Args[0]) || v.ExitID != 0 || v.SignalAt.IsZero() || time.Since(v.SignalAt) < 250*time.Millisecond {
 		return false, errors.New("ordinary exit must follow diagnostic Close budget")
 	}
 	if e = o.heldValid(); e != nil {

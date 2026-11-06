@@ -25,7 +25,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const prepareTraceELFSHA = "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+const prepareTraceELFSHA = "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01"
 const prepareTraceRoot = "/sys/kernel/tracing"
 const prepareTraceInstance = prepareTraceRoot + "/instances/xandbox_prepare_calibration"
 const prepareTraceGroup = "xandbox_prepare_calibration"
@@ -43,19 +43,21 @@ type prepareProbe struct {
 // before mounting tracefs or registering anything. These are ordinary entry
 // probes even at a post-CALL instruction; they are never return probes.
 // Release is inlined in Prepare.deferwrap1, not the out-of-line release symbol.
-// Only that pre-receive probe reads CX (the gate); other points read AX.
+// Both pre-receive release probes read CX (the gate); other points read AX.
+// node_ok is the checked success path before return/defer bookkeeping, NOT
+// an actual function return. Its AX is not interpreted as a result or identity.
 func prepareProbes() []prepareProbe {
 	const prefix = "github.com/123123213weqw/Xandbox/internal/firecracker."
 	return []prepareProbe{
-		{"enter", prefix + "(*prepareGate).acquire", 0x748012, "4889842480000000", "ax"},
-		{"selected", prefix + "(*prepareGate).acquire", 0x748085, "4885c0", "ax"},
-		{"ok", prefix + "(*prepareGate).acquire", 0x7480d5, "31c0", "ax"},
-		{"cancel", prefix + "(*prepareGate).acquire", 0x7480f5, "4883c470", "ax"},
-		{"race_release", prefix + "(*prepareGate).acquire", 0x7480c5, "488b442438", "ax"},
-		{"node_ok", prefix + "(*nodeEnvelope).acquirePrepare", 0x745a35, "31c0", "ax"},
-		{"node_reject_release", prefix + "(*nodeEnvelope).acquirePrepare", 0x745a25, "488b442418", "ax"},
-		{"release", prefix + "(*driver).Prepare.deferwrap1", 0x751df2, "488b01", "cx"},
-		{"released", prefix + "(*driver).Prepare.deferwrap1", 0x751dfc, "4883c410", "ax"},
+		{"enter", prefix + "(*prepareGate).acquire", 0x74c1f2, "4889842480000000", "ax"},
+		{"selected", prefix + "(*prepareGate).acquire", 0x74c265, "4885c0", "ax"},
+		{"ok", prefix + "(*prepareGate).acquire", 0x74c2b5, "31c0", "ax"},
+		{"cancel", prefix + "(*prepareGate).acquire", 0x74c2d5, "4883c470", "ax"},
+		{"race_release", prefix + "(*prepareGate).acquire", 0x74c2a5, "488b442438", "ax"},
+		{"node_ok", prefix + "(*nodeEnvelope).acquirePrepare", 0x749ba1, "440f117c2430", "ax"},
+		{"node_reject_release", prefix + "(*nodeEnvelope).acquirePrepare", 0x749b4c, "488b01", "cx"},
+		{"release", prefix + "(*driver).Prepare.deferwrap1", 0x7560b2, "488b01", "cx"},
+		{"released", prefix + "(*driver).Prepare.deferwrap1", 0x7560bc, "4883c410", "ax"},
 	}
 }
 

@@ -34,6 +34,12 @@ class ClosedProcessExitTests(unittest.TestCase):
                 require_clean_exit(SimpleNamespace(wait=lambda timeout:1),'/unexecuted','/private')
         require_clean_exit(SimpleNamespace(wait=lambda timeout:0),'/unexecuted','/private')
 
+    def test_closed_diagnostic_exit_codes_remain_failures(self):
+        for status in (74,75):
+            with self.subTest(status=status),patch('process_exit.failure_summary',return_value={'exit_status':status}):
+                with self.assertRaisesRegex(AssertionError,'"exit_status": '+str(status)):
+                    require_clean_exit(SimpleNamespace(wait=lambda timeout:status),'/unexecuted','/private')
+
     def test_wait_timeout_is_not_treated_as_clean(self):
         def pending(timeout):raise subprocess.TimeoutExpired('unexecuted',timeout)
         with self.assertRaisesRegex(AssertionError,'wait_timeout'):require_clean_exit(SimpleNamespace(wait=pending),'/unexecuted','/private')

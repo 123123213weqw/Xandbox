@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "published_on": "2026-10-28",
+  "original_execution_on": "2026-10-27",
+  "status": "FAILED_ORIGINAL_NOT_RERUN",
+  "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+  "production_code_commit": "6ea28eaf491f2863884db176af94936544620f37",
+  "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+  "baseline_and_oom_each_two_real_kvm_boots_independently_passed": true,
+  "original_load_boots": 1,
+  "software_prerequisites": {
+    "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+    "linux_default_packages": 43,
+    "linux_default_race_and_cgo0_each_count": 3,
+    "all24_native_artifacts_equal_independent_cross_builds": true,
+    "full_fixture_parents": 153,
+    "full_fixture_each_count": 3,
+    "full_fixture_both_builds_skipped": 0,
+    "root_python_tests": 312,
+    "root_python_skipped": 0,
+    "original_pr_ci": "https://github.com/123123213weqw/Xandbox/actions/runs/40474907011",
+    "original_push_ci": "https://github.com/123123213weqw/Xandbox/actions/runs/40474898787",
+    "six_jobs_each_original_attempt1_and_all_critical_steps_independently_verified": true
+  },
+  "planned_protocol": {
+    "offered_window_ms": 2400000,
+    "raw_intents": 6360,
+    "canary_intents": 240,
+    "quiescent_exact_quota_tail": 100,
+    "actor_budget_ms": 35000,
+    "original_limits_fairness_and_allowlist_unchanged": true
+  },
+  "observed": {
+    "result_rows": 734,
+    "periodic_resource_samples": 133,
+    "accepted_inventory_memory_only_not_fsynced_checkpoint": 472
+  },
+  "first_failure": {
+    "Kind": 1,
+    "Index": 129,
+    "Phase": 2,
+    "Tenant": 1,
+    "Outcome": "failed",
+    "Stage": "canary_old_gc",
+    "QueueMS": 0.333379,
+    "TotalMS": 35000.246,
+    "FinishedMS": 1320000.579
+  },
+  "failed_actor": {
+    "original_budget_ms": 34999.989648,
+    "both_open_and_switch_http_responses_observed": true,
+    "completed_http_measurements": {
+      "canary_open_http": {
+        "http_ms": 17360.287493999997,
+        "server_spans_ms": {
+          "xa_core_admission": 11578.152,
+          "xa_core_owner_commit": 7.597,
+          "xa_core_driver": 5732.347,
+          "xa_core_ready_commit": 9.795,
+          "xa_driver_slot": 3656.204,
+          "xa_driver_owner": 4.325,
+          "xa_driver_quota_reserve": 251.212,
+          "xa_driver_copy": 900.01,
+          "xa_driver_quota_verify": 1.287,
+          "xa_driver_activation": 915.086,
+          "xa_session_intent_commit": 7.169,
+          "xa_session_prepared_commit": 10.13,
+          "xa_session_active_commit": 14.092
+        },
+        "admission_and_slot_COMPOSITE_ms": 15234.356,
+        "composite_fraction": 0.8775405364263262
+      },
+      "canary_switch_http": {
+        "http_ms": 16866.984314999998,
+        "server_spans_ms": {
+          "xa_core_admission": 13015.113,
+          "xa_core_owner_commit": 8.918,
+          "xa_core_driver": 3812.304,
+          "xa_core_ready_commit": 3.643,
+          "xa_driver_slot": 1724.497,
+          "xa_driver_owner": 9.749,
+          "xa_driver_quota_reserve": 248.987,
+          "xa_driver_copy": 971.899,
+          "xa_driver_quota_verify": 0.88,
+          "xa_driver_activation": 851.352,
+          "xa_session_intent_commit": 18.344,
+          "xa_session_prepared_commit": 3.659,
+          "xa_session_active_commit": 3.666
+        },
+        "admission_and_slot_COMPOSITE_ms": 14739.609999999999,
+        "composite_fraction": 0.873873463372578
+      }
+    },
+    "after_fresh_command_remaining_budget_ms": 4.225329000000784,
+    "gc_suboperation": null,
+    "physical_stop_or_domain_empty_confirmation": null,
+    "namespace_destroy_or_full_project_clear_ms": null,
+    "old_gc_label_does_not_establish_slow_gc_or_unique_cause": true,
+    "EmptyMS_can_be_elapsed_on_error_not_physical_empty_proof": true,
+    "StopReplyMS_alias_is_not_independent_stop_confirmation": true,
+    "two_composite_spans_not_pure_queue_wait": true,
+    "between_run_differences_not_controlled_quiet_speedup": true
+  },
+  "independent_resource_audit": {
+    "raw_files_rehashed": 31,
+    "failed_load_cohort_actual_outer_generations": 60,
+    "failed_load_cohort_owned_scopes": 36,
+    "all_declared_paths_read_only_absent": true,
+    "all_outer_oom_and_pid_limit_events_zero": true,
+    "no_supplemental_cleanup": true,
+    "all_twelve_original_failed_attempts_retained": true
+  },
+  "full_offered_window_completed": false,
+  "tail_checkpoint_and_original_disk_cold_completed": false,
+  "remaining_scope": "All original sustained-load requirements, other affected runtime/boundary/systemd scopes, and every unfinished production milestone remain required. A separate quota-syscalls scope does not certify this failed load.",
+  "production_ready": false,
+  "goal_complete": false
+}

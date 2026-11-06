@@ -82,7 +82,8 @@ class DrainExtensionControls(unittest.TestCase):
         source=inspect.getsource(ready.operator);cold=source.split('if CHECKPOINT.exists():',1)[1].split('else:',1)[0]
         self.assertNotIn("run('systemctl'",cold);self.assertNotIn('setup()',cold)
     def test_drain_checks_are_mandatory_and_new_source_is_fingerprinted(self):
-        self.assertEqual(len(harness_files(True,False,True)),14);self.assertIn('systemd_drain_probe.py',harness_files(True,False,True))
+        self.assertEqual(len(harness_files(True,False,True)),15);self.assertIn('systemd_drain_probe.py',harness_files(True,False,True))
+        self.assertIn('systemd_fixture_provenance.py',harness_files(True,False,True))
         for operation,flags,extra in (('readiness-checkpoint',READINESS_CHECKPOINT_FLAGS,drain.CHECKPOINT_FLAGS),('readiness-recover',READINESS_RECOVERY_FLAGS,drain.RECOVERY_FLAGS)):
             good={key:True for key in flags}
             for key in extra:

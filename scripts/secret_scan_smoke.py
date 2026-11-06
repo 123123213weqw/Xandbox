@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import secrets
 import shutil
 import string
 import subprocess
@@ -14,11 +13,21 @@ import tempfile
 from secret_scan import environment, scan, ScanError
 
 
+def synthetic_values():
+    # Fixed TEST values, not credentials or a secret generator. A random hex
+    # sample can fall below the pinned scanner's entropy floor. Permute the
+    # alphabets to avoid its ordered-alphabet stopword. No scanner rule,
+    # threshold, ignore or fail-closed production policy is changed.
+    alphabet = string.ascii_letters + string.digits
+    provider = 'gh' + 'p_' + ''.join(alphabet[(17 * i) % len(alphabet)] for i in range(36))
+    hexadecimal = ''.join(format((7 * i) % 16, 'x') for i in range(16))
+    return provider, hexadecimal * 4, (hexadecimal[3:] + hexadecimal[:3]) * 4
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__); parser.add_argument('--scanner', type=Path, required=True)
     args = parser.parse_args(); scanner = args.scanner.resolve(); checks = []
-    fake_pat = 'gh' + 'p_' + ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(36))
-    fake_hex = secrets.token_hex(32)
+    fake_pat, fake_hex, merge_secret = synthetic_values()
     probes = [('provider_format', 'token = "'+fake_pat+'"', fake_pat, True),
               ('raw64hex_not_hash_exempt', 'api_key = "'+fake_hex+'"', fake_hex, True),
               ('inline_allow_cannot_suppress', 'token = "'+fake_pat+'" # gitleaks:allow', fake_pat, True),
@@ -65,7 +74,6 @@ def main():
         run('checkout', '-q', 'side'); (repo/'side.txt').write_text('side\n')
         run('add','.'); run('-c','commit.gpgsign=false','commit','-qm','side')
         run('checkout', '-q', 'main-control'); run('merge', '--no-commit', '--no-ff', 'side')
-        merge_secret = secrets.token_hex(32)
         (repo/'merge.txt').write_text('api_key = "'+merge_secret+'"\n')
         run('add','.'); run('-c','commit.gpgsign=false','commit','-qm','merge-only')
         status, summary, report, console = scan(scanner, 'git', repo)

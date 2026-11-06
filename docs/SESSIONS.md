@@ -108,3 +108,19 @@
 ## 实际已接受ticket跨节点drain
 
 [新的有限实机窗口](SESSION_TICKET_DRAIN.md)在初始真实session journal Sync、进入Core之前持有请求，确认pending1/既有两实例且无新增backend/配额；实际drain ACK后旧执行与独立回收继续，放行后原始请求用先前ticket完成一次Core创建，新的预留仍503。它不是取消原请求（取消会在Save后正确abort），不是先前raw排队取消的替代推断。原盘cold保持ACKdrained/旧key410等另有实际检查，详见命名来源和边界；未完成control writer的shutdown锁窗口仍未验收。
+
+## 首次未分配候选的容量拒绝（新候选，待新程序验收）
+
+首次Open在Core未分配Ref之前被节点或租户的**实例容量**拒绝，和不确定session提交是
+不同情况。新候选只保留精确Core容量sentinel：首次attempt、无candidate/ref、未fence、
+未cancel且未关闭时先原子关闭准入，将永久intent标为CLOSED/FAILED并确认持久Save成功，
+之后才回传普通503/UNAVAILABLE或429/TENANT_QUOTA。原key继续410，失败session仍占
+永久记录预算；后续只能用新key，既有实例必须通过普通Destroy才释放容量。
+
+Save失败或提交后返回错误仍是503/SESSION_UNAVAILABLE；已有Ref、旧session/switch、
+wrapped/compound容量错误、取消、已有关闭及其他错误均不走此普通拒绝路径。
+不回收尚未确认的资源、不恢复脏实例、不绕开node drain或重试原attempt。
+
+本候选改变普通broker，合成Mock的拒绝/持久屏障负例不算真实KVM、掉电或完整生产验收。
+旧版本源码/ELF的报告仍只证明各自版本。持续负载前序与剩余门槛见
+[固定到达负载](OPEN_ARRIVAL_LOAD.md)。

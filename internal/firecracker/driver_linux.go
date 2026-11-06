@@ -31,6 +31,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"github.com/123123213weqw/Xandbox/internal/lease"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
 	"golang.org/x/sys/unix"
 )
 
@@ -251,8 +252,11 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		}
 	}
 	if d.node != nil {
-		if err := d.node.acquirePrepare(ctx); err != nil {
-			return err
+		slotSpan := telemetry.StartCreation(ctx, telemetry.DriverPrepareSlot)
+		slotErr := d.node.acquirePrepare(ctx)
+		slotSpan.End()
+		if slotErr != nil {
+			return slotErr
 		}
 		defer d.node.preparing.release()
 	}
@@ -262,13 +266,18 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 			return errors.New("generation resource already exists")
 		}
 	}
+	ownershipSpan := telemetry.StartCreation(ctx, telemetry.DriverOwnership)
 	owner, err := d.registry.reserveContext(ctx, ref)
+	ownershipSpan.End()
 	if err != nil {
 		return err
 	}
 	if d.quota != nil {
-		if err := d.quota.reserve(owner, func() error { return d.registry.markQuotaAttempt(k) }); err != nil {
-			return err
+		quotaSpan := telemetry.StartCreation(ctx, telemetry.DriverQuotaReserve)
+		quotaErr := d.quota.reserve(owner, func() error { return d.registry.markQuotaAttempt(k) })
+		quotaSpan.End()
+		if quotaErr != nil {
+			return quotaErr
 		}
 	}
 	// A configured reserved range is mandatory; also reject known host accounts.
@@ -330,11 +339,14 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		assets["kernel"] = d.cfg.Kernel
 		assets["initrd"] = d.cfg.Initrd
 	}
+	copySpan := telemetry.StartCreation(ctx, telemetry.DriverAssetCopy)
+	defer copySpan.End()
 	for name, asset := range assets {
 		if err := copyAsset(ctx, asset, filepath.Join(root, name)); err != nil {
 			return err
 		}
 	}
+	copySpan.End()
 	if d.registry.catalog != nil {
 		// Only trusted immutable links enter during this pre-fork window.
 		// Every failure leaves an owned, never-admitted jail for normal GC.
@@ -359,10 +371,15 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		return err
 	}
 	if d.quota != nil {
-		if err := d.quota.verifyPrepared(jail, owner); err != nil {
-			return err
+		quotaSpan := telemetry.StartCreation(ctx, telemetry.DriverQuotaVerify)
+		quotaErr := d.quota.verifyPrepared(jail, owner)
+		quotaSpan.End()
+		if quotaErr != nil {
+			return quotaErr
 		}
 	}
+	activationSpan := telemetry.StartCreation(ctx, telemetry.DriverActivation)
+	defer activationSpan.End()
 	leaseRead, leaseWrite, err := os.Pipe()
 	if err != nil {
 		return err
@@ -466,7 +483,7 @@ func (d *driver) Prepare(ctx context.Context, ref sandbox.Ref, spec sandbox.Prep
 		}
 		initializationHash = health.InitializationHash
 	} else {
-		bootArgs := "console=ttyS0 reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.id=" + ref.ID + " xandbox.generation=" + ref.Generation
+		bootArgs := "console=ttyS0 quiet reboot=k panic=1 pci=off rdinit=/sbin/init xandbox.guest=1 xandbox.id=" + ref.ID + " xandbox.generation=" + ref.Generation
 		for _, put := range []struct {
 			path string
 			body any
@@ -793,34 +810,22 @@ func copyAsset(ctx context.Context, asset Asset, path string) error {
 		return err
 	}
 	defer dest.Close()
-	h := sha256.New()
-	buf := make([]byte, 128<<10)
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		n, err := source.Read(buf)
-		if n > 0 {
-			if _, err := io.MultiWriter(dest, h).Write(buf[:n]); err != nil {
-				return err
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
+	copyDest, err := assetCopySink(dest)
+	if err != nil {
+		return err
 	}
-	if hex.EncodeToString(h.Sum(nil)) != asset.SHA256 {
-		return errors.New("staged image digest mismatch")
+	if err := copyAssetBytes(ctx, source, copyDest, asset.SHA256); err != nil {
+		return err
 	}
 	// The reserved VMM UID must read cold kernel/initrd regardless of umask.
 	// Workspace callers subsequently restrict and chown their private copy.
 	if err := dest.Chmod(0444); err != nil {
 		return err
 	}
-	return dest.Close()
+	if err := dest.Close(); err != nil {
+		return err
+	}
+	return ctx.Err()
 }
 
 func hasWords(s string, words ...string) bool {

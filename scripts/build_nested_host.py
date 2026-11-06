@@ -34,8 +34,14 @@ def validate_manifest(manifest):
         if not re.fullmatch('[0-9a-f]{64}', value): raise ValueError('explicit artifact digest required')
 
 
-def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False, quota_unenforced=False, quota_state_io=False, quota_switch=False, node_budget=False, node_snapshot=False):
-    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot), bool(quota_unenforced), bool(quota_state_io),bool(quota_switch),bool(node_budget),bool(node_snapshot))) > 1: raise ValueError('mutually exclusive L1 image profiles')
+def validate_creation_cost_image_mode(mode, node_budget):
+    if mode not in (None, 'observe', 'maximum') or (mode is not None and node_budget is not True):
+        raise ValueError('creation-cost image mode requires explicit healthy node-budget')
+
+
+def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False, quota_unenforced=False, quota_state_io=False, quota_switch=False, node_budget=False, node_snapshot=False, node_load=False, creation_cost_mode=None):
+    validate_creation_cost_image_mode(creation_cost_mode, node_budget)
+    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot), bool(quota_unenforced), bool(quota_state_io),bool(quota_switch),bool(node_budget),bool(node_snapshot),bool(node_load))) > 1: raise ValueError('mutually exclusive L1 image profiles')
     # Linux 6.8 cannot pivot_root from its special initramfs rootfs. Move to
     # a bounded, ordinary tmpfs mount BEFORE starting the unmodified jailer.
     # Both scripts execute only as PID1 inside the owned L1, never on L0.
@@ -54,10 +60,13 @@ def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False,
         service += 'exec /usr/bin/xandbox-host-fixture -mode node-io >/dev/console 2>&1\n'
     elif quota_unenforced:
         service += 'mount -t ext4 -o rw,nosuid /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-quota-unenforced >/dev/console 2>&1\n'
+    elif node_load:
+        service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-load >/dev/console 2>&1\n'
     elif node_snapshot:
         service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-snapshot >/dev/console 2>&1\n'
     elif node_budget:
-        service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-budget >/dev/console 2>&1\n'
+        option = '' if creation_cost_mode is None else ' -creation-cost-mode '+creation_cost_mode
+        service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-budget'+option+' >/dev/console 2>&1\n'
     elif quota_switch:
         service += 'mount -t ext4 -o rw,nosuid,prjquota /dev/vda /srv\nexec /usr/bin/xandbox-host-fixture -mode node-quota-switch >/dev/console 2>&1\n'
     elif quota_snapshot:
@@ -71,9 +80,10 @@ def init_scripts(modules, state_io=False, quota_probe=False, quota_driver=False,
     return bootstrap, service
 
 
-def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False, quota_unenforced=False, quota_state_io=False, quota_switch=False, node_budget=False, node_snapshot=False):
+def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_probe=False, quota_driver=False, quota_snapshot=False, quota_unenforced=False, quota_state_io=False, quota_switch=False, node_budget=False, node_snapshot=False, node_load=False, creation_cost_mode=None):
     validate_manifest(manifest)
-    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot), bool(quota_unenforced), bool(quota_state_io),bool(quota_switch),bool(node_budget),bool(node_snapshot))) > 1: raise ValueError('mutually exclusive L1 image profiles')
+    validate_creation_cost_image_mode(creation_cost_mode, node_budget)
+    if sum((bool(state_io), bool(quota_probe), bool(quota_driver), bool(quota_snapshot), bool(quota_unenforced), bool(quota_state_io),bool(quota_switch),bool(node_budget),bool(node_snapshot),bool(node_load))) > 1: raise ValueError('mutually exclusive L1 image profiles')
     assert os.geteuid() == 0 and not output.exists()
     assert digest(alpine) == ALPINE_SHA256
     static_elf(fixture.read_bytes())
@@ -95,13 +105,13 @@ def build_initrd(*, alpine, fixture, manifest, output, state_io=False, quota_pro
         (root / 'etc/xandbox-host-fixture').chmod(0o600)
         modules = []
         selected_modules = dict(manifest['modules_sha256'])
-        if quota_probe or quota_driver or quota_snapshot or quota_unenforced or quota_state_io or quota_switch or node_budget or node_snapshot: selected_modules.update(manifest['quota_modules_sha256'])
+        if quota_probe or quota_driver or quota_snapshot or quota_unenforced or quota_state_io or quota_switch or node_budget or node_snapshot or node_load: selected_modules.update(manifest['quota_modules_sha256'])
         for name, wanted in selected_modules.items():
             source = Path('/lib/modules', release, name)
             assert source.is_file() and not source.is_symlink() and source.stat().st_size <= 8<<20 and digest(source) == wanted
             target = root / 'lib/fixture' / source.name
             shutil.copyfile(source, target); target.chmod(0o444); modules.append(target.name)
-        bootstrap, service = init_scripts(modules, state_io, quota_probe, quota_driver, quota_snapshot, quota_unenforced, quota_state_io,quota_switch,node_budget,node_snapshot)
+        bootstrap, service = init_scripts(modules, state_io, quota_probe, quota_driver, quota_snapshot, quota_unenforced, quota_state_io,quota_switch,node_budget,node_snapshot,node_load,creation_cost_mode)
         (root / 'init').write_text(bootstrap); (root / 'init').chmod(0o755)
         (root / 'sbin/xandbox-host-init').write_text(service); (root / 'sbin/xandbox-host-init').chmod(0o755)
         for name, major, minor in (('console', 5, 1), ('null', 1, 3), ('tty', 5, 0)):

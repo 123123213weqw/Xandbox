@@ -133,6 +133,12 @@ exec switch_root -c /dev/console /newroot /sbin/init
 def build(*, ubuntu, alpine, probe, output_disk, output_initrd, deployment_assets=None, ingress_assets=None, readiness_assets=None, release_assets=None, install_assets=None, managed_assets=None, managed_case='populated-gate'):
     if managed_case not in ('populated-gate','active-stop','supersession-repeat','supersession-visible-recovery','hot-rotation','draft-discard','draft-discard-cut','draft-kernel-guard') or managed_assets is None and managed_case!='populated-gate':raise ValueError('explicit managed profile required for case selection')
     if sum(a is not None for a in (deployment_assets,ingress_assets,readiness_assets,release_assets,install_assets,managed_assets))>1:raise ValueError("exclusive systemd deployment profile required")
+    # The published source declaration must describe these actual qualified
+    # bytes, before extraction, image allocation or any guest execution.
+    for profile, assets in (('deployment',deployment_assets),('ingress',ingress_assets),('readiness',readiness_assets),('release',release_assets),('install',install_assets),('managed',managed_assets)):
+        if assets is not None:
+            from systemd_fixture_provenance import validate_assets as validate_provenance
+            validate_provenance(assets,profile)
     disk_bytes = 24<<30 if ingress_assets is not None or readiness_assets is not None or release_assets is not None or install_assets is not None or managed_assets is not None else (12<<30 if deployment_assets is not None else ROOT_BYTES)
     lock = json.loads(Path(__file__).with_name('systemd_host_assets.json').read_text())
     policy = json.loads(Path(__file__).with_name('nested_host_assets.json').read_text())

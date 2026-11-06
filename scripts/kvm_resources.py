@@ -77,10 +77,47 @@ def _regular(path, expected_size=None):
 def workspace_observation(path):
     # Prepare copies directly to an exclusive final filename. A concurrent
     # observer must include partial allocation, not reject or silently drop it.
-    info = _regular(path)
+    return _workspace_observation(_regular(path))
+
+
+def _workspace_observation(info):
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError('unexpected fixture backing')
     if info.st_size > 128 << 20 or info.st_nlink != 1:
         raise ValueError('private workspace oversized or unexpectedly shared')
     return info, int(info.st_size < 128 << 20)
+
+
+def _directory_fd(path, *, dir_fd=None):
+    try:
+        return os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                       dir_fd=dir_fd)
+    except OSError as error:
+        if error.errno in (errno.ENOTDIR, errno.ELOOP):
+            raise ValueError('unknown jail namespace') from None
+        raise
+
+
+def jail_workspace_observation(jail):
+    """Anchor both directories; never follow a jail/root/workspace symlink.
+
+    A listed, valid Ref may be removed before open by ordinary Cleanup. Let
+    only ENOENT reach the caller's transient counter. Unknown names, wrong
+    types, permission errors and other I/O failures must remain fatal.
+    """
+    jail = Path(jail)
+    if not REF_NAME.fullmatch(jail.name):
+        raise ValueError('unknown jail namespace')
+    jail_fd = _directory_fd(jail)
+    try:
+        root_fd = _directory_fd('root', dir_fd=jail_fd)
+        try:
+            info = os.stat('workspace.ext4', dir_fd=root_fd, follow_symlinks=False)
+            return _workspace_observation(info)
+        finally:
+            os.close(root_fd)
+    finally:
+        os.close(jail_fd)
 
 
 def file_resident_bytes(path, expected_size):
@@ -196,11 +233,10 @@ class ResourceSampler:
         parent = self.runtime / 'j/firecracker'
         if parent.exists():
             for jail in list(parent.iterdir()):
-                if not REF_NAME.fullmatch(jail.name) or not jail.is_dir():
-                    raise ValueError('unknown jail namespace')
                 try:
-                    value, preparing = workspace_observation(jail / 'root/workspace.ext4')
+                    value, preparing = jail_workspace_observation(jail)
                 except FileNotFoundError:
+                    self.transient_misses += 1
                     continue
                 identity = (value.st_dev, value.st_ino)
                 if identity in workspaces or value.st_nlink != 1:

@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "validated_on": "2026-10-28",
+  "status": "ONE_NAMED_RUNTIME_SCOPE_PASSED_NOT_FULL_MATRIX",
+  "source_revision": "e2bb82f73f6014464339544a8dd7abc03b9fb535",
+  "production_code_commit": "6ea28eaf491f2863884db176af94936544620f37",
+  "ordinary_daemon_sha256": "4ddd4bea5ee252fd4b52a7132bfbab9723d76bbaa1941d4c341ce770e0802218",
+  "original_scope": "quota-syscalls from the original 25 runtime plus 12 boundary matrix; not a substitute or shorter success mode for the failed open-arrival load",
+  "original_profile": {
+    "l1_memory_mib": 2048,
+    "l1_vcpus": 4,
+    "l1_disk_bytes": 2147483648,
+    "outer_memory_max_bytes": 3221225472,
+    "snapshot": false,
+    "node_load_profile": false,
+    "test_only_errno_not_physical_media_fault": true
+  },
+  "syscall_cases": [
+    {
+      "case": "reserve-set-eio",
+      "injected_calls": 1,
+      "continued_kernel_calls": 19
+    },
+    {
+      "case": "reserve-read-erofs",
+      "injected_calls": 1,
+      "continued_kernel_calls": 20
+    },
+    {
+      "case": "reserve-sync-eio",
+      "injected_calls": 1,
+      "continued_kernel_calls": 21
+    },
+    {
+      "case": "clear-set-eio",
+      "injected_calls": 3,
+      "continued_kernel_calls": 28
+    },
+    {
+      "case": "clear-sync-erofs",
+      "injected_calls": 3,
+      "continued_kernel_calls": 31
+    },
+    {
+      "case": "clear-read-eio",
+      "injected_calls": 3,
+      "continued_kernel_calls": 34
+    }
+  ],
+  "three_clear_cases_each_at_least_three_errors_before_disarm": true,
+  "real_kernel_continue_and_closed_capacity_while_errors_armed_verified": true,
+  "original_disk_checkpoints": [
+    "running",
+    "stopped",
+    "destroyed"
+  ],
+  "real_kvm_boots": 4,
+  "durable_destroy_and_old_keys410_fresh_guest_and_current_quota_accounting_verified": true,
+  "all1220_source_files24_programs9_inputs_reverified": true,
+  "independent_raw_files_rehashed": 19,
+  "owned_resource_closure": {
+    "current_actual_generations": 4,
+    "current_owned_scopes": 1,
+    "previous_failed_load_cohort_generations": 60,
+    "previous_failed_load_cohort_scopes": 36,
+    "globally_unique_generations_in_these_receipts": 64,
+    "globally_unique_scopes_in_these_receipts": 37,
+    "all_declared_paths_read_only_absent": true,
+    "outer_oom_and_pid_limit_events_zero": true,
+    "no_supplemental_cleanup": true
+  },
+  "preparation_failure_retained": {
+    "failed_before_any_vm_or_harness_resource_allocation": true,
+    "cause": "read-only input hash attempted with unprivileged UID against an existing root-only input; moved only that read check to sudo without changing access modes or test arguments"
+  },
+  "other36_named_runtime_boundary_scopes_and_systemd_still_unqualified": true,
+  "original_sustained_load_gate_still_failed": true,
+  "production_ready": false,
+  "goal_complete": false
+}

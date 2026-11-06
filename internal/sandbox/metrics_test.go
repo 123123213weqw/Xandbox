@@ -38,7 +38,10 @@ func TestMetricsDoNotAcquireAnyLifecycleLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitState(t, m, vm.ID, Destroyed)
-	eventually(t, func() bool { return m.Metrics().Allocated == 0 })
+	// Allocated is released inside cleanupLocked BEFORE its deferred attempt
+	// observation. Wait for the worker to return too; neither DESTROYED nor
+	// Allocated=0 alone is a histogram-publication barrier.
+	eventually(t, func() bool { return metricsCleanupReturned(m.Metrics()) })
 	s := string(r.Render(m.Metrics()))
 	for _, op := range []string{"create_call", "stop_attempt", "cleanup_attempt"} {
 		if !strings.Contains(s, `xandbox_operation_seconds_count{operation="`+op+`",outcome="success"} 1`) {
@@ -47,5 +50,20 @@ func TestMetricsDoNotAcquireAnyLifecycleLock(t *testing.T) {
 	}
 	if m.Metrics().Records != 1 {
 		t.Fatal("tombstone not counted")
+	}
+}
+
+// Test-only exclusive single-instance quiescence, not a transactional production
+// snapshot. In this test no other producer can enqueue another cleanup.
+func metricsCleanupReturned(g telemetry.Gauges) bool {
+	return g.Allocated == 0 && g.CleanupRunning == 0 && g.CleanupQueued == 0
+}
+
+func TestMetricsCleanupObservationWaitsForWorkerReturn(t *testing.T) {
+	if metricsCleanupReturned(telemetry.Gauges{Allocated: 0, CleanupRunning: 1}) {
+		t.Fatal("allocation release was mistaken for deferred observation completion")
+	}
+	if metricsCleanupReturned(telemetry.Gauges{Allocated: 1}) || metricsCleanupReturned(telemetry.Gauges{CleanupQueued: 1}) || !metricsCleanupReturned(telemetry.Gauges{}) {
+		t.Fatal("exclusive cleanup quiescence predicate changed")
 	}
 }

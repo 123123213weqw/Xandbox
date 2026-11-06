@@ -45,7 +45,7 @@ func (p launchPolicy) resources() (memoryMiB int, diskBytes int64, cgroupBytes u
 	switch p.Profile {
 	case "":
 		return 2048, 2 << 30, 3 << 30, nil
-	case "node-budget-v1", "node-snapshot-v1":
+	case "node-budget-v1", "node-snapshot-v1", "node-load-v1":
 		return 8192, 12 << 30, 10 << 30, nil
 	case "systemd-ingress-v1":
 		return 16384, 24 << 30, 18 << 30, nil
@@ -108,7 +108,7 @@ func (p launchPolicy) cpuCount() int {
 	if p.Profile == "systemd-ingress-v1" {
 		return 12
 	}
-	if p.Profile == "node-budget-v1" || p.Profile == "node-snapshot-v1" {
+	if p.Profile == "node-budget-v1" || p.Profile == "node-snapshot-v1" || p.Profile == "node-load-v1" {
 		return 8
 	}
 	return 4
@@ -117,7 +117,7 @@ func (p launchPolicy) pidCount() int {
 	if p.Profile == "systemd-ingress-v1" {
 		return 512
 	}
-	if p.Profile == "node-budget-v1" || p.Profile == "node-snapshot-v1" {
+	if p.Profile == "node-budget-v1" || p.Profile == "node-snapshot-v1" || p.Profile == "node-load-v1" {
 		return 256
 	}
 	return 128
@@ -138,6 +138,13 @@ func (p launchPolicy) arguments() []string {
 		"-device", "virtio-blk-pci,drive=state",
 		"-object", "rng-random,id=rng0,filename=/dev/urandom", "-device", "virtio-rng-pci,rng=rng0",
 		"-sandbox", "on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny"}
+}
+
+func (p launchPolicy) hardLifetime() time.Duration {
+	if p.Profile == "node-load-v1" {
+		return nodeLoadOuterBudget
+	}
+	return 15 * time.Minute
 }
 
 func launch(path string) error {
@@ -206,7 +213,7 @@ func launch(path string) error {
 	if e != nil {
 		return e
 	}
-	hard := now + int64(15*time.Minute)
+	hard := now + int64(p.hardLifetime())
 	binding, e := lease.ParseBinding(filepath.Base(p.Cgroup))
 	if e != nil {
 		return e

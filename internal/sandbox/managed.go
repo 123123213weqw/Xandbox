@@ -20,7 +20,8 @@ func NormalizeCreate(req CreateRequest) (CreateRequest, error) { return normaliz
 // CreateManagedScoped reserves a domain-separated key. reserved runs exactly
 // once for a fresh reservation, BEFORE ownership fsync or allocation, outside
 // Manager.mu/instance.mu. It MUST only capture the immutable Ref in memory (and
-// may call RevokeScoped); it must not block, perform I/O or publish admission.
+// may call RevokeScoped, including its bounded live-capability signal); it must
+// not block, perform storage/RPC I/O or publish admission.
 func (m *Manager) CreateManagedScoped(ctx context.Context, owner Owner, key string, req CreateRequest, admission *Admission, reserved func(Ref)) (Record, error) {
 	if admission == nil || key == "" || reserved == nil {
 		return Record{}, ErrInvalid
@@ -48,7 +49,9 @@ func (m *Manager) ExecManagedScoped(tenant, id string, req ExecRequest, admissio
 
 // RevokeScoped is a volatile admission/deletion fence, not an HTTP 202 or stop
 // proof. It never waits for a record/storage lock. Lifecycle persists the fence,
-// proves host Stop and performs Cleanup; guardian renewal stops independently.
+// proves host Stop and performs Cleanup. Signal the already-owned lease without
+// waiting for reconciliation; contention or late Prepare publication is retried
+// independently by the reaper. Neither path acknowledges stopped execution.
 func (m *Manager) RevokeScoped(tenant string, ref Ref) error {
 	i, err := m.lookup(ref.ID)
 	if err != nil || tenant == "" || i.tenantID != tenant {
@@ -59,6 +62,9 @@ func (m *Manager) RevokeScoped(tenant string, ref Ref) error {
 	}
 	i.requestIntent(true)
 	m.notify()
+	if err := m.driver.RevokeLease(ref); err != nil {
+		i.leaseFailed.Store(true)
+	}
 	return nil
 }
 

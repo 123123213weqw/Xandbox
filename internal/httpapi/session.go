@@ -6,6 +6,7 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
+	"github.com/123123213weqw/Xandbox/internal/telemetry"
 )
 
 func sessionKey(r *http.Request) (string, error) {
@@ -25,7 +26,10 @@ func (a *API) openSession(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	result, e := a.sessions.Open(r.Context(), identity(r), key, req)
+	ctx := a.manager.WithCreationTrace(r.Context(), telemetry.CreationSessionOpen)
+	defer telemetry.EndCreationTrace(ctx)
+	result, e := a.sessions.Open(ctx, identity(r), key, req)
+	creationTiming(w, ctx)
 	if e != nil {
 		failure(w, e)
 		return
@@ -42,7 +46,10 @@ func (a *API) switchSession(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	result, e := a.sessions.Switch(r.Context(), identity(r), r.PathValue("id"), key, req)
+	ctx := a.manager.WithCreationTrace(r.Context(), telemetry.CreationSessionSwitch)
+	defer telemetry.EndCreationTrace(ctx)
+	result, e := a.sessions.Switch(ctx, identity(r), r.PathValue("id"), key, req)
+	creationTiming(w, ctx)
 	if e != nil {
 		failure(w, e)
 		return

@@ -16,7 +16,7 @@ from kvm_systemd_host import harness_files,validate_release_reply,READINESS_PROB
 class ReleaseControls(unittest.TestCase):
     def test_exact15_assets_and_original14_plus2_harness(self):
         self.assertEqual(len(builder.ASSETS),15);self.assertEqual(len(set(builder.ASSETS)),15)
-        old=harness_files(True,False,True);self.assertEqual(len(old),14)
+        old=harness_files(True,False,True);self.assertEqual(len(old),15)
         new=harness_files(True,False,True,True);self.assertEqual(new,old+('build_systemd_release.py','systemd_release_guest.py'))
         for deployed,readiness in ((False,False),(True,False),(False,True)):
             with self.assertRaises(ValueError):harness_files(deployed,False,readiness,True)

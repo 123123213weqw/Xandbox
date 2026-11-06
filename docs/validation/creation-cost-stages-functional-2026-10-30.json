@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "kind": "test-only-selected-create-server-stages-functional-acceptance",
+  "observed_on": "2026-10-30",
+  "production_ready": false,
+  "goal_complete": false,
+  "ordinary_program_base_revision": "599121b05c128053432eacab4b9abee7e79d8fbb",
+  "ordinary_daemon_sha256": "d748d8cf7216980582720c1618e1b0473a9228e371ae850257059a8980e98e01",
+  "ordinary_writeback_window_bytes": 8388608,
+  "qualified_test_fixture_sha256": "9637fe5916a5934f589c2021f51c7d9a13b572a32075adbeeb1a5db521c5ffe1",
+  "qualified_test_fixture_bytes": 14434205,
+  "code_binding": {
+    "algorithm": "SHA256 of sorted repository-relative .go/.py/go.mod/go.sum entries, each UTF-8 CODE_FILE + space + path + LF + unchanged file bytes + LF; docs/reports excluded",
+    "file_count": 502,
+    "measured_source_sha256": "2727f89b2d36a8540c82f100294eff0298befaa1ff5a4075883165311c188d30",
+    "published_source_sha256": "2727f89b2d36a8540c82f100294eff0298befaa1ff5a4075883165311c188d30",
+    "all_Go_and_Python_including_tests_bytes_equal_actual_measurements": true,
+    "measured_full_source_files": 1264,
+    "measured_source_archive_sha256": "419d74f1281aa03607d00f513b191db6ad42946127229be5286f59da338bc0cc",
+    "publication_only_docs_and_report_changes": true,
+    "not_whole_commit_or_other_fixture_qualification": true
+  },
+  "native_components": {
+    "go_toolchain": "go1.27.3",
+    "build": "linux/amd64/v1 CGO0 trimpath buildvcs=false",
+    "go_fixture_top_level_parents": 186,
+    "go_each_parent_runs_in_each_of_CGO0_and_race": 3,
+    "go_parent_and_child_skips_or_failures": 0,
+    "go_vet_exit": 0,
+    "native_fixture_equals_independent_cross": true,
+    "production_daemon_bytes_unchanged": true,
+    "python_tests": 424,
+    "python_skips_or_failures": 0,
+    "creation_cost_generated_controls": 66,
+    "explicit_root_UID_helper_not_rerun_or_newly_qualified": true,
+    "all11_legacy_default_startup_golden_bytes_regression_passed": true,
+    "not_whole43_package_or_native24_qualification": true
+  },
+  "actual_KVM": {
+    "modes": [
+      "default_OFF_option_absent",
+      "observe",
+      "maximum"
+    ],
+    "each_complete_original_healthy_protocol": true,
+    "actual_outer_generations": 6,
+    "original_disk_cold_transitions": 3,
+    "full_original_resource_IO_work_hash_dense_copy_and_durability_limits_unchanged": true,
+    "original_N_plus_1_pressure_replay_503_500_410_checks_preserved_not_extra_measured_creates": true,
+    "OFF_no_actual_frames_modekey_delivery_gate_receipts": true,
+    "OFF_not_trace_proof_of_all_host_syscall_absence": true,
+    "enabled_scope_count": 4,
+    "enabled_selected_creates_total": 12,
+    "selected_creates_each_checkpoint": 5,
+    "selected_creates_each_cold": 1,
+    "normal_schema": 4,
+    "ABI_schema": 1,
+    "all_selected_creates_complete_ordered_ten_fixed_server_spans_and_original_elapsed_success": true,
+    "independent_full_frames_SHA_ABI_lineage_8CPU_loss0_selected_syscall_returns0": true,
+    "public_actual_FD_metadata_fields": 8,
+    "unprivileged_QEMU_UID_explicit_private0600_regular_singlelink_bounded_inode_verified": true,
+    "maximum_preserves_all_real_JSON_prefix_bytes_then_only_ASCIIspaces": true,
+    "maximum_payload_bytes": 1048576,
+    "maximum_frames": 512,
+    "maximum_console_bytes": 2097152,
+    "host_export_limit_seconds": 2,
+    "host_export_not_API_Stop_or_speedup_time": true,
+    "host_export_can_allow_background_IO_and_is_observation_method_change": true,
+    "actual10_native_CLI_negative_outputs_and_normal_exit1_checked": true,
+    "actual_public_offline_CLI_positive_nooverwrite_wrongmode_and_OFF_negative_checked": true,
+    "mode_scope_payload_summaries": [
+      {
+        "label": "OBSERVE",
+        "scope": "checkpoint",
+        "payload_bytes": {
+          "abi": 5700,
+          "normal": 87406
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 43
+        },
+        "normal_JSON_prefix_bytes": 87406,
+        "explicit_synthetic_ASCIIspace_bytes": 0,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 13.645726008689962,
+        "not_API_Stop_or_performance_time": true
+      },
+      {
+        "label": "OBSERVE",
+        "scope": "cold",
+        "payload_bytes": {
+          "abi": 5694,
+          "normal": 24613
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 13
+        },
+        "normal_JSON_prefix_bytes": 24613,
+        "explicit_synthetic_ASCIIspace_bytes": 0,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 4.781462994287722,
+        "not_API_Stop_or_performance_time": true
+      },
+      {
+        "label": "MAXIMUM",
+        "scope": "checkpoint",
+        "payload_bytes": {
+          "abi": 5700,
+          "normal": 1048576
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 512
+        },
+        "normal_JSON_prefix_bytes": 87548,
+        "explicit_synthetic_ASCIIspace_bytes": 961028,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 90.26535200246144,
+        "not_API_Stop_or_performance_time": true
+      },
+      {
+        "label": "MAXIMUM",
+        "scope": "cold",
+        "payload_bytes": {
+          "abi": 5694,
+          "normal": 1048576
+        },
+        "frames": {
+          "abi": 3,
+          "normal": 512
+        },
+        "normal_JSON_prefix_bytes": 24626,
+        "explicit_synthetic_ASCIIspace_bytes": 1023950,
+        "snapshot_reads": 1,
+        "host_export_wait_ms": 92.65494499413762,
+        "not_API_Stop_or_performance_time": true
+      }
+    ]
+  },
+  "serial_observe_context": {
+    "selected_calls": 6,
+    "phase_bounds": {
+      "copy": {
+        "min_ms": 830.59,
+        "max_ms": 865.582
+      },
+      "activation": {
+        "min_ms": 865.542,
+        "max_ms": 1051.325
+      },
+      "slot_composite": {
+        "min_ms": 0.491,
+        "max_ms": 1.71
+      }
+    },
+    "nested_spans_not_additive_and_slot_not_pure_queue": true,
+    "activation_includes_API_boot_health_quota_domain_not_pure_guest_boot": true,
+    "copy_not_pure_physical_IO": true,
+    "no_per_create_kernel_clock_anchors_or_syscall_critical_path_subtraction": true,
+    "not_throughput_latency_SLO_highload_or_original40m_failure_cause": true,
+    "not_mode_or_ABBA_performance_comparison": true
+  },
+  "independent_evidence": {
+    "actual_original_files": 51,
+    "actual_original_bytes": 3315902,
+    "all_originals_hash_checked_and_kept_private": true,
+    "all_raw_still_private_even_secret_scan0": true,
+    "scanned_original_findings": 0,
+    "fresh_same_entire_original_archive_byte_equal": true,
+    "prior_originals_rehashed": 330,
+    "prior_known_exact_native_and_controller_births": 103,
+    "all106_known_exact_births_closed_after_run": true,
+    "old7_unknown_start_handles_missing_not_invented": true,
+    "cumulative_outer_generations": 397,
+    "cumulative_typed_scopes": 203,
+    "cumulative_declared_paths_absent": 1028,
+    "declared_fault_images_loop_unbound": 8,
+    "unknown_direct_generation_inventories": 22,
+    "prior200_receipt_fingerprints_retained": true,
+    "not203_passing_tests_or_all_host_RAM_media_erase": true,
+    "qualified_scoped_summary_sha256": "325be9eca23421c15b1900d93fdd8a861e5a84ef2eedadda89bc01f09acd7b30"
+  },
+  "retained_predecessors": [
+    "native component wrong greater-than-4096 test assumption FAILED; original outputs retained, own3591 generated counterexample not recovered old payload",
+    "private native builder pre-extraction path collision FAILED; original6 available outputs retained, no tests or VM",
+    "earlier185-parent source software-positive not hardware-qualified; endpoint-only callback coverage gap fixed with measured-only in-flight gate and new186th regression",
+    "first local independent auditor variable shadowing FAILED; original audit stderr/source retained, fixed observer reran analysis only, never producer"
+  ],
+  "performance_and_release": {
+    "one_repaired_ABBA_authorization_consumed_and_1MiB_finite_gain_gate_rejected": true,
+    "retain_original8MiB": true,
+    "no_new_B_ABBA_original40m_execution": true,
+    "all12_original40m_failures_remain_failed": true,
+    "full_production_and_sustained_load_operator_release_gates_remain_open": true,
+    "new_commit_CI_pending_at_publication": true,
+    "not_merged_or_deployed": true
+  }
+}

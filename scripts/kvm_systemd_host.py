@@ -117,12 +117,13 @@ def validate_managed_reply(operation,value,maintenance_case='populated-gate'):
 def harness_files(deployed,ingress,readiness,release=False,install=False,managed=False):
     if managed:
         if not deployed or ingress or readiness or release or install:raise ValueError('fresh managed profile is exclusive')
-        return ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json','build_systemd_install.py','build_systemd_deployment.py','build_systemd_managed.py','systemd_managed_guest.py','managed_fixture_trace.py','systemd_install_guest.py','install_fixture_trace.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
+        return ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json','systemd_fixture_provenance.py','build_systemd_install.py','build_systemd_deployment.py','build_systemd_managed.py','systemd_managed_guest.py','managed_fixture_trace.py','systemd_install_guest.py','install_fixture_trace.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
     if install:
         if not deployed or ingress or readiness or release:raise ValueError('fresh installer profile is exclusive, not old deployment composition')
-        return ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json','build_systemd_install.py','build_systemd_deployment.py','systemd_install_guest.py','install_fixture_trace.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
+        return ('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json','systemd_fixture_provenance.py','build_systemd_install.py','build_systemd_deployment.py','systemd_install_guest.py','install_fixture_trace.py','systemd_deployment_guest.py','systemd_ingress_guest.py','systemd_drain_probe.py')
     if release and (not deployed or not readiness):raise ValueError('publication profile requires complete readiness composition')
     names=('build_systemd_host.py','systemd_delegate_probe.py','systemd_host_assets.json','kvm_systemd_host.py','nested_host_assets.json')
+    if deployed:names+=('systemd_fixture_provenance.py',)
     if deployed:names+=('build_systemd_deployment.py','systemd_deployment_guest.py')
     if ingress or readiness:names+=('build_systemd_ingress.py','systemd_ingress_guest.py','ingress_guard_probe.py')
     if readiness:names+=('build_systemd_readiness.py','systemd_readiness_guest.py','readiness_fixture_gate.py','systemd_drain_probe.py')
@@ -163,6 +164,13 @@ def main():
     if args.managed_assets:
         from build_systemd_managed import load_assets
         managed=load_assets(args.managed_assets)
+    # Refuse stale/role-crossed declarations before creating any report/log,
+    # resource receipt, cgroup or VM; build() independently enforces this too.
+    for profile,assets in (('managed',managed),('install',install),('release',release),('readiness',readiness),('ingress',ingress),('deployment',deployment)):
+        if assets is not None:
+            from systemd_fixture_provenance import validate_assets as validate_provenance
+            validate_provenance(assets,profile)
+            break
     deployed=deployment is not None or ingress is not None or readiness is not None or install is not None or managed is not None
     assert os.geteuid()==0 and os.uname().sysname=='Linux' and os.uname().machine=='x86_64'
     assert len(bytes.fromhex(args.source_revision))==20

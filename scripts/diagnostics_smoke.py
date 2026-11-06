@@ -24,7 +24,7 @@ def terminate_cleanly(process, node, state, cycle):
         raise AssertionError(f'diagnostics restart cycle {cycle}: {error}') from None
 
 
-def main():
+def main(*, daemon_popen=subprocess.Popen):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--daemon', required=True)
     p.add_argument('--node', required=True)
@@ -89,7 +89,7 @@ def main():
                 return v
             ring_inode = lock_inode = None
             for cycle in range(45):
-                proc = subprocess.Popen(base, stdin=subprocess.DEVNULL, stdout=write_fd, stderr=write_fd)
+                proc = daemon_popen(base, stdin=subprocess.DEVNULL, stdout=write_fd, stderr=write_fd)
                 wait(lambda: call('GET', '/healthz'))
                 if cycle in (0, 44):
                     vm = call('POST', '/v1/sandboxes', {}, 201)
