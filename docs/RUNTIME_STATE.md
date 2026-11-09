@@ -64,6 +64,10 @@ cgroup removal, owner/UID/project release or successful accepted calls. The
 state lock is advisory exclusion for cooperating ordinary writers, not a root
 adversary boundary or a transferable durable resource certificate.
 
+The separate [stopped-backend reader](RUNTIME_BACKEND.md) now reuses this leased
+core with a complete byte-set binding for owner/namespace/project joins. It does
+not promote this core report to full reclaim or enable snapshot policy.
+
 ## Evidence limits and missing integration
 
 Tests use actual original BSD locks, live lock-holder observations, pidfds,

@@ -104,6 +104,11 @@ type stopTestModel struct {
 func stopModel(t *testing.T, kind string) *stopTestModel {
 	t.Helper()
 	f, tx := runtimeShortInstall(t)
+	return stopModelInstalled(t, kind, f, tx)
+}
+
+func stopModelInstalled(t *testing.T, kind string, f *filesystem, tx transaction) *stopTestModel {
+	t.Helper()
 	managerLinks(t, f)
 	x := &stopTestModel{f: f, tx: tx, children: map[string]*exec.Cmd{}, alive: map[string]bool{}, kind: kind}
 	for _, item := range []struct{ unit, role string }{{MainUnit, "main"}, {IngressUnit, "ingress"}} {

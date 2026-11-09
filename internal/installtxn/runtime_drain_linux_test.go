@@ -32,8 +32,17 @@ func (s drainTestStore) Save(old, next nodecontrol.State) error {
 // executable bytes and manager are a shadow/model, NOT a daemon/cgroup proof.
 // Short owned roots keep the real Unix path within Linux sun_path bounds.
 func runtimeShortInstall(t *testing.T) (*filesystem, transaction) {
+	return runtimeShortInstallPrepared(t, nil)
+}
+
+// Test-only customization happens BEFORE the original commit. New strict
+// backend readers need a valid policy, not a rewritten genesis or validator bypass.
+func runtimeShortInstallPrepared(t *testing.T, customize func(*prepared)) (*filesystem, transaction) {
 	t.Helper()
 	original, p, m := fixture(t)
+	if customize != nil {
+		customize(p)
+	}
 	short, e := os.MkdirTemp("", "xb-dr-")
 	if e != nil {
 		t.Fatal(e)

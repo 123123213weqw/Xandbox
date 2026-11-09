@@ -180,25 +180,34 @@ func (c *catalog) readIndex() (catalogIndex, error) {
 	if e = strictjson.Decode(b, &d); e != nil {
 		return d, e
 	}
-	if d.Version != 1 || d.ConfigSHA256 != configDigest(c.cfg) || d.RegistrySHA256 != registryDigest(c.backend) || d.Entries == nil || len(d.Entries) > c.cfg.Snapshot.MaxEntries {
-		return d, errors.New("invalid catalog index or node binding")
-	}
-	var liveBytes int64
-	for id, v := range d.Entries {
-		if !hex64.MatchString(id) || v.Bytes < 1 || v.Bytes > c.cfg.Snapshot.MaxBytes || (v.Phase != templateAvailable && v.Phase != templateRetiring && v.Phase != templateRetired) {
-			return d, errors.New("invalid catalog entry")
-		}
-		if v.Phase != templateRetired {
-			liveBytes += v.Bytes
-		}
-	}
-	if liveBytes > c.cfg.Snapshot.MaxBytes || (d.Active != "" && d.Entries[d.Active].Phase != templateAvailable) {
-		return d, errors.New("invalid active template or catalog budget")
+	if e = validateCatalogIndex(d, c.cfg, c.backend); e != nil {
+		return d, e
 	}
 	if e = c.checkObjects(); e != nil {
 		return d, e
 	}
 	return d, nil
+}
+
+// Pure schema/binding validation shared with the read-only inspection path.
+// The ordinary readIndex above retains its original sync/object checks.
+func validateCatalogIndex(d catalogIndex, cfg Config, backend string) error {
+	if cfg.Snapshot == nil || d.Version != 1 || d.ConfigSHA256 != configDigest(cfg) || d.RegistrySHA256 != registryDigest(backend) || d.Entries == nil || len(d.Entries) > cfg.Snapshot.MaxEntries {
+		return errors.New("invalid catalog index or node binding")
+	}
+	var liveBytes int64
+	for id, v := range d.Entries {
+		if !hex64.MatchString(id) || v.Bytes < 1 || v.Bytes > cfg.Snapshot.MaxBytes || (v.Phase != templateAvailable && v.Phase != templateRetiring && v.Phase != templateRetired) {
+			return errors.New("invalid catalog entry")
+		}
+		if v.Phase != templateRetired {
+			liveBytes += v.Bytes
+		}
+	}
+	if liveBytes > cfg.Snapshot.MaxBytes || (d.Active != "" && d.Entries[d.Active].Phase != templateAvailable) {
+		return errors.New("invalid active template or catalog budget")
+	}
+	return nil
 }
 func (c *catalog) saveIndex(d catalogIndex) error {
 	return c.persist(filepath.Join(c.root, "index.json"), d)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"sort"
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
@@ -17,12 +18,16 @@ import (
 // This reports ONLY parsed admission/ledger/session disk authority. Never full
 // state-root inventory, task success, quota release, kernel or shared-catalog GC.
 type runtimeCoreInventory struct {
+	authorityDigest                                             string // Internal complete ledger/session byte-set binding, never activation authority.
 	LedgerRecords, LedgerNonterminal                            int
 	SessionRecords, SessionNonterminal, UnboundFailedTargets    int
 	CoreAuthorityParsed                                         bool
 	AcceptedWorkComplete, ResourcesReclaimed, ActivationAllowed bool
 }
-type coreGeneration struct{ tenant string }
+type coreGeneration struct {
+	tenant string
+	state  sandbox.State
+}
 
 func sameCoreStat(a, b unix.Stat_t) bool {
 	return a.Dev == b.Dev && a.Ino == b.Ino && a.Mode == b.Mode && a.Uid == b.Uid && a.Nlink == b.Nlink && a.Size == b.Size && a.Mtim == b.Mtim && a.Ctim == b.Ctim
@@ -214,13 +219,41 @@ func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, re
 		if e != nil {
 			return e
 		}
-		stateFS := &filesystem{root: s.state.root}
-		if e = readCoreAdmission(ctx, stateFS, drainedRuntimeState(drain)); e != nil {
+		out, _, e = readCoreAuthority(ctx, s.state.root, drainedRuntimeState(drain))
+		if e != nil {
 			return e
 		}
-		generations := map[sandbox.Ref]coreGeneration{}
+		if e = s.state.verify(f); e != nil {
+			return e
+		}
+		if _, e = s.stoppedStateProof(ctx, base, request, m, empty); e != nil {
+			return e
+		}
+		out.CoreAuthorityParsed = true
+		return nil
+	})
+	if e != nil {
+		return runtimeCoreInventory{}, e
+	}
+	return out, nil
+}
+
+// Called only inside an already owned scope; never reacquire either lock or run
+// the effectful ordinary Load/recovery path. Generations are kept internal for
+// backend-owner joins, not returned as a transferable reclaim capability.
+func readCoreAuthority(ctx context.Context, root *os.File, expected nodecontrol.State) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
+	var out runtimeCoreInventory
+	generations := map[sandbox.Ref]coreGeneration{}
+	bytes := map[string]string{}
+	err := func() error {
+		var e error
+		stateFS := &filesystem{root: root}
+		if e = readCoreAdmission(ctx, stateFS, expected); e != nil {
+			return e
+		}
 		keys := map[string]bool{}
 		e = scanCoreDirectory(ctx, stateFS, "/ledger", sandbox.MaxLedgerRecords, sandbox.MaxLedgerRecordBytes, func(id string, b []byte) error {
+			bytes["ledger/"+id] = digest(b)
 			r, e := sandbox.DecodePersistedRecord(b)
 			if e != nil {
 				return e
@@ -238,7 +271,7 @@ func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, re
 				}
 				keys[k] = true
 			}
-			generations[r.Ref] = coreGeneration{r.TenantID}
+			generations[r.Ref] = coreGeneration{r.TenantID, r.State}
 			out.LedgerRecords++
 			if r.State != sandbox.Destroyed {
 				out.LedgerNonterminal++
@@ -250,6 +283,7 @@ func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, re
 		}
 		keys = map[string]bool{}
 		e = scanCoreDirectory(ctx, stateFS, "/sessions", session.MaxRecords, session.MaxRecordBytes, func(id string, b []byte) error {
+			bytes["sessions/"+id] = digest(b)
 			r, e := session.DecodePersistedRecord(b)
 			if e != nil {
 				return e
@@ -283,20 +317,23 @@ func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, re
 		if e != nil {
 			return e
 		}
-		if e = readCoreAdmission(ctx, stateFS, drainedRuntimeState(drain)); e != nil {
+		if e = readCoreAdmission(ctx, stateFS, expected); e != nil {
 			return e
 		}
-		if e = s.state.verify(f); e != nil {
-			return e
-		}
-		if _, e = s.stoppedStateProof(ctx, base, request, m, empty); e != nil {
-			return e
-		}
-		out.CoreAuthorityParsed = true
 		return nil
-	})
-	if e != nil {
-		return runtimeCoreInventory{}, e
+	}()
+	if err != nil {
+		return runtimeCoreInventory{}, nil, err
 	}
-	return out, nil
+	names := make([]string, 0, len(bytes))
+	for name := range bytes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var set []byte
+	for _, name := range names {
+		set = append(set, []byte(name+"\x00"+bytes[name]+"\n")...)
+	}
+	out.authorityDigest = digest(set)
+	return out, generations, nil
 }
