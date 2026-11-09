@@ -1,5 +1,7 @@
 # 准备许可的固定指令入口校准（TEST ONLY）
 
+当前 P0 候选已有独立的[固定 ELF／只读解析绑定](P0_PROBE_BINDING.md)，但**尚无新的 live 校准声明**；下列历史实机报告不因此重新签发或变成当前程序结果。
+
 当前分支的[节点准入控制](NODE_CONTROL.md)已改变生产 ELF；新4ee程序的固定ENTRY probe校准及独立取消实验已另行[实际复验](NODE4EE_REQUALIFICATION.md)。下文和清单仍保持原冻结历史证据，未重标为新程序结果；复现历史用例须使用对应历史源码与资产。
 
 **本页仅记录两个真实并发创建的跟踪校准，不是排队取消、blocked-copy 下回收隔离、满载或生产验收。** 冻结源码 `1e7650af7ea031b13ef370ccaa9b8915156d94db`；普通 daemon/admin/warden/builder 与已验收 2e 的四个 ELF 字节完全一致，fixture 变为 `9297f982…`。来源及实际结果以[校准报告](validation/kvm-node-prepare-admission-v3.json)和[来源清单](validation/node-prepare-provenance-v3.json)为准，不重标旧 DEFAULT/quota240 测量。

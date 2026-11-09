@@ -36,6 +36,10 @@ func (m operatorStoreMode) valid() bool { return m == operatorStorePre || m == o
 
 const operatorStoreHoldMax = 20 * time.Second
 
+// Frozen notification/control experiments have NOT been requalified for the
+// new probe ELF. A calibration-pin update must not retarget fault injection.
+const observerOrdinaryELFSHA = "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+
 var operatorTempPattern = regexp.MustCompile(`^\.state-[0-9]+$`)
 
 func runOperatorStoreDaemon() error {
@@ -50,7 +54,7 @@ func runOperatorObservedDaemon(shutdown bool) error {
 		return e
 	}
 	hash, e := fileHash("/srv/assets/sandboxd")
-	if e != nil || hash != prepareTraceELFSHA {
+	if e != nil || hash != observerOrdinaryELFSHA {
 		return errors.New("exact ordinary operator ELF required")
 	}
 	var st unix.Stat_t
@@ -509,7 +513,7 @@ func (n *node) startOperatorObserved(ctx context.Context, shutdown bool) (*opera
 		return nil, nil, e
 	}
 	hash, e := fileHash("/srv/assets/sandboxd")
-	if e != nil || hash != prepareTraceELFSHA {
+	if e != nil || hash != observerOrdinaryELFSHA {
 		return nil, nil, errors.New("fixed ordinary FileStore executable required")
 	}
 	pair, e := unix.Socketpair(unix.AF_UNIX, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)

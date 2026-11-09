@@ -109,3 +109,7 @@ old results for the new source, or treat shorter diagnostics as the full pass.
 The private parallel-copy candidate and its separate one-comparison permission
 are untouched. No merge, production deployment or new public version follows
 from software controls or a green CI run.
+
+## Fixed probe prequalification
+
+The [new fixed prepare-probe binding](P0_PROBE_BINDING.md) uses independently byte-matched native/cross input and bounded static review. Notification fault observers retain a separate old pin; parser/file controls do not certify live ABI, Stop/reclaim, sustained load or production readiness.

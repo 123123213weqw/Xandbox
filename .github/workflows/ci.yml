@@ -46,6 +46,15 @@ jobs:
         run: |
           umask 077
           python3 -m unittest discover -s scripts -p test_kvm_host_guard.py
+      - name: Verify fixed probe ELF as data without tracing
+        if: runner.os == 'Linux'
+        env:
+          XANDBOX_PREPARE_PROBE_ELF: ${{ runner.temp }}/xandbox-fixed-probe-data/sandboxd
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/xandbox-fixed-probe-data"
+          GOENV=off GOWORK=off GOFLAGS='' GOEXPERIMENT='' GODEBUG='' GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$XANDBOX_PREPARE_PROBE_ELF" ./cmd/sandboxd
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -tags=xandbox_host_fixture -count=3 -run '^TestPrepareProbe' ./cmd/xandbox-host-fixture
       - name: Race and failure tests under private umask
         run: |
           umask 077
@@ -65,6 +74,8 @@ jobs:
         run: make smoke
       - name: Test opt-in nested host fixture only on Linux
         if: runner.os == 'Linux'
+        env:
+          XANDBOX_PREPARE_PROBE_ELF: ${{ runner.temp }}/xandbox-fixed-probe-data/sandboxd
         run: go test -tags=xandbox_host_fixture -race -count=3 ./cmd/xandbox-host-fixture
       - name: Verify OOM fixture guards and Stop contract in CGO-free build
         if: runner.os == 'Linux'
