@@ -15,6 +15,22 @@ import tempfile
 import time
 
 from smoke import UnixHTTP
+from process_exit import failure_summary
+
+
+def stop_metadata_process(process, node, state, crash=False):
+    """Keep the original exit gate; project only closed metadata on failure."""
+    if crash:
+        process.kill()
+    else:
+        process.terminate()
+    result = process.wait(timeout=15)
+    unexpected = result == 0 if crash else result != 0
+    if unexpected:
+        # A retained tail can include earlier incarnations. Without a previous
+        # sequence it is context, never proof of this incarnation's failure.
+        raise AssertionError('metadata process exit: ' + json.dumps(
+            failure_summary(result, node, state), sort_keys=True))
 
 
 def main():
@@ -80,13 +96,8 @@ def main():
                     proc.wait(timeout=10)
                     raise
 
-            def stopped(proc, crash=False):
-                if crash:
-                    proc.kill()
-                else:
-                    proc.terminate()
-                result = proc.wait(timeout=15)
-                assert result != 0 if crash else result == 0
+            def stopped(proc, crash=False, directory=state):
+                stop_metadata_process(proc, node, directory, crash)
 
             def migrate(directory=state):
                 return subprocess.run([daemon, '-state-dir', str(directory), '-migrate-ledger'], capture_output=True, timeout=60)
@@ -183,7 +194,7 @@ def main():
                     assert proc.poll() is None, 'migration finished before fault injection; no interruption proof'
                     return any('version' in json.loads(f.read_text()) for f in ledger.glob('*.json'))
                 wait(partial_upgrade, 'first atomic upgrade', seconds=30)
-                stopped(proc, crash=True); process = None
+                stopped(proc, crash=True, directory=interrupted); process = None
                 upgraded = sum('version' in json.loads(f.read_text()) for f in ledger.glob('*.json'))
                 assert 0 < upgraded < count, 'not an actual partial migration'
                 assert subprocess.run(base(directory=interrupted), stdout=log, stderr=log, timeout=10).returncode != 0
@@ -206,7 +217,7 @@ def main():
                     capture_output=True, timeout=10)
                 assert opened.returncode == 0 and json.loads(opened.stdout)['control']['admission_open']
                 assert call('POST', '/v1/sandboxes', {}, key='new', status=503, directory=interrupted)['error']['code'] == 'METADATA_CAPACITY'
-                stopped(process); process = None
+                stopped(process, directory=interrupted); process = None
                 checks.append('actual SIGKILL during 2048-record migration leaves mixed schema; resume preserves all identities and cleans orphan temps')
                 checks.append('imported legacy fixture remains drained until same-UID operator CAS resume; metadata cap still enforced')
 
@@ -217,13 +228,13 @@ def main():
                     owned = create('historical', directory=historical)
                     raw = json.loads((historical / 'ledger' / (owned['id'] + '.json')).read_text())
                     assert 'version' not in raw and raw['state'] == 'READY'
-                    stopped(process, crash=True); process = None
+                    stopped(process, crash=True, directory=historical); process = None
                     assert subprocess.run(base(directory=historical), stdout=log, stderr=log, timeout=10).returncode != 0
                     assert migrate(historical).returncode == 0
                     process = start(directory=historical)
                     destroyed(owned, directory=historical)
                     assert call('POST', '/v1/sandboxes', {}, key='historical', status=410, directory=historical)['error']['code'] == 'IDEMPOTENCY_GONE'
-                    stopped(process); process = None
+                    stopped(process, directory=historical); process = None
                     checks.append('actual pre-upgrade daemon SIGKILL ownership migrates and is reclaimed without key reuse')
             finally:
                 if process is not None and process.poll() is None:

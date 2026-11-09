@@ -89,6 +89,28 @@ and metadata/inode/mode/owner/link/time drift. They are software/file controls,
 **not** live ABI, guest execution, VM-abort, Stop/reclaim or performance evidence.
 No raw host identities or trace registers are published.
 
+## Preserved CI failure and diagnostic follow-up
+
+The binding commit `9d9db9be0deba1d8abb3e4f2c4d4ec6cd1e8e488` passed
+its [original push run](https://github.com/123123213weqw/Xandbox/actions/runs/42658149841),
+but its [original pull-request run](https://github.com/123123213weqw/Xandbox/actions/runs/42658162188)
+failed the Go 1.25.14 process smoke gate. `metadata_smoke.py` rejected the final
+graceful stop of the disposable imported 2048-record mock fixture. That original
+assertion did not record the exit code or diagnostic view; its cause is **not
+established**. The run remains failed, not an infrastructure exception or pass.
+
+The follow-up adds failure-only integer exit status and the existing bounded,
+closed diagnostic projection, with the exact disposable fixture directory.
+Retained records can include earlier incarnations and are context, not proof
+of this exit's cause. No raw logs, paths, identities, credentials or request
+values are exported. Normal stop still requires zero, crash still requires
+nonzero, and the original 15-second wait, 2048 records, partial-upgrade and
+resume/metadata-cap gates remain unchanged. No retry or accepted-exit allowlist
+was added, and no daemon behavior or diagnostic deadline was changed. Python
+controls cover zero/nonzero/signal/timeout refusal and fixture-directory wiring.
+A later green software run cannot establish the cause of this earlier failure,
+nor can it qualify live shutdown, sustained load or state-preserving rollback.
+
 ## Required next gates
 
 Independently qualify the changed fixture/helper bytes and exact source/asset
