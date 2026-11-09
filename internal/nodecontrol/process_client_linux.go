@@ -4,6 +4,8 @@ package nodecontrol
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -28,15 +30,30 @@ func (p *processLease) aliveLocked() error {
 	if p.file == nil {
 		return ErrProcessPin
 	}
-	fds := []unix.PollFd{{Fd: int32(p.file.Fd()), Events: unix.POLLIN}}
-	n, e := unix.Poll(fds, 0)
-	if e != nil {
-		return e
+	return pollLiveProcess(int32(p.file.Fd()), unix.Poll)
+}
+
+// Go/runtime or ordinary signals may interrupt even this nonblocking probe.
+// EINTR is NOT death and never means success: retry the actual kernel probe
+// with the same leased FD. The finite budget prevents a signal storm spinning
+// indefinitely; exhaustion remains an error/uncertain RPC outcome. Production
+// always supplies unix.Poll; the unexported seam permits deterministic tests.
+func pollLiveProcess(fd int32, poll func([]unix.PollFd, int) (int, error)) error {
+	for attempts := 0; attempts < 4; attempts++ {
+		fds := []unix.PollFd{{Fd: fd, Events: unix.POLLIN}}
+		n, e := poll(fds, 0)
+		if errors.Is(e, unix.EINTR) {
+			continue
+		}
+		if e != nil {
+			return fmt.Errorf("operator pidfd poll: %w", e)
+		}
+		if n != 0 {
+			return ErrProcessPin
+		}
+		return nil
 	}
-	if n != 0 {
-		return ErrProcessPin
-	}
-	return nil
+	return fmt.Errorf("operator pidfd poll interrupted repeatedly: %w", unix.EINTR)
 }
 func (p *processLease) close() {
 	p.mu.Lock()

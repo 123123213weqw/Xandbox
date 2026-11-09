@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 // Test ELF only; own private Unix endpoint/controller, no daemon/VM/systemd.
@@ -305,4 +306,47 @@ func TestPinnedProcessStatBoundsAndCloseRace(t *testing.T) {
 }
 func bytesReplace(b, old, next []byte) []byte {
 	return []byte(strings.Replace(string(b), string(old), string(next), 1))
+}
+
+func TestPinnedProcessInterruptedPollRetriesAreBounded(t *testing.T) {
+	for _, kind := range []string{"interrupted-then-live", "interrupted-then-dead", "storm", "unsupported"} {
+		t.Run(kind, func(t *testing.T) {
+			calls := 0
+			e := pollLiveProcess(123, func(fds []unix.PollFd, timeout int) (int, error) {
+				calls++
+				if len(fds) != 1 || fds[0].Fd != 123 || fds[0].Events != unix.POLLIN || timeout != 0 {
+					t.Fatal("changed FD/probe")
+				}
+				if kind == "unsupported" {
+					return -1, unix.ENOSYS
+				}
+				if calls <= 2 || kind == "storm" {
+					return -1, unix.EINTR
+				}
+				if kind == "interrupted-then-dead" {
+					fds[0].Revents = unix.POLLIN
+					return 1, nil
+				}
+				return 0, nil
+			})
+			switch kind {
+			case "interrupted-then-live":
+				if e != nil || calls != 3 {
+					t.Fatal(e, calls)
+				}
+			case "interrupted-then-dead":
+				if !errors.Is(e, ErrProcessPin) || calls != 3 {
+					t.Fatal(e, calls)
+				}
+			case "storm":
+				if !errors.Is(e, unix.EINTR) || calls != 4 {
+					t.Fatal("signal storm accepted/unbounded", e, calls)
+				}
+			case "unsupported":
+				if !errors.Is(e, unix.ENOSYS) || calls != 1 {
+					t.Fatal("unsupported syscall fallback", e, calls)
+				}
+			}
+		})
+	}
 }

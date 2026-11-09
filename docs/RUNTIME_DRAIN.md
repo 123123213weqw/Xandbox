@@ -23,6 +23,15 @@ Close is serialized with pidfd observations to avoid FD-reuse races; a closed or
 dead lease cannot adopt a replacement server at the same path. Unsupported
 platforms refuse rather than falling back to an unpinned client.
 
+A nonblocking pidfd poll may return `EINTR`. It is neither process death nor a
+successful liveness proof: repeat the same real probe at most four times while
+holding the lease. An exhausted interruption budget or unsupported syscall is
+still an error, never an unpinned fallback. The initial `4604e32` CI execution
+observed interrupted-system-call failures in the new drain gate; those original
+failures remain failed. Deterministic interrupted/live, interrupted/dead, signal
+storm and unsupported-syscall controls accompany the corrective change; native
+passes alone do not erase a CI failure or qualify the corrective commit.
+
 The selected directory must also match the installer's independently anchored
 fixed state-directory FD. The pinned client has **status and drain only**, no
 resume method. Drain success requires the exact expected epoch/revision/request
