@@ -47,8 +47,10 @@ to induce kernel PID reuse or prove a real service's identity/placement.
 
 1. Hold the original installer operation OFD EX across the whole invocation.
    Take the original file flock only for on-disk proof/persistence; **release it
-   before every operator RPC**. Do not reacquire the operation lock inside a
-   future outer maintenance scope; a typed owned-scope adapter is still needed.
+   before every operator RPC**. An internal typed `runtimeScope` can now retain the original operation
+   lease across drain and the physical-stop stage without reacquisition. It
+   serializes stages/close and rechecks original lock/root identity; it is not
+   authority to select binaries.
 2. Verify the exact original installation commit, installed/protected files,
    clean config inventory and anchored operator-root identity. This initial
    adapter refuses a runtime file-selection namespace. Repeat activation from a

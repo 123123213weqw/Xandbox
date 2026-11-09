@@ -33,6 +33,35 @@ func (p *processLease) aliveLocked() error {
 	return pollLiveProcess(int32(p.file.Fd()), unix.Poll)
 }
 
+func (p *processLease) exited() (bool, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if p.file == nil {
+		return false, ErrProcessPin
+	}
+	return pollExitedProcess(int32(p.file.Fd()), unix.Poll)
+}
+func pollExitedProcess(fd int32, poll func([]unix.PollFd, int) (int, error)) (bool, error) {
+	for i := 0; i < 4; i++ {
+		fds := []unix.PollFd{{Fd: fd, Events: unix.POLLIN}}
+		n, e := poll(fds, 0)
+		if errors.Is(e, unix.EINTR) {
+			continue
+		}
+		if e != nil {
+			return false, fmt.Errorf("operator exit poll: %w", e)
+		}
+		if n == 0 {
+			return false, nil
+		}
+		if n != 1 || fds[0].Revents&unix.POLLIN == 0 || fds[0].Revents & ^int16(unix.POLLIN|unix.POLLHUP) != 0 {
+			return false, ErrProcessPin
+		}
+		return true, nil
+	}
+	return false, fmt.Errorf("operator exit poll interrupted repeatedly: %w", unix.EINTR)
+}
+
 // Go/runtime or ordinary signals may interrupt even this nonblocking probe.
 // EINTR is NOT death and never means success: retry the actual kernel probe
 // with the same leased FD. The finite budget prevents a signal storm spinning
@@ -123,13 +152,13 @@ func processStart(raw []byte, pid int) (uint64, error) {
 // NewPinnedClient opens pidfd BEFORE reading any incarnation metadata. It
 // neither signals the process nor executes a program or creates a state root.
 // PID/executable/placement ownership must also be proved by the lifecycle caller.
-func NewPinnedClient(stateDir string, pid int) (*PinnedClient, error) {
+func pinProcess(pid int) (*processLease, ProcessIdentity, error) {
 	if pid <= 1 {
-		return nil, ErrProcessPin
+		return nil, ProcessIdentity{}, ErrProcessPin
 	}
 	fd, e := unix.PidfdOpen(pid, 0)
 	if e != nil {
-		return nil, e
+		return nil, ProcessIdentity{}, e
 	}
 	lease := &processLease{file: os.NewFile(uintptr(fd), "operator-pidfd")}
 	ok := false
@@ -139,32 +168,48 @@ func NewPinnedClient(stateDir string, pid int) (*PinnedClient, error) {
 		}
 	}()
 	if e = lease.alive(); e != nil {
-		return nil, e
+		return nil, ProcessIdentity{}, e
 	}
 	boot, e := processRead("/proc/sys/kernel/random/boot_id", 64)
 	if e != nil {
-		return nil, e
+		return nil, ProcessIdentity{}, e
 	}
 	raw, e := processRead("/proc/"+strconv.Itoa(pid)+"/stat", 8192)
 	if e != nil {
-		return nil, e
+		return nil, ProcessIdentity{}, e
 	}
 	ticks, e := processStart(raw, pid)
 	if e != nil {
-		return nil, e
+		return nil, ProcessIdentity{}, e
 	}
 	id := ProcessIdentity{PID: pid, BootID: strings.TrimSpace(string(boot)), StartTicks: ticks}
 	if !id.Valid() {
-		return nil, ErrProcessPin
+		return nil, ProcessIdentity{}, ErrProcessPin
 	}
 	if e = lease.alive(); e != nil {
+		return nil, ProcessIdentity{}, e
+	}
+	ok = true
+	return lease, id, nil
+}
+
+func NewProcessWatch(pid int) (*ProcessWatch, error) {
+	lease, id, e := pinProcess(pid)
+	if e != nil {
+		return nil, e
+	}
+	return &ProcessWatch{id: id, live: lease.alive, exited: lease.exited, release: lease.close}, nil
+}
+func NewPinnedClient(stateDir string, pid int) (*PinnedClient, error) {
+	lease, id, e := pinProcess(pid)
+	if e != nil {
 		return nil, e
 	}
 	client, e := newClient(stateDir, func(conn *net.UnixConn) error { return lease.peer(conn, pid) })
 	if e != nil {
+		lease.close()
 		return nil, e
 	}
 	client.live = lease.alive
-	ok = true
-	return &PinnedClient{client: client, id: id, release: lease.close}, nil
+	return &PinnedClient{client: client, id: id, release: lease.close, exited: lease.exited}, nil
 }

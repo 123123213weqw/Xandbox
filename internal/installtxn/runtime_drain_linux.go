@@ -62,6 +62,11 @@ func (f *filesystem) runtimeDrainBase(ctx context.Context, base string, client *
 	} else if yes {
 		return ErrInventory
 	}
+	if yes, e := f.exists(runtimeStopRoot); e != nil {
+		return e
+	} else if yes {
+		return ErrInventory
+	}
 	names, e := f.names(Root)
 	if e != nil {
 		return e
@@ -164,11 +169,24 @@ func (f *filesystem) runtimeDrainLocked(ctx context.Context, work func() error) 
 // runtimeDrainAdmission is INTERNAL effectful write-ahead admission drain, not
 // a public updater, Stop/reclaim operation or a lifecycle/activation certificate.
 // Original operation EX spans RPC and persistence, but NO file flock spans RPC.
-// Never invoke it inside another operation-lock scope: the complete coordinator
-// still needs an owned scope adapter before composing it with the file engine.
+// An outer coordinator uses runtimeScope.drain instead of reacquiring this
+// wrapper's operation lock. The scope is NOT permission to select runtime files.
 // Existing stopped callbacks, manager/executable/placement proof and all-authority
 // compatibility remain separate prerequisites, not booleans this method accepts.
 func (f *filesystem) runtimeDrainAdmission(ctx context.Context, base, request string, client *nodecontrol.PinnedClient) (runtimeDrainResult, error) {
+	if !digestPattern.MatchString(base) || !requestPattern.MatchString(request) || client == nil || !client.Identity().Valid() {
+		return runtimeDrainResult{}, ErrPolicy
+	}
+	s, e := f.beginRuntimeScope(ctx)
+	if e != nil {
+		return runtimeDrainResult{}, e
+	}
+	defer s.close()
+	return s.drain(ctx, base, request, client)
+}
+
+// Only runtimeScope.drain calls this body, while retaining its original EX FD.
+func (f *filesystem) runtimeDrainInScope(ctx context.Context, base, request string, client *nodecontrol.PinnedClient) (runtimeDrainResult, error) {
 	var zero runtimeDrainResult
 	if !digestPattern.MatchString(base) || !requestPattern.MatchString(request) || client == nil || !client.Identity().Valid() {
 		return zero, ErrPolicy
@@ -176,14 +194,9 @@ func (f *filesystem) runtimeDrainAdmission(ctx context.Context, base, request st
 	if e := ctx.Err(); e != nil {
 		return zero, e
 	}
-	done, e := f.operationLock(ctx, true)
-	if e != nil {
-		return zero, e
-	}
-	defer done()
 	var p runtimeDrainIntent
 	pending := false
-	e = f.runtimeDrainLocked(ctx, func() error {
+	e := f.runtimeDrainLocked(ctx, func() error {
 		if e := f.runtimeDrainBase(ctx, base, client); e != nil {
 			return e
 		}

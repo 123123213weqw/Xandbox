@@ -30,6 +30,49 @@ type PinnedClient struct {
 	client  *Client
 	id      ProcessIdentity
 	release func()
+	exited  func() (bool, error)
+}
+
+// ProcessWatch holds a kernel incarnation, not permission to signal a PID.
+// Identity/Alive/Exited prove neither executable ownership nor resource reclaim.
+type ProcessWatch struct {
+	id      ProcessIdentity
+	live    func() error
+	exited  func() (bool, error)
+	release func()
+}
+
+func (w *ProcessWatch) Identity() ProcessIdentity {
+	if w == nil {
+		return ProcessIdentity{}
+	}
+	return w.id
+}
+func (w *ProcessWatch) Alive() error {
+	if w == nil || w.live == nil {
+		return ErrProcessPin
+	}
+	return w.live()
+}
+func (w *ProcessWatch) Exited() (bool, error) {
+	if w == nil || w.exited == nil {
+		return false, ErrProcessPin
+	}
+	return w.exited()
+}
+func (w *ProcessWatch) Close() {
+	if w != nil && w.release != nil {
+		w.release()
+	}
+}
+
+// Exited requires a STILL-OPEN pidfd reporting exit. A closed client, EOF or
+// failed request is never process-death evidence.
+func (c *PinnedClient) Exited() (bool, error) {
+	if c == nil || c.exited == nil {
+		return false, ErrProcessPin
+	}
+	return c.exited()
 }
 
 func (c *PinnedClient) Identity() ProcessIdentity {

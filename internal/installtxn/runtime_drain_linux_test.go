@@ -31,7 +31,7 @@ func (s drainTestStore) Save(old, next nodecontrol.State) error {
 // Real file store + controller + Unix RPC in the Go test process. Installation,
 // executable bytes and manager are a shadow/model, NOT a daemon/cgroup proof.
 // Short owned roots keep the real Unix path within Linux sun_path bounds.
-func drainModel(t *testing.T, check func(*filesystem) error) (*filesystem, transaction, *nodecontrol.PinnedClient, *nodecontrol.Controller) {
+func runtimeShortInstall(t *testing.T) (*filesystem, transaction) {
 	t.Helper()
 	original, p, m := fixture(t)
 	short, e := os.MkdirTemp("", "xb-dr-")
@@ -63,6 +63,13 @@ func drainModel(t *testing.T, check func(*filesystem) error) (*filesystem, trans
 	if e != nil {
 		t.Fatal(e)
 	}
+	return f, tx
+}
+
+func drainModel(t *testing.T, check func(*filesystem) error) (*filesystem, transaction, *nodecontrol.PinnedClient, *nodecontrol.Controller) {
+	t.Helper()
+	f, tx := runtimeShortInstall(t)
+	short := f.root.Name()
 	store, e := nodecontrol.OpenStore(short + stateDir)
 	if e != nil {
 		t.Fatal(e)

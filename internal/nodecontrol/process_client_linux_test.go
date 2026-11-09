@@ -350,3 +350,81 @@ func TestPinnedProcessInterruptedPollRetriesAreBounded(t *testing.T) {
 		})
 	}
 }
+
+func TestPinnedProcessExitRequiresOpenKernelLeaseNotClosedClient(t *testing.T) {
+	root := shortRoot(t)
+	child := pinnedChild(t, root)
+	w, e := NewProcessWatch(child.Process.Pid)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer w.Close()
+	c, e := NewPinnedClient(root, child.Process.Pid)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer c.Close()
+	if dead, e := w.Exited(); e != nil || dead {
+		t.Fatal("live process certified dead", dead, e)
+	}
+	if e = child.Process.Kill(); e != nil {
+		t.Fatal(e)
+	}
+	if e = child.Wait(); e == nil {
+		t.Fatal("child not terminated")
+	}
+	for _, exit := range []func() (bool, error){w.Exited, c.Exited} {
+		if dead, e := exit(); e != nil || !dead {
+			t.Fatal("held pidfd did not prove known death", dead, e)
+		}
+	}
+	w.Close()
+	c.Close()
+	if dead, e := w.Exited(); e == nil || dead {
+		t.Fatal("closed watch became death proof")
+	}
+	if dead, e := c.Exited(); e == nil || dead {
+		t.Fatal("closed client became death proof")
+	}
+}
+func TestPinnedProcessExitPollStrictEventsAndInterruptedBudget(t *testing.T) {
+	for _, kind := range []string{"live", "exit", "reaped", "hup-only", "invalid", "interrupted-exit", "storm", "unsupported"} {
+		t.Run(kind, func(t *testing.T) {
+			calls := 0
+			dead, e := pollExitedProcess(12, func(fds []unix.PollFd, timeout int) (int, error) {
+				calls++
+				if timeout != 0 || len(fds) != 1 || fds[0].Fd != 12 {
+					t.Fatal("different kernel probe")
+				}
+				if kind == "storm" || kind == "interrupted-exit" && calls == 1 {
+					return -1, unix.EINTR
+				}
+				switch kind {
+				case "live":
+					return 0, nil
+				case "unsupported":
+					return -1, unix.ENOSYS
+				case "hup-only":
+					fds[0].Revents = unix.POLLHUP
+				case "invalid":
+					fds[0].Revents = unix.POLLNVAL
+				case "reaped":
+					fds[0].Revents = unix.POLLIN | unix.POLLHUP
+				default:
+					fds[0].Revents = unix.POLLIN
+				}
+				return 1, nil
+			})
+			want := kind == "exit" || kind == "reaped" || kind == "interrupted-exit"
+			if dead != want || want && e != nil || kind == "live" && e != nil {
+				t.Fatal(kind, dead, e)
+			}
+			if !want && kind != "live" && e == nil {
+				t.Fatal("untrusted event certified absence")
+			}
+			if kind == "storm" && (calls != 4 || !errors.Is(e, unix.EINTR)) {
+				t.Fatal("unbounded storm", calls, e)
+			}
+		})
+	}
+}

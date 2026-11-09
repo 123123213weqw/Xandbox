@@ -53,7 +53,14 @@ func cgroup2FD(fd int) error {
 // below an already validated real cgroup-v2 parent. Missing events in an opened
 // group, fake filesystem reports, survivors and a frozen group fail closed.
 // No freeze, kill, migration, directory removal or other write is performed.
-func (f *filesystem) ingressEmpty() error {
+func (f *filesystem) ingressEmpty() error { return f.unitExecutionEmpty(IngressUnit) }
+
+// Closed fixed-unit selector; this proves kernel execution-domain emptiness,
+// never ownership/quota/jail removal or successful completion of accepted work.
+func (f *filesystem) unitExecutionEmpty(unit string) error {
+	if unit != MainUnit && unit != IngressUnit {
+		return ErrPolicy
+	}
 	parent, e := f.directory(ingressCgroupParent)
 	if e != nil {
 		return e
@@ -62,7 +69,7 @@ func (f *filesystem) ingressEmpty() error {
 	if e = cgroup2FD(int(parent.Fd())); e != nil {
 		return e
 	}
-	fd, e := unix.Openat(int(parent.Fd()), IngressUnit, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	fd, e := unix.Openat(int(parent.Fd()), unit, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if errors.Is(e, unix.ENOENT) {
 		return nil
 	}
@@ -84,7 +91,7 @@ func (f *filesystem) ingressEmpty() error {
 	if e = proveIngressSubtree(group, cgroup2FD); e != nil {
 		return e
 	}
-	return sameIngressEntry(int(parent.Fd()), IngressUnit, pinned, true)
+	return sameIngressEntry(int(parent.Fd()), unit, pinned, true)
 }
 
 // Only disappearance AFTER a complete proof counts as absence. All traversal is

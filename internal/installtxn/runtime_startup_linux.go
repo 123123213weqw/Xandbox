@@ -55,7 +55,7 @@ func (f *filesystem) startupFilesLocked(ctx context.Context) (transaction, error
 	if e := ctx.Err(); e != nil {
 		return zero, e
 	}
-	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot} {
+	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot} {
 		if yes, e := f.exists(root); e != nil {
 			return zero, e
 		} else if yes {
