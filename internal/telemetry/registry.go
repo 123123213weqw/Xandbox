@@ -59,11 +59,12 @@ func (r *Registry) Observe(op Operation, elapsed time.Duration, failed bool) {
 }
 
 type Gauges struct {
-	Diagnostics                                            diagnostics.Stats
-	Records, RecordCapacity, Allocated, Capacity           int64
-	StopQueued, CleanupQueued, StopRunning, CleanupRunning int64
-	StopWorkers, CleanupWorkers, QueueCapacity             int64
-	Sessions, SessionCapacity                              int64
+	Diagnostics                                                 diagnostics.Stats
+	Records, RecordCapacity, Allocated, Capacity                int64
+	StopQueued, CleanupQueued, StopRunning, CleanupRunning      int64
+	StopWorkers, CleanupWorkers, QueueCapacity                  int64
+	Sessions, SessionCapacity                                   int64
+	CreateQueued, CreateQueueCapacity, CreateClassQueueCapacity int64
 }
 
 // Render takes independent atomic observations, not a transactional snapshot.
@@ -98,6 +99,7 @@ func (r *Registry) Render(g Gauges) []byte {
 		{"stop_queued", g.StopQueued}, {"cleanup_queued", g.CleanupQueued}, {"stop_running", g.StopRunning}, {"cleanup_running", g.CleanupRunning},
 		{"stop_workers", g.StopWorkers}, {"cleanup_workers", g.CleanupWorkers}, {"queue_capacity_per_pool", g.QueueCapacity},
 		{"session_records", g.Sessions}, {"session_capacity", g.SessionCapacity},
+		{"create_queued", g.CreateQueued}, {"create_queue_capacity", g.CreateQueueCapacity}, {"create_queue_capacity_per_class", g.CreateClassQueueCapacity},
 	}
 	for _, v := range values {
 		fmt.Fprintf(&b, "# TYPE xandbox_%s gauge\nxandbox_%s %d\n", v.name, v.name, v.value)
