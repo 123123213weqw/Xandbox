@@ -321,7 +321,9 @@ func TestUpdateInspectionBasePinsCurrentManagedPolicyNotAnOldBackup(t *testing.T
 	}
 	old := p
 	req := strings.Repeat("b", 32)
-	if _, e = rotateModel(context.Background(), f, tx, source, 1, req, nil); e != nil {
+	// A new modeled rotation requires its existing explicit readiness hook;
+	// nil is legal only for an exact postcommit retry, not first publication.
+	if _, e = rotateModel(context.Background(), f, tx, source, 1, req, func() error { return nil }); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = f.inspectionBase(context.Background(), old); e == nil {
