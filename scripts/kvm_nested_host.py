@@ -18,6 +18,7 @@ import re
 
 from build_nested_host import build_initrd, digest, validate_manifest, static_elf
 from kvm_resources import cgroup_empty
+from host_test_guard import Budget, HostGuard, OwnedAbort
 from kvm_driver_smoke import wait
 from kvm_snapshot_smoke import private_json, sync_dir
 
@@ -816,6 +817,13 @@ def main():
         result['limitations'].append('Kernel prerequisite probe only: ordinary sandboxd has NO project quota integration or per-generation physical disk enforcement.')
     process = None; lifetime = None; channel = None; launcher_log = None; owned_groups = []
     l0_boot = Path('/proc/sys/kernel/random/boot_id').read_bytes()
+    # TEST ONLY additional host protection, never a replacement for the exact
+    # per-generation cgroup ceilings or the original acceptance thresholds.
+    host_guard = HostGuard(Budget(resources['cgroup_memory_max'], 2 * disk_bytes,
+                                  8 if node_profile else 4),
+                           ('/srv', '/var/lib', logs))
+    result['host_safety_guard_sha256']=digest(Path(__file__).with_name('host_test_guard.py'))
+    host_guard.start()
     try:
         root.mkdir(mode=0o700); control.mkdir(mode=0o700)
         private_json(logs/'resource-receipt.json',{'version':1,'root':str(root),'control':str(control),'cgroup_parent':str(parent_group),'cgroup':str(group)})
@@ -850,6 +858,8 @@ def main():
             backend.update(version=3,cgroup_root='/sys/fs/cgroup/xandbox/instances',node=node_budget_policy(),io={'version':1,'filesystem_device':'253:0','device':'253:0','bytes_per_second':16<<20,'operations_per_second':1024})
         private_json(staging/'config/backend.json',backend)
         disk=root/'disk.raw'
+        host_guard.check()
+        host_guard.check_sample()
         with disk.open('xb') as f: os.posix_fallocate(f.fileno(),0,disk_bytes); os.fsync(f.fileno())
         format_options = quota_format_options(args.quota_probe or (driver_profile and not args.quota_unenforced))
         subprocess.run(['mkfs.ext4','-q','-F','-m','0','-E','root_owner=0:0',*format_options,*node_snapshot_format_options(args.node_snapshot),*(['-U',str(filesystem_uuid)] if driver_profile else []),'-d',str(staging),str(disk)],check=True,timeout=120)
@@ -866,6 +876,8 @@ def main():
         boot_number=0
         def boot():
             nonlocal process,lifetime,channel,launcher_log,boot_number,group
+            host_guard.check()
+            host_guard.check_sample()
             # A new host incarnation gets a new execution generation/lease
             # binding. Reuse ONLY the private disk, never a killed domain.
             if boot_number: group=parent_group/secrets.token_hex(32)
@@ -879,11 +891,22 @@ def main():
             for name in ('control.sock','qmp.sock','console.log'):
                 p=root/name
                 if p.exists(): p.unlink()
-            read,lifetime=os.pipe(); launcher_log=(logs/f'launcher-{boot_number}.log').open('xb',buffering=0)
-            process=subprocess.Popen([str(fixture),'-mode','launch','-config',str(cfg)],stdin=read,stdout=launcher_log,stderr=launcher_log,
-                                     env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin'})
-            os.close(read)
+            read,write=os.pipe()
+            try:
+                lifetime=OwnedAbort(group,write)
+            except BaseException:
+                os.close(read);os.close(write)
+                raise
+            launcher_log=(logs/f'launcher-{boot_number}.log').open('xb',buffering=0)
+            try:
+                process=host_guard.launch(lifetime,lambda: subprocess.Popen(
+                    [str(fixture),'-mode','launch','-config',str(cfg)],stdin=read,
+                    stdout=launcher_log,stderr=launcher_log,
+                    env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin'}))
+            finally:
+                os.close(read)
             def ready():
+                host_guard.check()
                 assert process.poll() is None,'owned QEMU launcher exited; inspect private log'
                 console=root/'console.log'
                 if console.exists(): assert console.stat().st_size<=2<<20,'unexpected console flood'
@@ -898,12 +921,14 @@ def main():
         cut_receipt=None
         def request(operation,phase=None,receipt=None):
             nonlocal cut_receipt
+            host_guard.check()
             value={'version':1,'operation':operation}
             if phase:value['phase']=phase
             if receipt is not None:
                 assert operation in ('quota-copy-cut-recover','quota-owner-cut-recover') and phase is None
                 value=owner_cut_recovery_packet(receipt) if operation=='quota-owner-cut-recover' else copy_cut_recovery_packet(receipt)
             channel.send(value); out=channel.read()
+            host_guard.check()
             if operation=='quota-owner-cut-checkpoint':
                 summary,cut_receipt=detach_owner_cut_checkpoint(out,logs/'private-owner-cut-receipt.json')
                 return summary
@@ -921,7 +946,7 @@ def main():
             elapsed=round((time.perf_counter()-began)*1000,3)
             process.wait(timeout=15); process=None
             shutil.copyfile(root/'console.log',logs/f'l1-console-{boot_number}.log')
-            os.close(lifetime);lifetime=None;channel.close();channel=None;launcher_log.close();launcher_log=None
+            lifetime.close();lifetime=None;channel.close();channel=None;launcher_log.close();launcher_log=None
             private_json(logs/f'private-cgroup-{boot_number}.json',private_group_counters(group))
             group.rmdir()
             assert Path('/proc/sys/kernel/random/boot_id').read_bytes()==l0_boot
@@ -1013,24 +1038,43 @@ def main():
         result['l0_boot_unchanged']=True; result['qmp_enabled_kvm_verified_each_boot']=True
         result['passed']=all(case['passed'] for case in result['cases'])
     finally:
-        if group.exists():
-            private_json(logs/'final-private-cgroup.json',private_group_counters(group))
-            (group/'cgroup.kill').write_text('1');wait(lambda:cgroup_empty(group),'owned nested cleanup',seconds=15)
-        if process is not None: process.wait(timeout=15)
-        if lifetime is not None: os.close(lifetime)
-        if channel is not None: channel.close()
-        if launcher_log is not None: launcher_log.close()
-        if (root/'console.log').exists():
-            with (root/'console.log').open('rb') as source:
-                source.seek(max(0,(root/'console.log').stat().st_size-(2<<20)))
-                (logs/'final-private-console.log').write_bytes(source.read(2<<20))
-        for owned in owned_groups:
-            if owned.exists(): owned.rmdir()
-        if parent_group.exists(): parent_group.rmdir()
-        if root.exists(): shutil.rmtree(root)
-        if control.exists(): shutil.rmtree(control)
-        result['cleanup_confirmed']=not any(p.exists() for p in (root,control,parent_group))
-        private_json(report,result)
+        try:
+            # Stop monitoring before closing retained generation FDs. The serial
+            # lease is held through the existing owned-resource cleanup below.
+            host_guard.stop()
+            # Safety cleanup MUST precede writing diagnostic logs: a full or
+            # failed log filesystem must not bypass closing the lease / Stop.
+            if lifetime is not None:
+                try: lifetime.abort()
+                except OSError:
+                    # Retain failure, but still attempt the independent owned
+                    # cgroup stop and reap below. Never skip Stop for logging.
+                    result['owned_lease_abort_unconfirmed']=True
+                    result['passed']=False
+            if group.exists():
+                (group/'cgroup.kill').write_text('1');wait(lambda:cgroup_empty(group),'owned nested cleanup',seconds=15)
+            if process is not None: process.wait(timeout=15)
+            if lifetime is not None: lifetime.close()
+            if channel is not None: channel.close()
+            if launcher_log is not None: launcher_log.close()
+            if group.exists():
+                private_json(logs/'final-private-cgroup.json',private_group_counters(group))
+            if (root/'console.log').exists():
+                with (root/'console.log').open('rb') as source:
+                    source.seek(max(0,(root/'console.log').stat().st_size-(2<<20)))
+                    (logs/'final-private-console.log').write_bytes(source.read(2<<20))
+            for owned in owned_groups:
+                if owned.exists(): owned.rmdir()
+            if parent_group.exists(): parent_group.rmdir()
+            if root.exists(): shutil.rmtree(root)
+            if control.exists(): shutil.rmtree(control)
+            result['cleanup_confirmed']=not any(p.exists() for p in (root,control,parent_group))
+            result['host_safety_guard_aborted']=host_guard.failure is not None
+            if result['host_safety_guard_aborted']: result['passed']=False
+            private_json(report,result)
+        finally:
+            host_guard.close()
+    host_guard.check()
     assert result['passed'] and result['cleanup_confirmed']
     print(json.dumps({'passed':True,'cases':len(result['cases']),'cleanup_confirmed':True}))
 

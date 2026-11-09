@@ -21,6 +21,7 @@ from build_nested_host import digest, validate_manifest
 from kvm_nested_host import JSONSocket, qmp_probe, nested_group_limits, nested_resources, nested_node_resources, replace_private_json, private_group_counters, nested_ingress_resources
 from kvm_driver_smoke import wait, same_owned_directory
 from kvm_resources import cgroup_empty
+from host_test_guard import Budget, HostGuard, OwnedAbort
 from kvm_snapshot_smoke import private_json
 
 PROBE_FLAGS=('pid1_systemd','manager_main_pid_verified','all_four_controllers','node_empty_internal_domains',
@@ -191,6 +192,11 @@ def main():
             'limitations':['Real systemd primitive only, not ordinary sandboxd/guest lifecycle deployment or operator release acceptance.',
                            'Healthy fsynced original-disk checkpoint, not in-flight persistence/physical power loss or a stop/reclaim SLO.',
                            'No shared L0 service/module/mount/quota/sysctl/network changes. Raw console and resource identities remain private.']}
+    host_guard=HostGuard(Budget(resources['cgroup_memory_max'],2*resources['disk_bytes'],
+                               12 if resources['profile']=='systemd-ingress-v1' else 8 if deployed else 4),
+                        ('/srv','/var/lib',logs))
+    result['host_safety_guard_sha256']=digest(Path(__file__).with_name('host_test_guard.py'))
+    host_guard.start()
     try:
         create(root);create(control);receipt()
         if deployed:
@@ -210,6 +216,7 @@ def main():
         for argument,name in (('fixture','fixture'),('warden','warden')):
             shutil.copyfile(Path(getattr(args,argument)).resolve(),control/name);(control/name).chmod(0o555)
         shutil.copyfile(kernel,root/'kernel');(root/'kernel').chmod(0o444)
+        host_guard.check();host_guard.check_sample()
         result['build']=build(ubuntu=Path(args.ubuntu).resolve(),alpine=Path(args.alpine).resolve(),
                               probe=Path(__file__).with_name('systemd_delegate_probe.py'),output_disk=root/'disk.raw',output_initrd=root/'initrd.cpio.gz',deployment_assets=deployment,ingress_assets=ingress,readiness_assets=None if release is not None else readiness,release_assets=release,install_assets=install,managed_assets=managed,managed_case=managed_case)
         result['fixture_sha256']=digest(control/'fixture');result['warden_sha256']=digest(control/'warden')
@@ -219,6 +226,7 @@ def main():
         cfg=control/'launch.json'
         def boot():
             nonlocal process,lifetime,channel,launcher_log,group
+            host_guard.check();host_guard.check_sample()
             if result['l1_boots']:group=parent/secrets.token_hex(32)
             create(group);groups.append(group);receipt()
             for name,value in nested_group_limits(resources).items():(group/name).write_text(value);assert (group/name).read_text().strip()==value
@@ -229,10 +237,19 @@ def main():
             replace_private_json(cfg,launch)
             for name in ('control.sock','qmp.sock','console.log'):
                 if (root/name).exists():(root/name).unlink()
-            read,lifetime=os.pipe();launcher_log=(logs/f'launcher-{len(groups)}.log').open('xb',buffering=0)
-            process=subprocess.Popen([str(control/'fixture'),'-mode','launch','-config',str(cfg)],stdin=read,stdout=launcher_log,stderr=launcher_log,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin'})
-            os.close(read)
+            read,write=os.pipe()
+            try:lifetime=OwnedAbort(group,write)
+            except BaseException:
+                os.close(read);os.close(write)
+                raise
+            launcher_log=(logs/f'launcher-{len(groups)}.log').open('xb',buffering=0)
+            try:
+                process=host_guard.launch(lifetime,lambda: subprocess.Popen(
+                    [str(control/'fixture'),'-mode','launch','-config',str(cfg)],stdin=read,
+                    stdout=launcher_log,stderr=launcher_log,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin'}))
+            finally:os.close(read)
             def ready():
+                host_guard.check()
                 assert process.poll() is None,'bounded QEMU launcher exited; inspect private log'
                 p=root/'console.log'
                 if p.exists():
@@ -243,7 +260,9 @@ def main():
             qmp_probe(root/'qmp.sock',resources['memory_mib']);channel=JSONSocket(root/'control.sock',210 if deployed else 30)
             result['l1_boots']+=1
         def request(operation):
+            host_guard.check()
             channel.send({'version':1,'operation':operation});reply=channel.read()
+            host_guard.check()
             assert reply['ok'] is True,'fixed L1 systemd operation failed; inspect private console'
             if managed is not None:validate_managed_reply(operation,reply['result'],managed_case)
             elif install is not None:validate_install_reply(operation,reply['result'])
@@ -257,7 +276,7 @@ def main():
             nonlocal process,lifetime,channel,launcher_log
             assert ours(group)
             (group/'cgroup.kill').write_text('1');wait(lambda:cgroup_empty(group),'owned L1 execution stops',seconds=15)
-            process.wait(timeout=15);process=None;os.close(lifetime);lifetime=None;channel.close();channel=None
+            process.wait(timeout=15);process=None;lifetime.close();lifetime=None;channel.close();channel=None
             launcher_log.close();launcher_log=None
             shutil.copyfile(root/'console.log',logs/f'console-{result["l1_boots"]}.log')
             private_json(logs/f'private-cgroup-{result["l1_boots"]}.json',private_group_counters(group))
@@ -283,21 +302,32 @@ def main():
             else:result['limited_managed_v2_named_unconsumed_supersession_passed']=True
         result['passed']=True
     finally:
-        if ours(group):
-            (group/'cgroup.kill').write_text('1');wait(lambda:cgroup_empty(group),'owned systemd cleanup',seconds=15)
-        if process is not None:process.wait(timeout=15)
-        if lifetime is not None:os.close(lifetime)
-        if channel is not None:channel.close()
-        if launcher_log is not None:launcher_log.close()
-        if ours(root) and (root/'console.log').exists():shutil.copyfile(root/'console.log',logs/'final-private-console.log')
-        for owned_group in groups:
-            if ours(owned_group):owned_group.rmdir()
-        if ours(parent):parent.rmdir()
-        for path in (root,control):
-            if ours(path):shutil.rmtree(path)
-        result['cleanup_confirmed']=not any(os.path.lexists(p) for p in (root,control,parent))
-        result['l0_boot_unchanged']=Path('/proc/sys/kernel/random/boot_id').read_bytes()==l0_boot
-        private_json(report,result)
+        try:
+            host_guard.stop()
+            if lifetime is not None:
+                try:lifetime.abort()
+                except OSError:
+                    result['owned_lease_abort_unconfirmed']=True;result['passed']=False
+            if ours(group):
+                (group/'cgroup.kill').write_text('1');wait(lambda:cgroup_empty(group),'owned systemd cleanup',seconds=15)
+            if process is not None:process.wait(timeout=15)
+            if lifetime is not None:lifetime.close()
+            if channel is not None:channel.close()
+            if launcher_log is not None:launcher_log.close()
+            if ours(root) and (root/'console.log').exists():shutil.copyfile(root/'console.log',logs/'final-private-console.log')
+            for owned_group in groups:
+                if ours(owned_group):owned_group.rmdir()
+            if ours(parent):parent.rmdir()
+            for path in (root,control):
+                if ours(path):shutil.rmtree(path)
+            result['cleanup_confirmed']=not any(os.path.lexists(p) for p in (root,control,parent))
+            result['l0_boot_unchanged']=Path('/proc/sys/kernel/random/boot_id').read_bytes()==l0_boot
+            result['host_safety_guard_aborted']=host_guard.failure is not None
+            if result['host_safety_guard_aborted']:result['passed']=False
+            private_json(report,result)
+        finally:
+            host_guard.close()
+    host_guard.check()
     assert result['passed'] and result['cleanup_confirmed'] and result['l0_boot_unchanged']
     print(json.dumps({'passed':True,'l1_boots':2,'cleanup_confirmed':True,'sandboxd_deployment_accepted':False}))
 
