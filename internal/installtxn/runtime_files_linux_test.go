@@ -489,3 +489,26 @@ func TestRuntimeFileMissingRetainedObjectRefusesEvenLostAckRetry(t *testing.T) {
 		t.Fatal("lost retained object silently accepted")
 	}
 }
+
+func TestRuntimeFileLostHeadAndFenceCannotResetRevision(t *testing.T) {
+	f, tx, targets := runtimeModel(t)
+	if _, e := runtimeApply(context.Background(), f, tx, 0, runtimeReq("b"), "forward", targets); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := runtimeApply(context.Background(), f, tx, 1, runtimeReq("c"), "rollback", nil); e != nil {
+		t.Fatal(e)
+	}
+	// The binary vector again matches genesis. Loss of BOTH visible markers
+	// must still not turn surviving retained objects into a fresh revision 0.
+	for _, path := range []string{runtimeFilesRoot + "/head.json", runtimeFilesFence} {
+		if e := os.Remove(f.root.Name() + path); e != nil {
+			t.Fatal(e)
+		}
+	}
+	if _, e := runtimeApply(context.Background(), f, tx, 0, runtimeReq("d"), "forward", runtimeNoSources(targets)); !errors.Is(e, ErrInventory) {
+		t.Fatal("lost counter silently reinitialized", e)
+	}
+	if yes, _ := f.exists(runtimeFilesRoot + "/head.json"); yes {
+		t.Fatal("replacement counter created")
+	}
+}

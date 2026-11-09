@@ -568,6 +568,16 @@ func (f *filesystem) runtimeFileExchange(ctx context.Context, base string, expec
 			if expected != 0 {
 				return zero, ErrConflict
 			}
+			// Payload objects are created only AFTER a durable intent. Their
+			// survival without either intent or head is lost authority, not a
+			// fresh installation: never reset the monotonic revision to zero.
+			objects, err := f.names(runtimeFilesRoot + "/objects")
+			if err != nil && !errors.Is(err, unix.ENOENT) {
+				return zero, err
+			}
+			if len(objects) != 0 {
+				return zero, ErrInventory
+			}
 			if e = f.verifyTransaction(ctx, genesis); e != nil {
 				return zero, e
 			}

@@ -26,6 +26,11 @@ rollback selects only the immediate retained vector, not caller-supplied bytes
 or an earlier authority revision. Exact last-request retries are stable;
 unrelated stale requests and revision overflow refuse. Forward selection
 reserves the final revision for a possible retained-image rollback.
+Surviving payload objects with neither an intent nor head are lost authority,
+not a fresh revision zero—even if the binary vector again matches genesis and
+the startup fence has also disappeared. The engine refuses this counter loss
+without recreating it. This is not recovery from total storage destruction or
+protection against a malicious privileged owner.
 
 The fixed writable vector has 14 paths: seven non-backend runtime programs,
 the installer executable, the chroot gateway copy, three generated
