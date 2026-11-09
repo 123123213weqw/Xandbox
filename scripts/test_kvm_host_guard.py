@@ -244,7 +244,11 @@ class OwnedHandleTests(unittest.TestCase):
 
     def test_serial_lease_rejects_unsafe_directory_symlink_and_lock_content(self):
         with tempfile.TemporaryDirectory() as root:
-            path = Path(root) / 'guard'; path.mkdir(mode=0o755)
+            # mkdir's mode is filtered by umask: under 077, requesting 0755
+            # creates a SAFE 0700 directory. Establish the actual unsafe input
+            # explicitly; never weaken the production permission check.
+            path = Path(root) / 'guard'; path.mkdir(mode=0o700); path.chmod(0o755)
+            self.assertEqual(path.stat().st_mode & 0o7777, 0o755)
             with self.assertRaises(guard.UnsafeHost): guard._serial_lock_at(path, os.getuid())
             path.chmod(0o700); (path / 'lock').write_text('foreign'); (path / 'lock').chmod(0o600)
             with self.assertRaises(guard.UnsafeHost): guard._serial_lock_at(path, os.getuid())
