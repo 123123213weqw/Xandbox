@@ -19,6 +19,7 @@ type runtimeScope struct {
 	fs     *filesystem
 	lock   *os.File
 	rootID os.FileInfo
+	state  *runtimeStateLease // Separate original daemon BSD flock, acquired only AFTER stop proof.
 }
 
 func (f *filesystem) beginRuntimeScope(ctx context.Context) (*runtimeScope, error) {
@@ -42,6 +43,10 @@ func (s *runtimeScope) close() {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.state != nil {
+		s.state.close()
+		s.state = nil
+	}
 	if s.lock != nil {
 		s.lock.Close()
 		s.lock = nil
@@ -79,6 +84,9 @@ func (s *runtimeScope) valid(ctx context.Context) error {
 	}
 	if !os.SameFile(before, after) || after.Size() != 0 {
 		return ErrInventory
+	}
+	if s.state != nil {
+		return s.state.verify(s.fs)
 	}
 	return nil
 }

@@ -38,6 +38,12 @@ kernel path is exposed. Recheck both units/incarnations, source/protected bytes,
 links and original lease before effects; foreign drift refuses without restoring
 old authority or restarting a service.
 
+New v2 intents additionally bind original state-root/controller-lock identity and
+verify the original live main process's actual kernel BSD lock. The later owned
+state lease and core inventory are described in [RUNTIME_STATE.md](RUNTIME_STATE.md).
+Earlier v1 physical-stop recovery remains supported but cannot gain that stronger
+state authority or be silently rewritten into a v2 proof.
+
 Each stopped stage requires **all** of:
 - expected manager composition and inactive/failed state with `MainPID=0`;
 - still-open original pidfd reports actual exit (`POLLIN`, optionally `POLLHUP`),

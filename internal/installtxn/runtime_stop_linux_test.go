@@ -16,6 +16,7 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 // Test ELF only. Parent owns every child handle and is the ONLY process that
@@ -27,6 +28,15 @@ func TestRuntimeStopOperatorHelper(t *testing.T) {
 		return
 	}
 	if os.Getenv("XANDBOX_TEST_STOP_ROLE") == "main" {
+		// Match the ordinary daemon's ORIGINAL BSD flock, in a private test root.
+		lock, e := os.OpenFile(root+stateDir+"/controller.lock", os.O_CREATE|os.O_RDWR|unix.O_NOFOLLOW, 0600)
+		if e != nil {
+			os.Exit(69)
+		}
+		defer lock.Close()
+		if unix.Flock(int(lock.Fd()), unix.LOCK_EX|unix.LOCK_NB) != nil {
+			os.Exit(70)
+		}
 		store, e := nodecontrol.OpenStore(root + stateDir)
 		if e != nil {
 			os.Exit(71)

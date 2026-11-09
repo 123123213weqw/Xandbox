@@ -91,13 +91,16 @@ func TestRuntimeStopCrashHelper(t *testing.T) {
 		os.Exit(75)
 	}
 	_, e = s.stopWithProofs(context.Background(), os.Getenv("XANDBOX_TEST_STOP_BASE"), runtimeReq("b"), c, m, proof)
+	if e == nil && os.Getenv("XANDBOX_TEST_STOP_CRASH_CUT") == "runtime-state-locked" {
+		e = s.ownStoppedStateWithProof(context.Background(), os.Getenv("XANDBOX_TEST_STOP_BASE"), runtimeReq("b"), m, proof.empty)
+	}
 	if e != nil {
 		os.Exit(76)
 	}
 	os.Exit(0)
 }
 func TestRuntimeStopActualCoordinatorSIGKILLRecoversAfterOperatorDeath(t *testing.T) {
-	for _, cut := range []string{"runtime-stop-intent-durable", "runtime-stop-after-" + IngressUnit, "runtime-stop-after-" + MainUnit, "runtime-stop-receipt-renamed"} {
+	for _, cut := range []string{"runtime-stop-intent-durable", "runtime-stop-after-" + IngressUnit, "runtime-stop-after-" + MainUnit, "runtime-stop-receipt-renamed", "runtime-state-locked"} {
 		t.Run(cut, func(t *testing.T) {
 			x := stopModel(t, "")
 			s := x.scope(t)
@@ -171,6 +174,20 @@ func TestRuntimeStopActualCoordinatorSIGKILLRecoversAfterOperatorDeath(t *testin
 			r, e := x.stop(ctx, s, client)
 			if e != nil || !r.ExecutionStopped || r.ResourcesReclaimed || r.ActivationAllowed || len(x.jobs) != 2 {
 				t.Fatal("fresh coordinator recovery", r, e, x.jobs)
+			}
+			if cut == "runtime-state-locked" {
+				if e = ownStateModel(ctx, x, s); e != nil {
+					t.Fatal("kernel did not release dead coordinator state lock", e)
+				}
+				other, e := x.f.openRuntimeState()
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = acquireRuntimeState(other); !errors.Is(e, unix.EWOULDBLOCK) {
+					other.close()
+					t.Fatal("fresh scope did not retain original lease", e)
+				}
+				other.close()
 			}
 			unchangedRuntimeProtected(t, x.f, before)
 			if _, e = x.f.startupFilesLocked(ctx); e == nil {

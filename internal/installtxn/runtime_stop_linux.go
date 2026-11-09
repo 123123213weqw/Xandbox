@@ -26,6 +26,7 @@ type runtimeStopIntent struct {
 	Drain   string                       `json:"drain_intent_sha256"`
 	Main    nodecontrol.ProcessIdentity  `json:"main"`
 	Ingress *nodecontrol.ProcessIdentity `json:"ingress,omitempty"`
+	State   *runtimeStateIdentity        `json:"state_identity,omitempty"`
 }
 type runtimeStopReceipt struct {
 	Version int    `json:"version"`
@@ -41,7 +42,8 @@ type runtimeStopProofs struct {
 }
 
 func validRuntimeStop(p runtimeStopIntent) bool {
-	return p.Version == 1 && digestPattern.MatchString(p.Base) && requestPattern.MatchString(p.Request) && digestPattern.MatchString(p.Drain) && p.Main.Valid() && (p.Ingress == nil || p.Ingress.Valid() && *p.Ingress != p.Main)
+	version := p.Version == 1 && p.State == nil || p.Version == 2 && p.State != nil && p.State.valid()
+	return version && digestPattern.MatchString(p.Base) && requestPattern.MatchString(p.Request) && digestPattern.MatchString(p.Drain) && p.Main.Valid() && (p.Ingress == nil || p.Ingress.Valid() && *p.Ingress != p.Main)
 }
 func (f *filesystem) readRuntimeStop() (runtimeStopIntent, error) {
 	var p runtimeStopIntent
@@ -55,6 +57,11 @@ func (f *filesystem) readRuntimeStop() (runtimeStopIntent, error) {
 	return p, nil
 }
 func (f *filesystem) stopInventory(p *runtimeStopIntent) error {
+	if p != nil && p.State != nil {
+		if e := f.runtimeStateMatches(*p.State); e != nil {
+			return e
+		}
+	}
 	names, e := f.names(runtimeStopRoot)
 	if errors.Is(e, unix.ENOENT) {
 		return nil
@@ -300,7 +307,16 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if e = checkDrain(); e != nil {
 				return e
 			}
-			p = runtimeStopIntent{Version: 1, Base: base, Request: request, Drain: digest(encode(drain)), Main: drain.Process}
+			state, e := f.openRuntimeState()
+			if e != nil {
+				return e
+			}
+			id := state.id
+			state.close()
+			if e = runtimeStateOwnedBy(id, drain.Process); e != nil {
+				return e
+			}
+			p = runtimeStopIntent{Version: 2, Base: base, Request: request, Drain: digest(encode(drain)), Main: drain.Process, State: &id}
 			if ingress.pid > 1 {
 				w, e := nodecontrol.NewProcessWatch(ingress.pid)
 				if e != nil {
@@ -368,6 +384,11 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if e = checkDrain(); e != nil {
 				return e
 			}
+			if p.State != nil {
+				if e = runtimeStateOwnedBy(*p.State, p.Main); e != nil {
+					return e
+				}
+			}
 		}
 		if e = f.runtimeDrainLocked(ctx, func() error {
 			if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
@@ -432,6 +453,11 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 				}
 				if e = s.valid(ctx); e != nil {
 					return e
+				}
+				if main.pid > 1 && p.State != nil {
+					if e = runtimeStateOwnedBy(*p.State, p.Main); e != nil {
+						return e
+					}
 				}
 				if e = m.enabledLinks(); e != nil {
 					return e
