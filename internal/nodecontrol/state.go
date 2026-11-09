@@ -34,6 +34,9 @@ type State struct {
 	LastExpectedRevision uint64 `json:"last_expected_revision"`
 }
 
+// Valid checks the closed persistent schema, not disk durability or quiescence.
+func (s State) Valid() bool { return s.valid() }
+
 func (s State) valid() bool {
 	if s.Version != 1 || !hexID.MatchString(s.Epoch) || s.Revision == 0 || (s.Mode != ModeOpen && s.Mode != ModeDrained) {
 		return false

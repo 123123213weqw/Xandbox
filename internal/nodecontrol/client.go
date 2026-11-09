@@ -16,9 +16,17 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
 
-type Client struct{ http *http.Client }
+type Client struct {
+	http *http.Client
+	live func() error // Only the Linux incarnation-bound constructor supplies it.
+	root os.FileInfo
+}
 
 func NewClient(stateDir string) (*Client, error) {
+	return newClient(stateDir, nil)
+}
+
+func newClient(stateDir string, pinnedPeer func(*net.UnixConn) error) (*Client, error) {
 	dir, e := privatefile.ExistingDirectory(stateDir)
 	if e != nil {
 		return nil, e
@@ -56,6 +64,12 @@ func NewClient(stateDir string) (*Client, error) {
 			conn.Close()
 			return nil, e
 		}
+		if pinnedPeer != nil {
+			if e = pinnedPeer(u); e != nil {
+				conn.Close()
+				return nil, e
+			}
+		}
 		after, e := os.Lstat(path)
 		if e != nil || !privateSocket(after) || !os.SameFile(before, after) {
 			conn.Close()
@@ -63,7 +77,7 @@ func NewClient(stateDir string) (*Client, error) {
 		}
 		return conn, nil
 	}}
-	return &Client{http: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
+	return &Client{root: directoryInfo, http: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }
 func (c *Client) Close()                                    { c.http.CloseIdleConnections() }
 func (c *Client) Status(ctx context.Context) (Reply, error) { return c.call(ctx, "status", nil) }
@@ -81,6 +95,11 @@ func (c *Client) Change(ctx context.Context, mode string, request Command) (Repl
 }
 func (c *Client) call(ctx context.Context, operation string, command *Command) (Reply, error) {
 	var reply Reply
+	if c.live != nil {
+		if e := c.live(); e != nil {
+			return reply, e
+		}
+	}
 	path, method := "/v1/node", http.MethodGet
 	if operation != "status" {
 		path += "/" + operation
@@ -108,6 +127,11 @@ func (c *Client) call(ctx context.Context, operation string, command *Command) (
 	}
 	if len(b) > MaxReplyBytes {
 		return reply, errors.New("operator reply too large")
+	}
+	if c.live != nil {
+		if e = c.live(); e != nil {
+			return Reply{}, e // An accepted mutation may still need exact retry.
+		}
 	}
 	if response.StatusCode != 200 {
 		var failure controlError

@@ -55,10 +55,12 @@ func (f *filesystem) startupFilesLocked(ctx context.Context) (transaction, error
 	if e := ctx.Err(); e != nil {
 		return zero, e
 	}
-	if yes, e := f.exists(runtimeFilesRoot); e != nil {
-		return zero, e
-	} else if yes {
-		return zero, ErrInventory
+	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot} {
+		if yes, e := f.exists(root); e != nil {
+			return zero, e
+		} else if yes {
+			return zero, ErrInventory
+		}
 	}
 	t, e := f.readTransaction("commit")
 	if e != nil {

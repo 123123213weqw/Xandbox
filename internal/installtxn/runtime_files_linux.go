@@ -519,6 +519,13 @@ func (f *filesystem) runtimeFileExchange(ctx context.Context, base string, expec
 		return zero, e
 	}
 	defer unlock()
+	// The standalone drain component is not a Stop/reclaim proof. Composing
+	// these engines requires the future owned operation scope + lifecycle adapter.
+	if yes, err := f.exists(runtimeDrainRoot); err != nil {
+		return zero, err
+	} else if yes {
+		return zero, ErrInventory
+	}
 	genesis, e := f.runtimeBase(base)
 	if e != nil {
 		return zero, e
