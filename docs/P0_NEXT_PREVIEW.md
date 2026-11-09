@@ -138,5 +138,14 @@ cancel remaining obsolete-head jobs through the existing concurrency policy.
 
 This is CI infrastructure maintenance, not macOS 14 compatibility certification
 or a Linux/KVM/runtime change. The six source files exercised by the 37 original
-node software controls remain byte-identical; compare those exact hashes rather
+node software controls remain byte-identical in that CI-only commit; compare those exact hashes rather
 than rerunning unchanged software or claiming new hardware qualification.
+
+## 5. Monitor lifecycle refusal
+
+A follow-up hardens the test guard's own lifecycle: a never-started monitor,
+or one already stopped/closed, cannot authorize a launch even when no pressure
+failure has been recorded. Two explicit negative controls check that the spawn
+callback is never called. The ordinary service is unchanged. This changes the
+guard and its tests, so the earlier 37-control native result is historical;
+current software needs its own 39-control evidence, not an inherited pass.

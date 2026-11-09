@@ -212,6 +212,7 @@ class HostGuard:
         self.lock, self.done = threading.Lock(), threading.Event()
         self.failure, self.abort = None, None
         self.lease, self.thread = None, None
+        self._active = False
 
     def start(self):
         if self.lease is not None or self.thread is not None or self.done.is_set():
@@ -220,6 +221,7 @@ class HostGuard:
             self.lease = serial_lock()
             self.check_sample(starting=True)
             self.deadline = self.clock() + self.budget.seconds
+            self._active = True
             self.thread = threading.Thread(target=self._watch, daemon=True, name='owned-test-headroom')
             self.thread.start()
         except BaseException:
@@ -260,14 +262,17 @@ class HostGuard:
         # A trip before spawn rejects launch; a trip after spawn closes this
         # generation's pipe and kills only its already-open execution domain.
         with self.lock:
-            if self.failure is not None:
-                raise UnsafeHost(self.failure)
+            if self.failure is not None or not self._active or self.done.is_set():
+                # A never-started or already-closed monitor is not launch
+                # authority, even if it has never observed a pressure failure.
+                raise UnsafeHost(self.failure or 'active host monitor required')
             self.abort = handle.abort
             return start()
 
     def stop(self):
         self.done.set()
         with self.lock:
+            self._active = False
             self.abort = None
         if self.thread is not None and self.thread.ident is not None:
             self.thread.join(timeout=5)

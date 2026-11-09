@@ -120,9 +120,13 @@ class HostBudgetTests(unittest.TestCase):
 
 
 class MonitorTests(unittest.TestCase):
-    def make(self, read=None, clock=None):
-        return guard.HostGuard(guard.Budget(3 * guard.GIB, 4 * guard.GIB, 4), (),
-                               _sample=read or healthy, _clock=clock)
+    def make(self, read=None, clock=None, *, admitted=True):
+        monitor = guard.HostGuard(guard.Budget(3 * guard.GIB, 4 * guard.GIB, 4), (),
+                                  _sample=read or healthy, _clock=clock)
+        # Most state-machine tests begin at an already admitted state. Startup
+        # controls below independently exercise the real start/lease path.
+        monitor._active = admitted
+        return monitor
 
     def test_failure_latches_no_relaunch_and_callback_exactly_once(self):
         monitor = self.make(); handle = mock.Mock(); spawn = mock.Mock(return_value='child')
@@ -172,18 +176,31 @@ class MonitorTests(unittest.TestCase):
     def test_start_failure_releases_serial_lease(self):
         with tempfile.TemporaryFile() as file:
             fd = os.dup(file.fileno())
-            monitor = self.make(read=mock.Mock(side_effect=OSError()))
+            monitor = self.make(read=mock.Mock(side_effect=OSError()), admitted=False)
             with mock.patch.object(guard, 'serial_lock', return_value=fd):
                 with self.assertRaises(OSError): monitor.start()
             with self.assertRaises(OSError): os.fstat(fd)
 
     def test_start_close_is_single_use_and_releases_lease(self):
         with tempfile.TemporaryFile() as file:
-            fd = os.dup(file.fileno()); monitor = self.make()
+            fd = os.dup(file.fileno()); monitor = self.make(admitted=False)
             with mock.patch.object(guard, 'serial_lock', return_value=fd): monitor.start()
             monitor.close(); monitor.close()
             with self.assertRaises(OSError): os.fstat(fd)
             with self.assertRaises(guard.UnsafeHost): monitor.start()
+
+    def test_never_started_monitor_cannot_authorize_spawn(self):
+        monitor = self.make(admitted=False); spawn = mock.Mock(); handle = mock.Mock()
+        with self.assertRaises(guard.UnsafeHost): monitor.launch(handle, spawn)
+        spawn.assert_not_called(); handle.abort.assert_not_called()
+
+    def test_stop_or_close_cannot_be_followed_by_unmonitored_spawn(self):
+        for method in ('stop', 'close'):
+            monitor = self.make(); spawn = mock.Mock(); handle = mock.Mock()
+            getattr(monitor, method)()
+            with self.subTest(method=method), self.assertRaises(guard.UnsafeHost):
+                monitor.launch(handle, spawn)
+            spawn.assert_not_called(); handle.abort.assert_not_called()
 
 
 class OwnedHandleTests(unittest.TestCase):
