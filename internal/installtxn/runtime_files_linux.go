@@ -109,7 +109,13 @@ func validRuntimeHead(h runtimeFileHead, zero bool) bool {
 	if h.Revision == 0 {
 		return zero && h.Request == "" && h.Input == "" && h.Direction == "" && len(h.Previous) == 0
 	}
-	return requestPattern.MatchString(h.Request) && digestPattern.MatchString(h.Input) && (h.Direction == "forward" || h.Direction == "rollback") && validRuntimeFiles(h.Previous) && !bytes.Equal(encode(h.Current), encode(h.Previous))
+	if !requestPattern.MatchString(h.Request) || !digestPattern.MatchString(h.Input) || (h.Direction != "forward" && h.Direction != "rollback") || h.Direction == "forward" && h.Revision == ^uint64(0) || !validRuntimeFiles(h.Previous) || bytes.Equal(encode(h.Current), encode(h.Previous)) {
+		return false
+	}
+	// Decode is an authority boundary, not just a shape check. Reconstruct the
+	// exact committed request; a domain-valid but unrelated input hash refuses.
+	i := runtimeFileInput{Base: h.Base, Expected: h.Revision - 1, Request: h.Request, Direction: h.Direction, After: h.Current}
+	return h.Input == digest(encode(i))
 }
 func validRuntimeIntent(p runtimeFileIntent) bool {
 	i := p.Input
@@ -119,7 +125,7 @@ func validRuntimeIntent(p runtimeFileIntent) bool {
 	if i.Direction == "rollback" {
 		return p.Prior.Revision > 0 && bytes.Equal(encode(i.After), encode(p.Prior.Previous))
 	}
-	return i.Direction == "forward"
+	return i.Direction == "forward" && i.Expected < ^uint64(0)-1
 }
 func nextRuntimeHead(p runtimeFileIntent) runtimeFileHead {
 	return runtimeFileHead{Version: 1, Revision: p.Input.Expected + 1, Base: p.Input.Base, Request: p.Input.Request, Input: digest(encode(p.Input)), Direction: p.Input.Direction, Current: p.Input.After, Previous: p.Prior.Current}
@@ -376,6 +382,13 @@ func (f *filesystem) runtimeCapture(ctx context.Context, files []File) error {
 	return nil
 }
 func (f *filesystem) runtimeReplace(ctx context.Context, old, next File) error {
+	if next.Path == childRoot+"/gateway" && old.Path == next.Path {
+		return f.runtimeGatewayReplace(ctx, old, next)
+	}
+	return f.runtimeReplaceFile(ctx, old, next)
+}
+
+func (f *filesystem) runtimeReplaceFile(ctx context.Context, old, next File) error {
 	if old.Path != next.Path || old.Mode != next.Mode {
 		return ErrPolicy
 	}

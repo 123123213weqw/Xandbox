@@ -49,7 +49,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           umask 077
-          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntimeFile' ./internal/installtxn
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntime(File|Startup)' ./internal/installtxn
       - name: Race and failure tests under private umask
         run: |
           umask 077

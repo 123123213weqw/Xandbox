@@ -521,6 +521,16 @@ func (f *filesystem) privateDirectory(path string, mode uint32) error {
 	return trustedStat(int(dir.Fd()), true, mode)
 }
 func (f *filesystem) verifyGenerated(t transaction) error {
+	art, e := descriptor(t.Release)
+	if e != nil {
+		return e
+	}
+	return f.verifyGeneratedArtifacts(t.Plan, art)
+}
+
+// The runtime overlay changes only the selected program pins. Reuse the exact
+// original backend/composition rules and generators, never a second template.
+func (f *filesystem) verifyGeneratedArtifacts(plan Plan, art map[string]Artifact) error {
 	raw, e := f.read(Root+"/backend.json", 16384, 0600)
 	if e != nil {
 		return e
@@ -529,11 +539,7 @@ func (f *filesystem) verifyGenerated(t transaction) error {
 	if strictjson.Decode(raw, &cfg) != nil || cfg.Version != 3 || cfg.Snapshot != nil || cfg.RuntimeRoot != runtimeDir || cfg.CgroupRoot != unitRoot+"/node/instances" || cfg.IO == nil || cfg.Node == nil || cfg.Quota == nil {
 		return ErrInventory
 	}
-	art, e := descriptor(t.Release)
-	if e != nil {
-		return e
-	}
-	n := nodeManifest(t.Plan, art)
+	n := nodeManifest(plan, art)
 	if n.CheckServiceBackend(cfg) != nil {
 		return ErrInventory
 	}
@@ -542,7 +548,7 @@ func (f *filesystem) verifyGenerated(t transaction) error {
 			return ErrInventory
 		}
 	}
-	generated, e := render(t.Plan, cfg.IO.Device, art)
+	generated, e := render(plan, cfg.IO.Device, art)
 	if e != nil {
 		return e
 	}

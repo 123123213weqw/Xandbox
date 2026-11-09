@@ -56,8 +56,9 @@ and byte hash alone are not semantic compatibility.
    the producer before sealing; after the first final swap, all required old
    and new bytes must already be retained independently of that producer.
 4. Persist a matching `runtime-files-pending.json` startup fence in the original
-   install root. The existing legacy installer rejects this unknown inventory,
-   including at startup. Repeat the stopped boundary and protected/base proof.
+   install root. The legacy immutable inventory rejects this unknown file. The real
+   cap0 startup gate also refuses ANY runtime-journal namespace, even if a
+   rollback restored genesis and the startup fence was subsequently lost. Repeat the stopped boundary and protected/base proof.
 5. For each changed target, verify the original bounded inode/bytes, seal a
    same-directory scratch from the retained object, recheck the old path, rename
    and sync its parent. Mixed old/new images are recoverable **only while
@@ -70,6 +71,18 @@ and byte hash alone are not semantic compatibility.
 7. Retire only the matching file intent after the head and file effects are
    durable. **Keep the startup fence.** Even a successful retained-image
    rollback reports `StartupBlocked=true` and `ActivationAllowed=false`.
+
+The fixed chroot gateway parent is normally sealed `0555`. Updating its child
+also requires a bounded permission transaction: only a matching durable intent
+and startup fence may change that exact owned directory to `0700`; sync, select
+the gateway, then restore and sync `0555` before head CAS. No shared ancestor
+permissions change and no capability/privilege fallback is used. An interrupted
+writable mode is recoverable only under the original intent, never repaired by
+a new request, an unbound lost-ACK retry or a read verifier. Four additional
+error cuts and two actual child SIGKILL points cover writable/sealed recovery.
+The initial nonprivileged software attempt exposed the missing directory-write
+step; it failed and stopped before race execution. That failed source/run is
+retained separately, never counted as a passing current-source qualification.
 
 Unknown state, scratch, objects, wrong hashes/modes/inodes, producer drift,
 genesis changes, failed stopped observations, conflicting intents or uncertain
@@ -97,12 +110,36 @@ No model runtime bytes or test hook/FD-root selector is a production artifact.
 
 ## Missing integration — do not remove the fence
 
-The current installed self pin and generated startup verifiers still bind the
-original immutable targets. A real forward activation needs a **strict,
-genesis-preserving runtime overlay/self-pin verifier**, not rewriting genesis
-or allowing arbitrary file/hash overrides. It must preserve managed policy's
-old base while verifying the selected runtime vector and its generated config.
-Rolling back a daemon must not roll back the policy chain or credentials.
+The real installed startup gate remains on the genesis-only path and now
+explicitly rejects any runtime-journal namespace. Losing its fence or restoring
+genesis executables after rollback must not turn missing activation authority
+into permission to start. It uses the original read-only SH lock, with zero-size
+and post-acquisition inode checks; missing/rebound locks are not repaired.
+
+An **internal, read-only pre-activation composition verifier** now reads the exact
+canonical, input-bound head and original genesis. It requires the matching fence,
+no pending intent/scratch, private journal directories, every sealed current and
+retained payload, every selected/protected file, closed artifact/child inventory,
+native static ET_EXEC programs and an identical selected/chroot gateway. It
+reconstructs only the seven program pins; backend assets, original auth/config,
+budgets and managed policy base stay fixed. It reuses the production generators
+to check all three configs and both service units byte-for-byte. A coherent
+hash/object set with an incorrect generated composition or interpreter/script
+is insufficient. The head decoder derives its input digest from the actual
+base/revision/request/direction/current fields, not just the digest's syntax;
+forward selection cannot consume the last revision reserved for rollback.
+
+The separate internal self-byte check reads only the actual `/proc/self/exe`,
+not a caller-selected executable or the old genesis self hash. Neither internal
+primitive is permission to execute; there is no public selector, override,
+activation receipt or fence-finalization operation. They are not wired to accept
+updated startup. Synthetic ELF parser controls are data, not real qualified
+runtime builds. Source/build descriptors, all-authority compatibility and a real
+CGO-free service-gate run still need independent qualification. Do not compose
+unlocked/cached read proofs into an activation certificate. A future lifecycle
+adapter must retain the appropriate original locks across each proof boundary
+without deadlocking manager startup. Rolling back a daemon must never roll back
+the policy chain or credentials.
 
 Also required: source-bound **all-authority** backward-reader compatibility;
 persistent admission drain; observed accepted-work completion and independent
