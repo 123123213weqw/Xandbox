@@ -23,7 +23,7 @@ jobs:
             go: 1.25.x
           - os: ubuntu-24.04
             go: 1.27.x
-          - os: macos-14
+          - os: macos-15
             go: 1.27.x
     runs-on: ${{ matrix.os }}
     # Measured 77-root crash suite: retain whole-package race x3, not a runtime SLO.

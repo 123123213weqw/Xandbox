@@ -118,3 +118,25 @@ Before any future runtime upgrade/rollback executor is enabled it must have:
 Until those gates pass, keep the old installation intact; evaluate new versions
 only in a separately owned test environment. No automatic deployment, active
 node replacement, or claims that in-place rollback now works.
+
+## 4. CI runner maintenance (2026-11-09)
+
+The initial P0 head `0fbdca9` used the released main's `macos-14` label.
+Its [push run](https://github.com/123123213weqw/Xandbox/actions/runs/42610808470)
+and [PR run](https://github.com/123123213weqw/Xandbox/actions/runs/42610875991)
+each cancelled the macOS job before any test step, without assigning a runner.
+The actual annotation reported an unsupported `macos-14-arm64-us-default`
+configuration. Those original outcomes are retained, not passing tests.
+
+GitHub's [official retirement notice](https://github.blog/changelog/2026-10-01-github-actions-macos-14-runner-image-retirement/)
+announced removal on November 2. Change only the fixed macOS label to the
+supported `macos-15`; preserve all six jobs, Go versions, test repetitions,
+timeouts and security gates. No floating `latest`, paid larger runner or
+self-hosted/shared-node runner is introduced. New-head CI needs its own results;
+an old cancelled run is never reclassified as green. Updating the branch may
+cancel remaining obsolete-head jobs through the existing concurrency policy.
+
+This is CI infrastructure maintenance, not macOS 14 compatibility certification
+or a Linux/KVM/runtime change. The six source files exercised by the 37 original
+node software controls remain byte-identical; compare those exact hashes rather
+than rerunning unchanged software or claiming new hardware qualification.
