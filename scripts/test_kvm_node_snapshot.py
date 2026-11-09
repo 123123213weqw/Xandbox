@@ -14,8 +14,17 @@ class NodeSnapshotTests(unittest.TestCase):
   go=(Path(__file__).resolve().parent.parent/'cmd/xandbox-host-fixture/node_prepare_trace_linux.go').read_text()
   match=re.search(r'const prepareTraceELFSHA = "([0-9a-f]{64})"',go)
   self.assertIsNotNone(match);self.assertEqual(match[1],PREPARE_TRACE_ELF_SHA256)
-  bad=calibration();bad['exact_ordinary_elf_sha256']='d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'
-  with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
+  for old in ('5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c','d163a628036f4ecc2a6345bc8936500ad8b68368bd37337e916a9dfa761a6a26'):
+   self.assertNotEqual(old,PREPARE_TRACE_ELF_SHA256)
+   bad=calibration();bad['exact_ordinary_elf_sha256']=old
+   with self.assertRaises(AssertionError):validate_prepare_calibration(bad)
+  # Probe calibration must not implicitly retarget unqualified fault observers.
+  base=Path(__file__).resolve().parent.parent/'cmd/xandbox-host-fixture'
+  operator=(base/'node_operator_store_notify_linux.go').read_text()
+  frozen=re.search(r'const observerOrdinaryELFSHA = "([0-9a-f]{64})"',operator)
+  self.assertIsNotNone(frozen);self.assertEqual(frozen[1],'5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c')
+  for name in ('node_operator_store_notify_linux.go','node_diagnostics_notify_linux.go'):
+   text=(base/name).read_text();self.assertNotIn('prepareTraceELFSHA',text);self.assertIn('observerOrdinaryELFSHA',text)
  def test_explicit_profile_and_inode_format_leave_old_modes_unchanged(self):
   r=nested_node_resources(True);self.assertEqual(r,{'profile':'node-snapshot-v1','memory_mib':8192,'disk_bytes':12<<30,'cgroup_memory_max':10<<30})
   self.assertEqual(nested_group_limits(r)['cpu.max'],'800000 100000');self.assertEqual(nested_group_limits(r)['pids.max'],'256')

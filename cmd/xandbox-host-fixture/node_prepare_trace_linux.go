@@ -9,6 +9,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"debug/elf"
 	"encoding/hex"
 	"errors"
@@ -19,13 +20,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"golang.org/x/sys/unix"
 )
 
-const prepareTraceELFSHA = "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c"
+const prepareTraceELFSHA = "64883c528ba1d574aaa082c24b136e4938717c13c6abc122afcbddbb3b6c2abe"
+const prepareTraceELFBytes int64 = 12622263
 const prepareTraceRoot = "/sys/kernel/tracing"
 const prepareTraceInstance = prepareTraceRoot + "/instances/xandbox_prepare_calibration"
 const prepareTraceGroup = "xandbox_prepare_calibration"
@@ -47,58 +50,129 @@ type prepareProbe struct {
 func prepareProbes() []prepareProbe {
 	const prefix = "github.com/123123213weqw/Xandbox/internal/firecracker."
 	return []prepareProbe{
-		{"enter", prefix + "(*prepareGate).acquire", 0x748012, "4889842480000000", "ax"},
-		{"selected", prefix + "(*prepareGate).acquire", 0x748085, "4885c0", "ax"},
-		{"ok", prefix + "(*prepareGate).acquire", 0x7480d5, "31c0", "ax"},
-		{"cancel", prefix + "(*prepareGate).acquire", 0x7480f5, "4883c470", "ax"},
-		{"race_release", prefix + "(*prepareGate).acquire", 0x7480c5, "488b442438", "ax"},
-		{"node_ok", prefix + "(*nodeEnvelope).acquirePrepare", 0x745a35, "31c0", "ax"},
-		{"node_reject_release", prefix + "(*nodeEnvelope).acquirePrepare", 0x745a25, "488b442418", "ax"},
-		{"release", prefix + "(*driver).Prepare.deferwrap1", 0x751df2, "488b01", "cx"},
-		{"released", prefix + "(*driver).Prepare.deferwrap1", 0x751dfc, "4883c410", "ax"},
+		{"enter", prefix + "(*prepareGate).acquire", 0x749972, "4889842480000000", "ax"},
+		{"selected", prefix + "(*prepareGate).acquire", 0x7499e5, "4885c0", "ax"},
+		{"ok", prefix + "(*prepareGate).acquire", 0x749a35, "31c0", "ax"},
+		{"cancel", prefix + "(*prepareGate).acquire", 0x749a55, "4883c470", "ax"},
+		{"race_release", prefix + "(*prepareGate).acquire", 0x749a25, "488b442438", "ax"},
+		{"node_ok", prefix + "(*nodeEnvelope).acquirePrepare", 0x747395, "31c0", "ax"},
+		{"node_reject_release", prefix + "(*nodeEnvelope).acquirePrepare", 0x747385, "488b442418", "ax"},
+		{"release", prefix + "(*driver).Prepare.deferwrap1", 0x753752, "488b01", "cx"},
+		{"released", prefix + "(*driver).Prepare.deferwrap1", 0x75375c, "4883c410", "ax"},
 	}
 }
 
+// One immutable bounded image is BOTH hashed and parsed. No reopen-after-hash
+// window, generic digest selector, alternate target, or live tracing here.
+func prepareProbeImage(raw []byte) ([]uint64, error) {
+	if int64(len(raw)) != prepareTraceELFBytes || fmt.Sprintf("%x", sha256.Sum256(raw)) != prepareTraceELFSHA {
+		return nil, errors.New("trace requires exact qualified ordinary daemon image")
+	}
+	f, e := elf.NewFile(bytes.NewReader(raw))
+	if e != nil {
+		return nil, e
+	}
+	defer f.Close()
+	return prepareProbeOffsets(f, bytes.NewReader(raw))
+}
+
+func samePrepareExecutable(a, b os.FileInfo) bool {
+	if a == nil || b == nil || !a.Mode().IsRegular() || !b.Mode().IsRegular() || !os.SameFile(a, b) || a.Size() != b.Size() || a.Mode() != b.Mode() || !a.ModTime().Equal(b.ModTime()) {
+		return false
+	}
+	x, xok := a.Sys().(*syscall.Stat_t)
+	y, yok := b.Sys().(*syscall.Stat_t)
+	return xok && yok && x.Uid == y.Uid && x.Gid == y.Gid && x.Nlink == y.Nlink && x.Ctim == y.Ctim
+}
+
+func prepareProbeFile(f *os.File) ([]uint64, os.FileInfo, error) {
+	before, e := f.Stat()
+	if e != nil || !before.Mode().IsRegular() || before.Size() != prepareTraceELFBytes {
+		return nil, nil, errors.New("fixed bounded regular probe ELF required")
+	}
+	raw := make([]byte, prepareTraceELFBytes)
+	if _, e = io.ReadFull(io.NewSectionReader(f, 0, prepareTraceELFBytes), raw); e != nil {
+		return nil, nil, e
+	}
+	after, e := f.Stat()
+	if e != nil || !samePrepareExecutable(before, after) {
+		return nil, nil, errors.New("probe ELF changed during verification")
+	}
+	offsets, e := prepareProbeImage(raw)
+	if e != nil {
+		return nil, nil, e
+	}
+	return offsets, after, nil
+}
+
 func prepareProbeOffsets(f *elf.File, raw io.ReaderAt) ([]uint64, error) {
-	if f.Class != elf.ELFCLASS64 || f.Machine != elf.EM_X86_64 || f.Type != elf.ET_EXEC || f.Data != elf.ELFDATA2LSB {
+	if f.Class != elf.ELFCLASS64 || f.Machine != elf.EM_X86_64 || f.Type != elf.ET_EXEC || f.Data != elf.ELFDATA2LSB || len(f.Progs) < 1 || len(f.Progs) > 32 {
 		return nil, errors.New("fixed amd64 static executable required")
+	}
+	for _, seg := range f.Progs {
+		if seg.Type == elf.PT_INTERP || seg.Type == elf.PT_DYNAMIC {
+			return nil, errors.New("static probe executable required")
+		}
 	}
 	syms, e := f.Symbols()
 	if e != nil {
 		return nil, e
 	}
-	var offsets []uint64
+	wanted := make(map[string][]elf.Symbol)
 	for _, p := range prepareProbes() {
-		valid := false
-		for _, s := range syms {
-			if s.Name == p.symbol && s.Size > 0 && p.address >= s.Value && p.address-s.Value < s.Size {
-				valid = true
-			}
+		wanted[p.symbol] = nil
+	}
+	for _, s := range syms {
+		if _, ok := wanted[s.Name]; ok {
+			wanted[s.Name] = append(wanted[s.Name], s)
 		}
-		if !valid {
+	}
+	var offsets []uint64
+	seen := make(map[uint64]bool)
+	for _, p := range prepareProbes() {
+		matches := wanted[p.symbol]
+		if len(matches) != 1 {
 			return nil, fmt.Errorf("fixed probe symbol mismatch: %s", p.name)
 		}
+		s := matches[0]
 		code, e := hex.DecodeString(p.opcode)
-		if e != nil {
-			return nil, e
+		if e != nil || len(code) == 0 || elf.ST_TYPE(s.Info) != elf.STT_FUNC || s.Section == elf.SHN_UNDEF || s.Section >= elf.SHN_LORESERVE || int(s.Section) >= len(f.Sections) || s.Size == 0 || s.Size > ^uint64(0)-s.Value || p.address < s.Value || p.address-s.Value >= s.Size || uint64(len(code)) > s.Size-(p.address-s.Value) {
+			return nil, fmt.Errorf("fixed probe function bounds mismatch: %s", p.name)
+		}
+		section := f.Sections[s.Section]
+		if section.Type != elf.SHT_PROGBITS || section.Flags&elf.SHF_EXECINSTR == 0 || s.Value < section.Addr || s.Value-section.Addr > section.Size || s.Size > section.Size-(s.Value-section.Addr) || section.Offset > ^uint64(0)-(p.address-section.Addr) {
+			return nil, errors.New("probe function outside executable section")
 		}
 		found := false
+		var offset uint64
 		for _, seg := range f.Progs {
-			if seg.Type != elf.PT_LOAD || seg.Flags&elf.PF_X == 0 || p.address < seg.Vaddr || p.address-seg.Vaddr > seg.Filesz || uint64(len(code)) > seg.Filesz-(p.address-seg.Vaddr) {
+			if seg.Type != elf.PT_LOAD || seg.Flags&elf.PF_X == 0 {
 				continue
 			}
-			offset := seg.Off + p.address - seg.Vaddr
-			got := make([]byte, len(code))
-			if _, e = raw.ReadAt(got, int64(offset)); e != nil || !bytes.Equal(got, code) {
-				return nil, fmt.Errorf("fixed instruction mismatch: %s", p.name)
+			if seg.Flags&elf.PF_W != 0 || seg.Filesz > seg.Memsz || seg.Filesz > ^uint64(0)-seg.Off || seg.Memsz > ^uint64(0)-seg.Vaddr {
+				return nil, errors.New("invalid executable segment geometry")
 			}
-			offsets = append(offsets, offset)
+			if s.Value < seg.Vaddr || s.Value-seg.Vaddr > seg.Filesz || s.Size > seg.Filesz-(s.Value-seg.Vaddr) {
+				continue
+			}
+			if found {
+				return nil, errors.New("ambiguous probe executable segment")
+			}
+			offset = seg.Off + (p.address - seg.Vaddr)
+			if offset != section.Offset+(p.address-section.Addr) || offset > (uint64(1)<<63)-1-uint64(len(code)) {
+				return nil, errors.New("invalid probe file offset")
+			}
 			found = true
-			break
 		}
-		if !found {
+		if !found || seen[offset] {
 			return nil, errors.New("probe outside file-backed executable segment")
 		}
+		got := make([]byte, len(code))
+		if n, e := raw.ReadAt(got, int64(offset)); e != nil || n != len(got) || !bytes.Equal(got, code) {
+			return nil, fmt.Errorf("fixed instruction mismatch: %s", p.name)
+		}
+		seen[offset] = true
+		offsets = append(offsets, offset)
 	}
 	return offsets, nil
 }
@@ -106,6 +180,7 @@ func prepareProbeOffsets(f *elf.File, raw io.ReaderAt) ([]uint64, error) {
 type prepareTrace struct {
 	pid        int
 	identity   string
+	verified   os.FileInfo
 	registered []string
 	mounted    bool
 	instance   bool
@@ -144,11 +219,11 @@ func (t *prepareTrace) daemon() error {
 		return errors.New("trace target incarnation changed")
 	}
 	a, e := os.Stat(fmt.Sprintf("/proc/%d/exe", t.pid))
-	if e != nil {
-		return e
+	if e != nil || !samePrepareExecutable(a, t.verified) {
+		return errors.New("trace target is not the verified executable")
 	}
 	b, e := os.Stat("/srv/assets/sandboxd")
-	if e != nil || !os.SameFile(a, b) {
+	if e != nil || !samePrepareExecutable(b, t.verified) {
 		return errors.New("trace target executable inode changed")
 	}
 	cg, e := os.ReadFile(fmt.Sprintf("/proc/%d/cgroup", t.pid))
@@ -165,21 +240,12 @@ func startPrepareTrace(pid int) (t *prepareTrace, err error) {
 	if _, e := fixedNodeSnapshotConfig(); e != nil {
 		return nil, e
 	}
-	h, e := fileHash("/srv/assets/sandboxd")
-	if e != nil || h != prepareTraceELFSHA {
-		return nil, errors.New("trace requires exact qualified ordinary daemon ELF")
-	}
-	f, e := os.Open("/srv/assets/sandboxd")
+	f, e := os.OpenFile("/srv/assets/sandboxd", os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if e != nil {
 		return nil, e
 	}
 	defer f.Close()
-	ef, e := elf.NewFile(f)
-	if e != nil {
-		return nil, e
-	}
-	defer ef.Close()
-	offsets, e := prepareProbeOffsets(ef, f)
+	offsets, verified, e := prepareProbeFile(f)
 	if e != nil {
 		return nil, e
 	}
@@ -187,7 +253,7 @@ func startPrepareTrace(pid int) (t *prepareTrace, err error) {
 	if e != nil {
 		return nil, e
 	}
-	t = &prepareTrace{pid: pid, identity: id}
+	t = &prepareTrace{pid: pid, identity: id, verified: verified}
 	defer func() {
 		if err != nil {
 			err = errors.Join(err, t.close())

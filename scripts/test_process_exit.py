@@ -91,4 +91,66 @@ class CurrentCycleObservationTests(unittest.TestCase):
             self.assertEqual(clean.call_args.kwargs,{'previous_sequence':78})
 
 
+class MetadataProcessExitTests(unittest.TestCase):
+    def process(self, status):
+        calls = []
+        def wait(timeout):
+            calls.append(('wait', timeout))
+            return status
+        return SimpleNamespace(terminate=lambda: calls.append('terminate'),
+                               kill=lambda: calls.append('kill'), wait=wait), calls
+
+    def test_normal_stop_still_requires_zero_and_preserves_timeout(self):
+        from metadata_smoke import stop_metadata_process
+        for status in (0, 1, -15):
+            process, calls = self.process(status)
+            with patch('metadata_smoke.failure_summary', return_value={'exit_status':status}) as summary:
+                if status:
+                    with self.assertRaisesRegex(AssertionError, 'metadata process exit:.*exit_status'):
+                        stop_metadata_process(process, '/unexecuted-node', '/private-state')
+                    summary.assert_called_once_with(status, '/unexecuted-node', '/private-state')
+                else:
+                    stop_metadata_process(process, '/unexecuted-node', '/private-state')
+                    summary.assert_not_called()
+            self.assertEqual(calls, ['terminate', ('wait', 15)])
+
+    def test_crash_still_requires_nonzero_and_uses_exact_fixture_directory(self):
+        from metadata_smoke import stop_metadata_process
+        for status in (0, -9):
+            process, calls = self.process(status)
+            with patch('metadata_smoke.failure_summary', return_value={'exit_status':status}) as summary:
+                if status == 0:
+                    with self.assertRaises(AssertionError):
+                        stop_metadata_process(process, '/unexecuted-node', '/private-interrupted', crash=True)
+                    summary.assert_called_once_with(status, '/unexecuted-node', '/private-interrupted')
+                else:
+                    stop_metadata_process(process, '/unexecuted-node', '/private-interrupted', crash=True)
+                    summary.assert_not_called()
+            self.assertEqual(calls, ['kill', ('wait', 15)])
+
+    def test_timeout_remains_failure_without_output_drain_or_retry(self):
+        from metadata_smoke import stop_metadata_process
+        process, calls = self.process(0)
+        def pending(timeout):
+            self.assertEqual(timeout, 15)
+            raise subprocess.TimeoutExpired('/private-process', timeout)
+        process.wait = pending
+        with patch('metadata_smoke.failure_summary') as summary:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                stop_metadata_process(process, '/unexecuted-node', '/private-state')
+            summary.assert_not_called()
+        self.assertEqual(calls, ['terminate'])
+
+    def test_imported_and_historical_stops_use_their_own_roots(self):
+        import inspect
+        import metadata_smoke
+        source = inspect.getsource(metadata_smoke.main)
+        for gate in ('stopped(proc, crash=True, directory=interrupted)',
+                     'stopped(process, directory=interrupted)',
+                     'stopped(process, crash=True, directory=historical)',
+                     'stopped(process, directory=historical)',
+                     'count = 2048', "assert 0 < upgraded < count"):
+            self.assertIn(gate, source)
+
+
 if __name__=='__main__':unittest.main()

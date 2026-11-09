@@ -378,7 +378,7 @@ func (n *node) startDiagnosticObserved(ctx context.Context) (*diagnosticObserver
 		return nil, e
 	}
 	h, e := fileHash("/srv/assets/sandboxd")
-	if e != nil || h != prepareTraceELFSHA {
+	if e != nil || h != observerOrdinaryELFSHA {
 		return nil, errors.New("exact ordinary diagnostic ELF required")
 	}
 	pair, e := unix.Socketpair(unix.AF_UNIX, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)

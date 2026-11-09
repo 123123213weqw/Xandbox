@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "scope": "fixed test-only prepare calibration binding; file/static evidence only",
+  "runtime_source": "1a78d4b2942f97ae945bafd6681c26470b438a8e",
+  "compiler": "go1.27.3",
+  "target": "linux/amd64/v1",
+  "CGO_ENABLED": 0,
+  "flags": [
+    "-trimpath",
+    "-buildvcs=false"
+  ],
+  "daemon_sha256": "64883c528ba1d574aaa082c24b136e4938717c13c6abc122afcbddbb3b6c2abe",
+  "daemon_bytes": 12622263,
+  "native_and_cross_actual_file_byte_comparison": true,
+  "static_complete_symbols": 3,
+  "static_instruction_count": 132,
+  "normalization": "Only E8 direct CALL rel32 displacement, with exact decoded target-symbol checks; all other bytes/branches/registers/stack dataflow match",
+  "algorithm_negative_controls": [
+    "register-operand",
+    "non-call-operand",
+    "call-target",
+    "branch-target"
+  ],
+  "points": [
+    {
+      "name": "enter",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "address": "0x749972",
+      "opcode": "4889842480000000",
+      "register": "ax",
+      "function_bytes": 293
+    },
+    {
+      "name": "selected",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "address": "0x7499e5",
+      "opcode": "4885c0",
+      "register": "ax",
+      "function_bytes": 293
+    },
+    {
+      "name": "ok",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "address": "0x749a35",
+      "opcode": "31c0",
+      "register": "ax",
+      "function_bytes": 293
+    },
+    {
+      "name": "cancel",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "address": "0x749a55",
+      "opcode": "4883c470",
+      "register": "ax",
+      "function_bytes": 293
+    },
+    {
+      "name": "race_release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*prepareGate).acquire",
+      "address": "0x749a25",
+      "opcode": "488b442438",
+      "register": "ax",
+      "function_bytes": 293
+    },
+    {
+      "name": "node_ok",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "address": "0x747395",
+      "opcode": "31c0",
+      "register": "ax",
+      "function_bytes": 173
+    },
+    {
+      "name": "node_reject_release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*nodeEnvelope).acquirePrepare",
+      "address": "0x747385",
+      "opcode": "488b442418",
+      "register": "ax",
+      "function_bytes": 173
+    },
+    {
+      "name": "release",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "address": "0x753752",
+      "opcode": "488b01",
+      "register": "cx",
+      "function_bytes": 41
+    },
+    {
+      "name": "released",
+      "symbol": "github.com/123123213weqw/Xandbox/internal/firecracker.(*driver).Prepare.deferwrap1",
+      "address": "0x75375c",
+      "opcode": "4883c410",
+      "register": "ax",
+      "function_bytes": 41
+    }
+  ],
+  "notification_observer_sha256_unchanged": "5bfb2394f95a1b1c2f887b6e301357b92140586bde07448e3e09f2aa0ee3c11c",
+  "new_fixture_hardware_qualification": false,
+  "live_probe_calibration_passed": false,
+  "guest_or_VM_execution_in_this_binding_evidence": false,
+  "sustained_load_passed": false,
+  "production_ready": false,
+  "historical_reports_reclassified": false
+}
