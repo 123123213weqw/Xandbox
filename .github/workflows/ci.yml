@@ -23,7 +23,7 @@ jobs:
             go: 1.25.x
           - os: ubuntu-24.04
             go: 1.27.x
-          - os: macos-14
+          - os: macos-15
             go: 1.27.x
     runs-on: ${{ matrix.os }}
     # Measured 77-root crash suite: retain whole-package race x3, not a runtime SLO.
@@ -72,6 +72,7 @@ jobs:
       - name: Python harness syntax and guest image extraction safety
         run: |
           python3 -m unittest discover -s scripts -p test_doctor_smoke.py
+          python3 -m unittest discover -s scripts -p test_release_bundle.py
           python3 -m unittest discover -s scripts -p test_node_oom.py
           python3 -m py_compile scripts/kvm_snapshot_smoke.py scripts/kvm_snapshot_faults.py scripts/kvm_driver_smoke.py scripts/build_guest_fault_fixture.py
           python3 -m unittest discover -s scripts -p test_guest_image.py

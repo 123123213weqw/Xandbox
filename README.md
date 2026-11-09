@@ -38,6 +38,9 @@
 
 Go 实现的云端短生命周期沙箱基础设施，采用 MIT 许可证。
 
+下一预览版的 [P0 安全测试、长负载诊断与安装/回滚门槛](docs/P0_NEXT_PREVIEW.md)：
+新增测试宿主余量闸门与只读发布包校验；尚不是长测修复通过或可用的原地升级/回滚工具。
+
 **状态：生产化开发中，尚未生产就绪。**
 
 新增 [独立TLS接入与外部凭证边界](docs/TLS_GATEWAY.md)：root固定连接broker无TCP listener，专用UID/caps0/NNP/chroot的网络child；真实TLS→KVM双租户、key/证书轮换不重启controller/guest、无效reload关闭入口、旧revision拒绝及同盘冷恢复有限验收通过。0b基线的cwd/继承FD与持久lock标记修正有独立2 scope/4次外层启动证据；首轮失败、原生bootstrap失败对照及各冻结阶段保留，普通4ee五个ELF不变。这不是完整PKI、DoS、operator部署或生产SLO验收。
