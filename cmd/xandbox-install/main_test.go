@@ -10,6 +10,36 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/installtxn"
 )
 
+func TestFixedUpdateInspectionCLIReadOnlyClosedResultAndErrors(t *testing.T) {
+	calls := 0
+	op := operations{inspectUpdate: func(_ context.Context, path string) (installtxn.UpdateInspectionResult, error) {
+		calls++
+		if path != "/private/update-plan.json" {
+			t.Fatal("plan changed")
+		}
+		return installtxn.UpdateInspectionResult{Version: 1, InstalledFilesVerified: true}, nil
+	}}
+	for _, args := range [][]string{{"inspect-update"}, {"inspect-update", "-plan", ""}, {"inspect-update", "-unit", "other.service"}, {"inspect-update", "-plan", "/private/update-plan.json", "--force"}, {"rollback", "-plan", "/private/update-plan.json"}} {
+		var out, errout bytes.Buffer
+		if run(args, &out, &errout, op) != 1 || calls != 0 || out.Len() != 0 {
+			t.Fatal("invalid inspection reached operation")
+		}
+	}
+	var out, errout bytes.Buffer
+	args := []string{"inspect-update", "-plan", "/private/update-plan.json"}
+	if run(args, &out, &errout, op) != 0 || calls != 1 || errout.Len() != 0 || !strings.Contains(out.String(), `"activation_allowed":false`) || !strings.Contains(out.String(), `"compatibility_proven":false`) || !strings.Contains(out.String(), `"state_changed":false`) || !strings.Contains(out.String(), `"production_ready":false`) || strings.Contains(out.String(), "/private/") {
+		t.Fatal("inspection result inflated or leaked")
+	}
+	op.inspectUpdate = func(context.Context, string) (installtxn.UpdateInspectionResult, error) {
+		return installtxn.UpdateInspectionResult{}, errors.New("PRIVATE_KEY_PATH_CREDENTIAL")
+	}
+	out.Reset()
+	errout.Reset()
+	if run(args, &out, &errout, op) != 1 || out.Len() != 0 || strings.Contains(errout.String(), "PRIVATE") || !strings.Contains(errout.String(), "no activation is authorized") {
+		t.Fatal("raw inspection error escaped")
+	}
+}
+
 func TestFixedCLIAndNoSensitiveErrorOutput(t *testing.T) {
 	calls := 0
 	op := operations{apply: func(context.Context, string, uint64, string) (installtxn.Result, error) {

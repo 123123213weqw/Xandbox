@@ -16,6 +16,7 @@ import (
 )
 
 type operations struct {
+	inspectUpdate  func(context.Context, string) (installtxn.UpdateInspectionResult, error)
 	discardDraft   func(context.Context, uint64, string, string) (installtxn.DraftResult, error)
 	replacePending func(context.Context, string, uint64, string, string) (installtxn.Result, error)
 	recoverPolicy  func(context.Context, string, uint64, string, string) (installtxn.Result, error)
@@ -33,6 +34,8 @@ func run(args []string, out, errout io.Writer, op operations) int {
 	var e error
 	silent := false
 	switch {
+	case len(args) == 3 && args[0] == "inspect-update" && args[1] == "-plan" && args[2] != "" && op.inspectUpdate != nil:
+		v, e = op.inspectUpdate(ctx, args[2])
 	case len(args) == 7 && args[0] == "discard-supersession-draft" && args[1] == "-expected-revision" && args[3] == "-pending-request-id" && args[5] == "-draft-sha256":
 		expected, err := strconv.ParseUint(args[2], 10, 64)
 		_, requestErr := hex.DecodeString(args[4])
@@ -85,6 +88,10 @@ func run(args []string, out, errout io.Writer, op operations) int {
 		return 1
 	}
 	if e != nil {
+		if len(args) > 0 && args[0] == "inspect-update" {
+			io.WriteString(errout, "xandbox-install: update inspection unconfirmed; no activation is authorized\n")
+			return 1
+		}
 		io.WriteString(errout, "xandbox-install: installation unconfirmed; preserve the exact request and inspect before reconcile\n")
 		return 1
 	}
@@ -94,5 +101,5 @@ func run(args []string, out, errout io.Writer, op operations) int {
 	return 0
 }
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, operations{discardDraft: installtxn.DiscardSupersessionDraft, replacePending: installtxn.ReplacePendingPolicy, apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure, recoverPolicy: installtxn.RecoverPolicy}))
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, operations{inspectUpdate: installtxn.InspectUpdate, discardDraft: installtxn.DiscardSupersessionDraft, replacePending: installtxn.ReplacePendingPolicy, apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure, recoverPolicy: installtxn.RecoverPolicy}))
 }
