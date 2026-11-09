@@ -55,6 +55,32 @@ jobs:
           mkdir -m 700 "$RUNNER_TEMP/xandbox-fixed-probe-data"
           GOENV=off GOWORK=off GOFLAGS='' GOEXPERIMENT='' GODEBUG='' GOTOOLCHAIN=go1.27.3 GOOS=linux GOARCH=amd64 GOAMD64=v1 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$XANDBOX_PREPARE_PROBE_ELF" ./cmd/sandboxd
           GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -tags=xandbox_host_fixture -count=3 -run '^TestPrepareProbe' ./cmd/xandbox-host-fixture
+      - name: Check out fixed released reader source separately
+        if: runner.os == 'Linux'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 46b625311828edfd8e3abed2d6bae56560346460
+          path: .reader-baseline-source
+          persist-credentials: false
+      - name: Verify fixed backward readers without restoring state
+        if: runner.os == 'Linux'
+        env:
+          GOENV: 'off'
+          GOWORK: 'off'
+          GOFLAGS: ''
+          GOEXPERIMENT: ''
+          GODEBUG: ''
+          GOTOOLCHAIN: go1.27.3
+          GOOS: linux
+          GOARCH: amd64
+          GOAMD64: v1
+          CGO_ENABLED: '0'
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/xandbox-fixed-reader-data"
+          go build -C "$GITHUB_WORKSPACE/.reader-baseline-source" -trimpath -buildvcs=false -o "$RUNNER_TEMP/xandbox-fixed-reader-data/sandboxd" ./cmd/sandboxd
+          go build -C "$GITHUB_WORKSPACE/.reader-baseline-source" -trimpath -buildvcs=false -o "$RUNNER_TEMP/xandbox-fixed-reader-data/xandbox-node" ./cmd/xandbox-node
+          python3 scripts/reader_rollback_smoke.py --baseline "$RUNNER_TEMP/xandbox-fixed-reader-data/sandboxd" --candidate "$RUNNER_TEMP/xandbox-fixed-probe-data/sandboxd" --node "$RUNNER_TEMP/xandbox-fixed-reader-data/xandbox-node"
       - name: Race and failure tests under private umask
         run: |
           umask 077
@@ -91,6 +117,7 @@ jobs:
         run: go test -tags=xandbox_managed_fixture -race -count=3 ./cmd/xandbox-managed-fixture
       - name: Python harness syntax and guest image extraction safety
         run: |
+          python3 -m unittest discover -s scripts -p test_reader_rollback_smoke.py
           python3 -m unittest discover -s scripts -p test_doctor_smoke.py
           python3 -m unittest discover -s scripts -p test_release_bundle.py
           python3 -m unittest discover -s scripts -p test_node_oom.py
