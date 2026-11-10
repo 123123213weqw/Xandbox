@@ -148,38 +148,47 @@ func canonical(p string) bool {
 func inside(p, dir string) bool { return p == dir || strings.HasPrefix(p, dir+"/") }
 func Decode(raw []byte) (Plan, error) {
 	var p Plan
-	if len(raw) == 0 || len(raw) > MaxPlan || strictjson.Decode(raw, &p) != nil || (p.Version != 1 && p.Version != 2) || p.ReleaseRevision == 0 || !digestPattern.MatchString(p.Release) || !devicePattern.MatchString(p.DevicePath) {
+	if len(raw) == 0 || len(raw) > MaxPlan || strictjson.Decode(raw, &p) != nil {
 		return p, ErrPolicy
+	}
+	return p, validatePlan(p)
+}
+
+// Shared semantic policy, never a substitute for the bounded strict wire
+// decoder. Generated launch/ingress composition validation is unchanged.
+func validatePlan(p Plan) error {
+	if (p.Version != 1 && p.Version != 2) || p.ReleaseRevision == 0 || !digestPattern.MatchString(p.Release) || !devicePattern.MatchString(p.DevicePath) {
+		return ErrPolicy
 	}
 	inputs := []firecracker.Asset{p.Self, p.Backend, p.Auth, p.Gateway}
 	if p.Version == 1 {
 		if p.Policy != nil {
-			return p, ErrPolicy
+			return ErrPolicy
 		}
 		inputs = append(inputs, p.Certificate, p.PrivateKey)
 	} else {
 		if p.Policy == nil || p.Certificate != (firecracker.Asset{}) || p.PrivateKey != (firecracker.Asset{}) {
-			return p, ErrPolicy
+			return ErrPolicy
 		}
 		inputs = append(inputs, *p.Policy)
 	}
 	paths := map[string]bool{}
 	for i, a := range inputs {
 		if !canonical(a.Path) || !digestPattern.MatchString(a.SHA256) || paths[a.Path] || inside(a.Path, Root) || inside(a.Path, DataRoot) || inside(a.Path, UnitDir) || (i != 0 && inside(a.Path, "/usr/libexec")) {
-			return p, ErrPolicy
+			return ErrPolicy
 		}
 		paths[a.Path] = true
 	}
 	// Reuse the existing strict budget/serialization rules, not a looser unit template.
 	n := nodeManifest(p, map[string]Artifact{"daemon": {SHA256: strings.Repeat("0", 64)}})
 	if _, e := launch.Decode(encode(n)); e != nil {
-		return p, ErrPolicy
+		return ErrPolicy
 	}
 	g := ingressManifest(p, n, "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
 	if g.CheckComposition(n) != nil {
-		return p, ErrPolicy
+		return ErrPolicy
 	}
-	return p, nil
+	return nil
 }
 func rolePath(role string) string {
 	switch role {

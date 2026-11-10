@@ -76,8 +76,8 @@ func validFileList(t transaction) bool {
 	if t.Version != 1 || t.Revision != 1 || !requestPattern.MatchString(t.RequestID) {
 		return false
 	}
-	p, e := Decode(encode(t.Plan))
-	if e != nil || !bytes.Equal(encode(p), encode(t.Plan)) {
+	p, e := validatedPlanValue(t.Plan)
+	if e != nil {
 		return false
 	}
 	expected := map[string]uint32{SelfPath: 0555, childRoot + "/gateway": 0555, UnitDir + "/" + MainUnit: 0600, UnitDir + "/" + IngressUnit: 0600}
