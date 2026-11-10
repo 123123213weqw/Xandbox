@@ -1,0 +1,408 @@
+//go:build linux
+
+package installtxn
+
+import (
+	"context"
+	"io"
+	"os"
+	"sort"
+
+	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
+	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
+	"github.com/123123213weqw/Xandbox/internal/strictjson"
+	"golang.org/x/sys/unix"
+)
+
+// This reports ONLY parsed admission/ledger/session disk authority. Never full
+// state-root inventory, task success, quota release, kernel or shared-catalog GC.
+type runtimeCoreInventory struct {
+	authorityDigest                                             string // Internal complete ledger/session byte-set binding, never activation authority.
+	LedgerRecords, LedgerNonterminal                            int
+	SessionRecords, SessionNonterminal, UnboundFailedTargets    int
+	CoreAuthorityParsed                                         bool
+	AcceptedWorkComplete, ResourcesReclaimed, ActivationAllowed bool
+}
+type coreGeneration struct {
+	tenant string
+	state  sandbox.State
+}
+
+func sameCoreStat(a, b unix.Stat_t) bool {
+	return a.Dev == b.Dev && a.Ino == b.Ino && a.Mode == b.Mode && a.Uid == b.Uid && a.Nlink == b.Nlink && a.Size == b.Size && a.Mtim == b.Mtim && a.Ctim == b.Ctim
+}
+
+func readCoreRecord(ctx context.Context, dir *os.File, name string, limit int) ([]byte, error) {
+	if e := ctx.Err(); e != nil {
+		return nil, e
+	}
+	fd, e := unix.Openat(int(dir.Fd()), name, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
+	if e != nil {
+		return nil, e
+	}
+	in := os.NewFile(uintptr(fd), "runtime-core-record")
+	defer in.Close()
+	if e = trustedStat(fd, false, 0600); e != nil {
+		return nil, e
+	}
+	var before, after, current unix.Stat_t
+	if e = unix.Fstat(fd, &before); e != nil {
+		return nil, e
+	}
+	if before.Size < 1 || before.Size > int64(limit) {
+		return nil, ErrInventory
+	}
+	b, e := io.ReadAll(io.LimitReader(in, int64(limit)+1))
+	if e != nil {
+		return nil, e
+	}
+	if len(b) != int(before.Size) {
+		return nil, ErrInventory
+	}
+	if e = unix.Fstat(fd, &after); e != nil {
+		return nil, e
+	}
+	if e = unix.Fstatat(int(dir.Fd()), name, &current, unix.AT_SYMLINK_NOFOLLOW); e != nil {
+		return nil, e
+	}
+	if !sameCoreStat(before, after) || !sameCoreStat(after, current) {
+		return nil, ErrInventory
+	}
+	return b, ctx.Err()
+}
+
+// Stream bounded directory pages/one bounded file at a time; do not call the
+// effectful ordinary constructors/loaders. Any temp/unknown entry refuses,
+// leaving its bytes intact. The ordinary hard schema ceilings are unchanged.
+func scanCoreDirectory(ctx context.Context, f *filesystem, path string, max, limit int, visit func(string, []byte) error) error {
+	dir, e := f.directory(path)
+	if e != nil {
+		return e
+	}
+	defer dir.Close()
+	if e = trustedStat(int(dir.Fd()), true, 0700); e != nil {
+		return e
+	}
+	var before, after unix.Stat_t
+	if e = unix.Fstat(int(dir.Fd()), &before); e != nil {
+		return e
+	}
+	seen := map[string]bool{}
+	for {
+		if e = ctx.Err(); e != nil {
+			return e
+		}
+		names, err := dir.Readdirnames(128)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		for _, name := range names {
+			if len(seen) >= max || len(name) != 37 || name[32:] != ".json" || !requestPattern.MatchString(name[:32]) || seen[name] {
+				return ErrInventory
+			}
+			seen[name] = true
+			b, e := readCoreRecord(ctx, dir, name, limit)
+			if e != nil {
+				return e
+			}
+			if e = visit(name[:32], b); e != nil {
+				return e
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+	}
+	if e = unix.Fstat(int(dir.Fd()), &after); e != nil {
+		return e
+	}
+	if !sameCoreStat(before, after) {
+		return ErrInventory
+	}
+	linked, e := f.directory(path)
+	if e != nil {
+		return e
+	}
+	defer linked.Close()
+	var current unix.Stat_t
+	if e = unix.Fstat(int(linked.Fd()), &current); e != nil {
+		return e
+	}
+	if !sameCoreStat(after, current) {
+		return ErrInventory
+	}
+	return ctx.Err()
+}
+
+func readCoreAdmission(ctx context.Context, f *filesystem, expected nodecontrol.State) error {
+	_, e := readCoreAdmissionSet(ctx, f, expected, nil)
+	return e
+}
+
+// Optional maintenance is exact typed v2 WAL authority, NOT an allowlist flag.
+// A v1 caller must still reject every maintenance sidecar/orphan anchor.
+func readCoreAdmissionSet(ctx context.Context, f *filesystem, expected nodecontrol.State, lease *nodecontrol.MaintenanceRecord) (map[string]string, error) {
+	if lease != nil && (!lease.Valid() || expected != lease.After()) {
+		return nil, ErrPolicy
+	}
+	dir, e := f.directory("/admission")
+	if e != nil {
+		return nil, e
+	}
+	defer dir.Close()
+	if e = trustedStat(int(dir.Fd()), true, 0700); e != nil {
+		return nil, e
+	}
+	var before, after, current unix.Stat_t
+	if e = unix.Fstat(int(dir.Fd()), &before); e != nil {
+		return nil, e
+	}
+	names, e := dir.Readdirnames(3)
+	if e != nil && e != io.EOF {
+		return nil, e
+	}
+	want := []string{"state.json"}
+	if lease != nil {
+		want = append(want, nodecontrol.MaintenanceName)
+	}
+	if !sameNames(names, want) {
+		return nil, ErrInventory
+	}
+	hashes := map[string]string{}
+	b, e := readCoreRecord(ctx, dir, "state.json", nodecontrol.StateLimit)
+	if e != nil {
+		return nil, e
+	}
+	hashes["admission/state.json"] = digest(b)
+	var state nodecontrol.State
+	if strictjson.Decode(b, &state) != nil || !state.Valid() || state != expected || state.Mode != nodecontrol.ModeDrained {
+		return nil, ErrConflict
+	}
+	b, e = readCoreRecord(ctx, f.root, "admission.identity", nodecontrol.StateLimit)
+	if e != nil {
+		return nil, e
+	}
+	hashes["admission.identity"] = digest(b)
+	var id struct {
+		Version int    `json:"version"`
+		Epoch   string `json:"epoch"`
+	}
+	if strictjson.Decode(b, &id) != nil || id.Version != 1 || id.Epoch != state.Epoch {
+		return nil, ErrConflict
+	}
+	if lease != nil {
+		b, e = readCoreRecord(ctx, dir, nodecontrol.MaintenanceName, nodecontrol.StateLimit)
+		if e != nil {
+			return nil, e
+		}
+		var r nodecontrol.MaintenanceRecord
+		if strictjson.Decode(b, &r) != nil || !r.Valid() || r != *lease || string(b) != string(encode(r)) {
+			return nil, ErrConflict
+		}
+		hashes["admission/"+nodecontrol.MaintenanceName] = digest(b)
+		b, e = readCoreRecord(ctx, f.root, "maintenance.identity", nodecontrol.StateLimit)
+		if e != nil {
+			return nil, e
+		}
+		var anchor struct {
+			Version      int    `json:"version"`
+			RecordSHA256 string `json:"record_sha256"`
+		}
+		if strictjson.Decode(b, &anchor) != nil || anchor.Version != 1 || anchor.RecordSHA256 != digest(encode(r)) {
+			return nil, ErrConflict
+		}
+		hashes["maintenance.identity"] = digest(b)
+	} else {
+		var anchor unix.Stat_t
+		e = unix.Fstatat(int(f.root.Fd()), "maintenance.identity", &anchor, unix.AT_SYMLINK_NOFOLLOW)
+		if e == nil {
+			return nil, ErrInventory
+		}
+		if e != unix.ENOENT {
+			return nil, e
+		}
+	}
+	if e = unix.Fstat(int(dir.Fd()), &after); e != nil {
+		return nil, e
+	}
+	linked, e := f.directory("/admission")
+	if e != nil {
+		return nil, e
+	}
+	defer linked.Close()
+	if e = unix.Fstat(int(linked.Fd()), &current); e != nil {
+		return nil, e
+	}
+	if !sameCoreStat(before, after) || !sameCoreStat(after, current) {
+		return nil, ErrInventory
+	}
+	return hashes, ctx.Err()
+}
+
+func (s *runtimeScope) inspectStoppedCore(ctx context.Context, base, request string, m systemManager) (runtimeCoreInventory, error) {
+	return s.inspectStoppedCoreWithProof(ctx, base, request, m, m.fs.unitExecutionEmpty)
+}
+
+// Private positive models cover image/manager/cgroups only; real BSD state lock,
+// immutable identity, disk schemas and cross-record joins are never bypassed.
+func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, request string, m systemManager, empty func(string) error) (runtimeCoreInventory, error) {
+	var out runtimeCoreInventory
+	if !digestPattern.MatchString(base) || !requestPattern.MatchString(request) {
+		return out, ErrPolicy
+	}
+	e := s.run(ctx, func(f *filesystem) error {
+		if s.state == nil {
+			return ErrConflict
+		}
+		p, e := s.stoppedStateProof(ctx, base, request, m, empty)
+		if e != nil {
+			return e
+		}
+		if p.State == nil || s.state.id != *p.State {
+			return ErrConflict
+		}
+		drain, e := f.runtimeDrainReadIntent()
+		if e != nil {
+			return e
+		}
+		out, _, e = readCoreAuthorityForDrain(ctx, s.state.root, drain)
+		if e != nil {
+			return e
+		}
+		if e = s.state.verify(f); e != nil {
+			return e
+		}
+		if _, e = s.stoppedStateProof(ctx, base, request, m, empty); e != nil {
+			return e
+		}
+		out.CoreAuthorityParsed = true
+		return nil
+	})
+	if e != nil {
+		return runtimeCoreInventory{}, e
+	}
+	return out, nil
+}
+
+// Called only inside an already owned scope; never reacquire either lock or run
+// the effectful ordinary Load/recovery path. Generations are kept internal for
+// backend-owner joins, not returned as a transferable reclaim capability.
+func readCoreAuthority(ctx context.Context, root *os.File, expected nodecontrol.State) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
+	return readCoreAuthorityWithMaintenance(ctx, root, expected, nil)
+}
+func readCoreAuthorityForDrain(ctx context.Context, root *os.File, p runtimeDrainIntent) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
+	if !validRuntimeDrain(p) {
+		return runtimeCoreInventory{}, nil, ErrInventory
+	}
+	return readCoreAuthorityWithMaintenance(ctx, root, drainedRuntimeState(p), p.Maintenance)
+}
+func readCoreAuthorityWithMaintenance(ctx context.Context, root *os.File, expected nodecontrol.State, lease *nodecontrol.MaintenanceRecord) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
+	var out runtimeCoreInventory
+	generations := map[sandbox.Ref]coreGeneration{}
+	bytes := map[string]string{}
+	err := func() error {
+		var e error
+		stateFS := &filesystem{root: root}
+		admission, e := readCoreAdmissionSet(ctx, stateFS, expected, lease)
+		if e != nil {
+			return e
+		}
+		for name, h := range admission {
+			bytes[name] = h
+		}
+		keys := map[string]bool{}
+		e = scanCoreDirectory(ctx, stateFS, "/ledger", sandbox.MaxLedgerRecords, sandbox.MaxLedgerRecordBytes, func(id string, b []byte) error {
+			bytes["ledger/"+id] = digest(b)
+			r, e := sandbox.DecodePersistedRecord(b)
+			if e != nil {
+				return e
+			}
+			if r.ID != id || r.Backend != "firecracker" {
+				return ErrInventory
+			}
+			if _, yes := generations[r.Ref]; yes {
+				return ErrInventory
+			}
+			if r.CreateKeyHash != "" {
+				k := r.TenantID + "\x00" + r.CreateKeyHash
+				if keys[k] {
+					return ErrInventory
+				}
+				keys[k] = true
+			}
+			generations[r.Ref] = coreGeneration{r.TenantID, r.State}
+			out.LedgerRecords++
+			if r.State != sandbox.Destroyed {
+				out.LedgerNonterminal++
+			}
+			return nil
+		})
+		if e != nil {
+			return e
+		}
+		keys = map[string]bool{}
+		e = scanCoreDirectory(ctx, stateFS, "/sessions", session.MaxRecords, session.MaxRecordBytes, func(id string, b []byte) error {
+			bytes["sessions/"+id] = digest(b)
+			r, e := session.DecodePersistedRecord(b)
+			if e != nil {
+				return e
+			}
+			k := r.TenantID + "\x00" + r.CreateKeyHash
+			if r.ID != id || keys[k] {
+				return ErrInventory
+			}
+			keys[k] = true
+			owns := func(ref sandbox.Ref) bool { return ref == (sandbox.Ref{}) || generations[ref].tenant == r.TenantID }
+			if !owns(r.Current) {
+				return ErrInventory
+			}
+			for _, a := range r.Attempts {
+				if !owns(a.From) {
+					return ErrInventory
+				}
+				if !owns(a.Target) {
+					if a.State != "FAILED" {
+						return ErrInventory
+					}
+					out.UnboundFailedTargets++
+				}
+			}
+			out.SessionRecords++
+			if r.State != session.Closed {
+				out.SessionNonterminal++
+			}
+			return nil
+		})
+		if e != nil {
+			return e
+		}
+		admissionAfter, e := readCoreAdmissionSet(ctx, stateFS, expected, lease)
+		if e != nil {
+			return e
+		}
+		if len(admissionAfter) != len(admission) {
+			return ErrConflict
+		}
+		for name, h := range admission {
+			if admissionAfter[name] != h {
+				return ErrConflict
+			}
+		}
+		return nil
+	}()
+	if err != nil {
+		return runtimeCoreInventory{}, nil, err
+	}
+	names := make([]string, 0, len(bytes))
+	for name := range bytes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var set []byte
+	for _, name := range names {
+		set = append(set, []byte(name+"\x00"+bytes[name]+"\n")...)
+	}
+	out.authorityDigest = digest(set)
+	return out, generations, nil
+}

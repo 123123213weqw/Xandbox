@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/123123213weqw/Xandbox/internal/gateway"
@@ -349,35 +348,15 @@ func Verify(ctx context.Context) error {
 	if e = launch.RejectServiceDescriptors(); e != nil {
 		return e
 	}
-	// The read-only gate never creates a lock on an uncommitted/absent install.
-	lock, e := f.open(Root+"/.lock", unix.O_RDONLY, 0600)
+	// The gate uses the original read-only SH lock, never a new inode.
+	unlock, e := f.startupReadLock(ctx)
 	if e != nil {
 		return e
 	}
-	defer lock.Close()
-	for {
-		if e = ctx.Err(); e != nil {
-			return e
-		}
-		e = unix.Flock(int(lock.Fd()), unix.LOCK_SH|unix.LOCK_NB)
-		if e == nil {
-			break
-		}
-		if !errors.Is(e, unix.EAGAIN) && !errors.Is(e, unix.EWOULDBLOCK) {
-			return e
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(5 * time.Millisecond):
-		}
-	}
-	t, e := f.readTransaction("commit")
+	defer unlock()
+	t, e := f.startupFilesLocked(ctx)
 	if e != nil {
 		return e
 	}
-	if e = f.self(ctx, t.Plan); e != nil {
-		return e
-	}
-	return f.verifyTransaction(ctx, t)
+	return f.self(ctx, t.Plan)
 }

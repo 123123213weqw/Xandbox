@@ -34,6 +34,9 @@ type State struct {
 	LastExpectedRevision uint64 `json:"last_expected_revision"`
 }
 
+// Valid checks the closed persistent schema, not disk durability or quiescence.
+func (s State) Valid() bool { return s.valid() }
+
 func (s State) valid() bool {
 	if s.Version != 1 || !hexID.MatchString(s.Epoch) || s.Revision == 0 || (s.Mode != ModeOpen && s.Mode != ModeDrained) {
 		return false
@@ -56,6 +59,7 @@ type FileStore struct {
 	root, dir         string
 	rootInfo, dirInfo os.FileInfo
 	epoch             string
+	maintenanceHook   func(string) error // Private deterministic fault seam; no flags/env/root override.
 }
 
 // OpenStore requires the daemon's exclusive controller.lock. Fresh, genuinely
@@ -70,6 +74,15 @@ func OpenStore(stateDir string) (*FileStore, error) {
 	_, identityErr := os.Lstat(filepath.Join(root, "admission.identity"))
 	if identityErr != nil && !os.IsNotExist(identityErr) {
 		return nil, identityErr
+	}
+	// Refuse a lost admission directory/identity BEFORE EnsureDirectory can
+	// recreate even an empty namespace beside an existing maintenance anchor.
+	if identityErr != nil {
+		if _, err := os.Lstat(filepath.Join(root, maintenanceIdentity)); err == nil {
+			return nil, errors.New("maintenance requires existing admission identity")
+		} else if !os.IsNotExist(err) {
+			return nil, err
+		}
 	}
 	if identityErr == nil {
 		if _, e = privatefile.ExistingDirectory(filepath.Join(root, "admission")); e != nil {
@@ -88,6 +101,15 @@ func OpenStore(stateDir string) (*FileStore, error) {
 	f.dirInfo, e = os.Lstat(dir)
 	if e != nil {
 		return nil, e
+	}
+	if identityErr != nil {
+		for _, path := range []string{filepath.Join(dir, MaintenanceName), filepath.Join(dir, maintenanceScratch), filepath.Join(root, maintenanceIdentity)} {
+			if _, err := os.Lstat(path); err == nil {
+				return nil, errors.New("maintenance requires existing admission identity")
+			} else if !os.IsNotExist(err) {
+				return nil, err
+			}
+		}
 	}
 	state, e := f.readState()
 	if os.IsNotExist(e) {
@@ -197,21 +219,21 @@ func (f *FileStore) directories() error {
 }
 func (f *FileStore) readState() (State, error) {
 	var out State
-	entries, e := os.ReadDir(f.dir)
+	r, _, e := f.readMaintenance(nil)
 	if e != nil {
 		return out, e
 	}
-	if len(entries) > 33 {
-		return out, errors.New("admission directory bound exceeded")
+	out, e = f.readStateFile()
+	if e != nil {
+		return out, e
 	}
-	for _, entry := range entries {
-		if entry.Name() != "state.json" && !tempName.MatchString(entry.Name()) {
-			return out, errors.New("unknown admission directory entry")
-		}
-		if _, e = privateRead(filepath.Join(f.dir, entry.Name())); e != nil {
-			return out, e
-		}
+	if r != nil && out != r.Before && out != r.After() {
+		return State{}, ErrConflict
 	}
+	return out, nil
+}
+func (f *FileStore) readStateFile() (State, error) {
+	var out State
 	b, e := privateRead(filepath.Join(f.dir, "state.json"))
 	if e != nil {
 		return out, e
@@ -232,21 +254,27 @@ func (f *FileStore) Load() (State, error) {
 	if e != nil {
 		return State{}, e
 	}
+	if e = f.verifyEpoch(s); e != nil {
+		return State{}, e
+	}
+	return s, nil
+}
+func (f *FileStore) verifyEpoch(s State) error {
 	if s.Epoch != f.epoch {
-		return State{}, errors.New("admission epoch changed")
+		return errors.New("admission epoch changed")
 	}
 	b, e := privateRead(filepath.Join(f.root, "admission.identity"))
 	if e != nil {
-		return State{}, e
+		return e
 	}
 	var id struct {
 		Version int    `json:"version"`
 		Epoch   string `json:"epoch"`
 	}
 	if e = strictjson.Decode(b, &id); e != nil || id.Version != 1 || id.Epoch != f.epoch {
-		return State{}, errors.New("admission identity changed")
+		return errors.New("admission identity changed")
 	}
-	return s, nil
+	return nil
 }
 func (f *FileStore) Save(previous, next State) error {
 	if !previous.valid() || !next.valid() || previous.Revision == math.MaxUint64 || next.Epoch != previous.Epoch || next.Revision != previous.Revision+1 || next.LastExpectedRevision != previous.Revision {
@@ -259,11 +287,29 @@ func (f *FileStore) Save(previous, next State) error {
 	if actual != previous {
 		return errors.New("durable admission state changed outside controller")
 	}
+	lease, _, e := f.readMaintenance(nil)
+	if e != nil {
+		return e
+	}
+	if lease != nil {
+		if previous != lease.Before || next != lease.After() {
+			return ErrMaintenance
+		}
+		if e = f.maintenancePoint("maintenance-before-state"); e != nil {
+			return e
+		}
+	}
 	b, e := json.Marshal(next)
 	if e != nil {
 		return e
 	}
-	return f.writeAtomic(filepath.Join(f.dir, "state.json"), ".state-", b)
+	if e = f.writeAtomic(filepath.Join(f.dir, "state.json"), ".state-", b); e != nil {
+		return e
+	}
+	if lease != nil {
+		return f.maintenancePoint("maintenance-after-state")
+	}
+	return nil
 }
 func (f *FileStore) writeAtomic(target, prefix string, data []byte) error {
 	if len(data) > StateLimit {

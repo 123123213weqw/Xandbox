@@ -64,12 +64,13 @@ func (s Status) valid() bool {
 }
 
 type Controller struct {
-	store  Store
-	gate   *sandbox.AdmissionGate
-	serial chan struct{}
-	closed atomic.Bool
-	mu     sync.Mutex // Only bounded memory/gate updates, NEVER persistence.
-	view   Status
+	store       Store
+	gate        *sandbox.AdmissionGate
+	serial      chan struct{}
+	closed      atomic.Bool
+	mu          sync.Mutex // Only bounded memory/gate updates, NEVER persistence.
+	view        Status
+	maintenance *MaintenanceRecord
 }
 
 func New(store Store, gate *sandbox.AdmissionGate) (*Controller, error) {
@@ -84,13 +85,30 @@ func New(store Store, gate *sandbox.AdmissionGate) (*Controller, error) {
 	if !s.valid() {
 		return nil, ErrInvalid
 	}
+	var lease *MaintenanceRecord
+	if m, ok := store.(MaintenanceStore); ok {
+		lease, e = m.LoadMaintenance()
+		if e != nil {
+			return nil, e
+		}
+		if lease != nil {
+			s, e = recoverMaintenance(store, m, *lease)
+			if e != nil {
+				return nil, e
+			}
+		}
+	}
 	c := &Controller{store: store, gate: gate, serial: make(chan struct{}, 1), view: Status{Version: 1, Committed: s, Phase: "ready", DesiredMode: s.Mode}}
-	gate.SetOpen(s.Mode == ModeOpen)
+	c.maintenance = lease
+	gate.SetOpen(lease == nil && s.Mode == ModeOpen)
 	return c, nil
 }
 func (c *Controller) Status() Status {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.statusLocked()
+}
+func (c *Controller) statusLocked() Status {
 	s := c.view
 	s.AdmissionOpen = c.gate.Open()
 	s.PendingSessionReservations = c.gate.Pending()
@@ -123,6 +141,10 @@ func (c *Controller) Change(ctx context.Context, target string, request Command)
 	if c.closed.Load() {
 		c.mu.Unlock()
 		return c.Status(), ErrClosed
+	}
+	if c.maintenance != nil {
+		c.mu.Unlock()
+		return c.Status(), ErrMaintenance
 	}
 	if e := ctx.Err(); e != nil {
 		c.mu.Unlock()

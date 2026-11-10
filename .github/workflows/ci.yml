@@ -45,13 +45,48 @@ jobs:
       - name: Verify read-only update inventory in CGO-free builds
         if: runner.os == 'Linux'
         run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -count=3 -run 'UpdateInspection' ./internal/installtxn ./cmd/xandbox-install
+      - name: Verify fenced runtime file journal and actual child death in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntime(File|Startup)' ./internal/installtxn
+      - name: Verify process-pinned write-ahead drain in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestPinnedProcess|TestRuntimeDrain)' ./internal/nodecontrol ./internal/installtxn
+      - name: Verify scoped physical-stop protocol in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestRuntimeScope|TestRuntimeStop)' ./internal/installtxn
+      - name: Verify durable maintenance fence and actual process death in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestMaintenance' ./internal/nodecontrol
+      - name: Verify write-ahead maintenance coordinator and typed authority joins in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntimeMaintenance' ./internal/installtxn
       - name: Race and failure tests under private umask
         run: |
           umask 077
           go test -race -timeout=20m -count=3 ./...
+      - name: Verify original state lease and read-only core inventory in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestRuntimeState|TestRuntimeCore)' ./internal/installtxn
       - name: Verify inherited quota filter in CGO-free child processes
         if: runner.os == 'Linux'
         run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -count=3 -run 'TestQuota' ./internal/warden
+      - name: Verify read-only backend and quota inventory in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestRuntimeBackend|TestInspection)' ./internal/installtxn ./internal/firecracker
       - name: Verify installer output bounds in CGO-free child processes
         if: runner.os == 'Linux'
         run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -count=3 -run 'TestManagerWriter|TestManagerCaptureActualChild' ./internal/installtxn

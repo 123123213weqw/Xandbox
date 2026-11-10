@@ -57,6 +57,13 @@ func (f *filesystem) inspectionBase(ctx context.Context, p UpdateInspectionPlan)
 			return transaction{}, ErrInventory
 		}
 	}
+	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot} {
+		if yes, err := f.exists(root); err != nil {
+			return transaction{}, err
+		} else if yes {
+			return transaction{}, ErrInventory
+		}
+	}
 	if e = f.verifyTransaction(ctx, t); e != nil {
 		return transaction{}, e
 	}
