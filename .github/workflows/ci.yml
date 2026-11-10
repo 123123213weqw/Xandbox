@@ -70,6 +70,11 @@ jobs:
         run: |
           umask 077
           GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntimeMaintenance' ./internal/installtxn
+      - name: Verify finish-only accepted-work admission and original-scope integration
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestAcceptedWork|TestMaintenanceQuiescence|TestRuntimeWork)' ./internal/sandbox ./internal/session ./internal/nodecontrol ./internal/installtxn
       - name: Race and failure tests under private umask
         run: |
           umask 077

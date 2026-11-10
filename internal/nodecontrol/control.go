@@ -64,13 +64,14 @@ func (s Status) valid() bool {
 }
 
 type Controller struct {
-	store       Store
-	gate        *sandbox.AdmissionGate
-	serial      chan struct{}
-	closed      atomic.Bool
-	mu          sync.Mutex // Only bounded memory/gate updates, NEVER persistence.
-	view        Status
-	maintenance *MaintenanceRecord
+	store                 Store
+	gate                  *sandbox.AdmissionGate
+	serial                chan struct{}
+	closed                atomic.Bool
+	mu                    sync.Mutex // Only bounded memory/gate updates, NEVER persistence.
+	view                  Status
+	maintenance           *MaintenanceRecord
+	maintenanceOriginLive bool
 }
 
 func New(store Store, gate *sandbox.AdmissionGate) (*Controller, error) {
@@ -100,6 +101,10 @@ func New(store Store, gate *sandbox.AdmissionGate) (*Controller, error) {
 	}
 	c := &Controller{store: store, gate: gate, serial: make(chan struct{}, 1), view: Status{Version: 1, Committed: s, Phase: "ready", DesiredMode: s.Mode}}
 	c.maintenance = lease
+	if lease != nil {
+		gate.MarkAcceptedWorkUncertain()
+		gate.FreezeAcceptedWork() // Unknown old execution outcomes: fail closed.
+	}
 	gate.SetOpen(lease == nil && s.Mode == ModeOpen)
 	return c, nil
 }
