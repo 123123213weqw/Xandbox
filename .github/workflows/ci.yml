@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      runtime_cpu_diagnostic:
+        description: Additional disposable CPU diagnostic; never native qualification
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -114,6 +120,7 @@ jobs:
         run: go test -tags=xandbox_managed_fixture -race -count=3 ./cmd/xandbox-managed-fixture
       - name: Python harness syntax and guest image extraction safety
         run: |
+          python3 -m unittest discover -s scripts -p test_runtime_cpu_diagnostic.py
           python3 -m unittest discover -s scripts -p test_doctor_smoke.py
           python3 -m unittest discover -s scripts -p test_release_bundle.py
           python3 -m unittest discover -s scripts -p test_node_oom.py
@@ -204,3 +211,21 @@ jobs:
         run: python3 scripts/secret_scan_smoke.py --scanner "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"
       - name: Scan all reachable non-shallow history without publishing raw findings
         run: python3 scripts/secret_scan.py --scanner "$RUNNER_TEMP/xandbox-secret-tools/gitleaks"
+
+  runtime-cpu-diagnostic:
+    name: Additional disposable CPU diagnostic (not native acceptance)
+    if: github.event_name == 'workflow_dispatch' && inputs.runtime_cpu_diagnostic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.3
+          cache: false
+      - name: Download public dependencies before separate bounded diagnostic
+        run: GOTOOLCHAIN=go1.27.3 GOFLAGS=-p=1 GOMAXPROCS=2 GOMEMLIMIT=512MiB go mod download
+      - name: Require complete fixed diagnostic and print only closed numeric summary
+        run: python3 scripts/runtime_cpu_diagnostic.py
