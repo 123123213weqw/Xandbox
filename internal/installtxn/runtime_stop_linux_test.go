@@ -74,6 +74,10 @@ func TestRuntimeStopOperatorHelper(t *testing.T) {
 				os.Exit(75)
 			}
 			var d sandbox.Driver = driver
+			if os.Getenv("XANDBOX_TEST_CLOSE_MODE") == "terminal-firecracker-model" {
+				// Explicit TEST-only metadata model, NEVER a real backend/VM.
+				d = &terminalProjectionModelDriver{Driver: driver}
+			}
 			if os.Getenv("XANDBOX_TEST_CLOSE_MODE") == "cleanup-failed" {
 				d = &runtimeCloseFailedDriver{Driver: driver}
 			}
@@ -90,7 +94,7 @@ func TestRuntimeStopOperatorHelper(t *testing.T) {
 				os.Exit(78)
 			}
 			mode := os.Getenv("XANDBOX_TEST_CLOSE_MODE")
-			if mode == "populated" || mode == "cleanup-failed" {
+			if mode == "populated" || mode == "cleanup-failed" || mode == "terminal-firecracker-model" {
 				if _, err = broker.Open(context.Background(), sandbox.Owner{TenantID: "alpha", MaxInstances: 4}, "original", sandbox.CreateRequest{}); err != nil {
 					os.Exit(79)
 				}
