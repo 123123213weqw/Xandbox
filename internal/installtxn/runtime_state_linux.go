@@ -33,6 +33,8 @@ func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 		return runtimeProofFailure(proofStateLockRecordSyntax, ErrInventory)
 	}
 	found := 0
+	var firstLine, firstOrdinal string
+	sameText, sameOrdinal := true, true
 	for _, line := range strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n") {
 		v := strings.Fields(line)
 		blocked := len(v) == 9 && v[1] == "->"
@@ -58,13 +60,22 @@ func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 		if blocked || v[1] != "FLOCK" || v[2] != "ADVISORY" || v[3] != "WRITE" || v[4] != strconv.Itoa(pid) || v[6] != "0" || v[7] != "EOF" {
 			return runtimeProofFailure(proofStateLockOwnerMismatch, ErrConflict)
 		}
+		// Diagnostic comparisons only; retain the exact original rejection and
+		// final found==1 authority requirement. The displayed ordinal is NOT a
+		// stable kernel lock ID. No deduplication, extra read or retry is allowed.
+		if found == 0 {
+			firstLine, firstOrdinal = line, v[0]
+		} else {
+			sameText = sameText && line == firstLine
+			sameOrdinal = sameOrdinal && v[0] == firstOrdinal
+		}
 		found++
 	}
 	if found == 0 {
 		return runtimeProofFailure(proofStateLockOwnerMissing, ErrConflict)
 	}
 	if found != 1 {
-		return runtimeProofFailure(proofStateLockOwnerAmbiguous, ErrConflict)
+		return runtimeLockAmbiguityFailure(found, sameText, sameOrdinal)
 	}
 	return nil
 }

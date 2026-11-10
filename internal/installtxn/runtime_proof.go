@@ -101,6 +101,7 @@ var runtimeProofLabels = [...]string{
 type runtimeProofError struct {
 	stage runtimeProofStage
 	cause error
+	lock  runtimeLockAmbiguity
 }
 
 func runtimeProofFailure(stage runtimeProofStage, err error) error {
@@ -121,6 +122,9 @@ func (e *runtimeProofError) Error() string {
 			}
 			b.WriteByte('/')
 			b.WriteString(label)
+			if item.stage == proofStateLockOwnerAmbiguous {
+				item.lock.appendTo(&b)
+			}
 		}
 		current = errors.Unwrap(current)
 	}

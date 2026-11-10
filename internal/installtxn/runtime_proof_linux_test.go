@@ -88,7 +88,7 @@ func TestRuntimeStateProofKernelParserMatchesIndependentOriginal(t *testing.T) {
 		label string
 	}{
 		{"8: FLOCK ADVISORY WRITE 1 08:02:100 0 EOF\n", "state-lock-owner-missing"},
-		{good + good, "state-lock-owner-ambiguous"},
+		{good + good, "state-lock-owner-ambiguous/lock-rows-two/exact-text"},
 		{strings.Replace(good, "123", "124", 1), "state-lock-owner-mismatch"},
 		{strings.TrimSuffix(good, "\n"), "state-lock-record-syntax"},
 	}
