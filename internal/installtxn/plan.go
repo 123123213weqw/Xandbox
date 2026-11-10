@@ -181,7 +181,7 @@ func validatePlan(p Plan) error {
 	}
 	// Reuse the existing strict budget/serialization rules, not a looser unit template.
 	n := nodeManifest(p, map[string]Artifact{"daemon": {SHA256: strings.Repeat("0", 64)}})
-	if _, e := launch.Decode(encode(n)); e != nil {
+	if _, e := launch.ValidateLineValue(n); e != nil {
 		return ErrPolicy
 	}
 	g := ingressManifest(p, n, "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
@@ -251,7 +251,7 @@ func descriptor(r Release) (map[string]Artifact, error) {
 	for _, v := range r.Files {
 		m.Files = append(m.Files, releasestore.File{Role: v.Role, Source: "/descriptor/" + v.Role, SHA256: v.SHA256, Bytes: v.Bytes})
 	}
-	normalized, e := releasestore.Decode(encode(m))
+	normalized, e := releasestore.ValidateLineValue(m)
 	if e != nil || len(normalized.Files) != len(roles) {
 		return nil, ErrPolicy
 	}
