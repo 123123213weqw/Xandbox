@@ -1,7 +1,11 @@
 # Runtime lock ambiguity: draft diagnostics, not a recovery policy
 
-The original state proof still requires exactly **one** matching active
-exclusive BSD lock owned by the pinned original process. Missing, duplicate,
+The historical global-row parser still requires exactly **one** matching active
+exclusive BSD lock owned by the pinned original process. The current FD-bound
+candidate changes the positive source; see [its mandatory FD witness and retained
+global negative veto](RUNTIME_STATE_FD_PROOF.md). The statements below describe
+the retained historical parser and its same-payload diagnostics, not an extra
+positive acceptance path. Missing, duplicate,
 foreign, blocked, malformed or oversized observations still fail closed. There
 is no deduplication, extra kernel read, retry, fallback, owner-count relaxation,
 new authority or change to any Stop/file/state-lock decision.

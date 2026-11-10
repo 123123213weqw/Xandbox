@@ -38,6 +38,22 @@ func TestRuntimeStopOperatorHelper(t *testing.T) {
 		if unix.Flock(int(lock.Fd()), unix.LOCK_EX|unix.LOCK_NB) != nil {
 			os.Exit(70)
 		}
+		switch os.Getenv("XANDBOX_TEST_CLOSE_MODE") {
+		case "state-fd-unlocked":
+			if unix.Flock(int(lock.Fd()), unix.LOCK_UN) != nil {
+				os.Exit(81)
+			}
+		case "state-fd-shared":
+			if unix.Flock(int(lock.Fd()), unix.LOCK_SH|unix.LOCK_NB) != nil {
+				os.Exit(82)
+			}
+		case "state-fd-duplicate":
+			fd, err := unix.Dup(int(lock.Fd()))
+			if err != nil {
+				os.Exit(83)
+			}
+			defer unix.Close(fd)
+		}
 		store, e := nodecontrol.OpenStore(root + stateDir)
 		if e != nil {
 			os.Exit(71)

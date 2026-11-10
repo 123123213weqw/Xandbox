@@ -264,7 +264,7 @@ func (s *runtimeScope) workStopPeers(ctx context.Context, t transaction, p runti
 					if c == nil || c.Identity() != p.Stop.Main {
 						return ErrConflict
 					}
-					if e := runtimeStateOwnedBy(*p.Stop.State, p.Stop.Main); e != nil {
+					if e := s.fs.runtimeStateOwnedBy(ctx, *p.Stop.State, p.Stop.Main); e != nil {
 						return e
 					}
 					if terminal == nil {

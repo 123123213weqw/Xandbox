@@ -315,7 +315,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			id := state.id
 			state.close()
 			stage = proofStopOriginalStateOwner
-			if e = runtimeStateOwnedBy(id, drain.Process); e != nil {
+			if e = f.runtimeStateOwnedBy(ctx, id, drain.Process); e != nil {
 				return e
 			}
 			p = runtimeStopIntent{Version: 2, Base: base, Request: request, Drain: digest(encode(drain)), Main: drain.Process, State: &id}
@@ -393,7 +393,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			}
 			if p.State != nil {
 				stage = proofStopPresignalStateOwner
-				if e = runtimeStateOwnedBy(*p.State, p.Main); e != nil {
+				if e = f.runtimeStateOwnedBy(ctx, *p.State, p.Main); e != nil {
 					return e
 				}
 			}
@@ -470,7 +470,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 				}
 				if main.pid > 1 && p.State != nil {
 					stage = proofStopPresignalStateOwner
-					if e = runtimeStateOwnedBy(*p.State, p.Main); e != nil {
+					if e = f.runtimeStateOwnedBy(ctx, *p.State, p.Main); e != nil {
 						return e
 					}
 				}

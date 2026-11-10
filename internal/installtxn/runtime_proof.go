@@ -52,6 +52,14 @@ const (
 	proofStateLockOwnerMissing
 	proofStateLockOwnerAmbiguous
 	proofStateWatchLive
+	proofStateOwnerState
+	proofStateFDOpen
+	proofStateFDList
+	proofStateFDStat
+	proofStateFDMultiple
+	proofStateFDRead
+	proofStateFDRecord
+	proofStateOwnerRecheck
 )
 
 var runtimeProofLabels = [...]string{
@@ -96,6 +104,14 @@ var runtimeProofLabels = [...]string{
 	"state-lock-owner-missing",
 	"state-lock-owner-ambiguous",
 	"state-watch-live",
+	"state-owner-state",
+	"state-fd-open",
+	"state-fd-list",
+	"state-fd-stat",
+	"state-fd-multiple",
+	"state-fd-read",
+	"state-fd-record",
+	"state-owner-recheck",
 }
 
 type runtimeProofError struct {

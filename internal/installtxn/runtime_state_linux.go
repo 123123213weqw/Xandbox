@@ -80,28 +80,6 @@ func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 	return nil
 }
 
-// Reading the current path/inode alone would accept a replacement lock while
-// the old daemon retained an unlinked descriptor. Bind the original live
-// incarnation to the actual kernel BSD lock before persisting any stop intent.
-func runtimeStateOwnedBy(id runtimeStateIdentity, process nodecontrol.ProcessIdentity) error {
-	w, e := nodecontrol.NewProcessWatch(process.PID)
-	if e != nil {
-		return runtimeProofFailure(proofStateWatchOpen, e)
-	}
-	defer w.Close()
-	if w.Identity() != process {
-		return runtimeProofFailure(proofStateIncarnation, ErrConflict)
-	}
-	raw, e := boundedProcessFile("/proc/locks", 4<<20)
-	if e != nil {
-		return runtimeProofFailure(proofStateLocksRead, e)
-	}
-	if e = stateKernelLockOwner(raw, id, process.PID); e != nil {
-		return e
-	}
-	return runtimeProofFailure(proofStateWatchLive, w.Alive())
-}
-
 func (p *runtimeStateLease) close() {
 	if p == nil {
 		return
