@@ -90,8 +90,14 @@ func TestRuntimeStopCrashHelper(t *testing.T) {
 	if e != nil {
 		os.Exit(75)
 	}
-	_, e = s.stopWithProofs(context.Background(), os.Getenv("XANDBOX_TEST_STOP_BASE"), runtimeReq("b"), c, m, proof)
-	if e == nil && os.Getenv("XANDBOX_TEST_STOP_CRASH_CUT") == "runtime-state-locked" {
+	if os.Getenv("XANDBOX_TEST_FINISH_STOP") == "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_, e = s.finishAndStopWithProofs(ctx, os.Getenv("XANDBOX_TEST_STOP_BASE"), runtimeReq("b"), c, m, proof)
+	} else {
+		_, e = s.stopWithProofs(context.Background(), os.Getenv("XANDBOX_TEST_STOP_BASE"), runtimeReq("b"), c, m, proof)
+	}
+	if e == nil && os.Getenv("XANDBOX_TEST_FINISH_STOP") != "1" && os.Getenv("XANDBOX_TEST_STOP_CRASH_CUT") == "runtime-state-locked" {
 		e = s.ownStoppedStateWithProof(context.Background(), os.Getenv("XANDBOX_TEST_STOP_BASE"), runtimeReq("b"), m, proof.empty)
 	}
 	if e != nil {
@@ -103,6 +109,9 @@ func TestRuntimeStopActualCoordinatorSIGKILLRecoversAfterOperatorDeath(t *testin
 	runRuntimeStopCrashRecovery(t, nil, []string{"runtime-stop-intent-durable", "runtime-stop-after-" + IngressUnit, "runtime-stop-after-" + MainUnit, "runtime-stop-receipt-renamed", "runtime-state-locked"})
 }
 func runRuntimeStopCrashRecovery(t *testing.T, prepare func(*stopTestModel, *runtimeScope), cuts []string) {
+	runRuntimeStopCrashRecoveryMode(t, prepare, cuts, false)
+}
+func runRuntimeStopCrashRecoveryMode(t *testing.T, prepare func(*stopTestModel, *runtimeScope), cuts []string, finish bool) {
 	for _, cut := range cuts {
 		t.Run(cut, func(t *testing.T) {
 			x := stopModel(t, "")
@@ -118,6 +127,9 @@ func runRuntimeStopCrashRecovery(t *testing.T, prepare func(*stopTestModel, *run
 			defer cancel()
 			cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestRuntimeStopCrashHelper$")
 			cmd.Env = []string{"GOMAXPROCS=2", "XANDBOX_TEST_STOP_CRASH_ROOT=" + x.f.root.Name(), "XANDBOX_TEST_STOP_MAIN=" + strconv.Itoa(x.children[MainUnit].Process.Pid), "XANDBOX_TEST_STOP_INGRESS=" + strconv.Itoa(x.children[IngressUnit].Process.Pid), "XANDBOX_TEST_STOP_CRASH_CUT=" + cut, "XANDBOX_TEST_STOP_BASE=" + digest(encode(x.tx))}
+			if finish {
+				cmd.Env = append(cmd.Env, "XANDBOX_TEST_FINISH_STOP=1")
+			}
 			in, e := cmd.StdinPipe()
 			if e != nil {
 				t.Fatal(e)
@@ -178,11 +190,21 @@ func runRuntimeStopCrashRecovery(t *testing.T, prepare func(*stopTestModel, *run
 			if !x.alive[MainUnit] {
 				client = nil
 			}
-			r, e := x.stop(ctx, s, client)
+			var r runtimeStopResult
+			if finish {
+				p, err := s.finishAndStopWithProofs(ctx, digest(encode(x.tx)), runtimeReq("b"), client, x.manager, x.proof)
+				e = err
+				if p == nil || s.state == nil {
+					t.Fatal("composed recovery lost known work/state", p, e)
+				}
+				r.ExecutionStopped = true
+			} else {
+				r, e = x.stop(ctx, s, client)
+			}
 			if e != nil || !r.ExecutionStopped || r.ResourcesReclaimed || r.ActivationAllowed || len(x.jobs) != 2 {
 				t.Fatal("fresh coordinator recovery", r, e, x.jobs)
 			}
-			if cut == "runtime-state-locked" {
+			if cut == "runtime-state-locked" || finish {
 				if e = ownStateModel(ctx, x, s); e != nil {
 					t.Fatal("kernel did not release dead coordinator state lock", e)
 				}

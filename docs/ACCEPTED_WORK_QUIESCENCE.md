@@ -45,7 +45,10 @@ complete original maintenance record and exact after-state; there is no unpinned
 or ordinary-drain fallback. The endpoint is nonblocking: each request freezes and
 observes bounded memory only; no worker or controller mutex waits on work/I/O.
 
-No success receipt is persisted or accepted across a restart. Loading a durable
+This live work API persists/accepts no success receipt across a restart.
+The separate [work-bound Stop coordinator](WORK_BOUND_STOP.md) can record a
+known original-live cohort result BEFORE Stop; it does not infer lost outcomes
+from a dead/restarted node or clear the node's uncertainty rule. Loading a durable
 maintenance record conservatively freezes execution and marks work uncertain;
 loading non-destroyed old Core ownership also marks history uncertain. Cleanup,
 replacement-process zero counts or retrying the same BEGIN cannot clear it.
@@ -74,7 +77,9 @@ This proof is ONLY current accepted-work completion. It is NOT full journal or
 resource quiescence, backend reclaim, service Stop, compatibility, file-selection
 or activation authority. Administrative CloseSession and lifecycle cleanup can
 still write state; those must be joined under the later original state lease.
-No current updater CLI or file engine consumes this proof. The existing startup
+The separate internal [work-bound Stop stage](WORK_BOUND_STOP.md) now consumes
+the live proof to durably bind known completion before actual Stop/state
+exclusion. No current updater CLI or file engine consumes either proof. The existing startup
 and lifecycle-namespace rejection fences remain intact.
 
 ## Test scope and remaining P0
