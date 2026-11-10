@@ -27,6 +27,7 @@ type runtimeStopIntent struct {
 	Main    nodecontrol.ProcessIdentity  `json:"main"`
 	Ingress *nodecontrol.ProcessIdentity `json:"ingress,omitempty"`
 	State   *runtimeStateIdentity        `json:"state_identity,omitempty"`
+	Work    string                       `json:"work_completion_sha256,omitempty"`
 }
 type runtimeStopReceipt struct {
 	Version int    `json:"version"`
@@ -42,7 +43,7 @@ type runtimeStopProofs struct {
 }
 
 func validRuntimeStop(p runtimeStopIntent) bool {
-	version := p.Version == 1 && p.State == nil || p.Version == 2 && p.State != nil && p.State.valid()
+	version := p.Version == 1 && p.State == nil && p.Work == "" || p.Version == 2 && p.State != nil && p.State.valid() && p.Work == "" || p.Version == 3 && p.State != nil && p.State.valid() && digestPattern.MatchString(p.Work)
 	return version && digestPattern.MatchString(p.Base) && requestPattern.MatchString(p.Request) && digestPattern.MatchString(p.Drain) && p.Main.Valid() && (p.Ingress == nil || p.Ingress.Valid() && *p.Ingress != p.Main)
 }
 func (f *filesystem) readRuntimeStop() (runtimeStopIntent, error) {
@@ -57,6 +58,11 @@ func (f *filesystem) readRuntimeStop() (runtimeStopIntent, error) {
 	return p, nil
 }
 func (f *filesystem) stopInventory(p *runtimeStopIntent) error {
+	if p != nil && p.Version == 3 {
+		if e := f.workStopLink(*p); e != nil {
+			return e
+		}
+	}
 	if p != nil && p.State != nil {
 		if e := f.runtimeStateMatches(*p.State); e != nil {
 			return e

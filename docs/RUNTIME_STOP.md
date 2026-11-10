@@ -101,3 +101,13 @@ failure/reboot state-preserving rollback; staging accounting and guarded owned-L
 qualification. Original long-load failures, unexplained metadata exit, resource/
 asset/IO/benefit ceilings and actor/offered-clock requirements remain unchanged.
 The full production goal is not replaced by a software/model physical-stop test.
+
+## Explicit known-work composition
+
+The internal [work-bound Stop coordinator](WORK_BOUND_STOP.md) adds explicit v3
+intent binding to an independently anchored positive original-live cohort
+receipt BEFORE Stop effects. All original v1/v2 canonical bytes and the ordinary
+physical Stop result remain unchanged (accepted-work/full-reclaim/activation
+flags false). v3 requires the strict completion/source/process/state plan link
+on every Stop/state recovery, never caller counts or adoption of replacements.
+This is not an operational updater, full reclaim or real KVM acceptance.

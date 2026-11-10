@@ -32,6 +32,12 @@ semantics. They cannot acquire this stronger state authority, are not silently
 rewritten/upgraded, and still never authorize file selection. Device/inode/change
 binding is not a portable backup or a reboot certificate; uncertainty refuses.
 
+Version-3 Stop additionally requires the exact independently anchored known-work
+completion link from [work-bound Stop](WORK_BOUND_STOP.md). It preserves the
+original state/process identities and requires this link again on fresh state
+acquisition; it never upgrades v1/v2 or interprets termination as work success.
+The resulting state lease still does not certify full reclaim/activation.
+
 ## Core inventory is not full resource inventory
 
 While both original leases are retained, an unexported reader parses admission,
