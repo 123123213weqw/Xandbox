@@ -33,8 +33,8 @@ storm and unsupported-syscall controls accompany the corrective change; native
 passes alone do not erase a CI failure or qualify the corrective commit.
 
 The selected directory must also match the installer's independently anchored
-fixed state-directory FD. The pinned client has **status and drain only**, no
-resume method. Drain success requires the exact expected epoch/revision/request
+fixed state-directory FD. The pinned client has **status, drain and maintenance begin/status**, no
+resume or maintenance-release method. See [the durable maintenance fence](RUNTIME_MAINTENANCE.md). Drain success requires the exact expected epoch/revision/request
 and closed admission, not merely a syntactically valid JSON response.
 
 PID/incarnation binding still does NOT prove the process is the correct

@@ -110,6 +110,62 @@ func controlHandler(c *Controller, resources func() sandbox.Stats) http.Handler 
 			fail(400, "INVALID_REQUEST")
 			return
 		}
+		if r.URL.Path == maintenancePath {
+			var reply MaintenanceReply
+			var e error
+			switch r.Method {
+			case http.MethodGet:
+				b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+				if err != nil || len(b) != 0 {
+					fail(400, "INVALID_REQUEST")
+					return
+				}
+				reply, e = c.MaintenanceStatus()
+			case http.MethodPost:
+				if r.Header.Get("Content-Type") != "application/json" {
+					fail(415, "JSON_REQUIRED")
+					return
+				}
+				b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxCommandBytes))
+				if err != nil {
+					fail(413, "COMMAND_TOO_LARGE")
+					return
+				}
+				var request MaintenanceRequest
+				if strictjson.Decode(b, &request) != nil || !request.Valid() {
+					fail(400, "INVALID_COMMAND")
+					return
+				}
+				reply, e = c.BeginMaintenance(r.Context(), request)
+			default:
+				w.Header().Set("Allow", "GET, POST")
+				fail(405, "METHOD_NOT_ALLOWED")
+				return
+			}
+			if e != nil {
+				switch {
+				case errors.Is(e, ErrMaintenanceUnsupported):
+					fail(501, "MAINTENANCE_UNSUPPORTED")
+				case errors.Is(e, ErrMaintenance):
+					fail(409, "MAINTENANCE")
+				case errors.Is(e, ErrBusy):
+					fail(409, "BUSY")
+				case errors.Is(e, ErrConflict):
+					fail(409, "CONFLICT")
+				case errors.Is(e, ErrFenced):
+					fail(503, "PERSISTENCE_FENCED")
+				case errors.Is(e, ErrClosed):
+					fail(503, "CLOSED")
+				case errors.Is(e, context.Canceled), errors.Is(e, context.DeadlineExceeded):
+					fail(408, "CANCELLED_BEFORE_ACCEPTANCE")
+				default:
+					fail(500, "INTERNAL")
+				}
+				return
+			}
+			_ = json.NewEncoder(w).Encode(reply)
+			return
+		}
 		if r.URL.Path == "/v1/node" && r.Method == http.MethodGet {
 			b, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
 			if e != nil || len(b) != 0 {
@@ -161,6 +217,8 @@ func controlHandler(c *Controller, resources func() sandbox.Stats) http.Handler 
 				fail(409, "REVISION_EXHAUSTED")
 			case errors.Is(e, ErrClosed):
 				fail(503, "CLOSED")
+			case errors.Is(e, ErrMaintenance):
+				fail(409, "MAINTENANCE")
 			case errors.Is(e, context.Canceled), errors.Is(e, context.DeadlineExceeded):
 				fail(408, "CANCELLED_BEFORE_ACCEPTANCE")
 			default:

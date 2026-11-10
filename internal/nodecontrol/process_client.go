@@ -22,7 +22,8 @@ func (p ProcessIdentity) Valid() bool {
 	return p.PID > 1 && bootID.MatchString(p.BootID) && p.StartTicks > 0
 }
 
-// PinnedClient permits only status and drain, never resume. The expected PID
+// PinnedClient permits status, drain and maintenance begin/status, never resume
+// or maintenance release. The expected PID
 // comes from an independently verified manager incarnation, not a tenant token.
 // Its private kernel lease must remain live before dial and after response read.
 // A lost reply never undoes a mutation; retain/retry its original CAS command.
