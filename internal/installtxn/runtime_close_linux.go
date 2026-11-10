@@ -307,9 +307,11 @@ func (s *runtimeScope) closeBoundRuntime(ctx context.Context, work runtimeWorkSt
 			stage = "begin-peer"
 			begin := true
 			for {
+				stage = "poll-input"
 				if e := f.runtimeDrainLocked(ctx, input); e != nil {
 					return e
 				}
+				stage = "poll-peers"
 				if e := s.workStopPeers(ctx, tx, work, &w.Work, c, m, proof, false); e != nil {
 					return e
 				}

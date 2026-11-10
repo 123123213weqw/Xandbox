@@ -12,21 +12,7 @@ import (
 
 func TestRuntimeStateProofLockRowTopologyKeepsExactOwnerPredicate(t *testing.T) {
 	id := runtimeStateIdentity{LockDevice: unix.Mkdev(8, 1), LockInode: 99}
-	good := "1: FLOCK ADVISORY WRITE 123 08:01:99 0 EOF\n"
-	other := "2: FLOCK ADVISORY WRITE 456 08:02:100 0 EOF\n"
-	cases := []struct{ name, raw, suffix string }{
-		{"exact-two", good + good, "/lock-rows-two/exact-text"},
-		{"exact-three", strings.Repeat(good, 3), "/lock-rows-three/exact-text"},
-		{"exact-many", strings.Repeat(good, 4), "/lock-rows-many/exact-text"},
-		{"saturated", strings.Repeat(good, 4096), "/lock-rows-many/exact-text"},
-		{"same-ordinal-whitespace", good + "1:\tFLOCK  ADVISORY WRITE 123 08:01:99 0 EOF\n", "/lock-rows-two/same-ordinal"},
-		{"same-ordinal-number-spelling", good + "1: FLOCK ADVISORY WRITE 123 0008:0001:099 0 EOF\n", "/lock-rows-two/same-ordinal"},
-		{"different-ordinal", good + "2:" + good[2:], "/lock-rows-two/different-ordinal"},
-		{"different-ordinal-spelling", good + "01:" + good[2:], "/lock-rows-two/different-ordinal"},
-		{"private-ordinal-never-retained", strings.ReplaceAll(good+good, "1:", "private-raw-ordinal:"), "/lock-rows-two/exact-text"},
-		{"foreign-interleaved", good + other + good, "/lock-rows-two/exact-text"},
-		{"mixed-three", good + good + "2:" + good[2:], "/lock-rows-three/different-ordinal"},
-	}
+	cases := runtimeLockTopologyCases()
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			old := originalStateKernelLockOwnerCe053([]byte(c.raw), id, 123)
