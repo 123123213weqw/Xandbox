@@ -16,6 +16,7 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
 	"golang.org/x/sys/unix"
 )
 
@@ -41,9 +42,46 @@ func TestRuntimeStopOperatorHelper(t *testing.T) {
 		if e != nil {
 			os.Exit(71)
 		}
-		c, e := nodecontrol.New(store, sandbox.NewAdmissionGate(false))
+		g := sandbox.NewAdmissionGate(false)
+		c, e := nodecontrol.New(store, g)
 		if e != nil {
 			os.Exit(72)
+		}
+
+		if os.Getenv("XANDBOX_TEST_CLOSE_MODE") != "unsupported" {
+			ledger, err := sandbox.NewFileStore(root + stateDir + "/ledger")
+			if err != nil {
+				os.Exit(74)
+			}
+			driver, err := sandbox.NewMockDriver(root + stateDir + "/instances")
+			if err != nil {
+				os.Exit(75)
+			}
+			var d sandbox.Driver = driver
+			if os.Getenv("XANDBOX_TEST_CLOSE_MODE") == "cleanup-failed" {
+				d = &runtimeCloseFailedDriver{Driver: driver}
+			}
+			core, err := sandbox.NewManager(ledger, d, sandbox.Options{AdmissionGate: g, RetryDelay: time.Millisecond, ReapInterval: time.Millisecond})
+			if err != nil {
+				os.Exit(76)
+			}
+			journal, err := session.NewFileStore(root + stateDir + "/sessions")
+			if err != nil {
+				os.Exit(77)
+			}
+			broker, err := session.New(core, journal, session.Options{RetryInterval: time.Millisecond})
+			if err != nil {
+				os.Exit(78)
+			}
+			mode := os.Getenv("XANDBOX_TEST_CLOSE_MODE")
+			if mode == "populated" || mode == "cleanup-failed" {
+				if _, err = broker.Open(context.Background(), sandbox.Owner{TenantID: "alpha", MaxInstances: 4}, "original", sandbox.CreateRequest{}); err != nil {
+					os.Exit(79)
+				}
+			}
+			if c.AttachRuntime(core, broker) != nil {
+				os.Exit(80)
+			}
 		}
 		_, e = nodecontrol.Start(root+stateDir, c, func() sandbox.Stats { return sandbox.Stats{Active: 1, Capacity: 4} })
 		if e != nil {
@@ -53,10 +91,20 @@ func TestRuntimeStopOperatorHelper(t *testing.T) {
 	fmt.Println("READY")
 	_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
 }
+
+type runtimeCloseFailedDriver struct{ sandbox.Driver }
+
+func (d *runtimeCloseFailedDriver) Cleanup(context.Context, sandbox.Ref) error {
+	return errors.New("owned mock cleanup failure")
+}
 func runtimeStopChild(t *testing.T, root, role string) *exec.Cmd {
 	t.Helper()
+	return runtimeStopChildMode(t, root, role, "")
+}
+func runtimeStopChildMode(t *testing.T, root, role, mode string) *exec.Cmd {
+	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^TestRuntimeStopOperatorHelper$")
-	cmd.Env = []string{"GOMAXPROCS=2", "XANDBOX_TEST_STOP_ROOT=" + root, "XANDBOX_TEST_STOP_ROLE=" + role}
+	cmd.Env = []string{"GOMAXPROCS=2", "XANDBOX_TEST_STOP_ROOT=" + root, "XANDBOX_TEST_STOP_ROLE=" + role, "XANDBOX_TEST_CLOSE_MODE=" + mode}
 	in, e := cmd.StdinPipe()
 	if e != nil {
 		t.Fatal(e)

@@ -1,7 +1,8 @@
 # Source-bound tracked-runtime close
 
 Status: **experimental internal actuator, NOT full-host reclamation or an
-operational updater**. The installer does not call/persist this protocol yet.
+operational updater**. The internal installer now composes and journals this
+protocol; see [durable runtime close](DURABLE_RUNTIME_CLOSE.md).
 No real systemd/KVM/quota/activation/rollback/long-load acceptance is implied.
 
 ## Actual authority and effect ordering
@@ -69,13 +70,13 @@ Store.Load is disguised as inspection. Full resource/version compatibility and
 physical Stop/original state lease plus exact all-authority/kernel/namespace/
 quota joins remain independent prerequisites before file selection.
 
-The result is LIVE ONLY, with no durable close receipt or crash recovery here.
-The installer still needs an exact write-ahead close intent bound to its known
-work/source/process plan, pinned status polling, independently anchored known
-close outcome BEFORE Stop, and the original state-held raw data/resource join.
-Do NOT treat a missing reply or a replacement node's zero counts as closure.
-Current work-bound Stop does not invoke this new actuator; all startup and raw
-file-selection namespace fences stay intact. No CLI/update/deployment is added.
+The endpoint result remains live-only. The internal installer now persists a
+source/work/process-bound write-ahead intent and independently anchored known
+close outcome BEFORE explicit v4 Stop; see [durable runtime close](DURABLE_RUNTIME_CLOSE.md).
+That new receipt is not whole-host reclamation, file selection or activation.
+Missing replies and replacement zero counts remain insufficient. All startup
+and raw file-selection namespace fences stay intact. No CLI/update/deployment
+is added; original-state-held full authority and rollback joins remain open.
 
 Normal Core Cleanup discards in-memory job outputs, as the existing Destroy
 contract specifies. This close is NOT a guarantee that a client fetched a

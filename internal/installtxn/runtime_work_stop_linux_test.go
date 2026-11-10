@@ -31,10 +31,19 @@ func readWorkStopIntentTest(t *testing.T, f *filesystem) runtimeWorkStopIntent {
 	}
 	return p
 }
+func runtimeWorkCompletionFromTest(t *testing.T, f *filesystem) runtimeWorkCompletion {
+	t.Helper()
+	var r runtimeWorkCompletion
+	ok, e := f.readWorkStopRecord("complete.json", &r)
+	if e != nil || !ok {
+		t.Fatal(e)
+	}
+	return r
+}
 func workStopKnownBeforeSignal(t *testing.T, x *stopTestModel) {
 	t.Helper()
 	stop, e := x.f.readRuntimeStop()
-	if e != nil || stop.Version != 3 || x.f.workStopLink(stop) != nil {
+	if e != nil || stop.Version != 4 || x.f.closeStopLink(stop) != nil {
 		t.Fatal("Stop lacks exact anchored completion", stop, e)
 	}
 }
@@ -299,7 +308,14 @@ func TestRuntimeWorkStopUnanchoredOutcomeNeverRecoveredFromDeadOrReplacementNode
 				x.alive[MainUnit] = true
 			}
 			proof, e := s.finishAndStopWithProofs(ctx, digest(encode(x.tx)), runtimeReq("b"), nil, x.manager, x.proof)
-			want := kind == "anchored-dead" || kind == "anchored-scratch-dead"
+			// A historical anchored WORK result remains readable, but cannot
+			// replace the new runtime-close receipt after the daemon dies.
+			if kind == "anchored-dead" {
+				if e := x.f.workStopLink(original.stopped(runtimeWorkCompletionFromTest(t, x.f))); e != nil {
+					t.Fatal(e)
+				}
+			}
+			want := false
 			if (e == nil) != want || (proof != nil) != want || len(x.jobs) != 0 {
 				t.Fatal(kind, proof, e, x.jobs)
 			}
@@ -435,6 +451,11 @@ func TestRuntimeWorkStopExplicitV3BindsCompletionWithoutChangingV1OrV2Bytes(t *t
 	}
 	x.f.hook = nil
 	stop, e := x.f.readRuntimeStop()
+	if e == nil && stop.Version == 4 && digestPattern.MatchString(stop.Close) {
+		stop.Version, stop.Close = 3, ""
+	} else {
+		t.Fatal("missing current v4 closure", stop, e)
+	}
 	if e != nil || stop.Version != 3 || !digestPattern.MatchString(stop.Work) {
 		t.Fatal(stop, e)
 	}

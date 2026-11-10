@@ -15,6 +15,7 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
+	"github.com/123123213weqw/Xandbox/internal/session"
 	"golang.org/x/sys/unix"
 )
 
@@ -212,6 +213,18 @@ func TestRuntimeWorkOperatorHelper(t *testing.T) {
 	}
 	if _, e = core.Exec(r.ID, sandbox.ExecRequest{Generation: r.Generation, Argv: []string{"controlled-test-call"}}); e != nil {
 		os.Exit(79)
+	}
+
+	journal, e := session.NewFileStore(root + stateDir + "/sessions")
+	if e != nil {
+		os.Exit(81)
+	}
+	broker, e := session.New(core, journal, session.Options{RetryInterval: time.Millisecond})
+	if e != nil {
+		os.Exit(82)
+	}
+	if c.AttachRuntime(core, broker) != nil {
+		os.Exit(83)
 	}
 	server, e := nodecontrol.Start(root+stateDir, c, core.Stats)
 	if e != nil {

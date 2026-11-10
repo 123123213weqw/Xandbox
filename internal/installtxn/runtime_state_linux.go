@@ -232,7 +232,7 @@ func (s *runtimeScope) stoppedStateProof(ctx context.Context, base, request stri
 		if e != nil {
 			return e
 		}
-		if (p.Version != 2 && p.Version != 3) || p.State == nil || p.Base != base || p.Request != request || p.Main != drain.Process || p.Drain != digest(encode(drain)) {
+		if (p.Version != 2 && p.Version != 3 && p.Version != 4) || p.State == nil || p.Base != base || p.Request != request || p.Main != drain.Process || p.Drain != digest(encode(drain)) {
 			return ErrConflict
 		}
 		if e = s.fs.stopInventory(&p); e != nil {
