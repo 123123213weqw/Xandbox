@@ -309,6 +309,11 @@ func runArgs(args []string) (retErr error) {
 		}
 	}()
 
+	// Bind actual lifecycle authority before exposing any operator endpoint.
+	if err := control.AttachRuntime(manager, sessions); err != nil {
+		return err
+	}
+
 	var metricsErrors <-chan error
 	if *metricsEnabled {
 		observer, err := observability.Start(absDir, metrics, func() telemetry.Gauges {
