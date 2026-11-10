@@ -11,13 +11,103 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import time
 
 from smoke import UnixHTTP
+from process_exit import failure_summary, KINDS, REASONS
+
+
+# Fixed source-level labels, not CLI values. True retains the original kill /
+# nonzero assertion; False retains terminate / zero. No budget or case changes.
+STOP_PHASES = {
+    'tenant_capacity_stop': False,
+    'node_capacity_stop': False,
+    'active_exec_kill': True,
+    'post_crash_recovery_stop': False,
+    'migrated_legacy_stop': False,
+    'partial_migration_kill': True,
+    'imported_2048_stop': False,
+    'historical_daemon_kill': True,
+    'historical_recovery_stop': False,
+}
+
+
+def _exit_status(value):
+    return type(value) is int and -128 <= value <= 255
+
+
+def _stop_failure(phase, category, status=None, node=None, directory=None, collect=False):
+    # Only this closed payload is diagnostic. Standard Python source traceback
+    # locations are not tenant paths or evidence of the daemon's failure cause.
+    if type(phase) is not str or phase not in STOP_PHASES:
+        phase = 'unavailable'
+    if category not in ('invalid_policy', 'optimized_python', 'signal_failed',
+                        'wait_timeout', 'wait_failed', 'invalid_exit_status', 'unexpected_exit_status'):
+        category = 'invalid_policy'
+    payload = {'schema': 'xandbox.metadata-stop-failure.v1', 'phase': phase,
+               'failure': category, 'wait_limit_seconds': 15,
+               'expected': ('nonzero_after_kill' if STOP_PHASES[phase] else 'zero_after_terminate')
+               if phase in STOP_PHASES else 'unavailable',
+               'exit_status': status if _exit_status(status) else None,
+               'diagnostic_view': 'not_requested', 'closed_records': [],
+               'persisted_tail_is_not_current_process_proof': True}
+    if collect:
+        payload['diagnostic_view'] = 'unavailable'
+        try:
+            summary = failure_summary(status, node, directory)
+            if type(summary) is dict:
+                tool_status = summary.get('view_exit_status')
+                if _exit_status(tool_status):
+                    payload['view_exit_status'] = tool_status
+                rows = summary.get('closed_records')
+                if summary.get('diagnostic_view') == 'closed' and type(tool_status) is int and tool_status == 0 and type(rows) is list and len(rows) <= 6:
+                    projected = []
+                    for row in rows:
+                        if type(row) is not dict or type(row.get('kind')) is not str or row['kind'] not in KINDS or type(row.get('reason')) is not str or row['reason'] not in REASONS:
+                            raise ValueError()
+                        projected.append({'kind': row['kind'], 'reason': row['reason']})
+                    payload['closed_records'] = projected
+                    payload['diagnostic_view'] = 'closed'
+        except Exception:
+            # Never relay an OS/CLI/parser exception, report, path or console.
+            pass
+    raise AssertionError(json.dumps(payload, sort_keys=True)) from None
+
+
+def stop_metadata_process(process, node, directory, phase, crash=False):
+    if type(phase) is not str or phase not in STOP_PHASES or type(crash) is not bool or STOP_PHASES[phase] != crash:
+        _stop_failure('unavailable', 'invalid_policy')
+    if sys.flags.optimize:
+        _stop_failure(phase, 'optimized_python')
+    try:
+        if crash:
+            process.kill()
+        else:
+            process.terminate()
+    except Exception:
+        _stop_failure(phase, 'signal_failed')
+    try:
+        status = process.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        # Do not spend another diagnostic wait while the owned process may be
+        # live. The original main finally still kills/reaps this exact handle.
+        _stop_failure(phase, 'wait_timeout')
+    except Exception:
+        _stop_failure(phase, 'wait_failed')
+    if not _exit_status(status):
+        _stop_failure(phase, 'invalid_exit_status')
+    if status != 0 if crash else status == 0:
+        return
+    # Only a known-exited, unexpected status gets the EXISTING bounded read-only
+    # diagnostic query. Never infer this process's success from an earlier tail.
+    _stop_failure(phase, 'unexpected_exit_status', status, node, directory, collect=True)
 
 
 def main():
+    if sys.flags.optimize:
+        _stop_failure('unavailable', 'optimized_python')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--daemon', required=True)
     parser.add_argument('--node', required=True, help='same-UID operator CLI for explicit legacy-fixture resume')
@@ -80,13 +170,8 @@ def main():
                     proc.wait(timeout=10)
                     raise
 
-            def stopped(proc, crash=False):
-                if crash:
-                    proc.kill()
-                else:
-                    proc.terminate()
-                result = proc.wait(timeout=15)
-                assert result != 0 if crash else result == 0
+            def stopped(proc, crash=False, *, phase, directory):
+                stop_metadata_process(proc, node, directory, phase, crash=crash)
 
             def migrate(directory=state):
                 return subprocess.run([daemon, '-state-dir', str(directory), '-migrate-ledger'], capture_output=True, timeout=60)
@@ -121,26 +206,26 @@ def main():
                 assert create('two')['id'] == second['id']
                 assert migrate().returncode != 0, 'offline migration bypassed live controller lock'
                 checks.append('tenant metadata saturation preserves live replay, tombstone and exclusive migration lock')
-                stopped(process); process = None
+                stopped(process, phase='tenant_capacity_stop', directory=state); process = None
                 process = start(['-max-records', '2', '-max-tenant-records', '2'])
                 destroyed(second)
                 denied = call('POST', '/v1/sandboxes', {}, key='three', status=503)
                 assert denied['error']['code'] == 'METADATA_CAPACITY'
                 assert call('POST', '/v1/sandboxes', {}, key='one', status=410)['error']['code'] == 'IDEMPOTENCY_GONE'
                 checks.append('node metadata cap survives restart and does not recycle destroyed keys')
-                stopped(process); process = None
+                stopped(process, phase='node_capacity_stop', directory=state); process = None
 
                 # Add one live record, then crash. Lower caps may stop new
                 # admission but must not prevent recovery of old ownership.
                 process = start(['-max-records', '3', '-max-tenant-records', '3'])
                 third = create('three')
                 call('POST', path(third) + '/exec', {'generation': third['generation'], 'argv': ['sleep', '4s']}, status=202)
-                stopped(process, crash=True); process = None
+                stopped(process, crash=True, phase='active_exec_kill', directory=state); process = None
                 process = start(['-max-records', '1', '-max-tenant-records', '1'])
                 destroyed(third)
                 assert call('POST', '/v1/sandboxes', {}, key='three', status=410)['error']['code'] == 'IDEMPOTENCY_GONE'
                 checks.append('SIGKILL restart below old record budget reclaims every old generation without resurrection')
-                stopped(process); process = None
+                stopped(process, phase='post_crash_recovery_stop', directory=state); process = None
 
                 files = list((state / 'ledger').glob('*.json'))
                 for file in files:
@@ -154,7 +239,7 @@ def main():
                 assert json.loads(migrate().stdout)['upgraded'] == 0
                 process = start(['-max-records', '1', '-max-tenant-records', '1'])
                 assert call('POST', '/v1/sandboxes', {}, key='one', status=410)['error']['code'] == 'IDEMPOTENCY_GONE'
-                stopped(process); process = None
+                stopped(process, phase='migrated_legacy_stop', directory=state); process = None
                 checks.append('legacy fixture requires explicit offline upgrade; rerun is idempotent and preserves key rejection')
 
                 before = {f: f.read_bytes() for f in files}
@@ -183,7 +268,7 @@ def main():
                     assert proc.poll() is None, 'migration finished before fault injection; no interruption proof'
                     return any('version' in json.loads(f.read_text()) for f in ledger.glob('*.json'))
                 wait(partial_upgrade, 'first atomic upgrade', seconds=30)
-                stopped(proc, crash=True); process = None
+                stopped(proc, crash=True, phase='partial_migration_kill', directory=interrupted); process = None
                 upgraded = sum('version' in json.loads(f.read_text()) for f in ledger.glob('*.json'))
                 assert 0 < upgraded < count, 'not an actual partial migration'
                 assert subprocess.run(base(directory=interrupted), stdout=log, stderr=log, timeout=10).returncode != 0
@@ -206,7 +291,7 @@ def main():
                     capture_output=True, timeout=10)
                 assert opened.returncode == 0 and json.loads(opened.stdout)['control']['admission_open']
                 assert call('POST', '/v1/sandboxes', {}, key='new', status=503, directory=interrupted)['error']['code'] == 'METADATA_CAPACITY'
-                stopped(process); process = None
+                stopped(process, phase='imported_2048_stop', directory=interrupted); process = None
                 checks.append('actual SIGKILL during 2048-record migration leaves mixed schema; resume preserves all identities and cleans orphan temps')
                 checks.append('imported legacy fixture remains drained until same-UID operator CAS resume; metadata cap still enforced')
 
@@ -217,13 +302,13 @@ def main():
                     owned = create('historical', directory=historical)
                     raw = json.loads((historical / 'ledger' / (owned['id'] + '.json')).read_text())
                     assert 'version' not in raw and raw['state'] == 'READY'
-                    stopped(process, crash=True); process = None
+                    stopped(process, crash=True, phase='historical_daemon_kill', directory=historical); process = None
                     assert subprocess.run(base(directory=historical), stdout=log, stderr=log, timeout=10).returncode != 0
                     assert migrate(historical).returncode == 0
                     process = start(directory=historical)
                     destroyed(owned, directory=historical)
                     assert call('POST', '/v1/sandboxes', {}, key='historical', status=410, directory=historical)['error']['code'] == 'IDEMPOTENCY_GONE'
-                    stopped(process); process = None
+                    stopped(process, phase='historical_recovery_stop', directory=historical); process = None
                     checks.append('actual pre-upgrade daemon SIGKILL ownership migrates and is reclaimed without key reuse')
             finally:
                 if process is not None and process.poll() is None:
