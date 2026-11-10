@@ -19,6 +19,7 @@ import (
 )
 
 type Options struct {
+	Results          ResultStore // nil preserves volatile legacy jobs; explicit bounded durable mode only.
 	AdmissionGate    *AdmissionGate
 	Metrics          *telemetry.Registry
 	MaxRecords       int
@@ -36,9 +37,10 @@ type Options struct {
 }
 
 type execution struct {
-	job    Job
-	cancel context.CancelFunc
-	work   *acceptedWork
+	job       Job
+	cancel    context.CancelFunc
+	work      *acceptedWork
+	resultErr error
 }
 
 type instance struct {
@@ -149,6 +151,15 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 	}
 	if len(records) > MaxLedgerRecords {
 		return nil, errors.New("ledger exceeds hard record limit")
+	}
+	if opts.Results != nil {
+		uncertain, err := opts.Results.Bind(records)
+		if err != nil {
+			return nil, err
+		}
+		if uncertain {
+			opts.AdmissionGate.MarkAcceptedWorkUncertain()
+		}
 	}
 	allocated := 0
 	for _, record := range records {
@@ -515,6 +526,14 @@ func (m *Manager) Exec(id string, req ExecRequest) (Job, error) {
 }
 
 func (m *Manager) exec(id string, req ExecRequest, admission *Admission) (Job, error) {
+	if m.opts.Results != nil {
+		return m.execWithResults(id, req, admission)
+	}
+	return m.execVolatile(id, req, admission)
+}
+
+// Original volatile admission path, unchanged apart from its internal name.
+func (m *Manager) execVolatile(id string, req ExecRequest, admission *Admission) (Job, error) {
 	if len(req.Argv) == 0 || len(req.Argv) > 128 || req.Argv[0] == "" {
 		return Job{}, fmt.Errorf("%w: argv must contain 1..128 arguments", ErrInvalid)
 	}
@@ -593,6 +612,10 @@ func (m *Manager) exec(id string, req ExecRequest, admission *Admission) (Job, e
 }
 
 func (m *Manager) run(i *instance, e *execution, ctx context.Context, req ExecRequest, limit int) {
+	if m.opts.Results != nil {
+		m.runWithResults(i, e, ctx, req, limit)
+		return
+	}
 	success := false
 	defer func() { e.work.finish(success) }()
 	out, err := m.driver.Exec(ctx, e.job.Ref, req, limit)
@@ -647,12 +670,21 @@ func (m *Manager) GetJob(id, jobID string) (Job, error) {
 		return Job{}, err
 	}
 	i.mu.Lock()
-	defer i.mu.Unlock()
 	e := i.jobs[jobID]
-	if e == nil {
-		return Job{}, ErrNotFound
+	if e != nil {
+		job, err := e.job, e.resultErr
+		i.mu.Unlock()
+		if err != nil {
+			return Job{}, ErrResultUnavailable
+		}
+		return job, nil
 	}
-	return e.job, nil
+	ref, tenant := i.ref, i.tenantID
+	i.mu.Unlock()
+	if m.opts.Results != nil {
+		return m.opts.Results.Get(ref, tenant, jobID)
+	}
+	return Job{}, ErrNotFound
 }
 
 func (m *Manager) Stop(ctx context.Context, ref Ref) (Record, error) {

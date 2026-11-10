@@ -81,6 +81,11 @@ jobs:
         run: |
           umask 077
           GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestAcceptedWork|TestMaintenanceQuiescence|TestRuntimeWork)' ./internal/sandbox ./internal/session ./internal/nodecontrol ./internal/installtxn
+      - name: Verify opt-in bounded result durability and owned crash cuts in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestResultStore|TestManager.*Result)' ./internal/sandbox
       - name: Race and failure tests under private umask
         run: |
           umask 077

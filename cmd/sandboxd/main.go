@@ -139,6 +139,9 @@ func runArgs(args []string) (retErr error) {
 	maxSessions := flags.Int("max-sessions", 1000, "maximum retained session records, including closed tombstones")
 	maxTenantSessions := flags.Int("max-tenant-sessions", 0, "retained sessions per tenant; 0 = min(100,max-sessions)")
 	sessionHistory := flags.Int("session-history", 64, "maximum retained attempts per session, including initial create; 1..64")
+	resultBytes := flags.Int64("result-bytes", 0, "opt-in logical retained-result reservation budget; 0 disables, maximum 1 GiB; no eviction")
+	resultTenantBytes := flags.Int64("result-tenant-bytes", 0, "per-tenant logical result budget; 0 = min(16 MiB, result-bytes)")
+	resultRecords := flags.Int("result-records", 0, "retained result record admission bound; 0 = 4096 when enabled")
 	metricsEnabled := flags.Bool("metrics", false, "operator-only metrics on private state-dir/metrics.sock; never on tenant API or TCP")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -150,7 +153,10 @@ func runArgs(args []string) (retErr error) {
 	if *stateDir == "" || (!*migrateLedger && *backend != "mock" && *backend != "firecracker") || *maxInstances < 1 || *maxInstances > 10_000 || *maxRecords < 1 || *maxRecords > sandbox.MaxLedgerRecords || *maxTenantRecords < 0 || *maxTenantRecords > *maxRecords || *maxSessions < 1 || *maxSessions > session.MaxRecords || *maxTenantSessions < 0 || *maxTenantSessions > *maxSessions || *sessionHistory < 1 || *sessionHistory > session.MaxHistory || flags.NArg() != 0 {
 		return fmt.Errorf("usage: sandboxd -backend mock|firecracker -state-dir DIR [-max-instances 32]; mock provides NO isolation")
 	}
-	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "" || *metricsEnabled) {
+	if *resultBytes < 0 || *resultBytes > sandbox.MaxResultBytes || *resultTenantBytes < 0 || *resultTenantBytes > *resultBytes || *resultRecords < 0 || *resultRecords > sandbox.MaxResultRecords || (*resultBytes == 0 && (*resultTenantBytes != 0 || *resultRecords != 0)) {
+		return errors.New("invalid retained result bounds")
+	}
+	if *migrateLedger && (*backend != "" || *authFile != "" || *insecureMock || *firecrackerConfig != "" || *metricsEnabled || *resultBytes != 0) {
 		return errors.New("offline migration cannot be combined with backend or authentication options")
 	}
 	if !*migrateLedger && ((*authFile == "" && !*insecureMock) || (*authFile != "" && *insecureMock)) {
@@ -228,6 +234,34 @@ func runArgs(args []string) (retErr error) {
 		}
 		return json.NewEncoder(os.Stdout).Encode(report)
 	}
+	// Never silently start volatile mode over retained job data. Validate/open
+	// results BEFORE a backend constructor or API/lifecycle workers can run.
+	var results *sandbox.FileResultStore
+	if *resultBytes == 0 {
+		if _, e := os.Lstat(filepath.Join(absDir, "results")); !errors.Is(e, os.ErrNotExist) {
+			return sandbox.ErrResultUnavailable
+		}
+	} else {
+		if *resultTenantBytes == 0 {
+			*resultTenantBytes = min(16<<20, *resultBytes)
+		}
+		if *resultRecords == 0 {
+			*resultRecords = 4096
+		}
+		results, err = sandbox.OpenResultStore(filepath.Join(absDir, "results"), sandbox.ResultLimits{Bytes: *resultBytes, TenantBytes: *resultTenantBytes, Records: *resultRecords})
+		if err != nil {
+			return err
+		}
+		defer results.Close()
+		// Reject orphan/foreign outcomes before any backend constructor.
+		rows, e := store.Load()
+		if e != nil {
+			return e
+		}
+		if _, e = results.Bind(rows); e != nil {
+			return e
+		}
+	}
 	controlStore, err := nodecontrol.OpenStore(absDir)
 	if err != nil {
 		return fmt.Errorf("load node admission control: %w", err)
@@ -251,6 +285,9 @@ func runArgs(args []string) (retErr error) {
 	var driver sandbox.Driver
 	metrics := &telemetry.Registry{}
 	opts := sandbox.Options{AdmissionGate: admissionGate, Metrics: metrics, MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxTenantRecords: *maxTenantRecords, StopWorkers: *stopWorkers, CleanupWorkers: *cleanupWorkers, WorkQueueSize: *workQueueSize}
+	if results != nil {
+		opts.Results = results
+	}
 	writeTimeout := 10 * time.Second
 	if *backend == "mock" {
 		driver, err = sandbox.NewMockDriver(filepath.Join(absDir, "instances"))
