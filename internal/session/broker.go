@@ -289,7 +289,7 @@ func (b *Broker) Open(ctx context.Context, owner sandbox.Owner, key string, req 
 		return Result{}, err
 	}
 	b.mu.Unlock()
-	defer b.finish(e, a)
+	defer func() { b.finish(e, a, retErr) }()
 	return b.mutate(ctx, owner, e, a, req)
 }
 
@@ -360,7 +360,7 @@ func (b *Broker) Switch(ctx context.Context, owner sandbox.Owner, id, key string
 		return Result{}, err
 	}
 	e.mu.Unlock()
-	defer b.finish(e, a)
+	defer func() { b.finish(e, a, retErr) }()
 	return b.mutate(ctx, owner, e, a, req.Create)
 }
 
@@ -409,12 +409,12 @@ func (b *Broker) persist(e *entry, r Record) error {
 	return err
 }
 func (b *Broker) copy(e *entry) Record { e.mu.Lock(); defer e.mu.Unlock(); return clone(e.record) }
-func (b *Broker) finish(e *entry, a *attempt) {
-	a.ticket.Release()
+func (b *Broker) finish(e *entry, a *attempt, result error) {
 	e.mu.Lock()
 	e.busy = false
 	close(a.done)
 	e.mu.Unlock()
+	a.ticket.Complete(result)
 	b.notify()
 }
 func (b *Broker) refOf(a *attempt) sandbox.Ref {

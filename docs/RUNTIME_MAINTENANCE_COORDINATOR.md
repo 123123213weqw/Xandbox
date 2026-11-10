@@ -70,8 +70,10 @@ semantically equivalent but byte-changed admission bindings cannot silently pass
 a cached backend observation. The cold-only snapshot-nil installed policy and
 metadata-only limitations remain unchanged.
 
-All `AcceptedWorkComplete`, `ResourcesReclaimed` and `ActivationAllowed` flags
-remain false. A maintenance ACK, state lock or empty modeled backend observation
+The BEGIN/ordinary-drain/physical-Stop `AcceptedWorkComplete`,
+`ResourcesReclaimed` and `ActivationAllowed` flags remain false. The separate
+live finish-only stage is described in [accepted-work quiescence](ACCEPTED_WORK_QUIESCENCE.md);
+it does not authorize Stop/reclaim/file selection/activation. A maintenance ACK, state lock or empty modeled backend observation
 is not a successful work/full reclaim/activation certificate.
 
 ## Test boundary and missing operational work
@@ -92,7 +94,7 @@ admission directory; it never recreates an authority and is covered by the
 existing corruption suite.
 
 Still required: complete all mutable-authority/version compatibility; explicit
-accepted-work policy and real bounded owned-L1 Stop/reclaim; safely compose typed
+durable lost-job outcome policy and real bounded owned-L1 Stop/reclaim; safely compose typed
 file selection without nested locks or boolean gaps; source-bound maintenance
 release restoring prior admission and ingress; held-process startup/health;
 state-preserving failure/reboot rollback and original long-load acceptance.

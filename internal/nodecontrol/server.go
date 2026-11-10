@@ -110,6 +110,49 @@ func controlHandler(c *Controller, resources func() sandbox.Stats) http.Handler 
 			fail(400, "INVALID_REQUEST")
 			return
 		}
+		if r.URL.Path == quiescencePath {
+			if r.Method != http.MethodPost {
+				w.Header().Set("Allow", "POST")
+				fail(405, "METHOD_NOT_ALLOWED")
+				return
+			}
+			if r.Header.Get("Content-Type") != "application/json" {
+				fail(415, "JSON_REQUIRED")
+				return
+			}
+			b, e := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxCommandBytes))
+			if e != nil {
+				fail(413, "COMMAND_TOO_LARGE")
+				return
+			}
+			var request MaintenanceRequest
+			if strictjson.Decode(b, &request) != nil || !request.Valid() {
+				fail(400, "INVALID_COMMAND")
+				return
+			}
+			reply, e := c.QuiesceMaintenance(r.Context(), request)
+			if e != nil {
+				switch {
+				case errors.Is(e, ErrMaintenanceUnsupported):
+					fail(501, "MAINTENANCE_UNSUPPORTED")
+				case errors.Is(e, ErrMaintenance):
+					fail(409, "MAINTENANCE")
+				case errors.Is(e, ErrBusy):
+					fail(409, "BUSY")
+				case errors.Is(e, ErrFenced):
+					fail(503, "PERSISTENCE_FENCED")
+				case errors.Is(e, ErrClosed):
+					fail(503, "CLOSED")
+				case errors.Is(e, context.Canceled), errors.Is(e, context.DeadlineExceeded):
+					fail(408, "CANCELLED_BEFORE_ACCEPTANCE")
+				default:
+					fail(500, "INTERNAL")
+				}
+				return
+			}
+			_ = json.NewEncoder(w).Encode(reply)
+			return
+		}
 		if r.URL.Path == maintenancePath {
 			var reply MaintenanceReply
 			var e error

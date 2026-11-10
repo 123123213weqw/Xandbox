@@ -178,6 +178,7 @@ func (c *Controller) BeginMaintenance(ctx context.Context, req MaintenanceReques
 			return MaintenanceReply{}, ErrConflict
 		}
 		c.maintenance = &record
+		c.maintenanceOriginLive = true
 	}
 	c.gate.SetOpen(false)
 	c.view.Phase, c.view.DesiredMode, c.view.PendingRequestID = "pending", ModeDrained, req.Command.RequestID

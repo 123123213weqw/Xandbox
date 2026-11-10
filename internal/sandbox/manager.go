@@ -38,6 +38,7 @@ type Options struct {
 type execution struct {
 	job    Job
 	cancel context.CancelFunc
+	work   *acceptedWork
 }
 
 type instance struct {
@@ -170,6 +171,9 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 		stopQueue: make(chan *instance, opts.WorkQueueSize), cleanupQueue: make(chan *instance, opts.WorkQueueSize),
 	}
 	for _, r := range records {
+		if r.State != Destroyed {
+			opts.AdmissionGate.MarkAcceptedWorkUncertain()
+		}
 		if _, exists := m.records[r.ID]; exists {
 			cancel()
 			return nil, fmt.Errorf("duplicate ledger identity %s", r.ID)
@@ -404,7 +408,9 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		m.mu.Unlock()
 		return Record{}, errors.New("random identity collision")
 	}
+	var work *acceptedWork
 	err = m.opts.AdmissionGate.reserve(ticket, func() {
+		work = m.opts.AdmissionGate.startWorkLocked()
 		m.records[id], m.active[id] = i, i
 		m.metricRecords.Add(1)
 		m.metricAllocated.Add(1)
@@ -418,6 +424,7 @@ func (m *Manager) createScoped(ctx context.Context, owner Owner, key string, req
 		return Record{}, err
 	}
 	m.mu.Unlock()
+	defer func() { work.finish(retErr == nil) }()
 	if reserved != nil {
 		reserved(i.ref)
 	}
@@ -561,12 +568,19 @@ func (m *Manager) exec(id string, req ExecRequest, admission *Admission) (Job, e
 	if req.TimeoutMS < 1 || req.TimeoutMS > i.record.Limits.MaxExecMS {
 		return Job{}, fmt.Errorf("%w: execution timeout exceeds instance policy", ErrInvalid)
 	}
+	// Linearize actual execution admission against the distinct finish-only
+	// maintenance fence, not ordinary drain. A caller queued on i.mu before
+	// the fence has not yet been accepted and must be rejected here.
+	work, err := m.opts.AdmissionGate.acceptExecution()
+	if err != nil {
+		return Job{}, err
+	}
 	// Do not retain a caller-owned mutable slice across the asynchronous call.
 	req.Argv = append([]string(nil), req.Argv...)
 	ctx, cancel := context.WithTimeout(m.ctx, time.Duration(req.TimeoutMS)*time.Millisecond)
 	e := &execution{job: Job{
 		ID: jobID, Ref: i.record.Ref, Status: "RUNNING", StartedAt: time.Now().UTC(),
-	}, cancel: cancel}
+	}, cancel: cancel, work: work}
 	if i.running == 0 {
 		i.idle = make(chan struct{})
 	}
@@ -579,6 +593,8 @@ func (m *Manager) exec(id string, req ExecRequest, admission *Admission) (Job, e
 }
 
 func (m *Manager) run(i *instance, e *execution, ctx context.Context, req ExecRequest, limit int) {
+	success := false
+	defer func() { e.work.finish(success) }()
 	out, err := m.driver.Exec(ctx, e.job.Ref, req, limit)
 	if err == nil {
 		err = ctx.Err()
@@ -618,6 +634,7 @@ func (m *Manager) run(i *instance, e *execution, ctx context.Context, req ExecRe
 			e.job.Status = "FAILED"
 		}
 	}
+	success = err == nil && e.job.Output.ExitCode == 0
 	i.running--
 	if i.running == 0 {
 		close(i.idle)
