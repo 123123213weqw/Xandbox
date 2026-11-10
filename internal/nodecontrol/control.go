@@ -72,6 +72,7 @@ type Controller struct {
 	view                  Status
 	maintenance           *MaintenanceRecord
 	maintenanceOriginLive bool
+	runtime               *runtimeCloser
 }
 
 func New(store Store, gate *sandbox.AdmissionGate) (*Controller, error) {
@@ -221,7 +222,7 @@ func (c *Controller) Close(ctx context.Context) error {
 	select {
 	case c.serial <- struct{}{}:
 		<-c.serial
-		return nil
+		return c.waitRuntimeClose(ctx)
 	case <-ctx.Done():
 		return ctx.Err()
 	}
