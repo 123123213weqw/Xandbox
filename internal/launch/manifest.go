@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
@@ -49,7 +50,7 @@ type Manifest struct {
 const MaxManifest = 16384
 
 var unitName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}\.service$`)
-var sha = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var sha = fixedhex.Pattern(64)
 var errPolicy = errors.New("invalid immutable launch policy")
 
 func canonical(p string) bool {

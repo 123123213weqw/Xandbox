@@ -10,7 +10,6 @@ import (
 	"sort"
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
 
@@ -91,7 +90,7 @@ func (f *filesystem) runtimeDrainReadIntent() (runtimeDrainIntent, error) {
 	if e != nil {
 		return p, e
 	}
-	if strictjson.Decode(b, &p) != nil || !validRuntimeDrain(p) || !bytes.Equal(b, encode(p)) {
+	if !canonicalRuntimeIntentValue(b, &p) || !validRuntimeDrain(p) {
 		return p, ErrInventory
 	}
 	return p, nil

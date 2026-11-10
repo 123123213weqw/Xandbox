@@ -3,12 +3,10 @@
 package installtxn
 
 import (
-	"bytes"
 	"context"
 	"errors"
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
 
@@ -88,7 +86,7 @@ func (f *filesystem) readMaintenanceIntent() (runtimeDrainIntent, bool, error) {
 	if e != nil {
 		return p, false, e
 	}
-	if strictjson.Decode(b, &p) != nil || !validRuntimeDrain(p) || !validRuntimeMaintenance(p) || !bytes.Equal(b, encode(p)) {
+	if !canonicalRuntimeIntentValue(b, &p) || !validRuntimeDrain(p) || !validRuntimeMaintenance(p) {
 		return p, false, ErrInventory
 	}
 	return p, true, nil

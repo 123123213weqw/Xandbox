@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/launch"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
@@ -31,7 +32,7 @@ const MaxManifest = 16384
 var errPolicy = errors.New("invalid ingress service policy")
 var unitName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}\.service$`)
 var safePath = regexp.MustCompile(`^/[A-Za-z0-9_./-]+$`)
-var sha = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var sha = fixedhex.Pattern(64)
 var device = regexp.MustCompile(`^(0|[1-9][0-9]{0,6}):(0|[1-9][0-9]{0,6})$`)
 
 func canonical(p string) bool         { return safePath.MatchString(p) && filepath.Clean(p) == p && p != "/" }

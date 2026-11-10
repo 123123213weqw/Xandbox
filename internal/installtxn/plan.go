@@ -181,7 +181,9 @@ func validatePlan(p Plan) error {
 	}
 	// Reuse the existing strict budget/serialization rules, not a looser unit template.
 	n := nodeManifest(p, map[string]Artifact{"daemon": {SHA256: strings.Repeat("0", 64)}})
-	if _, e := launch.ValidateLineValue(n); e != nil {
+	// CheckComposition below repeats the SAME node semantic policy. Retain its
+	// stricter LF-inclusive wire ceiling here; bare JSON size is not equivalent.
+	if !nodeLineFitsManifest(n) {
 		return ErrPolicy
 	}
 	g := ingressManifest(p, n, "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
@@ -190,6 +192,15 @@ func validatePlan(p Plan) error {
 	}
 	return nil
 }
+
+// Only a serialized byte budget, NEVER semantic validity or host authority.
+// The sole production caller must still run the original CheckComposition on
+// the same private immutable node value. Keep json.Marshal's error/UTF-8 rules.
+func nodeLineFitsManifest(n launch.Manifest) bool {
+	data, e := json.Marshal(n)
+	return e == nil && len(data) < launch.MaxManifest // len(data)+one LF <= ceiling
+}
+
 func rolePath(role string) string {
 	switch role {
 	case "launcher":

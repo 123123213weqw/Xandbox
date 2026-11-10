@@ -7,6 +7,7 @@ import (
 	"math"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -15,6 +16,9 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/launch"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
+
+// Independent pinned regexp(s), not candidate shared pattern aliases.
+var originalSha98 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // Exact pre-change44 oracle; never calls the candidate value helper/predicate.
 func originalDecode44(data []byte) (Manifest, error) {
@@ -27,7 +31,7 @@ func originalDecode44(data []byte) (Manifest, error) {
 	}
 	paths := map[string]bool{}
 	for _, a := range []firecracker.Asset{m.Gateway, m.Config, m.NodeLaunch} {
-		if !canonical(a.Path) || !sha.MatchString(a.SHA256) || paths[a.Path] || inside(m.PolicyStateDir, a.Path) {
+		if !canonical(a.Path) || !originalSha98.MatchString(a.SHA256) || paths[a.Path] || inside(m.PolicyStateDir, a.Path) {
 			return m, errPolicy
 		}
 		paths[a.Path] = true

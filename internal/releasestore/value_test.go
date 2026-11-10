@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"math"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -13,6 +14,10 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
+
+// Independent pinned regexp(s), not candidate shared pattern aliases.
+var originalDigestPattern98 = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var originalRevisionPattern98 = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // Exact pre-change44 oracle; never calls the candidate value helper/predicate.
 func originalDecode44(data []byte) (Manifest, error) {
@@ -23,7 +28,7 @@ func originalDecode44(data []byte) (Manifest, error) {
 	return originalNormalize44(m)
 }
 func originalNormalize44(m Manifest) (Manifest, error) {
-	if m.Version != 1 || !revisionPattern.MatchString(m.SourceRevision) || !toolchainPattern.MatchString(m.Toolchain) || (m.GOARCH != "amd64" && m.GOARCH != "arm64") || len(m.Files) != len(roles) {
+	if m.Version != 1 || !originalRevisionPattern98.MatchString(m.SourceRevision) || !toolchainPattern.MatchString(m.Toolchain) || (m.GOARCH != "amd64" && m.GOARCH != "arm64") || len(m.Files) != len(roles) {
 		return m, ErrPolicy
 	}
 	m.Files = append([]File(nil), m.Files...)
@@ -31,7 +36,7 @@ func originalNormalize44(m Manifest) (Manifest, error) {
 	var total int64
 	sources := map[string]bool{}
 	for i, f := range m.Files {
-		if f.Role != roles[i] || !canonical(f.Source) || f.Source == Root || strings.HasPrefix(f.Source, Root+"/") || sources[f.Source] || !digestPattern.MatchString(f.SHA256) || f.Bytes <= 0 || f.Bytes > maximum(f.Role) || f.Bytes > MaxReleaseBytes-total {
+		if f.Role != roles[i] || !canonical(f.Source) || f.Source == Root || strings.HasPrefix(f.Source, Root+"/") || sources[f.Source] || !originalDigestPattern98.MatchString(f.SHA256) || f.Bytes <= 0 || f.Bytes > maximum(f.Role) || f.Bytes > MaxReleaseBytes-total {
 			return m, ErrPolicy
 		}
 		sources[f.Source] = true

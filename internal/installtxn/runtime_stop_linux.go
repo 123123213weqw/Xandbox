@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
 
@@ -42,7 +41,7 @@ func (f *filesystem) readRuntimeStop() (runtimeStopIntent, error) {
 	if e != nil {
 		return p, e
 	}
-	if strictjson.Decode(b, &p) != nil || !validRuntimeStop(p) || !bytes.Equal(b, encode(p)) {
+	if !canonicalRuntimeIntentValue(b, &p) || !validRuntimeStop(p) {
 		return p, ErrInventory
 	}
 	return p, nil
