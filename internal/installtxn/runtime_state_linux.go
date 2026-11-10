@@ -15,14 +15,6 @@ import (
 
 // A v2 Stop binds the EXISTING state root and controller.lock before effects.
 // These inode identities are not a portable backup or a reboot certificate.
-type runtimeStateIdentity struct {
-	RootDevice        uint64 `json:"root_device"`
-	RootInode         uint64 `json:"root_inode"`
-	LockDevice        uint64 `json:"lock_device"`
-	LockInode         uint64 `json:"lock_inode"`
-	LockChangeSeconds int64  `json:"lock_change_seconds"`
-	LockChangeNanos   int64  `json:"lock_change_nanos"`
-}
 
 func (p runtimeStateIdentity) valid() bool {
 	return p.RootInode != 0 && p.LockInode != 0 && p.LockChangeSeconds > 0 && p.LockChangeNanos >= 0 && p.LockChangeNanos < 1_000_000_000
@@ -38,7 +30,7 @@ type runtimeStateLease struct {
 // https://docs.kernel.org/filesystems/proc.html#proc-pid-fdinfo-fd-information-about-opened-file
 func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 	if len(raw) == 0 || len(raw) > 4<<20 || raw[len(raw)-1] != '\n' {
-		return ErrInventory
+		return runtimeProofFailure(proofStateLockRecordSyntax, ErrInventory)
 	}
 	found := 0
 	for _, line := range strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n") {
@@ -48,28 +40,31 @@ func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 			v = append(v[:1], v[2:]...)
 		}
 		if len(v) != 8 {
-			return ErrInventory
+			return runtimeProofFailure(proofStateLockRecordSyntax, ErrInventory)
 		}
 		parts := strings.Split(v[5], ":")
 		if len(parts) != 3 {
-			return ErrInventory
+			return runtimeProofFailure(proofStateLockRecordSyntax, ErrInventory)
 		}
 		major, a := strconv.ParseUint(parts[0], 16, 32)
 		minor, b := strconv.ParseUint(parts[1], 16, 32)
 		inode, c := strconv.ParseUint(parts[2], 10, 64)
 		if a != nil || b != nil || c != nil {
-			return ErrInventory
+			return runtimeProofFailure(proofStateLockRecordSyntax, ErrInventory)
 		}
 		if major != uint64(unix.Major(id.LockDevice)) || minor != uint64(unix.Minor(id.LockDevice)) || inode != id.LockInode {
 			continue
 		}
 		if blocked || v[1] != "FLOCK" || v[2] != "ADVISORY" || v[3] != "WRITE" || v[4] != strconv.Itoa(pid) || v[6] != "0" || v[7] != "EOF" {
-			return ErrConflict
+			return runtimeProofFailure(proofStateLockOwnerMismatch, ErrConflict)
 		}
 		found++
 	}
+	if found == 0 {
+		return runtimeProofFailure(proofStateLockOwnerMissing, ErrConflict)
+	}
 	if found != 1 {
-		return ErrConflict
+		return runtimeProofFailure(proofStateLockOwnerAmbiguous, ErrConflict)
 	}
 	return nil
 }
@@ -80,20 +75,20 @@ func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 func runtimeStateOwnedBy(id runtimeStateIdentity, process nodecontrol.ProcessIdentity) error {
 	w, e := nodecontrol.NewProcessWatch(process.PID)
 	if e != nil {
-		return e
+		return runtimeProofFailure(proofStateWatchOpen, e)
 	}
 	defer w.Close()
 	if w.Identity() != process {
-		return ErrConflict
+		return runtimeProofFailure(proofStateIncarnation, ErrConflict)
 	}
 	raw, e := boundedProcessFile("/proc/locks", 4<<20)
 	if e != nil {
-		return e
+		return runtimeProofFailure(proofStateLocksRead, e)
 	}
 	if e = stateKernelLockOwner(raw, id, process.PID); e != nil {
 		return e
 	}
-	return w.Alive()
+	return runtimeProofFailure(proofStateWatchLive, w.Alive())
 }
 
 func (p *runtimeStateLease) close() {

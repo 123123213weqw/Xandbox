@@ -16,14 +16,6 @@ import (
 
 const runtimeDrainRoot = "/etc/xandbox-runtime-drain"
 
-type runtimeDrainIntent struct {
-	Version     int                            `json:"version"`
-	Base        string                         `json:"base_commit_sha256"`
-	Request     string                         `json:"request_id"`
-	Process     nodecontrol.ProcessIdentity    `json:"process"`
-	Before      nodecontrol.State              `json:"before"`
-	Maintenance *nodecontrol.MaintenanceRecord `json:"maintenance,omitempty"`
-}
 type runtimeDrainReceipt struct {
 	Version int               `json:"version"`
 	Input   string            `json:"intent_sha256"`

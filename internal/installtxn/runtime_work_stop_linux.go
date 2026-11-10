@@ -10,7 +10,6 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
 
@@ -21,18 +20,6 @@ const runtimeWorkStopAnchorScratch = "/etc/.xandbox-runtime-work.identity.next"
 // The original state/ingress identities are captured while the original daemon
 // is alive, BEFORE the work fence or any Stop effect. No new Before/identity is
 // inferred from a dead/replacement process or from current pathnames on retry.
-type runtimeWorkStopIntent struct {
-	Version int                `json:"version"`
-	Policy  string             `json:"policy"`
-	Drain   runtimeDrainIntent `json:"drain"`
-	Stop    runtimeStopIntent  `json:"original_stop_plan"`
-}
-
-type runtimeWorkCompletion struct {
-	Version int                        `json:"version"`
-	Input   string                     `json:"intent_sha256"`
-	Work    sandbox.AcceptedWorkStatus `json:"terminal_work"`
-}
 
 func (p runtimeWorkStopIntent) valid() bool {
 	return p.Version == 1 && p.Policy == "finish-only-v1" && validRuntimeMaintenance(p.Drain) && validRuntimeDrain(p.Drain) && p.Stop.Version == 2 && validRuntimeStop(p.Stop) && p.Stop.Base == p.Drain.Base && p.Stop.Request == p.Drain.Request && p.Stop.Drain == digest(encode(p.Drain)) && p.Stop.Main == p.Drain.Process
@@ -65,7 +52,7 @@ func (f *filesystem) readWorkStopRecord(name string, value any) (bool, error) {
 	if e != nil {
 		return false, e
 	}
-	if strictjson.Decode(b, value) != nil || !bytes.Equal(b, encode(value)) {
+	if !decodeCanonicalRuntime(b, value) {
 		return false, ErrInventory
 	}
 	return true, nil

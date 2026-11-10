@@ -8,9 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
-	"github.com/123123213weqw/Xandbox/internal/sandbox"
-	"github.com/123123213weqw/Xandbox/internal/session"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 	"time"
 )
@@ -23,19 +20,6 @@ var errRuntimeClose = errors.New("bound runtime closure failed or has unknown ou
 
 // Durable BEFORE the irreversible live RPC. Original v3 Stop transitively binds
 // source, Before, owner, process/state and known work; v4 adds closure's anchor.
-type runtimeCloseIntent struct {
-	Version int               `json:"version"`
-	Policy  string            `json:"policy"`
-	Input   string            `json:"work_intent_sha256"`
-	Stop    runtimeStopIntent `json:"original_work_stop_plan"`
-}
-type runtimeCloseCompletion struct {
-	Version  int                        `json:"version"`
-	Input    string                     `json:"intent_sha256"`
-	Work     sandbox.AcceptedWorkStatus `json:"terminal_work"`
-	Core     sandbox.ClosureObservation `json:"core"`
-	Sessions session.ClosureObservation `json:"sessions"`
-}
 
 func closeIntent(p runtimeWorkStopIntent, w runtimeWorkCompletion) runtimeCloseIntent {
 	return runtimeCloseIntent{Version: 1, Policy: "close-bound-runtime-v1", Input: digest(encode(p)), Stop: p.stopped(w)}
@@ -70,7 +54,7 @@ func (f *filesystem) readCloseRecord(name string, value any) (bool, error) {
 	if e != nil {
 		return false, e
 	}
-	if strictjson.Decode(b, value) != nil || !bytes.Equal(b, encode(value)) {
+	if !decodeCanonicalRuntime(b, value) {
 		return false, ErrInventory
 	}
 	return true, nil

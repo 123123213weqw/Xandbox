@@ -19,17 +19,6 @@ import (
 
 const runtimeStopRoot = "/etc/xandbox-runtime-stop"
 
-type runtimeStopIntent struct {
-	Version int                          `json:"version"`
-	Base    string                       `json:"base_commit_sha256"`
-	Request string                       `json:"request_id"`
-	Drain   string                       `json:"drain_intent_sha256"`
-	Main    nodecontrol.ProcessIdentity  `json:"main"`
-	Ingress *nodecontrol.ProcessIdentity `json:"ingress,omitempty"`
-	State   *runtimeStateIdentity        `json:"state_identity,omitempty"`
-	Work    string                       `json:"work_completion_sha256,omitempty"`
-	Close   string                       `json:"runtime_close_sha256,omitempty"`
-}
 type runtimeStopReceipt struct {
 	Version int    `json:"version"`
 	Input   string `json:"intent_sha256"`
@@ -236,6 +225,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 	if !digestPattern.MatchString(base) || !requestPattern.MatchString(request) || proof.process == nil || proof.empty == nil {
 		return result, ErrPolicy
 	}
+	stage := proofStopScope
 	e := s.run(ctx, func(f *filesystem) error {
 		if m.fs != f {
 			return ErrPolicy
@@ -244,6 +234,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 		var drain runtimeDrainIntent
 		var p runtimeStopIntent
 		pending := false
+		stage = proofStopInput
 		if e := f.runtimeDrainLocked(ctx, func() error {
 			var e error
 			t, drain, e = f.runtimeStopBase(ctx, base, request)
@@ -266,6 +257,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 		}); e != nil {
 			return e
 		}
+		stage = proofStopEnabledLinks
 		if e := m.enabledLinks(); e != nil {
 			return e
 		}
@@ -282,10 +274,12 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			}
 			return o, ErrInventory
 		}
+		stage = proofStopMainObservation
 		main, e := observe(MainUnit)
 		if e != nil {
 			return e
 		}
+		stage = proofStopIngressObservation
 		ingress, e := observe(IngressUnit)
 		if e != nil {
 			return e
@@ -309,20 +303,24 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if main.pid != drain.Process.PID || main.active != "active" {
 				return ErrConflict
 			}
+			stage = proofStopDrainPeer
 			if e = checkDrain(); e != nil {
 				return e
 			}
+			stage = proofStopStateOpen
 			state, e := f.openRuntimeState()
 			if e != nil {
 				return e
 			}
 			id := state.id
 			state.close()
+			stage = proofStopOriginalStateOwner
 			if e = runtimeStateOwnedBy(id, drain.Process); e != nil {
 				return e
 			}
 			p = runtimeStopIntent{Version: 2, Base: base, Request: request, Drain: digest(encode(drain)), Main: drain.Process, State: &id}
 			if ingress.pid > 1 {
+				stage = proofStopIngressWatch
 				w, e := nodecontrol.NewProcessWatch(ingress.pid)
 				if e != nil {
 					return e
@@ -335,6 +333,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 				return ErrInventory
 			}
 		}
+		stage = proofStopOriginalPeers
 		ids := map[string]*nodecontrol.ProcessIdentity{MainUnit: &p.Main, IngressUnit: p.Ingress}
 		watches := map[string]*nodecontrol.ProcessWatch{}
 		defer func() {
@@ -371,6 +370,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if w.Identity() != *id || o.pid != id.PID {
 				return ErrConflict
 			}
+			stage = proofStopUnitProcess
 			if e = proof.process(ctx, t, unit, *id); e != nil {
 				return e
 			}
@@ -378,6 +378,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 				return e
 			}
 		}
+		stage = proofStopExistingReceipt
 		for _, path := range []string{runtimeStopRoot + "/stopped.json", runtimeStopRoot + "/.stopped.json.next"} {
 			if yes, err := f.exists(path); err != nil {
 				return err
@@ -386,15 +387,18 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			}
 		}
 		if main.pid > 1 {
+			stage = proofStopDrainPeer
 			if e = checkDrain(); e != nil {
 				return e
 			}
 			if p.State != nil {
+				stage = proofStopPresignalStateOwner
 				if e = runtimeStateOwnedBy(*p.State, p.Main); e != nil {
 					return e
 				}
 			}
 		}
+		stage = proofStopIntentPersist
 		if e = f.runtimeDrainLocked(ctx, func() error {
 			if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
 				return e
@@ -412,6 +416,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 		// Stop ingress before main, never propagate dependency jobs. Each stage
 		// must prove process exit AND a real whole-subtree empty/unfrozen domain.
 		for _, unit := range []string{IngressUnit, MainUnit} {
+			stage = proofStopUnitObservation
 			o, e := observe(unit)
 			if e != nil {
 				return e
@@ -425,18 +430,21 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 				if e = w.Alive(); e != nil {
 					return e
 				}
+				stage = proofStopUnitProcess
 				if e = proof.process(ctx, t, unit, *id); e != nil {
 					return e
 				}
 				// A foreign admission resume must be noticed before stopping
 				// ingress too, not only before the later main-unit job.
 				if main.pid > 1 {
+					stage = proofStopDrainPeer
 					if e = checkDrain(); e != nil {
 						return e
 					}
 				}
 				// A concurrent incarnation change in EITHER unit must not reach a
 				// stop job, even when the other unit was the intended next stage.
+				stage = proofStopOtherPeers
 				for _, other := range []string{MainUnit, IngressUnit} {
 					current, e := observe(other)
 					if e != nil {
@@ -456,17 +464,21 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 						}
 					}
 				}
+				stage = proofStopOperationScope
 				if e = s.valid(ctx); e != nil {
 					return e
 				}
 				if main.pid > 1 && p.State != nil {
+					stage = proofStopPresignalStateOwner
 					if e = runtimeStateOwnedBy(*p.State, p.Main); e != nil {
 						return e
 					}
 				}
+				stage = proofStopPresignalLinks
 				if e = m.enabledLinks(); e != nil {
 					return e
 				}
+				stage = proofStopPresignalAuthority
 				if e = f.runtimeDrainLocked(ctx, func() error {
 					if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
 						return e
@@ -478,16 +490,20 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 				}); e != nil {
 					return e
 				}
+				stage = proofStopBeforeSignalCut
 				if e = f.point("runtime-stop-before-" + unit); e != nil {
 					return e
 				}
+				stage = proofStopManagerStop
 				if _, e = m.command(ctx, []string{"--job-mode=ignore-dependencies", "stop", unit}); e != nil {
 					return e
 				}
+				stage = proofStopAfterSignalCut
 				if e = f.point("runtime-stop-after-" + unit); e != nil {
 					return e
 				}
 			}
+			stage = proofStopExitObservation
 			o, e = observe(unit)
 			if e != nil {
 				return e
@@ -495,6 +511,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if o.pid != 0 {
 				return ErrInventory
 			}
+			stage = proofStopExitWatch
 			if w != nil {
 				dead, e := w.Exited()
 				if e != nil {
@@ -504,13 +521,16 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 					return ErrInventory
 				}
 			}
+			stage = proofStopEmptyDomain
 			if e = proof.empty(unit); e != nil {
 				return e
 			}
 		}
+		stage = proofStopEmptyCut
 		if e = f.point("runtime-stop-domains-empty"); e != nil {
 			return e
 		}
+		stage = proofStopReceiptPersist
 		if e = f.runtimeDrainLocked(ctx, func() error {
 			if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
 				return e
@@ -527,6 +547,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 		}
 		// A receipt is not a cached kernel observation; recheck both domains.
 		for _, unit := range []string{IngressUnit, MainUnit} {
+			stage = proofStopUnitObservation
 			o, e := observe(unit)
 			if e != nil {
 				return e
@@ -534,6 +555,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if o.pid != 0 {
 				return ErrConflict
 			}
+			stage = proofStopEmptyDomain
 			if e = proof.empty(unit); e != nil {
 				return e
 			}
@@ -551,7 +573,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 		return nil
 	})
 	if e != nil {
-		return runtimeStopResult{}, e
+		return runtimeStopResult{}, runtimeProofFailure(stage, e)
 	}
 	return result, nil
 }
