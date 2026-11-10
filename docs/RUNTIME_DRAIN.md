@@ -114,3 +114,12 @@ failure/reboot rollback; safe ingress and prior-admission restoration; staging
 budget and owned-L1 fault/long-load qualification. Existing failed sustained-load
 results, resource/asset/IO ceilings and actor/offered-clock/benefit gates remain.
 The broader production goal is not replaced by this admission-only component.
+
+## Explicit exclusive-maintenance v2
+
+The old v1 ordinary-drain adapter and canonical bytes remain unchanged. The
+new [maintenance coordinator](RUNTIME_MAINTENANCE_COORDINATOR.md) writes an
+explicit v2 intent and refuses v1 adoption or ordinary-drain fallback. Its node
+CAS ID is distinct from the installation operation ID. Physical Stop and typed
+core/backend joins must verify the v2 owner as well as admission state. Neither
+version is a public updater or permission to select/activate runtime files.

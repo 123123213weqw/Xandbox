@@ -65,6 +65,11 @@ jobs:
         run: |
           umask 077
           GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestMaintenance' ./internal/nodecontrol
+      - name: Verify write-ahead maintenance coordinator and typed authority joins in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntimeMaintenance' ./internal/installtxn
       - name: Race and failure tests under private umask
         run: |
           umask 077

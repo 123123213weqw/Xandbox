@@ -328,7 +328,7 @@ func (s *runtimeScope) inspectStoppedBackendWithProofs(ctx context.Context, base
 			return e
 		}
 		var generations map[sandbox.Ref]coreGeneration
-		out.Core, generations, e = readCoreAuthority(ctx, s.state.root, drainedRuntimeState(drain))
+		out.Core, generations, e = readCoreAuthorityForDrain(ctx, s.state.root, drain)
 		if e != nil {
 			return e
 		}
@@ -414,10 +414,10 @@ func (s *runtimeScope) inspectStoppedBackendWithProofs(ctx context.Context, base
 		if j != out.Jails || g != out.InstanceGroups || n != out.NodeEnvelopePresent {
 			return ErrConflict
 		}
-		if e = readCoreAdmission(ctx, state, drainedRuntimeState(drain)); e != nil {
+		if _, e = readCoreAdmissionSet(ctx, state, drainedRuntimeState(drain), drain.Maintenance); e != nil {
 			return e
 		}
-		coreAfter, _, e := readCoreAuthority(ctx, s.state.root, drainedRuntimeState(drain))
+		coreAfter, _, e := readCoreAuthorityForDrain(ctx, s.state.root, drain)
 		if e != nil {
 			return e
 		}

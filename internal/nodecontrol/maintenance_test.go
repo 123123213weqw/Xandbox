@@ -158,7 +158,7 @@ func TestMaintenanceWriteAheadCutsKeepGateClosedAndExactLiveOwnerCanRecover(t *t
 }
 
 func TestMaintenanceUnknownPartialOrLostBindingNeverRepairsOrReopens(t *testing.T) {
-	for _, kind := range []string{"wrong-owner", "bad-final", "bad-prefix", "duplicate-scratch", "missing-fence", "bad-anchor", "linked-fence", "symlink-fence", "public-fence", "missing-admission-identity", "foreign-state", "unknown-entry"} {
+	for _, kind := range []string{"wrong-owner", "bad-final", "bad-prefix", "duplicate-scratch", "missing-fence", "bad-anchor", "linked-fence", "symlink-fence", "public-fence", "missing-admission-identity", "missing-admission-dir-and-identity", "foreign-state", "unknown-entry"} {
 		t.Run(kind, func(t *testing.T) {
 			root, _, c, _ := maintenanceController(t)
 			req := maintenanceRequest(c.Status().Committed)
@@ -200,6 +200,9 @@ func TestMaintenanceUnknownPartialOrLostBindingNeverRepairsOrReopens(t *testing.
 			case "public-fence":
 				check(os.Chmod(path, 0644))
 			case "missing-admission-identity":
+				check(os.Remove(filepath.Join(root, "admission.identity")))
+			case "missing-admission-dir-and-identity":
+				check(os.RemoveAll(filepath.Join(root, "admission")))
 				check(os.Remove(filepath.Join(root, "admission.identity")))
 			case "foreign-state":
 				s := reply.Control.Committed

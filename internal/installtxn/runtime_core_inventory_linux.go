@@ -136,61 +136,108 @@ func scanCoreDirectory(ctx context.Context, f *filesystem, path string, max, lim
 }
 
 func readCoreAdmission(ctx context.Context, f *filesystem, expected nodecontrol.State) error {
+	_, e := readCoreAdmissionSet(ctx, f, expected, nil)
+	return e
+}
+
+// Optional maintenance is exact typed v2 WAL authority, NOT an allowlist flag.
+// A v1 caller must still reject every maintenance sidecar/orphan anchor.
+func readCoreAdmissionSet(ctx context.Context, f *filesystem, expected nodecontrol.State, lease *nodecontrol.MaintenanceRecord) (map[string]string, error) {
+	if lease != nil && (!lease.Valid() || expected != lease.After()) {
+		return nil, ErrPolicy
+	}
 	dir, e := f.directory("/admission")
 	if e != nil {
-		return e
+		return nil, e
 	}
 	defer dir.Close()
 	if e = trustedStat(int(dir.Fd()), true, 0700); e != nil {
-		return e
+		return nil, e
 	}
 	var before, after, current unix.Stat_t
 	if e = unix.Fstat(int(dir.Fd()), &before); e != nil {
-		return e
+		return nil, e
 	}
-	names, e := dir.Readdirnames(2)
+	names, e := dir.Readdirnames(3)
 	if e != nil && e != io.EOF {
-		return e
+		return nil, e
 	}
-	if !sameNames(names, []string{"state.json"}) {
-		return ErrInventory
+	want := []string{"state.json"}
+	if lease != nil {
+		want = append(want, nodecontrol.MaintenanceName)
 	}
+	if !sameNames(names, want) {
+		return nil, ErrInventory
+	}
+	hashes := map[string]string{}
 	b, e := readCoreRecord(ctx, dir, "state.json", nodecontrol.StateLimit)
 	if e != nil {
-		return e
+		return nil, e
 	}
+	hashes["admission/state.json"] = digest(b)
 	var state nodecontrol.State
 	if strictjson.Decode(b, &state) != nil || !state.Valid() || state != expected || state.Mode != nodecontrol.ModeDrained {
-		return ErrConflict
+		return nil, ErrConflict
 	}
-	// Root-level file is opened RELATIVE to the held state FD. Do not relax the
-	// install filesystem's global canonical-path policy to accept a slash root.
 	b, e = readCoreRecord(ctx, f.root, "admission.identity", nodecontrol.StateLimit)
 	if e != nil {
-		return e
+		return nil, e
 	}
+	hashes["admission.identity"] = digest(b)
 	var id struct {
 		Version int    `json:"version"`
 		Epoch   string `json:"epoch"`
 	}
 	if strictjson.Decode(b, &id) != nil || id.Version != 1 || id.Epoch != state.Epoch {
-		return ErrConflict
+		return nil, ErrConflict
+	}
+	if lease != nil {
+		b, e = readCoreRecord(ctx, dir, nodecontrol.MaintenanceName, nodecontrol.StateLimit)
+		if e != nil {
+			return nil, e
+		}
+		var r nodecontrol.MaintenanceRecord
+		if strictjson.Decode(b, &r) != nil || !r.Valid() || r != *lease || string(b) != string(encode(r)) {
+			return nil, ErrConflict
+		}
+		hashes["admission/"+nodecontrol.MaintenanceName] = digest(b)
+		b, e = readCoreRecord(ctx, f.root, "maintenance.identity", nodecontrol.StateLimit)
+		if e != nil {
+			return nil, e
+		}
+		var anchor struct {
+			Version      int    `json:"version"`
+			RecordSHA256 string `json:"record_sha256"`
+		}
+		if strictjson.Decode(b, &anchor) != nil || anchor.Version != 1 || anchor.RecordSHA256 != digest(encode(r)) {
+			return nil, ErrConflict
+		}
+		hashes["maintenance.identity"] = digest(b)
+	} else {
+		var anchor unix.Stat_t
+		e = unix.Fstatat(int(f.root.Fd()), "maintenance.identity", &anchor, unix.AT_SYMLINK_NOFOLLOW)
+		if e == nil {
+			return nil, ErrInventory
+		}
+		if e != unix.ENOENT {
+			return nil, e
+		}
 	}
 	if e = unix.Fstat(int(dir.Fd()), &after); e != nil {
-		return e
+		return nil, e
 	}
 	linked, e := f.directory("/admission")
 	if e != nil {
-		return e
+		return nil, e
 	}
 	defer linked.Close()
 	if e = unix.Fstat(int(linked.Fd()), &current); e != nil {
-		return e
+		return nil, e
 	}
 	if !sameCoreStat(before, after) || !sameCoreStat(after, current) {
-		return ErrInventory
+		return nil, ErrInventory
 	}
-	return ctx.Err()
+	return hashes, ctx.Err()
 }
 
 func (s *runtimeScope) inspectStoppedCore(ctx context.Context, base, request string, m systemManager) (runtimeCoreInventory, error) {
@@ -219,7 +266,7 @@ func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, re
 		if e != nil {
 			return e
 		}
-		out, _, e = readCoreAuthority(ctx, s.state.root, drainedRuntimeState(drain))
+		out, _, e = readCoreAuthorityForDrain(ctx, s.state.root, drain)
 		if e != nil {
 			return e
 		}
@@ -242,14 +289,27 @@ func (s *runtimeScope) inspectStoppedCoreWithProof(ctx context.Context, base, re
 // the effectful ordinary Load/recovery path. Generations are kept internal for
 // backend-owner joins, not returned as a transferable reclaim capability.
 func readCoreAuthority(ctx context.Context, root *os.File, expected nodecontrol.State) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
+	return readCoreAuthorityWithMaintenance(ctx, root, expected, nil)
+}
+func readCoreAuthorityForDrain(ctx context.Context, root *os.File, p runtimeDrainIntent) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
+	if !validRuntimeDrain(p) {
+		return runtimeCoreInventory{}, nil, ErrInventory
+	}
+	return readCoreAuthorityWithMaintenance(ctx, root, drainedRuntimeState(p), p.Maintenance)
+}
+func readCoreAuthorityWithMaintenance(ctx context.Context, root *os.File, expected nodecontrol.State, lease *nodecontrol.MaintenanceRecord) (runtimeCoreInventory, map[sandbox.Ref]coreGeneration, error) {
 	var out runtimeCoreInventory
 	generations := map[sandbox.Ref]coreGeneration{}
 	bytes := map[string]string{}
 	err := func() error {
 		var e error
 		stateFS := &filesystem{root: root}
-		if e = readCoreAdmission(ctx, stateFS, expected); e != nil {
+		admission, e := readCoreAdmissionSet(ctx, stateFS, expected, lease)
+		if e != nil {
 			return e
+		}
+		for name, h := range admission {
+			bytes[name] = h
 		}
 		keys := map[string]bool{}
 		e = scanCoreDirectory(ctx, stateFS, "/ledger", sandbox.MaxLedgerRecords, sandbox.MaxLedgerRecordBytes, func(id string, b []byte) error {
@@ -317,8 +377,17 @@ func readCoreAuthority(ctx context.Context, root *os.File, expected nodecontrol.
 		if e != nil {
 			return e
 		}
-		if e = readCoreAdmission(ctx, stateFS, expected); e != nil {
+		admissionAfter, e := readCoreAdmissionSet(ctx, stateFS, expected, lease)
+		if e != nil {
 			return e
+		}
+		if len(admissionAfter) != len(admission) {
+			return ErrConflict
+		}
+		for name, h := range admission {
+			if admissionAfter[name] != h {
+				return ErrConflict
+			}
 		}
 		return nil
 	}()

@@ -1,7 +1,9 @@
 # Internal durable maintenance admission fence
 
 Status: **begin-only coordinator component; no operational updater**. No
-installer command, release or production coordinator uses this protocol yet.
+installer command or release uses this protocol yet. An internal, unexposed
+[write-ahead coordinator adapter](RUNTIME_MAINTENANCE_COORDINATOR.md) now joins it
+to the installer WAL, physical Stop, state lease and core/backend readers.
 Do not call it on an installation as a substitute for an updater: **there is
 currently no release/end/resume path for a held maintenance fence**. It must not
 be enabled in production before safe lifecycle integration and recovery exist.
@@ -19,9 +21,9 @@ The original admission `State` and normal `/v1/node` reply remain version 1.
 A separate private Unix endpoint `/v1/node/maintenance` supports GET capability/
 status and POST begin. POST binds an exact installed-commit SHA256 and operation
 ID to the original admission epoch/revision and a distinct CAS request ID. The
-caller must first persist its own operation WAL; **the installer WAL adapter is
-not implemented here**. A digest in this request is an owner label, not proof
-that installed executable/config bytes were verified.
+caller must first persist its own operation WAL; see the internal v2 coordinator
+adapter. No public CLI invokes it. A digest in this request is an owner label,
+not proof that installed executable/config bytes were verified.
 
 1. Under the controller's original state ownership and serialization with all
    ordinary drain/resume commands, validate CAS, cache the immutable owner and
@@ -49,8 +51,10 @@ that installed executable/config bytes were verified.
 A failure before ANY durable byte can leave no maintenance artifact. The live
 controller still fences, but after process death the original open state may
 remain. Only the caller's independently durable WAL/startup fence can close
-that gap. That mandatory integration is NOT supplied here. Never infer that a
-failed begin alone durably fenced an installation, or deploy this endpoint as a
+that gap. The internal adapter supplies that installer WAL and existing startup-
+gate namespace check; operational activation/reboot integration is still missing.
+Never infer that a failed begin alone durably fenced an installation, or deploy
+this endpoint as a
 complete update protocol.
 
 The file store independently refuses ordinary transitions while a fence exists.
@@ -71,9 +75,10 @@ legacy endpoints refuse; there is **no ordinary-drain fallback**. No tenant toke
 TCP endpoint, arbitrary path, release route or unpinned fallback is added.
 
 This does NOT verify process executable/source, manager ownership, cgroups or
-health. Those remain separate caller prerequisites. The current isolated
-`installtxn` core inventory rejects these new sidecars by its closed inventory;
-it does not yet join or adopt them. Older source readers likewise fail closed
+health. Those remain separate caller prerequisites. The legacy v1 `installtxn`
+core inventory still refuses these sidecars. Only an exact typed v2 WAL/record/
+anchor join accepts them; no blanket names allowlist or adoption exists. Older
+source readers likewise fail closed
 on the unknown admission entry. Unchanged v1 state is therefore **not a claim
 that the old/new complete authority graph is update-compatible**.
 
@@ -93,8 +98,8 @@ no systemctl, installer CLI, real backend/quota, VM, GPU or offered-load workloa
 The shared-host software supervisor and headroom checks are NOT hard kernel
 per-job quotas.
 
-Still required: persist/join installer owner WAL and all mutable authorities;
-coordinate accepted-work policy and real drain/Stop/state-lock handoff;
+Still required: complete all other mutable-authority compatibility and real
+owned-L1 lifecycle qualification; coordinate accepted-work policy;
 independent full backend reclaim; typed file selection; held-process startup/
 health; source-bound release/restoration of prior admission and ingress;
 state-preserving failure/reboot rollback; bounded owned-L1 systemd/KVM tests and

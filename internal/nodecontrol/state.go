@@ -75,6 +75,15 @@ func OpenStore(stateDir string) (*FileStore, error) {
 	if identityErr != nil && !os.IsNotExist(identityErr) {
 		return nil, identityErr
 	}
+	// Refuse a lost admission directory/identity BEFORE EnsureDirectory can
+	// recreate even an empty namespace beside an existing maintenance anchor.
+	if identityErr != nil {
+		if _, err := os.Lstat(filepath.Join(root, maintenanceIdentity)); err == nil {
+			return nil, errors.New("maintenance requires existing admission identity")
+		} else if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
 	if identityErr == nil {
 		if _, e = privatefile.ExistingDirectory(filepath.Join(root, "admission")); e != nil {
 			return nil, e

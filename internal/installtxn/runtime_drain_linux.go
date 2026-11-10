@@ -17,11 +17,12 @@ import (
 const runtimeDrainRoot = "/etc/xandbox-runtime-drain"
 
 type runtimeDrainIntent struct {
-	Version int                         `json:"version"`
-	Base    string                      `json:"base_commit_sha256"`
-	Request string                      `json:"request_id"`
-	Process nodecontrol.ProcessIdentity `json:"process"`
-	Before  nodecontrol.State           `json:"before"`
+	Version     int                            `json:"version"`
+	Base        string                         `json:"base_commit_sha256"`
+	Request     string                         `json:"request_id"`
+	Process     nodecontrol.ProcessIdentity    `json:"process"`
+	Before      nodecontrol.State              `json:"before"`
+	Maintenance *nodecontrol.MaintenanceRecord `json:"maintenance,omitempty"`
 }
 type runtimeDrainReceipt struct {
 	Version int               `json:"version"`
@@ -37,9 +38,12 @@ type runtimeDrainResult struct {
 }
 
 func validRuntimeDrain(p runtimeDrainIntent) bool {
-	return p.Version == 1 && digestPattern.MatchString(p.Base) && requestPattern.MatchString(p.Request) && p.Process.Valid() && p.Before.Valid() && p.Request != p.Before.LastRequestID
+	return (p.Version == 1 && p.Maintenance == nil || validRuntimeMaintenance(p)) && digestPattern.MatchString(p.Base) && requestPattern.MatchString(p.Request) && p.Process.Valid() && p.Before.Valid() && p.Request != p.Before.LastRequestID
 }
 func drainedRuntimeState(p runtimeDrainIntent) nodecontrol.State {
+	if p.Version == 2 && p.Maintenance != nil {
+		return p.Maintenance.After()
+	}
 	if p.Before.Mode == nodecontrol.ModeDrained {
 		return p.Before
 	}
@@ -203,6 +207,9 @@ func (f *filesystem) runtimeDrainInScope(ctx context.Context, base, request stri
 		var err error
 		p, err = f.runtimeDrainReadIntent()
 		pending = err == nil
+		if pending && p.Version != 1 {
+			return ErrConflict
+		}
 		if err != nil && !errors.Is(err, unix.ENOENT) {
 			return err
 		}

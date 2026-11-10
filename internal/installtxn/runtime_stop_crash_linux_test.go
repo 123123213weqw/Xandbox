@@ -100,11 +100,18 @@ func TestRuntimeStopCrashHelper(t *testing.T) {
 	os.Exit(0)
 }
 func TestRuntimeStopActualCoordinatorSIGKILLRecoversAfterOperatorDeath(t *testing.T) {
-	for _, cut := range []string{"runtime-stop-intent-durable", "runtime-stop-after-" + IngressUnit, "runtime-stop-after-" + MainUnit, "runtime-stop-receipt-renamed", "runtime-state-locked"} {
+	runRuntimeStopCrashRecovery(t, nil, []string{"runtime-stop-intent-durable", "runtime-stop-after-" + IngressUnit, "runtime-stop-after-" + MainUnit, "runtime-stop-receipt-renamed", "runtime-state-locked"})
+}
+func runRuntimeStopCrashRecovery(t *testing.T, prepare func(*stopTestModel, *runtimeScope), cuts []string) {
+	for _, cut := range cuts {
 		t.Run(cut, func(t *testing.T) {
 			x := stopModel(t, "")
 			s := x.scope(t)
-			x.drain(t, s)
+			if prepare == nil {
+				x.drain(t, s)
+			} else {
+				prepare(x, s)
+			}
 			s.close()
 			before := runtimeProtectedBytes(t, x.f, x.tx)
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

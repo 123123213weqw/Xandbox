@@ -17,6 +17,9 @@ import (
 )
 
 func backendModel(t *testing.T) (*stopTestModel, *runtimeScope, firecracker.Config, backendInspectionProofs, sandbox.Record) {
+	return backendModelPrepared(t, nil)
+}
+func backendModelPrepared(t *testing.T, prepare func(*stopTestModel, *runtimeScope)) (*stopTestModel, *runtimeScope, firecracker.Config, backendInspectionProofs, sandbox.Record) {
 	t.Helper()
 	f, tx := runtimeShortInstallPrepared(t, func(p *prepared) {
 		// Existing generic lifecycle fixture is intentionally minimal/invalid as
@@ -54,7 +57,11 @@ func backendModel(t *testing.T) (*stopTestModel, *runtimeScope, firecracker.Conf
 	})
 	x := stopModelInstalled(t, "", f, tx)
 	s := x.scope(t)
-	x.drain(t, s)
+	if prepare == nil {
+		x.drain(t, s)
+	} else {
+		prepare(x, s)
+	}
 	if _, e := x.stop(context.Background(), s, x.client); e != nil {
 		t.Fatal(e)
 	}

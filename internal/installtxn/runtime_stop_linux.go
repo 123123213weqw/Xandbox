@@ -291,14 +291,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if e != nil {
 				return e
 			}
-			r, e := client.Status(ctx)
-			if e != nil {
-				return e
-			}
-			if !runtimeDrainStatus(r.Control, drainedRuntimeState(drain)) {
-				return ErrConflict
-			}
-			return nil
+			return runtimeLiveDrain(ctx, drain, client)
 		}
 		if !pending {
 			if main.pid != drain.Process.PID || main.active != "active" {
