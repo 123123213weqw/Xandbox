@@ -28,7 +28,7 @@ type resultFileIdentity struct {
 }
 
 func resultIdentity(v unix.Stat_t) resultFileIdentity {
-	return resultFileIdentity{uint64(v.Dev), v.Ino, uint64(v.Nlink), v.Mode, v.Uid, v.Gid, v.Size, v.Mtim, v.Ctim}
+	return resultFileIdentity{uint64(v.Dev), v.Ino, uint64(v.Nlink), uint32(v.Mode), v.Uid, v.Gid, v.Size, v.Mtim, v.Ctim}
 }
 
 type resultSnapshot struct {
