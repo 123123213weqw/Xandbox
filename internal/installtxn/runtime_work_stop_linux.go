@@ -429,13 +429,17 @@ type runtimeStoppedWorkProof struct {
 func (s *runtimeScope) finishAndStop(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager) (*runtimeStoppedWorkProof, error) {
 	return s.finishAndStopWithProofs(ctx, base, operation, c, m, runtimeStopProofs{process: runtimeProcessProof, empty: m.fs.unitExecutionEmpty})
 }
-func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (*runtimeStoppedWorkProof, error) {
+
+// finishKnownAcceptedWork preserves the ORIGINAL finish-only write-ahead,
+// process/state/owner and accepted-work checks, without choosing a close mode or
+// requesting physical Stop. Only typed closure adapters may consume this result.
+func (s *runtimeScope) finishKnownAcceptedWork(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (runtimeWorkStopIntent, runtimeWorkCompletion, error) {
 	if _, ok := ctx.Deadline(); !ok || !digestPattern.MatchString(base) || !requestPattern.MatchString(operation) || proof.process == nil || proof.empty == nil {
-		return nil, ErrPolicy
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, ErrPolicy
 	}
 	p, e := s.workStopInput(ctx, base, operation, c, m, proof)
 	if e != nil {
-		return nil, e
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 	}
 	var r runtimeWorkCompletion
 	var anchored bool
@@ -459,21 +463,21 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 		})
 	})
 	if e != nil {
-		return nil, e
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 	}
 	if !anchored {
 		// No accepted-work outcome is inferred from a stopped/replacement node.
 		// Reprove the SAME live gate before completing any unanchored record.
 		live, e := s.quiesceAcceptedWorkWithProof(ctx, base, operation, c, m, proof.process)
 		if e != nil {
-			return nil, e
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 		}
 		if live.scope != s || live.intent != digest(encode(p.Drain)) || live.process != p.Stop.Main || live.record != *p.Drain.Maintenance || !live.terminal.Complete() {
-			return nil, ErrConflict
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, ErrConflict
 		}
 		want := runtimeWorkCompletion{Version: 1, Input: digest(encode(p)), Work: live.terminal}
 		if r.Version != 0 && !bytes.Equal(encode(r), encode(want)) {
-			return nil, ErrConflict
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, ErrConflict
 		}
 		r = want
 		e = s.run(ctx, func(f *filesystem) error {
@@ -498,7 +502,7 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 			})
 		})
 		if e != nil {
-			return nil, e
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 		}
 	}
 	// Promote/resync complete known work scratches BEFORE the close intent
@@ -530,6 +534,14 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 			return f.workStopLink(p.stopped(r))
 		})
 	})
+	if e != nil {
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
+	}
+	return p, r, nil
+}
+
+func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (*runtimeStoppedWorkProof, error) {
+	p, r, e := s.finishKnownAcceptedWork(ctx, base, operation, c, m, proof)
 	if e != nil {
 		return nil, e
 	}

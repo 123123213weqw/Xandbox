@@ -7,6 +7,9 @@ The legacy installed cold-state reader still refuses the results namespace.
 A [separate disk-only retained-state reader](RETAINED_STATE_READER.md) now
 compares the complete known root and all canonical results to supplied V2
 observations; it is not an actor/Stop/activation capability or managed updater.
+An internal [write-ahead pinned close adapter](RESULT_CLOSE_WAL.md) now persists
+this actual V2 actor outcome under its original installed-operation scope. It
+requests no physical Stop or file effects and cannot produce a legacy v4 proof.
 
 ## New records and explicit legacy boundary
 

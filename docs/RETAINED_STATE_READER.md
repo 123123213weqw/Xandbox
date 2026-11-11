@@ -2,9 +2,10 @@
 
 This supplies the explicit result-format reader needed before installation can
 preserve retained outcomes. **It does not activate a managed installation or
-rollback path.** The old installed root reader, original operation/Stop protocols,
-file engine, startup and retained-self fences are unchanged and still refuse a
-results-bearing state. No CLI, flag, environment bypass or ordinary daemon path
+rollback path.** The old installed root reader and operation/Stop formats still
+refuse a results-bearing state. File/startup/self boundaries remain fail-closed;
+startup/raw file/update-inspection guards additionally reject orphan result-close
+WAL paths. No CLI, flag, environment bypass or ordinary daemon path
 selects the new reader. `ResourcesReclaimed` and `ActivationAllowed` stay false.
 
 ## What is actually compared
@@ -80,8 +81,10 @@ load. All prior failed experiments remain failed.
 
 Before any real file mutation, the operational consumer still needs:
 
-- A distinct durable process-pinned V2 close/Stop WAL and same original operation
-  plus state FD join. A supplied observation or this disk report is insufficient.
+- The [durable pinned V2 close WAL](RESULT_CLOSE_WAL.md) now supplies an internal
+  actor/work receipt under the original operation FD. A distinct result-aware
+  physical Stop and original post-Stop state FD join remain required. Neither
+  this disk report nor the new pre-Stop closure receipt substitutes for them.
 - Source, candidate and retained-self/startup-overlay format compatibility,
   including explicit V1 integrity policy and refusal before incompatible files.
 - Managed immutable result-byte/record/FD/IO budgets. Existing logical result

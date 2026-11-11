@@ -57,7 +57,7 @@ func (f *filesystem) inspectionBase(ctx context.Context, p UpdateInspectionPlan)
 			return transaction{}, ErrInventory
 		}
 	}
-	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot, runtimeWorkStopRoot, runtimeWorkStopAnchor, runtimeWorkStopAnchorScratch, runtimeCloseRoot, runtimeCloseAnchor, runtimeCloseAnchorScratch} {
+	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot, runtimeWorkStopRoot, runtimeWorkStopAnchor, runtimeWorkStopAnchorScratch, runtimeCloseRoot, runtimeCloseAnchor, runtimeCloseAnchorScratch, runtimeResultsCloseRoot, runtimeResultsCloseAnchor, runtimeResultsCloseAnchorScratch} {
 		if yes, err := f.exists(root); err != nil {
 			return transaction{}, err
 		} else if yes {

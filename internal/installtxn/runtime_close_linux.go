@@ -211,6 +211,14 @@ func (s *runtimeScope) closeBoundRuntime(ctx context.Context, work runtimeWorkSt
 		if m.fs != f {
 			return ErrPolicy
 		}
+		// A V2 results journal must never be adopted by record-only closure.
+		for _, path := range []string{runtimeResultsCloseRoot, runtimeResultsCloseAnchor, runtimeResultsCloseAnchorScratch} {
+			if yes, e := f.exists(path); e != nil {
+				return e
+			} else if yes {
+				return ErrInventory
+			}
+		}
 		var tx transaction
 		var exists, has, anchored bool
 		input := func() error {
