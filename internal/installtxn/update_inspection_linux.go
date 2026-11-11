@@ -32,6 +32,9 @@ func InspectUpdate(ctx context.Context, path string) (UpdateInspectionResult, er
 }
 
 func (f *filesystem) inspectionBase(ctx context.Context, p UpdateInspectionPlan) (transaction, error) {
+	if e := f.runtimeNamespaceVeto(ctx); e != nil {
+		return transaction{}, e
+	}
 	t, e := f.readTransaction("commit")
 	if e != nil {
 		return transaction{}, e

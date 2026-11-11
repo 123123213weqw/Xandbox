@@ -456,7 +456,7 @@ func recoveryOperation(ctx context.Context, f *filesystem, p RotationPlan, expec
 	if !ok {
 		return result, ErrPlatform
 	}
-	operationDone, e := f.operationLock(ctx, true)
+	operationDone, e := f.ordinaryOperationLock(ctx, true)
 	if e != nil {
 		return result, e
 	}

@@ -176,7 +176,7 @@ func discardSupersessionDraftOperation(ctx context.Context, f *filesystem, expec
 	if !ok || confirm == nil {
 		return zero, ErrPlatform
 	}
-	done, e := f.operationLock(ctx, true)
+	done, e := f.ordinaryOperationLock(ctx, true)
 	if e != nil {
 		return zero, e
 	}

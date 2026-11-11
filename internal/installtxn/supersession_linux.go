@@ -453,7 +453,7 @@ func supersessionOperation(ctx context.Context, f *filesystem, p RotationPlan, e
 	if !ok {
 		return result, ErrPlatform
 	}
-	done, e := f.operationLock(ctx, true)
+	done, e := f.ordinaryOperationLock(ctx, true)
 	if e != nil {
 		return result, e
 	}
