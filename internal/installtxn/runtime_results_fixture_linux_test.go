@@ -236,7 +236,10 @@ func TestRuntimeResultsWALFixtureOriginalBootstrapDeathRetainsReloadCoverage(t *
 	if e != nil {
 		t.Fatal(e)
 	}
-	defer state.close()
+	stateID := state.id
+	// Observation is not a retained authority. Close this TEST-only read FD
+	// before Stop acquires its unique original operator state descriptor.
+	state.close()
 	x.client.Close()
 	if e := old.Process.Kill(); e != nil {
 		t.Fatal(e)
@@ -257,7 +260,7 @@ func TestRuntimeResultsWALFixtureOriginalBootstrapDeathRetainsReloadCoverage(t *
 	if e != nil || after.Control != before.Control || x.client.Identity() == watch.Identity() {
 		t.Fatal("explicit restart lost original committed status or incarnation boundary", after.Control, before.Control, e)
 	}
-	if e := x.f.runtimeStateOwnedBy(ctx, state.id, x.client.Identity()); e != nil {
+	if e := x.f.runtimeStateOwnedBy(ctx, stateID, x.client.Identity()); e != nil {
 		t.Fatal("replacement TEST actor lost same original state inode", e)
 	}
 	if _, e := os.Lstat(x.f.root.Name() + stateDir + "/instances"); e != nil {
@@ -266,7 +269,7 @@ func TestRuntimeResultsWALFixtureOriginalBootstrapDeathRetainsReloadCoverage(t *
 	s := x.scope(t)
 	x.maintain(t, s)
 	p, e := stopResultsModel(ctx, x, s)
-	if e != nil || p == nil || s.state == nil || s.state.id != state.id || !reflect.DeepEqual(x.jobs, []string{IngressUnit, MainUnit}) {
+	if e != nil || p == nil || s.state == nil || s.state.id != stateID || !reflect.DeepEqual(x.jobs, []string{IngressUnit, MainUnit}) {
 		t.Fatal("explicit restart failed original result-bound physical Stop/lease model", p, e, x.jobs)
 	}
 }

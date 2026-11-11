@@ -49,6 +49,14 @@ The existing `^TestRuntimeResultsWAL` gate also runs new tests for:
   must still succeed. Restart coverage is retained rather than repeated as the
   setup of every unrelated fault case.
 
+A test's read-only observer of the original lock is **not** retained operator
+state authority. Close that observer after capturing its identity, before Stop
+acquires its own unique original state descriptor. The first version of the
+explicit restart test retained both: all four Linux gates correctly refused
+`state-fd-multiple`. Correcting that TEST FD lifecycle must not relax the
+production uniqueness check or accept the earlier failed run. The existing
+alias/unlocked/shared/foreign-owner negative controls remain unchanged.
+
 The workflow, whole-package race x3, Go 20-minute timeout, 25-minute job limit,
 all sixteen CGO-free gates, compatibility matrix and host resource/IO limits are
 unchanged. No split, case drop, retry, race suppression or manual diagnostic run
