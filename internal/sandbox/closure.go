@@ -43,6 +43,15 @@ func (m *Manager) UsesAdmissionGate(g *AdmissionGate) bool {
 // constructor is performed here. The frozen work barrier must already have
 // observed actual terminal success; cancelled/unknown/unfinished calls refuse.
 func (m *Manager) ClosedProof(ctx context.Context) (*ClosureProof, error) {
+	if m != nil && m.opts.Results != nil {
+		return nil, ErrNotReady
+	}
+	return m.closedRecordsProof(ctx)
+}
+
+// Original record-only implementation; only the result-bound path may use it
+// when retention is enabled. Legacy public proof never drops result authority.
+func (m *Manager) closedRecordsProof(ctx context.Context) (*ClosureProof, error) {
 	if m == nil || !m.opts.AdmissionGate.AcceptedWorkStatus().Complete() {
 		return nil, ErrNotReady
 	}

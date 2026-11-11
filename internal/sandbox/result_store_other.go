@@ -2,6 +2,8 @@
 
 package sandbox
 
+import "context"
+
 // Private result storage requires supported Unix ownership/descriptor semantics.
 type FileResultStore struct{}
 
@@ -13,3 +15,8 @@ func (*FileResultStore) Bind([]Record) (bool, error)          { return false, Er
 func (*FileResultStore) Reserve(ResultReservation) error      { return ErrResultUnavailable }
 func (*FileResultStore) Complete(Job) error                   { return ErrResultUnavailable }
 func (*FileResultStore) Get(Ref, string, string) (Job, error) { return Job{}, ErrResultUnavailable }
+
+func (*FileResultStore) resultsAlive() bool { return false }
+func (*FileResultStore) sealResults(context.Context, []Record) (ResultClosureObservation, error) {
+	return ResultClosureObservation{}, ErrResultUnavailable
+}

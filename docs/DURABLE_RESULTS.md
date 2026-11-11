@@ -1,5 +1,9 @@
 # Bounded retained execution results (experimental opt-in)
 
+The current writer now uses checksum version2 and the separate
+[result-bound actor closure protocol](RESULT_BOUND_CLOSURE.md). Legacy version1
+is read without rewriting and is never certified as checksum-v2 closure.
+
 This is a data-preservation prerequisite for runtime updates, **not an operational
 updater, lossless delivery, production qualification, hard IO deadline or a fix
 for the earlier unknown long-load/metadata exits**. Default jobs remain volatile.
@@ -31,7 +35,7 @@ refusal, restore old cap0 self or treat this feature as update permission.
    reservation pipeline. Freeze cannot pass through a false-zero IO interval.
 2. Reserve the job's maximum output plus bounded metadata against node, tenant
    and record limits BEFORE storage IO. Ambiguous failures retain live capacity.
-   Persist a private versioned intent by exclusive scratch/write/fsync/rename/
+   Persist a private checksum-v2 intent by exclusive scratch/write/fsync/rename/
    directory-fsync BEFORE calling Driver.Exec. Argv/auth tokens are not stored.
 3. Actual guest results stay RUNNING/unpublished until their bounded terminal
    record is fsynced and renamed durably. Raw output bytes use base64, preserving
@@ -51,7 +55,7 @@ refusal, restore old cap0 self or treat this feature as update permission.
 
 Restart validates the entire bounded private namespace and ledger ownership
 before publishing results. Existing published records are reconfirmed/synced.
-A pending intent is reported as `INTERRUPTED`, `result_retained` absent/false and
+A pending intent is reported as `INTERRUPTED`, exit code -1, `result_retained` absent/false and
 no output: execution outcome is UNKNOWN, **never replayed**. Pending result state
 marks accepted work uncertain even if every ledger record is already DESTROYED.
 An old closure receipt/counter cannot establish success for this new namespace.
@@ -61,8 +65,9 @@ An old closure receipt/counter cannot establish success for this new namespace.
 A process death after a full rename can recover a pending or terminal record
 without executing anything. Unknown/partial scratch is intentionally preserved
 and blocks startup; automatic prefix repair, safe administrative recovery,
-retention lifecycle/delivery acknowledgement and full state-root/closure binding
-remain unfinished. No arbitrary power-loss, malicious-root rewrite resistance,
+retention lifecycle/delivery acknowledgement and installed-state closure binding
+remain unfinished. The separate live actor result-bound proof does not remove
+the installed cold-state reader refusal or enable file switching. No arbitrary power-loss, malicious-root rewrite resistance,
 media erasure, complete activation/reboot rollback or performance claim follows.
 
 Tests use private synthetic records, bounded mock execution and specifically

@@ -102,12 +102,13 @@ type Output struct {
 type Job struct {
 	ID string `json:"id"`
 	Ref
-	Status         string    `json:"status"`
-	StartedAt      time.Time `json:"started_at"`
-	FinishedAt     time.Time `json:"finished_at,omitempty"`
-	Output         Output    `json:"output"`
-	Error          string    `json:"error,omitempty"`
-	ResultRetained bool      `json:"result_retained,omitempty"`
+	Status          string    `json:"status"`
+	StartedAt       time.Time `json:"started_at"`
+	FinishedAt      time.Time `json:"finished_at,omitempty"`
+	Output          Output    `json:"output"`
+	Error           string    `json:"error,omitempty"`
+	ResultRetained  bool      `json:"result_retained,omitempty"`
+	ResultIntegrity string    `json:"result_integrity,omitempty"`
 }
 
 // Preparation contains trusted runtime policy. DeadlineNS is in the host clock

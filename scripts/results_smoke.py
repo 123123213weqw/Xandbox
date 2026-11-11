@@ -82,7 +82,7 @@ def main():
                     ref = refs[tenant]
                     job = call('POST', base(ref) + '/exec', request(ref), tenant=tenant, status=202)
                     final = wait(lambda: (current if (current := result(ref, job, tenant))['status'] != 'RUNNING' else None))
-                    assert final.get('result_retained') is True and final['status'] == 'EXITED' and final['output']['stdout'] == 'synthetic-retained\n'
+                    assert final.get('result_retained') is True and final.get('result_integrity') == 'checksum_v2' and final['status'] == 'EXITED' and final['output']['stdout'] == 'synthetic-retained\n'
                     jobs[tenant] = job
                     if tenant == 'alpha':
                         denied = call('POST', base(ref) + '/exec', request(ref), tenant=tenant, status=503)
@@ -105,7 +105,7 @@ def main():
                 process = start(budget=1, tenant_budget=1, records=1)
                 for tenant, ref in refs.items():
                     final = result(ref, jobs[tenant], tenant)
-                    assert final.get('result_retained') is True and final['output']['stdout'] == 'synthetic-retained\n'
+                    assert final.get('result_retained') is True and final.get('result_integrity') == 'checksum_v2' and final['output']['stdout'] == 'synthetic-retained\n'
                 call('GET', base(refs['alpha']) + '/executions/' + jobs['alpha']['id'], tenant='beta', status=404)
                 stop(process); process = None
                 assert snapshot() == before

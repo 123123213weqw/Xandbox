@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"golang.org/x/sys/unix"
@@ -19,6 +20,8 @@ type resultEntry struct {
 	reservation      ResultReservation
 	sum              [32]byte
 	terminal, failed bool
+	version          int
+	live             bool
 }
 
 // FileResultStore retains immutable outcomes independently of VM reclamation.
@@ -36,6 +39,9 @@ type FileResultStore struct {
 	tenantBytes map[string]int64
 	bytes       int64
 	limits      ResultLimits
+	sealed      bool
+	writers     int
+	closed      atomic.Bool
 	point       func(string) error // Private TEST cut only; no CLI/environment control.
 }
 
@@ -65,6 +71,7 @@ func OpenResultStore(path string, limits ResultLimits) (*FileResultStore, error)
 	return s, nil
 }
 func (s *FileResultStore) Close() error {
+	s.closed.Store(true)
 	s.fdMu.Lock()
 	defer s.fdMu.Unlock()
 	if s.dir == nil {
@@ -81,7 +88,7 @@ func (s *FileResultStore) Close() error {
 // kernel syscall deadline guarantee.
 func (s *FileResultStore) root() (*os.File, error) {
 	s.fdMu.Lock()
-	if s.dir == nil {
+	if s.dir == nil || s.closed.Load() {
 		s.fdMu.Unlock()
 		return nil, ErrResultUnavailable
 	}
@@ -106,6 +113,9 @@ func (s *FileResultStore) boundDir(dir *os.File) error {
 	if e := s.cut("result-root-before-stat"); e != nil {
 		return e
 	}
+	return s.boundDirNoCut(dir)
+}
+func (s *FileResultStore) boundDirNoCut(dir *os.File) error {
 	info, e := os.Lstat(s.path)
 	if e != nil || !os.SameFile(info, s.identity) || !info.IsDir() || info.Mode().Perm() != 0700 {
 		return ErrResultUnavailable
@@ -177,7 +187,7 @@ func (s *FileResultStore) load() error {
 			return ErrResultUnavailable
 		}
 		totals[r.Reservation.TenantID] += r.Reservation.charge()
-		entries[r.Reservation.JobID] = &resultEntry{reservation: r.Reservation, sum: sha256.Sum256(raw), terminal: r.Result != nil}
+		entries[r.Reservation.JobID] = &resultEntry{reservation: r.Reservation, sum: sha256.Sum256(raw), terminal: r.Result != nil, version: r.Version}
 	}
 	// Re-enumerate through an independent description; never accept an unknown
 	// entry that arrived after the initial complete bounded enumeration.
@@ -344,12 +354,29 @@ func (s *FileResultStore) write(dir *os.File, r resultEnvelope, previous *result
 	}
 	return nil
 }
+
+// The seal rejects new writers and refuses while ANY previously accepted
+// writer is active, including one waiting for an entry lock. No IO holds mu.
+func (s *FileResultStore) beginResultWrite() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.sealed || s.closed.Load() {
+		return ErrResultUnavailable
+	}
+	s.writers++
+	return nil
+}
+func (s *FileResultStore) endResultWrite() { s.mu.Lock(); s.writers--; s.mu.Unlock() }
 func (s *FileResultStore) Reserve(h ResultReservation) error {
 	h.StartedAt = h.StartedAt.UTC()
 	if !h.valid() {
 		return ErrInvalid
 	}
-	entry := &resultEntry{reservation: h}
+	if e := s.beginResultWrite(); e != nil {
+		return e
+	}
+	defer s.endResultWrite()
+	entry := &resultEntry{reservation: h, version: resultVersion}
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
 	s.mu.Lock()
@@ -373,12 +400,13 @@ func (s *FileResultStore) Reserve(h ResultReservation) error {
 		return ErrResultUnavailable
 	}
 	defer dir.Close()
-	r := resultEnvelope{Version: 1, Reservation: h}
+	r := resultEnvelope{Version: resultVersion, Reservation: h}
 	if e = s.write(dir, r, nil, "result-reserve"); e != nil {
 		entry.failed = true
 		return ErrResultUnavailable
 	}
 	entry.sum = sha256.Sum256(resultBytes(r))
+	entry.live = true
 	return nil
 }
 func (s *FileResultStore) entry(id string) *resultEntry {
@@ -387,6 +415,10 @@ func (s *FileResultStore) entry(id string) *resultEntry {
 	return s.entries[id]
 }
 func (s *FileResultStore) Complete(j Job) error {
+	if e := s.beginResultWrite(); e != nil {
+		return e
+	}
+	defer s.endResultWrite()
 	entry := s.entry(j.ID)
 	if entry == nil {
 		return ErrResultUnavailable
@@ -394,10 +426,11 @@ func (s *FileResultStore) Complete(j Job) error {
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
 	h := entry.reservation
-	if entry.failed || j.Ref != h.Ref || !j.StartedAt.Equal(h.StartedAt) {
+	if entry.failed || entry.version != resultVersion || (!entry.terminal && !entry.live) || j.Ref != h.Ref || !j.StartedAt.Equal(h.StartedAt) {
 		return ErrResultUnavailable
 	}
-	r := resultEnvelope{Version: 1, Reservation: h, Result: &retainedOutput{Status: j.Status, FinishedAt: j.FinishedAt, Stdout: []byte(j.Output.Stdout), Stderr: []byte(j.Output.Stderr), ExitCode: j.Output.ExitCode, Truncated: j.Output.Truncated, Error: []byte(boundedLedgerError(j.Error))}}
+	r := resultEnvelope{Version: resultVersion, Reservation: h, Result: &retainedOutput{Status: j.Status, FinishedAt: j.FinishedAt, Stdout: []byte(j.Output.Stdout), Stderr: []byte(j.Output.Stderr), ExitCode: j.Output.ExitCode, Truncated: j.Output.Truncated, Error: []byte(boundedLedgerError(j.Error))}}
+	r.SHA256 = resultDigest(r)
 	if !r.valid() {
 		return ErrInvalid
 	}

@@ -165,6 +165,14 @@ func (m *Manager) runWithResults(i *instance, e *execution, ctx context.Context,
 	// A storage failure is sticky for this accepted obligation, never a retry or
 	// a volatile output advertised as retained. Guest Stop remains independent.
 	stored := m.opts.Results.Complete(job)
+	var observed Job
+	if stored == nil {
+		observed, stored = m.opts.Results.Get(job.Ref, i.tenantID, job.ID)
+		if stored == nil && (!sameRetainedJob(job, observed) || !observed.ResultRetained || observed.ResultIntegrity != "checksum_v2") {
+			stored = ErrResultUnavailable
+		}
+	}
+
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if stored != nil {
@@ -175,6 +183,7 @@ func (m *Manager) runWithResults(i *instance, e *execution, ctx context.Context,
 		e.job.FinishedAt = job.FinishedAt
 	} else {
 		job.ResultRetained = true
+		job.ResultIntegrity = observed.ResultIntegrity
 		e.job = job
 		success = err == nil && job.Output.ExitCode == 0
 	}
@@ -182,4 +191,9 @@ func (m *Manager) runWithResults(i *instance, e *execution, ctx context.Context,
 	if i.running == 0 {
 		close(i.idle)
 	}
+}
+
+// Read-back binds the actual durable bytes, never a store-supplied success flag.
+func sameRetainedJob(a, b Job) bool {
+	return a.ID == b.ID && a.Ref == b.Ref && a.Status == b.Status && a.StartedAt.Equal(b.StartedAt) && a.FinishedAt.Equal(b.FinishedAt) && a.Output == b.Output && a.Error == b.Error
 }
