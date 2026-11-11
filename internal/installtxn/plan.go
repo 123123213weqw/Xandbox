@@ -183,10 +183,11 @@ func validatePlan(p Plan) error {
 	n := nodeManifest(p, map[string]Artifact{"daemon": {SHA256: strings.Repeat("0", 64)}})
 	// CheckComposition below repeats the SAME node semantic policy. Retain its
 	// stricter LF-inclusive wire ceiling here; bare JSON size is not equivalent.
-	if !nodeLineFitsManifest(n) {
+	line, fits := nodeManifestLine(n)
+	if !fits {
 		return ErrPolicy
 	}
-	g := ingressManifest(p, n, "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
+	g := ingressManifestWithNodeSHA(p, digest(line), "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
 	if g.CheckComposition(n) != nil {
 		return ErrPolicy
 	}
@@ -194,11 +195,22 @@ func validatePlan(p Plan) error {
 }
 
 // Only a serialized byte budget, NEVER semantic validity or host authority.
-// The sole production caller must still run the original CheckComposition on
-// the same private immutable node value. Keep json.Marshal's error/UTF-8 rules.
+// Retain the exact predicate independently of the line-producing helper below.
+// Neither is semantic validity; validatePlan still runs CheckComposition.
 func nodeLineFitsManifest(n launch.Manifest) bool {
 	data, e := json.Marshal(n)
 	return e == nil && len(data) < launch.MaxManifest // len(data)+one LF <= ceiling
+}
+
+// Produce only the exact JSON+LF bytes already needed by this private Plan
+// flow. Node is a closed immutable value; no callback, IO or mutation occurs
+// before its digest is consumed. This is not validation or source authority.
+func nodeManifestLine(n launch.Manifest) ([]byte, bool) {
+	data, e := json.Marshal(n)
+	if e != nil || len(data) >= launch.MaxManifest {
+		return nil, false
+	}
+	return append(data, '\n'), true
 }
 
 func rolePath(role string) string {
@@ -224,7 +236,15 @@ func nodeManifest(p Plan, art map[string]Artifact) launch.Manifest {
 	return launch.Manifest{Version: 1, UnitRoot: unitRoot, InputDir: inputDir, StateDir: stateDir, Daemon: firecracker.Asset{Path: rolePath("daemon"), SHA256: art["daemon"].SHA256}, Backend: firecracker.Asset{Path: Root + "/backend.json", SHA256: p.Backend.SHA256}, Auth: firecracker.Asset{Path: Root + "/auth.json", SHA256: p.Auth.SHA256}, Frontend: p.Frontend, Parent: p.Parent}
 }
 func ingressManifest(p Plan, n launch.Manifest, device string, art map[string]Artifact) ingresslaunch.Manifest {
-	return ingresslaunch.Manifest{Version: 1, UnitRoot: "/sys/fs/cgroup/system.slice/" + IngressUnit, PolicyStateDir: policyDir, Gateway: firecracker.Asset{Path: rolePath("gateway"), SHA256: art["gateway"].SHA256}, Config: firecracker.Asset{Path: Root + "/gateway.json", SHA256: p.Gateway.SHA256}, NodeLaunch: firecracker.Asset{Path: launchPath, SHA256: digest(encode(n))}, Device: device, Ingress: p.Ingress, Reserve: p.Reserve, Capacity: p.Capacity}
+	return ingressManifestWithNodeSHA(p, digest(encode(n)), device, art)
+}
+
+// Pure construction ONLY. CheckComposition validates semantic composition but
+// does NOT bind NodeLaunch.SHA256 to n. Both private production callers compute
+// this digest themselves from the SAME exact JSON+LF node bytes; no user digest,
+// cached validation, raw decoder bypass or effectful authority enters here.
+func ingressManifestWithNodeSHA(p Plan, nodeSHA, device string, art map[string]Artifact) ingresslaunch.Manifest {
+	return ingresslaunch.Manifest{Version: 1, UnitRoot: "/sys/fs/cgroup/system.slice/" + IngressUnit, PolicyStateDir: policyDir, Gateway: firecracker.Asset{Path: rolePath("gateway"), SHA256: art["gateway"].SHA256}, Config: firecracker.Asset{Path: Root + "/gateway.json", SHA256: p.Gateway.SHA256}, NodeLaunch: firecracker.Asset{Path: launchPath, SHA256: nodeSHA}, Device: device, Ingress: p.Ingress, Reserve: p.Reserve, Capacity: p.Capacity}
 }
 
 // render uses the production generators unchanged. Only this installer's main
