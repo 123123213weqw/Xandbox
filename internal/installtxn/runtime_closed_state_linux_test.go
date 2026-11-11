@@ -18,7 +18,6 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/diagnostics"
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
-	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"golang.org/x/sys/unix"
 )
 
@@ -28,6 +27,16 @@ func closedStateModel(t *testing.T) (*stopTestModel, *runtimeScope, *runtimeStop
 }
 func closedStateModelMetrics(t *testing.T, metrics bool) (*stopTestModel, *runtimeScope, *runtimeStoppedWorkProof, backendInspectionProofs) {
 	t.Helper()
+	return closedStateModelMetricsWithInitial(t, metrics, closedStateInitialModel)
+}
+
+// TEST-only constructor selection; every post-initialization Stop, strict root,
+// diagnostics and backend/model proof below is shared unchanged with restart.
+func closedStateModelMetricsWithInitial(t *testing.T, metrics bool, initial func(*testing.T, *filesystem, transaction) *stopTestModel) (*stopTestModel, *runtimeScope, *runtimeStoppedWorkProof, backendInspectionProofs) {
+	t.Helper()
+	if initial == nil {
+		t.Fatal("owned TEST initial main constructor required")
+	}
 	f, tx := runtimeShortInstallPrepared(t, func(p *prepared) {
 		p.plan.Frontend.Metrics = metrics
 		_, inputs, _, _ := inputFixture(t)
@@ -57,24 +66,7 @@ func closedStateModelMetrics(t *testing.T, metrics bool) (*stopTestModel, *runti
 			}
 		}
 	})
-	x := stopModelInstalled(t, "", f, tx)
-	x.client.Close()
-	old := x.children[MainUnit]
-	_ = old.Process.Kill()
-	_ = old.Wait()
-	// The old EMPTY fixture's mock-only directory is not a Firecracker root.
-	// Test setup removes that EMPTY directory before starting the explicit model;
-	// production inspection must reject, never delete, such an unknown namespace.
-	if e := os.Remove(f.root.Name() + stateDir + "/instances"); e != nil {
-		t.Fatal(e)
-	}
-	x.children[MainUnit] = runtimeStopChildMode(t, f.root.Name(), "main", "closed-state-firecracker-model")
-	var e error
-	x.client, e = nodecontrol.NewPinnedClient(f.root.Name()+stateDir, x.children[MainUnit].Process.Pid)
-	if e != nil {
-		t.Fatal(e)
-	}
-	t.Cleanup(x.client.Close)
+	x := initial(t, f, tx)
 	s := x.scope(t)
 	x.maintain(t, s)
 	ctx, cancel := workStopContext(t)

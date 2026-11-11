@@ -64,3 +64,42 @@ is introduced. New-source ordinary CI must be evaluated on its own actual
 outcomes; previous failures remain failures. Mock backend and manager/cgroup
 positives remain **models**, not native Firecracker/KVM, full reclamation,
 activation, rollback or production qualification.
+
+## Closed-state model fixture uses the same original seed
+
+The complete closed-state fixture had the same redundant ordinary-main
+initialization. Its setup then removed that main's **empty TEST-only**
+`state/instances` artifact before starting the actual
+`closed-state-firecracker-model` helper. The default fixture now uses the existing
+TEST initial-main seam and the **unchanged** strict empty-state seeder to start
+that selected helper immediately. No unused ordinary main or backend directory
+is created or deleted in this default path. The actual helper still opens its
+own original lock and reloads the entire seeded control status before maintenance.
+
+Only constructor selection is extracted. Original installed policy/rendered
+bytes, optional metrics input, actual controller/Broker/Core, maintenance,
+finish/close, fixed physical Stop and retained state FD, explicit diagnostic and
+backend-format models, and full read-only closed-state inspection are shared
+unchanged. Every preexisting test body and unknown-namespace/type/link/callback/
+lease/context refusal case remains; the production reader still rejects
+`instances` and preserves its bytes. The seeder continues to refuse all existing
+entries; it is not a recovery, migration or adoption routine.
+
+Two added `TestRuntimeCoreClosedFixture...` controls run both metrics-disabled
+and metrics-enabled inputs in the existing Core gate and whole race suite:
+
+- Correct initial populated TEST main plus ingress, exact seed reload, original
+  inode/FD-local BSD owner, no unused backend, and complete strict state/backend
+  **MODEL** join without mutation or reclaim/activation authority.
+- Explicit former old-main -> owned SIGKILL/reap -> correct-main restart, old
+  pidfd death, unchanged whole control status and original inode, the original
+  empty-artifact test setup, full physical Stop/retained lease and strict complete
+  read-only join. Observer lock descriptors are closed before operator Stop.
+
+This retains restart coverage independently instead of repeating it as every
+fixture's setup. It does **not** reduce old tests, arguments, repetitions,
+assertions, process-proof strength, race coverage, or any timeout/resource/IO
+limit. The workflow and Go command set are unchanged. It is not measured
+performance evidence or a diagnosis of an old timeout. Native KVM, long-load,
+complete result-aware installed consumer/handoff/rollback and production
+qualification remain separate unfinished requirements.
