@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"math"
-	"regexp"
+
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 )
 
 var ErrMaintenance = errors.New("exclusive maintenance admission fence is held")
 var ErrMaintenanceUnsupported = errors.New("durable maintenance protocol unsupported")
-var maintenanceDigest = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var maintenanceDigest = fixedhex.Pattern(64)
 
 // MaintenanceOwner identifies the exact installed operation, NOT a tenant credential,
 // process/executable proof, successful work or permission to select files.

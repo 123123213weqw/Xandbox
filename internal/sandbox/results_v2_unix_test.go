@@ -32,7 +32,7 @@ func TestResultStoreV2ChecksumBindsReservationAndPayloadAcrossRestart(t *testing
 		t.Fatal(e)
 	}
 	r, e := decodeResult(raw)
-	if e != nil || r.Version != 2 || !hashPattern.MatchString(r.SHA256) {
+	if e != nil || r.Version != 2 || !originalIdentitySHA64F9.MatchString(r.SHA256) {
 		t.Fatal(r, e)
 	}
 	for _, kind := range []string{"stdout", "tenant", "checksum", "missing", "wrong-version"} {

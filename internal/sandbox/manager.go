@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/hostclock"
 	"github.com/123123213weqw/Xandbox/internal/telemetry"
 )
@@ -285,7 +285,7 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (Record, error)
 	return m.CreateScoped(ctx, Owner{TenantID: "local", MaxInstances: m.opts.MaxInstances}, "", req)
 }
 
-var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var hashPattern = fixedhex.Pattern(64)
 
 func createHashes(key string, req CreateRequest) (string, string, error) {
 	if key == "" {

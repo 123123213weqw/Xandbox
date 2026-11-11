@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -40,8 +41,8 @@ type Config struct {
 
 const diskBytes = 128 << 20
 
-var hex32 = regexp.MustCompile(`^[0-9a-f]{32}$`)
-var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var hex32 = fixedhex.Pattern(32)
+var hex64 = fixedhex.Pattern(64)
 var cgName = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 var nodeCGName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$`)
 

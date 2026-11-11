@@ -10,6 +10,7 @@ import (
 	"regexp"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/launch"
 	"github.com/123123213weqw/Xandbox/internal/pathchars"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -25,7 +26,7 @@ type Manifest struct {
 	Device     string            `json:"device"`
 }
 
-var shaPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var shaPattern = fixedhex.Pattern(64)
 var devicePattern = regexp.MustCompile(`^(0|[1-9][0-9]{0,6}):(0|[1-9][0-9]{0,6})$`)
 var blockPattern = regexp.MustCompile(`^/dev/(vd[a-z]|sd[a-z]|nvme[0-9]+n[0-9]+)$`)
 var errPolicy = errors.New("invalid readiness policy")

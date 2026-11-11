@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
@@ -23,7 +24,7 @@ import (
 const managedRoot = "/etc/xandbox-install"
 const MaxPolicyIntent = 16384
 
-var policyRequest = regexp.MustCompile(`^[0-9a-f]{32}$`)
+var policyRequest = fixedhex.Pattern(32)
 var policyPath = regexp.MustCompile(`^/[A-Za-z0-9_./-]+$`)
 
 type PolicySource struct {

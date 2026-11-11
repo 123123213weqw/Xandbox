@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"unicode/utf8"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
@@ -25,7 +26,7 @@ const (
 	MaxLedgerErrorBytes  = 4096
 )
 
-var tokenPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
+var tokenPattern = fixedhex.Pattern(32)
 var recordTempPattern = regexp.MustCompile(`^\.record-[0-9]+$`)
 
 func validRef(ref Ref) bool {

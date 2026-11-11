@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
@@ -22,7 +23,7 @@ const ModeOpen = "open"
 const ModeDrained = "drained"
 const StateLimit = 4096
 
-var hexID = regexp.MustCompile(`^[0-9a-f]{32}$`)
+var hexID = fixedhex.Pattern(32)
 var tempName = regexp.MustCompile(`^\.(state|identity)-[0-9]+$`)
 
 type State struct {
