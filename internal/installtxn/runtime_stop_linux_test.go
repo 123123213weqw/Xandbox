@@ -181,10 +181,21 @@ func stopModel(t *testing.T, kind string) *stopTestModel {
 
 func stopModelInstalled(t *testing.T, kind string, f *filesystem, tx transaction) *stopTestModel {
 	t.Helper()
+	return stopModelInstalledWithMain(t, kind, f, tx, nil)
+}
+
+// TEST-only initialization seam. The nil/default path retains every original
+// manager, process, ownership, cleanup and model-cgroup observation unchanged.
+func stopModelInstalledWithMain(t *testing.T, kind string, f *filesystem, tx transaction, initialMain func() *exec.Cmd) *stopTestModel {
+	t.Helper()
 	managerLinks(t, f)
 	x := &stopTestModel{f: f, tx: tx, children: map[string]*exec.Cmd{}, alive: map[string]bool{}, kind: kind}
 	for _, item := range []struct{ unit, role string }{{MainUnit, "main"}, {IngressUnit, "ingress"}} {
-		x.children[item.unit] = runtimeStopChild(t, f.root.Name(), item.role)
+		if item.unit == MainUnit && initialMain != nil {
+			x.children[item.unit] = initialMain()
+		} else {
+			x.children[item.unit] = runtimeStopChild(t, f.root.Name(), item.role)
+		}
 		x.alive[item.unit] = true
 		modelIngressGroup(t, f.root.Name()+ingressCgroupParent+"/"+item.unit, "populated 0\nfrozen 0\n")
 	}

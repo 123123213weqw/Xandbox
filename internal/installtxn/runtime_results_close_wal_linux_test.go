@@ -183,18 +183,7 @@ func resultsWALDaemon(t *testing.T, root, mode string) *exec.Cmd {
 }
 func resultsWALModel(t *testing.T, mode string) (*stopTestModel, *runtimeScope) {
 	t.Helper()
-	x := stopModel(t, "")
-	x.client.Close()
-	old := x.children[MainUnit]
-	_ = old.Process.Kill()
-	_ = old.Wait()
-	x.children[MainUnit] = resultsWALDaemon(t, x.f.root.Name(), mode)
-	var e error
-	x.client, e = nodecontrol.NewPinnedClient(x.f.root.Name()+stateDir, x.children[MainUnit].Process.Pid)
-	if e != nil {
-		t.Fatal(e)
-	}
-	t.Cleanup(x.client.Close)
+	x, _ := resultsWALInitialModel(t, mode)
 	s := x.scope(t)
 	x.maintain(t, s)
 	return x, s
