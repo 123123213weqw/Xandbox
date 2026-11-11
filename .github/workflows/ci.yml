@@ -96,6 +96,11 @@ jobs:
         run: |
           umask 077
           GOTOOLCHAIN=go1.27.4 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntimeResultsWAL' ./internal/installtxn
+      - name: Verify result-bound physical Stop and original retained BSD state ownership
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.4 CGO_ENABLED=0 go test -v -count=3 -run '^TestRuntimeResultsStop' ./internal/installtxn
       - name: Race and failure tests under private umask
         run: |
           umask 077

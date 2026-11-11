@@ -98,3 +98,12 @@ durable prior-admission/ingress release; candidate-failure/reboot-safe rollback;
 unknown-prefix administration/acknowledgement/legacy integrity migration; current
 full original software/owned KVM and ORIGINAL sustained-load qualification.
 The Goal remains active, and no new release or production/SLO claim is enabled.
+
+## Following physical stage
+
+The separate [result-bound physical Stop adapter](RESULT_STOP.md) now consumes
+this opaque closure through fresh source/WAL joins, uses the original physical
+Stop algorithm with a distinct typed journal, and retains the original BSD state
+FD. This close component still does not perform those service effects itself.
+Neither component enables file activation, backend-reclaim or production
+qualification; see that adapter's explicit evidence and remaining-work limits.

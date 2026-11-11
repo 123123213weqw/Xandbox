@@ -220,6 +220,12 @@ func (s *runtimeScope) stop(ctx context.Context, base, request string, client *n
 // This stage requests physical termination, NOT successful work completion or
 // full reclaim; no scope method permits selecting binaries using this result.
 func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string, client *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (runtimeStopResult, error) {
+	return s.stopJournalWithProofs(ctx, base, request, client, m, proof, runtimePhysicalStopJournal{})
+}
+
+// One physical-effects algorithm; the closed journal modes do not reinterpret
+// one another's wire format or supply actor outcomes. No public mode/callback.
+func (s *runtimeScope) stopJournalWithProofs(ctx context.Context, base, request string, client *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs, journal runtimePhysicalStopJournal) (runtimeStopResult, error) {
 	var result runtimeStopResult
 	if !digestPattern.MatchString(base) || !requestPattern.MatchString(request) || proof.process == nil || proof.empty == nil {
 		return result, ErrPolicy
@@ -240,7 +246,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if e != nil {
 				return e
 			}
-			p, e = f.readRuntimeStop()
+			p, e = journal.read(f)
 			pending = e == nil
 			if e != nil && !errors.Is(e, unix.ENOENT) {
 				return e
@@ -252,7 +258,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 					return ErrConflict
 				}
 			}
-			return f.stopInventory(old)
+			return journal.inventory(ctx, f, old)
 		}); e != nil {
 			return e
 		}
@@ -378,7 +384,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			}
 		}
 		stage = proofStopExistingReceipt
-		for _, path := range []string{runtimeStopRoot + "/stopped.json", runtimeStopRoot + "/.stopped.json.next"} {
+		for _, path := range []string{journal.root() + "/stopped.json", journal.root() + "/.stopped.json.next"} {
 			if yes, err := f.exists(path); err != nil {
 				return err
 			} else if yes && (main.pid != 0 || ingress.pid != 0) {
@@ -402,13 +408,13 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
 				return e
 			}
-			if e := f.stopInventory(&p); e != nil {
+			if e := journal.inventory(ctx, f, &p); e != nil {
 				return e
 			}
-			if e := f.mkdir(runtimeStopRoot, 0700); e != nil {
+			if e := f.mkdir(journal.root(), 0700); e != nil {
 				return e
 			}
-			return f.runtimeRecord(runtimeStopRoot+"/intent.json", nil, encode(p), "runtime-stop-intent")
+			return f.runtimeRecord(journal.root()+"/intent.json", nil, journal.intent(p), journal.prefix()+"-intent")
 		}); e != nil {
 			return e
 		}
@@ -482,15 +488,15 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 					if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
 						return e
 					}
-					if e := f.stopInventory(&p); e != nil {
+					if e := journal.inventory(ctx, f, &p); e != nil {
 						return e
 					}
-					return f.exact(runtimeStopRoot+"/intent.json", encode(p), 0600)
+					return f.exact(journal.root()+"/intent.json", journal.intent(p), 0600)
 				}); e != nil {
 					return e
 				}
 				stage = proofStopBeforeSignalCut
-				if e = f.point("runtime-stop-before-" + unit); e != nil {
+				if e = f.point(journal.prefix() + "-before-" + unit); e != nil {
 					return e
 				}
 				stage = proofStopManagerStop
@@ -498,7 +504,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 					return e
 				}
 				stage = proofStopAfterSignalCut
-				if e = f.point("runtime-stop-after-" + unit); e != nil {
+				if e = f.point(journal.prefix() + "-after-" + unit); e != nil {
 					return e
 				}
 			}
@@ -526,7 +532,7 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			}
 		}
 		stage = proofStopEmptyCut
-		if e = f.point("runtime-stop-domains-empty"); e != nil {
+		if e = f.point(journal.prefix() + "-domains-empty"); e != nil {
 			return e
 		}
 		stage = proofStopReceiptPersist
@@ -534,13 +540,13 @@ func (s *runtimeScope) stopWithProofs(ctx context.Context, base, request string,
 			if _, _, e := f.runtimeStopBase(ctx, base, request); e != nil {
 				return e
 			}
-			if e := f.stopInventory(&p); e != nil {
+			if e := journal.inventory(ctx, f, &p); e != nil {
 				return e
 			}
-			if e := f.exact(runtimeStopRoot+"/intent.json", encode(p), 0600); e != nil {
+			if e := f.exact(journal.root()+"/intent.json", journal.intent(p), 0600); e != nil {
 				return e
 			}
-			return f.runtimeRecord(runtimeStopRoot+"/stopped.json", nil, encode(runtimeStopReceipt{Version: 1, Input: digest(encode(p))}), "runtime-stop-receipt")
+			return f.runtimeRecord(journal.root()+"/stopped.json", nil, journal.receipt(p), journal.prefix()+"-receipt")
 		}); e != nil {
 			return e
 		}

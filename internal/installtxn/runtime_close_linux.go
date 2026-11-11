@@ -212,7 +212,7 @@ func (s *runtimeScope) closeBoundRuntime(ctx context.Context, work runtimeWorkSt
 			return ErrPolicy
 		}
 		// A V2 results journal must never be adopted by record-only closure.
-		for _, path := range []string{runtimeResultsCloseRoot, runtimeResultsCloseAnchor, runtimeResultsCloseAnchorScratch} {
+		for _, path := range []string{runtimeResultsCloseRoot, runtimeResultsCloseAnchor, runtimeResultsCloseAnchorScratch, runtimeResultsStopRoot} {
 			if yes, e := f.exists(path); e != nil {
 				return e
 			} else if yes {
