@@ -3,7 +3,10 @@
 This connects retained outcomes to the actual live Manager/Broker close path.
 It does **not** enable managed updates, file switching, startup unfencing,
 maintenance release, automatic prefix recovery or production qualification.
-The complete installed cold-state reader still refuses the results namespace.
+The legacy installed cold-state reader still refuses the results namespace.
+A [separate disk-only retained-state reader](RETAINED_STATE_READER.md) now
+compares the complete known root and all canonical results to supplied V2
+observations; it is not an actor/Stop/activation capability or managed updater.
 
 ## New records and explicit legacy boundary
 

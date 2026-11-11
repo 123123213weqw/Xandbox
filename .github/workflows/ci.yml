@@ -86,6 +86,11 @@ jobs:
         run: |
           umask 077
           GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestResultStore|TestManager.*Result|TestRuntimeResults)' ./internal/sandbox ./internal/nodecontrol
+      - name: Verify read-only retained-result installed state in CGO-free builds
+        if: runner.os == 'Linux'
+        run: |
+          umask 077
+          GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -v -count=3 -run '^(TestResultInspection|TestRuntimeRetained)' ./internal/sandbox ./internal/installtxn
       - name: Race and failure tests under private umask
         run: |
           umask 077

@@ -167,15 +167,28 @@ func (r *stateInventoryReader) records(dir *os.File, names []string, path string
 // constructor/ordinary Load, orphan deletion, socket connection/unlink or sync.
 // Semantic admission/ledger/session/owner joins run independently before/after.
 func readClosedStateRoot(ctx context.Context, root *os.File, cfg firecracker.Config, metrics bool) (runtimeStateFootprint, error) {
+	return readClosedStateRootWithResults(ctx, root, cfg, metrics, nil)
+}
+
+// The legacy entry point above NEVER opts in. A result-aware caller must use
+// the separate full semantic/observation join, not merely allow a new name.
+func readClosedStateRootWithResults(ctx context.Context, root *os.File, cfg firecracker.Config, metrics bool, results *retainedRootPolicy) (runtimeStateFootprint, error) {
 	var st unix.Stat_t
 	if e := unix.Fstat(int(root.Fd()), &st); e != nil {
 		return runtimeStateFootprint{}, e
 	}
 	r := stateInventoryReader{ctx: ctx, device: uint64(st.Dev), hash: sha256.New()}
 	r.hash.Write([]byte("Xandbox original closed state namespace v1\x00"))
-	e := r.directory(root, ".", ".", 11, func(dir *os.File, names []string) error {
+	maxRoot := 11
+	if results != nil {
+		maxRoot++ // Exactly the mandatory known results directory, never a generic walk.
+	}
+	e := r.directory(root, ".", ".", maxRoot, func(dir *os.File, names []string) error {
 		required := map[string]bool{"controller.lock": true, "admission.identity": true, "maintenance.identity": true,
 			"admission": true, "ledger": true, "sessions": true, "firecracker": true, "diagnostics": true}
+		if results != nil {
+			required["results"] = true
+		}
 		for _, name := range names {
 			if !required[name] && name != "api.sock" && name != nodecontrol.SocketName && !(metrics && name == "metrics.sock") {
 				return ErrInventory
@@ -211,6 +224,13 @@ func readClosedStateRoot(ctx context.Context, root *os.File, cfg firecracker.Con
 					max, limit = session.MaxRecords, session.MaxRecordBytes
 				}
 				if e := r.directory(dir, name, name, max, func(d *os.File, n []string) error { return r.records(d, n, name, limit) }); e != nil {
+					return e
+				}
+			case "results":
+				if results == nil {
+					return ErrInventory
+				}
+				if e := r.retainedResults(dir, results); e != nil {
 					return e
 				}
 			case "firecracker":
