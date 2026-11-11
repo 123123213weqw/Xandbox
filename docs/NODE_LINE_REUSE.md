@@ -20,8 +20,10 @@ JSON/text codecs, references, mutable containers or new normalization rules.
 The original `ingressManifest` wrapper still computes `digest(encode(n))` for
 all its callers, including oversized/invalid inputs, and constructs the exact
 same fields/value/bytes. Only the fixed literal construction is shared with a
-private `ingressManifestWithNodeSHA` helper. Its two production callers compute
-the digest themselves from the same exact JSON+LF producer bytes. No caller can
+private `ingressManifestWithNodeSHA` helper. Its three production callers (the
+original wrapper, Plan validator and renderer) compute the digest themselves
+from the same exact JSON+LF producer bytes. The renderer also retains its exact
+node line for output; see [renderer node-line reuse](RENDER_NODE_LINE_REUSE.md). No caller can
 supply a raw line/digest through a public API, decoder flag or effect permission.
 
 **`CheckComposition` does not independently bind `NodeLaunch.SHA256` to `n`.**

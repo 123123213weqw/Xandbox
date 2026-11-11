@@ -240,7 +240,7 @@ func ingressManifest(p Plan, n launch.Manifest, device string, art map[string]Ar
 }
 
 // Pure construction ONLY. CheckComposition validates semantic composition but
-// does NOT bind NodeLaunch.SHA256 to n. Both private production callers compute
+// does NOT bind NodeLaunch.SHA256 to n. All three private production callers compute
 // this digest themselves from the SAME exact JSON+LF node bytes; no user digest,
 // cached validation, raw decoder bypass or effectful authority enters here.
 func ingressManifestWithNodeSHA(p Plan, nodeSHA, device string, art map[string]Artifact) ingresslaunch.Manifest {
