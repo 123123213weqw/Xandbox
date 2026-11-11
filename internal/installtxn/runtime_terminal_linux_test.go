@@ -12,27 +12,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/session"
 )
 
 func terminalStoppedModel(t *testing.T, mode string) (*stopTestModel, *runtimeScope, *runtimeStoppedWorkProof) {
 	t.Helper()
-	x := stopModel(t, "")
-	if mode != "" {
-		x.client.Close()
-		old := x.children[MainUnit]
-		_ = old.Process.Kill()
-		_ = old.Wait()
-		x.children[MainUnit] = runtimeStopChildMode(t, x.f.root.Name(), "main", mode)
-		var e error
-		x.client, e = nodecontrol.NewPinnedClient(x.f.root.Name()+stateDir, x.children[MainUnit].Process.Pid)
-		if e != nil {
-			t.Fatal(e)
-		}
-		t.Cleanup(x.client.Close)
-	}
+	return terminalStoppedModelWithInitial(t, mode, terminalActorInitialModel)
+}
+
+// TEST-only initialization seam; every original scope, maintenance, work/close,
+// physical Stop and retained-state step below remains unchanged.
+func terminalStoppedModelWithInitial(t *testing.T, mode string, initial func(*testing.T, string) *stopTestModel) (*stopTestModel, *runtimeScope, *runtimeStoppedWorkProof) {
+	t.Helper()
+	x := initial(t, mode)
 	s := x.scope(t)
 	x.maintain(t, s)
 	ctx, cancel := workStopContext(t)

@@ -62,17 +62,7 @@ func killCloseOriginalsTest(t *testing.T, x *stopTestModel) {
 }
 
 func TestRuntimeWorkCloseDurableIntentBeforeActualRPCAndAnchoredOutcomeBeforeSignals(t *testing.T) {
-	x := stopModel(t, "")
-	x.client.Close()
-	old := x.children[MainUnit]
-	_ = old.Process.Kill()
-	_ = old.Wait()
-	x.children[MainUnit] = runtimeStopChildMode(t, x.f.root.Name(), "main", "populated")
-	var setupErr error
-	x.client, setupErr = nodecontrol.NewPinnedClient(x.f.root.Name()+stateDir, x.children[MainUnit].Process.Pid)
-	if setupErr != nil {
-		t.Fatal(setupErr)
-	}
+	x := terminalActorInitialModel(t, "populated")
 	defer x.client.Close()
 	s := x.scope(t)
 	x.maintain(t, s)
@@ -457,17 +447,8 @@ func TestRuntimeWorkCloseExplicitV4CannotDowngradeOrAlterLegacyCanonicalBytes(t 
 }
 
 func TestRuntimeWorkCloseFailedActualCleanupNeverAuthorizesStop(t *testing.T) {
-	x := stopModel(t, "")
-	x.client.Close()
-	old := x.children[MainUnit]
-	_ = old.Process.Kill()
-	_ = old.Wait()
-	x.children[MainUnit] = runtimeStopChildMode(t, x.f.root.Name(), "main", "cleanup-failed")
+	x := terminalActorInitialModel(t, "cleanup-failed")
 	var e error
-	x.client, e = nodecontrol.NewPinnedClient(x.f.root.Name()+stateDir, x.children[MainUnit].Process.Pid)
-	if e != nil {
-		t.Fatal(e)
-	}
 	defer x.client.Close()
 	s := x.scope(t)
 	x.maintain(t, s)
