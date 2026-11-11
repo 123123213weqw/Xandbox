@@ -86,6 +86,9 @@ func resultsWALDaemonHelper(t *testing.T, root string) {
 		t.Fatal(e)
 	}
 	var driver sandbox.Driver = mock
+	if mode == "state-join-firecracker-model" {
+		driver = &terminalProjectionModelDriver{Driver: mock}
+	}
 	if mode == "cleanup-failed" {
 		driver = &runtimeCloseFailedDriver{Driver: mock}
 	}
