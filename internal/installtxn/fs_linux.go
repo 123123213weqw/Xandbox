@@ -242,12 +242,26 @@ func (r contextReader) Read(p []byte) (int, error) {
 	}
 	return r.input.Read(p)
 }
+
+// Fresh scratch only, not a data/hash cache. The contextReader wrapper hides
+// LimitedReader from io.Copy's small-N allocation optimization. For small
+// nonnegative sizes the inner reader already trims every request to size+1;
+// this buffer changes allocation, not that bound or its context/error order.
+// Keep original negative/overflow behavior and a nonzero CopyBuffer scratch.
+func hashScratchSize(size int64) int {
+	const ceiling = 32 * 1024
+	if size >= 0 && size < ceiling {
+		return int(size) + 1
+	}
+	return ceiling
+}
+
 func hashFile(ctx context.Context, in *os.File, size int64) (string, error) {
 	if _, e := in.Seek(0, 0); e != nil {
 		return "", e
 	}
 	h := sha256.New()
-	n, e := io.Copy(h, contextReader{ctx, io.LimitReader(in, size+1)})
+	n, e := io.CopyBuffer(h, contextReader{ctx, io.LimitReader(in, size+1)}, make([]byte, hashScratchSize(size)))
 	if e != nil {
 		return "", e
 	}
