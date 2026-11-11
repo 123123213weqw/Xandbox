@@ -51,7 +51,7 @@ func (f *filesystem) directory(path string) (*os.File, error) {
 	if e != nil {
 		return nil, e
 	}
-	for _, name := range strings.Split(strings.TrimPrefix(path, "/"), "/") {
+	for name := range strings.SplitSeq(strings.TrimPrefix(path, "/"), "/") {
 		if e = trustedStat(fd, true, 0); e != nil {
 			unix.Close(fd)
 			return nil, e

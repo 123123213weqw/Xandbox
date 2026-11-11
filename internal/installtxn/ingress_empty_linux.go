@@ -26,7 +26,7 @@ func parseIngressEmptyEvents(raw []byte) error {
 		return ErrInventory
 	}
 	fields := map[string]bool{}
-	for _, line := range strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(raw), "\n"), "\n") {
 		parts := strings.Fields(line)
 		if len(parts) != 2 || (parts[0] != "populated" && parts[0] != "frozen") || fields[parts[0]] || parts[1] != "0" {
 			return ErrInventory

@@ -35,7 +35,7 @@ func stateKernelLockOwner(raw []byte, id runtimeStateIdentity, pid int) error {
 	found := 0
 	var firstLine, firstOrdinal string
 	sameText, sameOrdinal := true, true
-	for _, line := range strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(raw), "\n"), "\n") {
 		v := strings.Fields(line)
 		blocked := len(v) == 9 && v[1] == "->"
 		if blocked {

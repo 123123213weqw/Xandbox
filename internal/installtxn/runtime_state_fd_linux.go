@@ -138,7 +138,7 @@ func stateKernelLockVeto(raw []byte, id runtimeStateIdentity, pid int) error {
 	if len(raw) == 0 || len(raw) > 4<<20 || raw[len(raw)-1] != '\n' {
 		return runtimeProofFailure(proofStateLockRecordSyntax, ErrInventory)
 	}
-	for _, line := range strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(raw), "\n"), "\n") {
 		v := strings.Fields(line)
 		blocked := len(v) == 9 && v[1] == "->"
 		if blocked {
