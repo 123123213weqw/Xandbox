@@ -2,6 +2,10 @@
 
 BIN_DIR ?= bin
 
+# Compatibility CI may explicitly use local; production builds must pin the patched SDK.
+GOTOOLCHAIN ?= go1.27.4
+export GOTOOLCHAIN
+
 test:
 	go test -race ./...
 
