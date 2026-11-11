@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -268,7 +268,7 @@ func hashFile(ctx context.Context, in *os.File, size int64) (string, error) {
 	if n != size {
 		return "", ErrInventory
 	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 func (f *filesystem) verify(ctx context.Context, v File) error {
 	in, e := f.open(v.Path, unix.O_RDONLY, v.Mode)

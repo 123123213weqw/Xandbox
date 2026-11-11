@@ -251,7 +251,11 @@ func ingressManifestWithNodeSHA(p Plan, nodeSHA, device string, art map[string]A
 // candidate adds a fixed read-only commit gate BEFORE the original launcher.
 func render(p Plan, device string, art map[string]Artifact) (map[string][]byte, error) {
 	n := nodeManifest(p, art)
-	g := ingressManifest(p, n, device, art)
+	// Reuse this private immutable node's exact JSON+LF for its pin and output.
+	// All generator/composition checks below still run; no IO or callback sees
+	// these bytes before the final artifact map is returned. Not a source cache.
+	nodeLine := encode(n)
+	g := ingressManifestWithNodeSHA(p, digest(nodeLine), device, art)
 	r := serviceready.Manifest{Version: 1, NodeLaunch: g.NodeLaunch, Helper: firecracker.Asset{Path: serviceready.HelperPath, SHA256: art["ready"].SHA256}, Device: device}
 	main, e := r.DaemonUnit(n, readyPath, p.DevicePath)
 	if e != nil {
@@ -274,7 +278,7 @@ func render(p Plan, device string, art map[string]Artifact) (map[string][]byte, 
 		ingress = strings.Replace(ingress, line, "ReadWritePaths="+policyDir+" "+policycontrol.OperatorDirectory+"\n", 1)
 		ingress = strings.Replace(ingress, "Type=exec\n", "Type=exec\nRuntimeDirectory=xandbox-ingress-control\nRuntimeDirectoryMode=0700\nRuntimeDirectoryPreserve=no\n", 1)
 	}
-	return map[string][]byte{launchPath: encode(n), ingressPath: encode(g), readyPath: encode(r), UnitDir + "/" + MainUnit: []byte(main), UnitDir + "/" + IngressUnit: []byte(ingress)}, nil
+	return map[string][]byte{launchPath: nodeLine, ingressPath: encode(g), readyPath: encode(r), UnitDir + "/" + MainUnit: []byte(main), UnitDir + "/" + IngressUnit: []byte(ingress)}, nil
 }
 
 func descriptor(r Release) (map[string]Artifact, error) {
