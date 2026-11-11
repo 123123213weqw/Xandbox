@@ -45,7 +45,7 @@ func originalDecodePlan2792(raw []byte) (Plan, error) {
 	}
 	paths := map[string]bool{}
 	for i, a := range inputs {
-		if !canonical(a.Path) || !digestPattern.MatchString(a.SHA256) || paths[a.Path] || inside(a.Path, Root) || inside(a.Path, DataRoot) || inside(a.Path, UnitDir) || (i != 0 && inside(a.Path, "/usr/libexec")) {
+		if !originalCanonicalPathE57(a.Path) || !digestPattern.MatchString(a.SHA256) || paths[a.Path] || inside(a.Path, Root) || inside(a.Path, DataRoot) || inside(a.Path, UnitDir) || (i != 0 && inside(a.Path, "/usr/libexec")) {
 			return p, ErrPolicy
 		}
 		paths[a.Path] = true

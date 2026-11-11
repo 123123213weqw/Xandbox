@@ -36,7 +36,7 @@ func originalNormalize44(m Manifest) (Manifest, error) {
 	var total int64
 	sources := map[string]bool{}
 	for i, f := range m.Files {
-		if f.Role != roles[i] || !canonical(f.Source) || f.Source == Root || strings.HasPrefix(f.Source, Root+"/") || sources[f.Source] || !originalDigestPattern98.MatchString(f.SHA256) || f.Bytes <= 0 || f.Bytes > maximum(f.Role) || f.Bytes > MaxReleaseBytes-total {
+		if f.Role != roles[i] || !originalCanonicalPathE57(f.Source) || f.Source == Root || strings.HasPrefix(f.Source, Root+"/") || sources[f.Source] || !originalDigestPattern98.MatchString(f.SHA256) || f.Bytes <= 0 || f.Bytes > maximum(f.Role) || f.Bytes > MaxReleaseBytes-total {
 			return m, ErrPolicy
 		}
 		sources[f.Source] = true

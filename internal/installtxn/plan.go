@@ -15,6 +15,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/ingresslaunch"
 	"github.com/123123213weqw/Xandbox/internal/launch"
+	"github.com/123123213weqw/Xandbox/internal/pathchars"
 	"github.com/123123213weqw/Xandbox/internal/policycontrol"
 	"github.com/123123213weqw/Xandbox/internal/releasestore"
 	"github.com/123123213weqw/Xandbox/internal/serviceready"
@@ -45,7 +46,6 @@ var ErrConflict = errors.New("installation request conflict")
 var ErrPlatform = errors.New("root Linux systemd initial installer required")
 var digestPattern = lowerHexPattern(64)
 var requestPattern = lowerHexPattern(32)
-var pathPattern = regexp.MustCompile(`^/[A-Za-z0-9_./-]+$`)
 var devicePattern = regexp.MustCompile(`^/dev/(vd[a-z]|sd[a-z]|nvme[0-9]+n[0-9]+)$`)
 var roles = []string{"daemon", "firecracker", "gateway", "ingress", "initrd", "jailer", "kernel", "launcher", "node", "ready", "template", "warden", "workspace"}
 
@@ -143,7 +143,7 @@ func encode(v any) []byte {
 }
 func digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func canonical(p string) bool {
-	return pathPattern.MatchString(p) && filepath.Clean(p) == p && p != "/"
+	return pathchars.Absolute(p) && filepath.Clean(p) == p && p != "/"
 }
 func inside(p, dir string) bool { return p == dir || strings.HasPrefix(p, dir+"/") }
 func Decode(raw []byte) (Plan, error) {
