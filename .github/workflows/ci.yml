@@ -104,7 +104,7 @@ jobs:
       - name: Race and failure tests under private umask
         run: |
           umask 077
-          go test -race -timeout=20m -count=3 ./...
+          go test -race -timeout=20m -count=3 -json ./...
       - name: Verify original state lease and read-only core inventory in CGO-free builds
         if: runner.os == 'Linux'
         run: |
