@@ -33,6 +33,10 @@ Each pass:
 2. Reconstructs the original sorted Core and Session terminal projections, not
    just counts. It decodes the actual complete ledger again to retain per-owner
    tenant, generation and exact output limit, without buffering all file bodies.
+   Its owner index keeps only the Ref key, tenant and exact output limit: it
+   never accumulates decoded Record/error payloads across owners. The complete
+   record (including LastError) is still validated and included in its terminal
+   and raw/root digests; discarding payload from the index is not ignoring data.
 3. Rechecks the admission/ledger/session raw authority before the final root
    scan. The full root scan then validates every known namespace, backend config
    and persisted diagnostics, and each result filename/header/ledger join.
@@ -66,6 +70,10 @@ processes/FDs. The installed root is a **model**, with MockDriver/backend/system
 quota models. Results are explicitly added after the legacy stopped fixture;
 that fixture is NOT a result-bound live actor/Stop acceptance. Tests assert that
 the old reader and old complete-state join still reject the new namespace.
+An additional empty/max4096-byte error control verifies the minimal owner
+index structurally and independently checks the complete error-bearing Core
+digest. It intentionally does not create 100k records or claim a host-memory
+stress test or managed quota qualification.
 Source and original CI logs must qualify the new code independently; no old green
 binary, report or mock pass qualifies Linux/KVM, physical reclaim or sustained
 load. All prior failed experiments remain failed.

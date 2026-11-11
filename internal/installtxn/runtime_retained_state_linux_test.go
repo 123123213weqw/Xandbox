@@ -5,6 +5,8 @@ package installtxn
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -389,5 +391,53 @@ func TestRuntimeRetainedRootBetweenScanMetadataRebindingAndFailureNeverPartial(t
 	}
 	if !reflect.DeepEqual(before, coreTree(t, x.x.f.root.Name())) {
 		t.Fatal("read-only full scans changed tree")
+	}
+}
+
+// One maximum-error record suffices to verify the structural no-payload bound;
+// deliberately do NOT manufacture 100k records or stress shared/CI host memory.
+func TestRuntimeRetainedRootOwnerProjectionKeepsNoRecordErrorPayload(t *testing.T) {
+	x := newRetainedRootTest(t)
+	ctx, cancel := workStopContext(t)
+	defer cancel()
+	for _, kind := range []string{"empty-error", "max-error"} {
+		t.Run(kind, func(t *testing.T) {
+			r := x.owner
+			if kind == "max-error" {
+				r.LastError = strings.Repeat("e", sandbox.MaxLedgerErrorBytes)
+			} else {
+				r.LastError = ""
+			}
+			writeCoreModel(t, x.x, "ledger", r.ID, r)
+			owners, projection, e := retainedLedgerOwners(ctx, x.s.state.root)
+			if e != nil || len(owners) != 1 {
+				t.Fatal(owners, projection, e)
+			}
+			owner, ok := owners[r.Ref]
+			typ := reflect.TypeOf(owner)
+			if !ok || owner.tenant != r.TenantID || owner.maxOutput != r.Limits.MaxOutputBytes || typ.NumField() != 2 || typ.Field(0).Name != "tenant" || typ.Field(0).Type.Kind() != reflect.String || typ.Field(1).Name != "maxOutput" || typ.Field(1).Type.Kind() != reflect.Int {
+				t.Fatal("owner index retained more than minimal identity metadata", owner, typ)
+			}
+			// Independently bind EVERY record field, including the complete error,
+			// to the original actor framing: dropping payload from the index must
+			// never mean ignoring it in the actual terminal/raw byte observations.
+			h := sha256.New()
+			h.Write([]byte("xandbox-core-closure-v1\n"))
+			if e := json.NewEncoder(h).Encode(r); e != nil {
+				t.Fatal(e)
+			}
+			expected := sandbox.ClosureObservation{Version: 1, Records: 1, RecordsSHA256: hex.EncodeToString(h.Sum(nil))}
+			if projection != expected {
+				t.Fatal(projection, expected)
+			}
+			x.expected.Core = expected
+			before := coreTree(t, x.x.f.root.Name())
+			if v, e := x.read(ctx); e != nil || !v.DiskResultBytesMatched || v.CoreTerminal != expected || v.ResourcesReclaimed || v.ActivationAllowed {
+				t.Fatal(v, e)
+			}
+			if !reflect.DeepEqual(before, coreTree(t, x.x.f.root.Name())) {
+				t.Fatal("minimal owner projection changed original payload bytes")
+			}
+		})
 	}
 }

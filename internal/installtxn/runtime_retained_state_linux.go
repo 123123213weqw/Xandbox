@@ -27,8 +27,17 @@ type runtimeRetainedStateInventory struct {
 	ResourcesReclaimed, ActivationAllowed bool
 }
 
+// Keep only bounded owner identity needed by result joins. A complete decoded
+// Record can carry 4096 bytes of LastError; retaining it per owner would turn a
+// streaming read into aggregate payload retention. Full record validation and
+// hashing still happen before this projection, including backend/terminal state.
+type retainedResultOwner struct {
+	tenant    string
+	maxOutput int
+}
+
 type retainedRootPolicy struct {
-	owners  map[sandbox.Ref]sandbox.Record
+	owners  map[sandbox.Ref]retainedResultOwner
 	results sandbox.ResultClosureObservation
 }
 
@@ -54,7 +63,7 @@ func (r *stateInventoryReader) retainedResults(root *os.File, policy *retainedRo
 			}
 			h := row.Reservation
 			owner, ok := policy.owners[h.Ref]
-			if !ok || owner.State != sandbox.Destroyed || owner.Backend != "firecracker" || owner.TenantID != h.TenantID || owner.Limits.MaxOutputBytes != h.MaxOutputBytes {
+			if !ok || owner.tenant != h.TenantID || owner.maxOutput != h.MaxOutputBytes {
 				return ErrConflict
 			}
 		}
@@ -67,8 +76,8 @@ func (r *stateInventoryReader) retainedResults(root *os.File, policy *retainedRo
 	return e
 }
 
-func retainedLedgerOwners(ctx context.Context, root *os.File) (map[sandbox.Ref]sandbox.Record, sandbox.ClosureObservation, error) {
-	owners := map[sandbox.Ref]sandbox.Record{}
+func retainedLedgerOwners(ctx context.Context, root *os.File) (map[sandbox.Ref]retainedResultOwner, sandbox.ClosureObservation, error) {
+	owners := map[sandbox.Ref]retainedResultOwner{}
 	p := newTerminalProjection(true)
 	e := stableBackendDirectory(ctx, &filesystem{root: root}, "/ledger", sandbox.MaxLedgerRecords, func(dir *os.File, names []string) error {
 		last := ""
@@ -93,7 +102,7 @@ func retainedLedgerOwners(ctx context.Context, root *os.File) (map[sandbox.Ref]s
 			if e = p.add(name[:32], raw); e != nil {
 				return e
 			}
-			owners[r.Ref] = r
+			owners[r.Ref] = retainedResultOwner{tenant: r.TenantID, maxOutput: r.Limits.MaxOutputBytes}
 		}
 		return ctx.Err()
 	})
