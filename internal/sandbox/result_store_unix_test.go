@@ -4,8 +4,10 @@ package sandbox
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -274,7 +276,23 @@ func TestResultStoreOwnedCrashHelper(t *testing.T) {
 	}
 	s.point = func(point string) error {
 		if point == stage {
-			_ = syscall.Kill(os.Getpid(), syscall.SIGKILL)
+			// FD 3 belongs only to this parent's selected-cut witness. Neither
+			// stdout nor a watchdog's SIGKILL can stand in for reaching the cut.
+			ack := os.NewFile(3, "result-crash-cut-witness")
+			if n, err := ack.Write([]byte{resultCrashCutMarker}); err != nil || n != 1 {
+				os.Exit(13)
+			}
+			if ack.Close() != nil {
+				os.Exit(14)
+			}
+			if syscall.Kill(os.Getpid(), syscall.SIGKILL) != nil {
+				os.Exit(15)
+			}
+			// Signal delivery need not finish before Kill returns. Never run
+			// another result-store operation, or the normal exit below, after it.
+			for {
+				time.Sleep(time.Hour)
+			}
 		}
 		return nil
 	}
@@ -292,9 +310,30 @@ func TestResultStoreActualOwnedSIGKILLPublicationCutsNeverReplayOrDeleteUnknownP
 		for _, cut := range []string{"written", "synced", "renamed", "durable"} {
 			t.Run(phase+"-"+cut, func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "results")
-				cmd := exec.Command(os.Args[0], "-test.run=^TestResultStoreOwnedCrashHelper$")
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				reader, writer, pipeErr := os.Pipe()
+				if pipeErr != nil {
+					t.Fatal(pipeErr)
+				}
+				defer reader.Close()
+				defer writer.Close()
+				deadline, ok := ctx.Deadline()
+				if !ok || reader.SetReadDeadline(deadline) != nil {
+					t.Fatal("owned crash witness has no bounded read")
+				}
+				cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestResultStoreOwnedCrashHelper$")
+				cmd.ExtraFiles = []*os.File{writer}
 				cmd.Env = append(os.Environ(), "XANDBOX_RESULT_TEST_DIR="+path, "XANDBOX_RESULT_TEST_CUT=result-"+phase+"-"+cut)
-				err := cmd.Run()
+				if err := cmd.Start(); err != nil {
+					t.Fatal(err)
+				}
+				closeErr := writer.Close()
+				err := cmd.Wait()
+				ack, ackErr := io.ReadAll(io.LimitReader(reader, 2))
+				if closeErr != nil || !resultCrashCutWitness(ctx.Err(), ack, ackErr) {
+					t.Fatal("selected cut unconfirmed or owned child watchdog expired")
+				}
 				var exit *exec.ExitError
 				if !errors.As(err, &exit) {
 					t.Fatal("child did not die", err)
