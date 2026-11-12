@@ -67,6 +67,17 @@ func NewWithAdmission(stateDir, configPath string, records []sandbox.Record, lim
 	return newDriver(stateDir, configPath, records, &limits)
 }
 func newDriver(stateDir, configPath string, records []sandbox.Record, limits *sandbox.AdmissionLimits) (sandbox.Driver, error) {
+	return newDriverResults(stateDir, configPath, records, limits, nil)
+}
+
+// NewWithResultAdmission binds actual retention limits on the SAME config read
+// as construction. No successful earlier preflight can authorize a replaced
+// config. Legacy constructors cannot silently enable config-v4 retention.
+func NewWithResultAdmission(stateDir, configPath string, records []sandbox.Record, limits sandbox.AdmissionLimits, results sandbox.ResultLimits) (sandbox.Driver, error) {
+	return newDriverResults(stateDir, configPath, records, &limits, &results)
+}
+
+func newDriverResults(stateDir, configPath string, records []sandbox.Record, limits *sandbox.AdmissionLimits, results *sandbox.ResultLimits) (sandbox.Driver, error) {
 	if os.Geteuid() != 0 {
 		return nil, errors.New("Firecracker driver requires privileged Linux controller")
 	}
@@ -78,6 +89,13 @@ func newDriver(stateDir, configPath string, records []sandbox.Record, limits *sa
 	}
 	cfg, err := loadConfig(configPath)
 	if err != nil {
+		return nil, err
+	}
+	var actualResults sandbox.ResultLimits
+	if results != nil {
+		actualResults = *results
+	}
+	if err = cfg.checkResultAdmission(actualResults); err != nil {
 		return nil, err
 	}
 	if cfg.Node != nil {
@@ -861,4 +879,8 @@ func (d *driver) CheckAdmission(l sandbox.AdmissionLimits) error {
 		return d.cfg.Node.match(l, false)
 	}
 	return nil
+}
+
+func (d *driver) CheckResultAdmission(l sandbox.ResultLimits) error {
+	return d.cfg.checkResultAdmission(l)
 }

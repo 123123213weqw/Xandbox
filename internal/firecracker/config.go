@@ -37,6 +37,7 @@ type Config struct {
 	Quota            *QuotaPolicy    `json:"quota,omitempty"`
 	IO               *IOPolicy       `json:"io,omitempty"`
 	Node             *NodePolicy     `json:"node,omitempty"`
+	Results          *ResultPolicy   `json:"results,omitempty"`
 }
 
 const diskBytes = 128 << 20
@@ -54,7 +55,8 @@ func key(ref sandbox.Ref) (string, error) {
 }
 
 func (c Config) validate() error {
-	if (c.Version != 1 && c.Version != 2 && c.Version != 3) || (c.Version == 1 && c.Snapshot != nil) || (c.Version == 2 && c.Snapshot == nil) || (c.Version == 3) != (c.Node != nil) || !c.ReservedUIDRange || c.UIDStart < 65536 || c.UIDCount < 1 || c.UIDCount > 10000 || int64(c.UIDStart) > (int64(1)<<31)-int64(c.UIDCount) {
+	complete := c.Version == 3 || c.Version == 4
+	if (c.Version != 1 && c.Version != 2 && c.Version != 3 && c.Version != 4) || (c.Version == 1 && c.Snapshot != nil) || (c.Version == 2 && c.Snapshot == nil) || complete != (c.Node != nil) || (c.Version == 4) != (c.Results != nil) || !c.ReservedUIDRange || c.UIDStart < 65536 || c.UIDCount < 1 || c.UIDCount > 10000 || int64(c.UIDStart) > (int64(1)<<31)-int64(c.UIDCount) {
 		return errors.New("invalid Firecracker version or reserved UID range")
 	}
 	if !cleanAbsolute(c.RuntimeRoot) || (!strings.HasPrefix(c.RuntimeRoot, "/run/") && !strings.HasPrefix(c.RuntimeRoot, "/srv/")) || len(filepath.Join(c.RuntimeRoot, "j/firecracker", strings.Repeat("0", 64), "root/api.sock")) > 107 {
@@ -64,7 +66,7 @@ func (c Config) validate() error {
 		return errors.New("cgroup root must be below /sys/fs/cgroup")
 	}
 	for _, part := range strings.Split(strings.TrimPrefix(c.CgroupRoot, "/sys/fs/cgroup/"), "/") {
-		if (c.Version != 3 && !cgName.MatchString(part)) || (c.Version == 3 && !nodeCGName.MatchString(part)) {
+		if (!complete && !cgName.MatchString(part)) || (complete && !nodeCGName.MatchString(part)) {
 			return errors.New("invalid cgroup root component")
 		}
 	}

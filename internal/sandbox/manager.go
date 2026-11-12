@@ -145,6 +145,9 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 			return nil, err
 		}
 	}
+	if err := checkResultResourceAdmission(driver, opts.Results); err != nil {
+		return nil, err
+	}
 	records, err := store.Load()
 	if err != nil {
 		return nil, err
@@ -159,6 +162,9 @@ func NewManager(store Store, driver Driver, opts Options) (*Manager, error) {
 		}
 		if uncertain {
 			opts.AdmissionGate.MarkAcceptedWorkUncertain()
+		}
+		if err := checkResultResourceAdmission(driver, opts.Results); err != nil {
+			return nil, err
 		}
 	}
 	allocated := 0

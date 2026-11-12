@@ -26,6 +26,10 @@ type ResultLimits struct {
 	Records            int
 }
 
+// Valid shares the ordinary store's exact logical reservation policy. It is
+// not a disk quota, source/FD proof, or permission to enable retention.
+func (l ResultLimits) Valid() bool { return l.valid() }
+
 func (l ResultLimits) valid() bool {
 	return l.Bytes > 0 && l.Bytes <= MaxResultBytes && l.TenantBytes > 0 && l.TenantBytes <= l.Bytes && l.Records > 0 && l.Records <= MaxResultRecords
 }

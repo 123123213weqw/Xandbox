@@ -110,6 +110,14 @@ func (p NodePolicy) validate(c Config) (NodeReservation, error) {
 	// Fixed protocol/store maxima plus generous control-runtime planning margins.
 	// Kernel control/parent cgroups separately enforce their actual memory bounds.
 	r.ControllerMemory = 128<<20 + records*(256<<10) + sessions*(1<<20) + n*(128<<20) + uint64(p.PrepareWorkers)*(2<<20)
+	result, e := c.resultReservation()
+	if e != nil {
+		return r, e
+	}
+	r.ControllerMemory, e = checkedSum(r.ControllerMemory, result.memory)
+	if e != nil {
+		return r, e
+	}
 	r.Memory = n*instanceMemoryMax + p.ControllerMemoryMax + catalog + uint64(p.PrepareWorkers)*(2<<20)
 	r.Pids = n*instancePidsMax + p.ControllerPidsMax
 	r.CPUQuota = n * instanceCPUQuota
@@ -125,11 +133,11 @@ func (p NodePolicy) validate(c Config) (NodeReservation, error) {
 	if e != nil {
 		return r, e
 	}
-	r.ManagedDisk, e = checkedSum(private, catalog, metadataBytes)
+	r.ManagedDisk, e = checkedSum(private, catalog, metadataBytes, result.disk)
 	if e != nil {
 		return r, e
 	}
-	r.ManagedInodes, e = checkedSum(privateInodes, metadataInodes)
+	r.ManagedInodes, e = checkedSum(privateInodes, metadataInodes, result.inodes)
 	if e != nil {
 		return r, e
 	}

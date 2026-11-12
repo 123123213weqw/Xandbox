@@ -165,6 +165,13 @@ func runArgs(args []string) (retErr error) {
 	if (*backend == "mock" && *firecrackerConfig != "") || (*backend == "firecracker" && (*firecrackerConfig == "" || *insecureMock)) {
 		return errors.New("Firecracker requires -firecracker-config and -auth-file; insecure mode is mock-only")
 	}
+	if *backend == "firecracker" && *resultBytes > 0 {
+		// BEFORE auth/state/result constructors or any backend effect. The actual
+		// constructor rechecks its own config, never consumes this as permission.
+		if e := firecracker.ValidateResultAdmissionConfig(*firecrackerConfig, requestedResultLimits(*resultBytes, *resultTenantBytes, *resultRecords)); e != nil {
+			return &diagnostics.Fault{Reason: diagnostics.NodeAdmission, Cause: e}
+		}
+	}
 	var authenticator *access.Authenticator
 	if *authFile != "" {
 		var err error
@@ -253,6 +260,11 @@ func runArgs(args []string) (retErr error) {
 			return err
 		}
 		defer results.Close()
+		if *backend == "firecracker" {
+			if e := results.CheckResourceCapacity(); e != nil {
+				return e // BEFORE Bind can publish recovery of an imported row.
+			}
+		}
 		// Reject orphan/foreign outcomes before any backend constructor.
 		rows, e := store.Load()
 		if e != nil {
@@ -260,6 +272,11 @@ func runArgs(args []string) (retErr error) {
 		}
 		if _, e = results.Bind(rows); e != nil {
 			return e
+		}
+		if *backend == "firecracker" {
+			if e = results.CheckResourceCapacity(); e != nil {
+				return e // Preserve over-budget imports; never evict to fit.
+			}
 		}
 	}
 	controlStore, err := nodecontrol.OpenStore(absDir)
@@ -297,7 +314,11 @@ func runArgs(args []string) (retErr error) {
 		if err == nil {
 			limits := sandbox.AdmissionLimits{MaxInstances: *maxInstances, MaxRecords: *maxRecords, MaxSessions: *maxSessions}
 			if err = firecracker.ValidateAdmissionConfig(*firecrackerConfig, limits); err == nil {
-				driver, err = firecracker.NewWithAdmission(absDir, *firecrackerConfig, records, limits)
+				if *resultBytes > 0 {
+					driver, err = firecracker.NewWithResultAdmission(absDir, *firecrackerConfig, records, limits, requestedResultLimits(*resultBytes, *resultTenantBytes, *resultRecords))
+				} else {
+					driver, err = firecracker.NewWithAdmission(absDir, *firecrackerConfig, records, limits)
+				}
 			}
 		}
 		opts.PrepareTimeout, opts.StopTimeout, opts.CleanupTimeout = 30*time.Second, 5*time.Second, 10*time.Second
