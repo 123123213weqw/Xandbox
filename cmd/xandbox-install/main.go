@@ -101,5 +101,5 @@ func run(args []string, out, errout io.Writer, op operations) int {
 	return 0
 }
 func main() {
-	os.Exit(runWithResults(os.Args[1:], os.Stdout, os.Stderr, resultOperations{installtxn.ApplyResults, installtxn.ReconcileResults, installtxn.StatusResults, installtxn.VerifyResults}, operations{inspectUpdate: installtxn.InspectUpdate, discardDraft: installtxn.DiscardSupersessionDraft, replacePending: installtxn.ReplacePendingPolicy, apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure, recoverPolicy: installtxn.RecoverPolicy}))
+	os.Exit(runWithResultPolicy(os.Args[1:], os.Stdout, os.Stderr, resultPolicyOperations{installtxn.ReconfigureResults, installtxn.ReconcileResultsPolicy}, resultOperations{installtxn.ApplyResults, installtxn.ReconcileResults, installtxn.StatusResults, installtxn.VerifyResults}, operations{inspectUpdate: installtxn.InspectUpdate, discardDraft: installtxn.DiscardSupersessionDraft, replacePending: installtxn.ReplacePendingPolicy, apply: installtxn.Apply, reconcile: installtxn.Reconcile, status: installtxn.Status, verify: installtxn.Verify, reconfigure: installtxn.Reconfigure, recoverPolicy: installtxn.RecoverPolicy}))
 }

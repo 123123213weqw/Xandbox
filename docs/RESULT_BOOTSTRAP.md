@@ -85,12 +85,16 @@ refuse. The original commit is never rewritten to rebless changed targets.
 Manager/readiness/ACK failure remains unconfirmed; committed files and current
 authority are preserved, not deleted or restored from an old snapshot.
 
-Only the original initial request is supported by `reconcile-results` in this
-increment. Versioned managed-policy rotation/recovery/supersession, result-aware
-maintenance scope and existing-state migration/rollback are **not yet wired**;
-legacy mutators reject Version2 rather than silently changing it. This limitation
-prevents production qualification; cold install is not a substitute for that
-remaining work or permission to evaluate on a shared host.
+Only the original initial request is supported by `reconcile-results`.
+Separate explicit `reconfigure-results` / `reconcile-results-policy` now wire
+managed one-file policy rotation and exact source-independent activation retry
+for the actual Version2 commit; see [policy maintenance](RESULT_POLICY_MAINTENANCE.md).
+Policy recovery/supersession, result-aware RUNTIME maintenance scope and
+existing-state migration/rollback remain **not yet wired**. This policy path
+does not select runtime files, acquire a stopped-state lease, migrate bindings,
+or restore prior authority; it preserves the existing result/ledger state.
+Legacy mutators still reject Version2. Cold install and policy maintenance do
+not substitute for the remaining work or authorize evaluation on a shared host.
 
 Existing Config3-to4 migration still requires an explicit FULL binding transition
 under the **original retained state FD, operation scope and source WAL**, complete
