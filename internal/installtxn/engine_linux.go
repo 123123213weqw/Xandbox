@@ -123,13 +123,8 @@ func (f *filesystem) verifyTargetsAfterPolicy(ctx context.Context, t transaction
 	if override != nil && (t.Plan.Version != 2 || override.Path != gateway.ManagedPolicyPath || override.Mode != 0600 || override.Bytes <= 0 || override.Bytes > gateway.MaxSnapshotBytes || !digestPattern.MatchString(override.SHA256)) {
 		return ErrPolicy
 	}
-	for _, v := range t.Files {
-		if override != nil && v.Path == gateway.ManagedPolicyPath {
-			v = *override
-		}
-		if e := f.verify(ctx, v); e != nil {
-			return e
-		}
+	if e := f.verifyFileSequence(ctx, t.Files, override); e != nil {
+		return e
 	}
 	if e := f.verifyGenerated(t); e != nil {
 		return e
