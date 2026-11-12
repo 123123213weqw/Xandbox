@@ -384,6 +384,19 @@ type target struct {
 	data   []byte
 }
 
+// Prefix comparison needs no storage for an empty output. For a shorter
+// existing prefix, the original loop already read exactly that many bytes.
+// Keep the original 64 KiB ceiling, chunk boundaries and every IO/barrier.
+func materializePrefixScratchSize(prefix int64) int {
+	if prefix <= 0 {
+		return 0
+	}
+	if prefix > 65536 {
+		return 65536
+	}
+	return int(prefix)
+}
+
 func (f *filesystem) materialize(ctx context.Context, v target) error {
 	if e := f.verify(ctx, v.file); e == nil {
 		return nil
@@ -410,9 +423,10 @@ func (f *filesystem) materialize(ctx context.Context, v target) error {
 	if e != nil || st.Size() > v.file.Bytes {
 		return ErrInventory
 	}
-	left := make([]byte, 65536)
-	right := make([]byte, 65536)
 	remain := st.Size()
+	scratch := materializePrefixScratchSize(remain)
+	left := make([]byte, scratch)
+	right := make([]byte, scratch)
 	for remain > 0 {
 		if e = ctx.Err(); e != nil {
 			return e
