@@ -122,27 +122,37 @@ func (r *stateInventoryReader) directory(parent *os.File, name, path string, max
 	return r.ctx.Err()
 }
 
-func (r *stateInventoryReader) file(dir *os.File, name, path string, limit int, empty bool) ([]byte, error) {
+func (r *stateInventoryReader) fileBytes(dir *os.File, name string, limit int, empty bool) ([]byte, unix.Stat_t, error) {
 	before, e := r.entry(dir, name)
 	if e != nil {
-		return nil, e
+		return nil, unix.Stat_t{}, e
 	}
 	var raw []byte
 	if empty {
 		if before.Mode != unix.S_IFREG|0600 || before.Nlink != 1 || before.Size != 0 {
-			return nil, ErrInventory
+			return nil, unix.Stat_t{}, ErrInventory
 		}
 	} else {
 		raw, e = readCoreRecord(r.ctx, dir, name, limit)
 		if e != nil {
-			return nil, e
+			return nil, unix.Stat_t{}, e
 		}
 	}
 	after, e := r.entry(dir, name)
 	if e != nil || stateEntry(before) != stateEntry(after) {
-		return nil, ErrInventory
+		return nil, unix.Stat_t{}, ErrInventory
 	}
-	r.bind(path, after, raw)
+	return raw, after, nil
+}
+
+// The byte/metadata reader is shared, not its observations or hashes. Ordinary
+// callers still compute a fresh raw digest and the exact original frame.
+func (r *stateInventoryReader) file(dir *os.File, name, path string, limit int, empty bool) ([]byte, error) {
+	raw, st, e := r.fileBytes(dir, name, limit, empty)
+	if e != nil {
+		return nil, e
+	}
+	r.bind(path, st, raw)
 	r.view.Files++
 	return raw, nil
 }

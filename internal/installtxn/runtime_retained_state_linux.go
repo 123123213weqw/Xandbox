@@ -53,11 +53,7 @@ func (r *stateInventoryReader) retainedResults(root *os.File, policy *retainedRo
 			last = name
 		}
 		for _, name := range names {
-			raw, e := r.file(dir, name, "results/"+name, sandbox.MaxResultRecordBytes, false)
-			if e != nil {
-				return e
-			}
-			row, e := p.Add(name[:32], raw)
+			row, e := r.retainedResult(dir, name, p)
 			if e != nil {
 				return e
 			}
