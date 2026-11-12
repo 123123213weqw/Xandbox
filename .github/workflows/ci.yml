@@ -197,6 +197,10 @@ jobs:
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-template-$arch" ./cmd/xandbox-template
             GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "/tmp/xandbox-gateway-$arch" ./cmd/xandbox-gateway
           done
+      - name: Verify eight existing native SDK4 result-bootstrap build contracts
+        run: |
+          umask 077
+          XANDBOX_TEST_RESULT_ARTIFACT_PREFIX=/tmp/ XANDBOX_TEST_RESULT_SOURCE="$(git rev-parse HEAD)" CGO_ENABLED=0 go test -v -count=3 -run '^TestResultBootstrapBuiltArtifacts$' ./internal/installtxn
 
   vulnerability-scan:
     runs-on: ubuntu-24.04

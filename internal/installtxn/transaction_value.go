@@ -52,7 +52,13 @@ func validFileList(t transaction) bool {
 	if t.Version != 1 || t.Revision != 1 || !requestPattern.MatchString(t.RequestID) {
 		return false
 	}
-	p, e := validatedPlanValue(t.Plan)
+	return validInstallationFiles(t.Plan, t.Release, t.Files)
+}
+
+// Pure shared inventory policy. Each versioned caller keeps its OWN exact
+// version/revision/request guard; no transaction or backend is normalized.
+func validInstallationFiles(plan Plan, release Release, files []File) bool {
+	p, e := validatedPlanValue(plan)
 	if e != nil {
 		return false
 	}
@@ -67,15 +73,15 @@ func validFileList(t transaction) bool {
 		}
 		expected[rolePath(r)] = mode
 	}
-	art, err := descriptor(t.Release)
-	if err != nil || digest(encode(t.Release)) != t.Plan.Release {
+	art, err := descriptor(release)
+	if err != nil || digest(encode(release)) != plan.Release {
 		return false
 	}
-	if len(t.Files) != len(expected) {
+	if len(files) != len(expected) {
 		return false
 	}
 	sourcePins := map[string]string{}
-	for _, input := range planInputs(t.Plan) {
+	for _, input := range planInputs(plan) {
 		sourcePins[Root+"/"+input.name] = input.a.SHA256
 	}
 	type artifactPin struct {
@@ -89,12 +95,12 @@ func validFileList(t transaction) bool {
 			pins = append(pins, artifactPin{childRoot + "/gateway", a.SHA256, a.Bytes})
 		}
 	}
-	for _, v := range t.Files {
+	for _, v := range files {
 		mode, ok := expected[v.Path]
 		if !ok || mode != v.Mode || v.Bytes < 1 || v.Bytes > 512<<20 || !digestPattern.MatchString(v.SHA256) {
 			return false
 		}
-		if v.Path == SelfPath && v.SHA256 != t.Plan.Self.SHA256 {
+		if v.Path == SelfPath && v.SHA256 != plan.Self.SHA256 {
 			return false
 		}
 		if pin, ok := sourcePins[v.Path]; ok && v.SHA256 != pin {
