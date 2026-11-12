@@ -318,10 +318,11 @@ func Run(path string) (retErr error) {
 	if e != nil {
 		return e
 	}
-	m, e := Decode(data)
+	policy, e := DecodeContract(data)
 	if e != nil {
 		return e
 	}
+	m := policy.Node()
 	stage = "placement"
 	if e = placement(m, "bootstrap"); e != nil {
 		return e
@@ -371,7 +372,7 @@ func Run(path string) (retErr error) {
 	if e = firecracker.ValidateAdmissionConfig(m.InputDir+"/backend.json", m.Admission()); e != nil {
 		return e
 	}
-	if e = m.checkBackend(c); e != nil {
+	if e = policy.CheckServiceBackend(c); e != nil {
 		return e
 	}
 	stage = "auth_policy"
@@ -413,7 +414,7 @@ func Run(path string) (retErr error) {
 	if e != nil {
 		return e
 	}
-	e = prepareGroups(unit, m, c, os.Getpid())
+	e = prepareContractGroups(unit, policy, c, os.Getpid())
 	unit.Close()
 	if e != nil {
 		return e
@@ -431,7 +432,7 @@ func Run(path string) (retErr error) {
 	}
 	// Resolve the already-verified ELF FD in execve before its CLOEXEC close.
 	// Config/auth arguments name immutable per-unit snapshots, not raced source names.
-	e = unix.Exec("/proc/self/fd/"+strconv.Itoa(int(executable.Fd())), m.Arguments(), []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "HOME=/nonexistent", "LANG=C"})
+	e = unix.Exec("/proc/self/fd/"+strconv.Itoa(int(executable.Fd())), policy.Arguments(), []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "HOME=/nonexistent", "LANG=C"})
 	runtime.KeepAlive(executable)
 	return e
 }

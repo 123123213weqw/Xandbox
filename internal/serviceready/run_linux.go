@@ -3,7 +3,6 @@
 package serviceready
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -112,6 +111,10 @@ func alive(fd int) error {
 // Capture an incarnation before connecting; pidfd liveness closes PID reuse
 // between peer credentials and pre/post executable/argv/placement observations.
 func mainProof(n launch.Manifest, pid int) error {
+	return mainProofArguments(n, pid, n.Arguments())
+}
+
+func mainProofArguments(n launch.Manifest, pid int, arguments []string) error {
 	root := "/proc/" + strconv.Itoa(pid)
 	b, e := bounded(root+"/cgroup", 4096)
 	if e != nil {
@@ -133,7 +136,7 @@ func mainProof(n launch.Manifest, pid int) error {
 	if e != nil {
 		return e
 	}
-	if !bytes.Equal(b, []byte(strings.Join(n.Arguments(), "\x00")+"\x00")) {
+	if !processArgumentsMatch(b, arguments) {
 		return errPolicy
 	}
 	return nil
@@ -172,6 +175,10 @@ func peer(conn *net.UnixConn, pid int) error {
 	return nil
 }
 func probe(ctx context.Context, n launch.Manifest) error {
+	return probeArguments(ctx, n, n.Arguments())
+}
+
+func probeArguments(ctx context.Context, n launch.Manifest, arguments []string) error {
 	b, e := bounded(n.UnitRoot+"/node/control/cgroup.procs", 4096)
 	if e != nil {
 		return e
@@ -188,7 +195,7 @@ func probe(ctx context.Context, n launch.Manifest) error {
 	if e = alive(fd); e != nil {
 		return e
 	}
-	if e = mainProof(n, pid); e != nil {
+	if e = mainProofArguments(n, pid, arguments); e != nil {
 		return e
 	}
 	if e = snapshot(n); e != nil {
@@ -231,7 +238,7 @@ func probe(ctx context.Context, n launch.Manifest) error {
 	if e = requestHealth(ctx, conn); e != nil {
 		return e
 	}
-	if e = mainProof(n, pid); e != nil {
+	if e = mainProofArguments(n, pid, arguments); e != nil {
 		return e
 	}
 	return alive(fd)
@@ -318,10 +325,11 @@ func Run(path string) (ret error) {
 	if e != nil {
 		return e
 	}
-	n, e := launch.Decode(b)
+	policy, e := launch.DecodeContract(b)
 	if e != nil {
 		return e
 	}
+	n := policy.Node()
 	stage = "placement"
 	if e = launch.ServicePlacement(n.UnitRoot + "/.control"); e != nil {
 		return e
@@ -344,7 +352,7 @@ func Run(path string) (ret error) {
 		return e
 	}
 	var backend firecracker.Config
-	if strictjson.Decode(b, &backend) != nil || n.CheckServiceBackend(backend) != nil || backend.IO == nil || backend.IO.Device != m.Device {
+	if strictjson.Decode(b, &backend) != nil || policy.CheckServiceBackend(backend) != nil || backend.IO == nil || backend.IO.Device != m.Device {
 		return errPolicy
 	}
 	if e = launch.CheckServiceEnvelope(n.UnitRoot, m.Device, n.Parent, false, 0); e != nil {
@@ -353,5 +361,5 @@ func Run(path string) (ret error) {
 	stage = "waiting"
 	ctx, cancel := context.WithTimeout(context.Background(), WaitSeconds*time.Second)
 	defer cancel()
-	return waitReady(ctx, func(ctx context.Context) error { return probe(ctx, n) })
+	return waitReady(ctx, func(ctx context.Context) error { return probeArguments(ctx, n, policy.Arguments()) })
 }
