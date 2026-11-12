@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/privatefile"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
@@ -17,8 +18,8 @@ import (
 
 const maxFileBytes = 128 << 10
 
-var idPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
-var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var idPattern = fixedhex.Pattern(32)
+var hashPattern = fixedhex.Pattern(64)
 var tempPattern = regexp.MustCompile(`^\.session-[0-9]+$`)
 
 type envelope struct {

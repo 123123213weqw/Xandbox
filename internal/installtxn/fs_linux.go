@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -51,7 +51,7 @@ func (f *filesystem) directory(path string) (*os.File, error) {
 	if e != nil {
 		return nil, e
 	}
-	for _, name := range strings.Split(strings.TrimPrefix(path, "/"), "/") {
+	for name := range strings.SplitSeq(strings.TrimPrefix(path, "/"), "/") {
 		if e = trustedStat(fd, true, 0); e != nil {
 			unix.Close(fd)
 			return nil, e
@@ -242,19 +242,33 @@ func (r contextReader) Read(p []byte) (int, error) {
 	}
 	return r.input.Read(p)
 }
+
+// Fresh scratch only, not a data/hash cache. The contextReader wrapper hides
+// LimitedReader from io.Copy's small-N allocation optimization. For small
+// nonnegative sizes the inner reader already trims every request to size+1;
+// this buffer changes allocation, not that bound or its context/error order.
+// Keep original negative/overflow behavior and a nonzero CopyBuffer scratch.
+func hashScratchSize(size int64) int {
+	const ceiling = 32 * 1024
+	if size >= 0 && size < ceiling {
+		return int(size) + 1
+	}
+	return ceiling
+}
+
 func hashFile(ctx context.Context, in *os.File, size int64) (string, error) {
 	if _, e := in.Seek(0, 0); e != nil {
 		return "", e
 	}
 	h := sha256.New()
-	n, e := io.Copy(h, contextReader{ctx, io.LimitReader(in, size+1)})
+	n, e := io.CopyBuffer(h, contextReader{ctx, io.LimitReader(in, size+1)}, make([]byte, hashScratchSize(size)))
 	if e != nil {
 		return "", e
 	}
 	if n != size {
 		return "", ErrInventory
 	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 func (f *filesystem) verify(ctx context.Context, v File) error {
 	in, e := f.open(v.Path, unix.O_RDONLY, v.Mode)
@@ -370,6 +384,19 @@ type target struct {
 	data   []byte
 }
 
+// Prefix comparison needs no storage for an empty output. For a shorter
+// existing prefix, the original loop already read exactly that many bytes.
+// Keep the original 64 KiB ceiling, chunk boundaries and every IO/barrier.
+func materializePrefixScratchSize(prefix int64) int {
+	if prefix <= 0 {
+		return 0
+	}
+	if prefix > 65536 {
+		return 65536
+	}
+	return int(prefix)
+}
+
 func (f *filesystem) materialize(ctx context.Context, v target) error {
 	if e := f.verify(ctx, v.file); e == nil {
 		return nil
@@ -396,9 +423,10 @@ func (f *filesystem) materialize(ctx context.Context, v target) error {
 	if e != nil || st.Size() > v.file.Bytes {
 		return ErrInventory
 	}
-	left := make([]byte, 65536)
-	right := make([]byte, 65536)
 	remain := st.Size()
+	scratch := materializePrefixScratchSize(remain)
+	left := make([]byte, scratch)
+	right := make([]byte, scratch)
 	for remain > 0 {
 		if e = ctx.Err(); e != nil {
 			return e

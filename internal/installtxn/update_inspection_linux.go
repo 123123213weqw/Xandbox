@@ -32,6 +32,9 @@ func InspectUpdate(ctx context.Context, path string) (UpdateInspectionResult, er
 }
 
 func (f *filesystem) inspectionBase(ctx context.Context, p UpdateInspectionPlan) (transaction, error) {
+	if e := f.runtimeNamespaceVeto(ctx); e != nil {
+		return transaction{}, e
+	}
 	t, e := f.readTransaction("commit")
 	if e != nil {
 		return transaction{}, e
@@ -57,7 +60,7 @@ func (f *filesystem) inspectionBase(ctx context.Context, p UpdateInspectionPlan)
 			return transaction{}, ErrInventory
 		}
 	}
-	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot} {
+	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot, runtimeWorkStopRoot, runtimeWorkStopAnchor, runtimeWorkStopAnchorScratch, runtimeCloseRoot, runtimeCloseAnchor, runtimeCloseAnchorScratch, runtimeResultsCloseRoot, runtimeResultsCloseAnchor, runtimeResultsCloseAnchorScratch, runtimeResultsStopRoot} {
 		if yes, err := f.exists(root); err != nil {
 			return transaction{}, err
 		} else if yes {

@@ -110,6 +110,10 @@ func controlHandler(c *Controller, resources func() sandbox.Stats) http.Handler 
 			fail(400, "INVALID_REQUEST")
 			return
 		}
+		if r.URL.Path == runtimeResultsClosePath {
+			serveRuntimeResultsClose(c, w, r)
+			return
+		}
 		if r.URL.Path == runtimeClosePath {
 			if r.Method != http.MethodPost {
 				w.Header().Set("Allow", "POST")

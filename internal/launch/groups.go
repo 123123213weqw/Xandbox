@@ -106,6 +106,19 @@ func prepareGroups(unit group, m Manifest, c firecracker.Config, pid int) error 
 	if e := m.checkBackend(c); e != nil {
 		return e
 	}
+	return prepareGroupsBody(unit, m, c, pid)
+}
+
+// The versioned policy is checked BEFORE even the first group read/write. The
+// shared body receives the ORIGINAL backend, including its V4 result policy.
+func prepareContractGroups(unit group, policy Contract, c firecracker.Config, pid int) error {
+	if e := policy.CheckServiceBackend(c); e != nil {
+		return e
+	}
+	return prepareGroupsBody(unit, policy.Node(), c, pid)
+}
+
+func prepareGroupsBody(unit group, m Manifest, c firecracker.Config, pid int) error {
 	if e := expect(unit, "cgroup.type", "domain"); e != nil {
 		return e
 	}

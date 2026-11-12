@@ -22,34 +22,6 @@ type prepared struct {
 	close   func()
 }
 
-func planInputs(p Plan) []struct {
-	name string
-	a    firecracker.Asset
-	max  int64
-} {
-	values := []struct {
-		name string
-		a    firecracker.Asset
-		max  int64
-	}{{"backend.json", p.Backend, 16384}, {"auth.json", p.Auth, 65536}, {"gateway.json", p.Gateway, gateway.MaxSnapshotBytes}}
-	if p.Version == 2 && p.Policy != nil {
-		return append(values, struct {
-			name string
-			a    firecracker.Asset
-			max  int64
-		}{"gateway-policy.json", *p.Policy, gateway.MaxSnapshotBytes})
-	}
-	return append(values, struct {
-		name string
-		a    firecracker.Asset
-		max  int64
-	}{"tls.pem", p.Certificate, 65536}, struct {
-		name string
-		a    firecracker.Asset
-		max  int64
-	}{"tls.key", p.PrivateKey, 65536})
-}
-
 func (p prepared) transaction(request string) transaction {
 	t := transaction{Version: 1, Revision: 1, RequestID: request, Plan: p.plan, Release: p.release}
 	for _, v := range p.targets {

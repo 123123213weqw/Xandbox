@@ -296,6 +296,10 @@ func failure(w http.ResponseWriter, err error) {
 		status, code, message = 409, "IDEMPOTENCY_CONFLICT", "key already used with a different request"
 	case errors.Is(err, sandbox.ErrIdempotencyGone):
 		status, code, message = 410, "IDEMPOTENCY_GONE", "creation no longer usable; use a new key"
+	case errors.Is(err, sandbox.ErrResultCapacity):
+		status, code, message = 503, "RESULT_CAPACITY", "retained result capacity exhausted"
+	case errors.Is(err, sandbox.ErrResultUnavailable):
+		status, code, message = 503, "RESULT_UNAVAILABLE", "result retention unavailable"
 	case errors.Is(err, sandbox.ErrJobLimit):
 		status, code, message = 429, "JOB_LIMIT", "execution history limit reached"
 	case errors.Is(err, sandbox.ErrTenantCapacity):

@@ -3,13 +3,13 @@
 package ingresslaunch
 
 import (
-	"encoding/json"
 	"errors"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
 	"github.com/123123213weqw/Xandbox/internal/launch"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
@@ -27,10 +27,12 @@ type Manifest struct {
 	Capacity       launch.ParentEnvelope `json:"capacity"`
 }
 
+const MaxManifest = 16384
+
 var errPolicy = errors.New("invalid ingress service policy")
 var unitName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}\.service$`)
 var safePath = regexp.MustCompile(`^/[A-Za-z0-9_./-]+$`)
-var sha = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var sha = fixedhex.Pattern(64)
 var device = regexp.MustCompile(`^(0|[1-9][0-9]{0,6}):(0|[1-9][0-9]{0,6})$`)
 
 func canonical(p string) bool         { return safePath.MatchString(p) && filepath.Clean(p) == p && p != "/" }
@@ -40,41 +42,38 @@ func validBudget(p launch.ParentEnvelope) bool {
 }
 func Decode(data []byte) (Manifest, error) {
 	var m Manifest
-	if len(data) > 16384 || strictjson.Decode(data, &m) != nil {
+	if len(data) > MaxManifest || strictjson.Decode(data, &m) != nil {
 		return m, errPolicy
 	}
+	return m, validateManifest(m)
+}
+
+// Shared policy for raw decoding and typed values; no filesystem or effects.
+func validateManifest(m Manifest) error {
 	if m.Version != 1 || !canonical(m.UnitRoot) || filepath.Dir(m.UnitRoot) != "/sys/fs/cgroup/system.slice" || !unitName.MatchString(filepath.Base(m.UnitRoot)) || !canonical(m.PolicyStateDir) || !strings.HasPrefix(m.PolicyStateDir, "/srv/") || !device.MatchString(m.Device) || m.Device == "0:0" || !validBudget(m.Ingress) || !validBudget(m.Reserve) || !validBudget(m.Capacity) {
-		return m, errPolicy
+		return errPolicy
 	}
 	paths := map[string]bool{}
 	for _, a := range []firecracker.Asset{m.Gateway, m.Config, m.NodeLaunch} {
 		if !canonical(a.Path) || !sha.MatchString(a.SHA256) || paths[a.Path] || inside(m.PolicyStateDir, a.Path) {
-			return m, errPolicy
+			return errPolicy
 		}
 		paths[a.Path] = true
 	}
 	if filepath.Base(m.Gateway.Path) != "xandbox-gateway" {
-		return m, errPolicy
+		return errPolicy
 	}
-	return m, nil
+	return nil
 }
 
 // CheckComposition counts the entire daemon parent, the entire separate ingress
 // service, and explicit host/operator reserve. Capacity is an operator accounting
 // ceiling, NOT a common kernel-enforced parent or proof of available host capacity.
 func (m Manifest) CheckComposition(n launch.Manifest) error {
-	raw, e := json.Marshal(m)
-	if e != nil {
+	if _, e := ValidateValue(m); e != nil {
 		return errPolicy
 	}
-	if _, e = Decode(raw); e != nil {
-		return errPolicy
-	}
-	raw, e = json.Marshal(n)
-	if e != nil {
-		return errPolicy
-	}
-	if _, e = launch.Decode(raw); e != nil {
+	if _, e := launch.ValidateValue(n); e != nil {
 		return errPolicy
 	}
 

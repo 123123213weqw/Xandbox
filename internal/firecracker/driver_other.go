@@ -15,3 +15,7 @@ func New(stateDir, configPath string, records []sandbox.Record) (sandbox.Driver,
 func NewWithAdmission(stateDir, configPath string, records []sandbox.Record, limits sandbox.AdmissionLimits) (sandbox.Driver, error) {
 	return nil, errors.New("Firecracker node admission requires Linux/KVM; no fallback")
 }
+
+func NewWithResultAdmission(string, string, []sandbox.Record, sandbox.AdmissionLimits, sandbox.ResultLimits) (sandbox.Driver, error) {
+	return nil, errors.New("Firecracker result admission requires Linux/KVM; no fallback")
+}

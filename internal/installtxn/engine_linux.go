@@ -25,14 +25,6 @@ var directories = []struct {
 	path string
 	mode uint32
 }{{DataRoot, 0700}, {assetDir, 0700}, {stateDir, 0700}, {runtimeDir, 0700}, {policyDir, 0700}, {DataRoot + "/g", 0700}, {childRoot, 0700}}
-var configNames = []string{"auth.json", "backend.json", "gateway.json", "ingress.json", "launch.json", "readiness.json", "tls.key", "tls.pem"}
-
-func configNamesFor(version int) []string {
-	if version == 2 {
-		return []string{"auth.json", "backend.json", "gateway.json", "gateway-policy.json", "ingress.json", "launch.json", "readiness.json"}
-	}
-	return configNames
-}
 
 func (f *filesystem) rootInventory(version int, committed bool) error {
 	names, e := f.names(Root)
@@ -72,68 +64,13 @@ func (f *filesystem) rootInventory(version int, committed bool) error {
 	}
 	return nil
 }
-func validFileList(t transaction) bool {
-	if t.Version != 1 || t.Revision != 1 || !requestPattern.MatchString(t.RequestID) {
-		return false
-	}
-	p, e := validatedPlanValue(t.Plan)
-	if e != nil {
-		return false
-	}
-	expected := map[string]uint32{SelfPath: 0555, childRoot + "/gateway": 0555, UnitDir + "/" + MainUnit: 0600, UnitDir + "/" + IngressUnit: 0600}
-	for _, name := range configNamesFor(p.Version) {
-		expected[Root+"/"+name] = 0600
-	}
-	for _, r := range roles {
-		mode := uint32(0444)
-		if executable(r) {
-			mode = 0555
-		}
-		expected[rolePath(r)] = mode
-	}
-	art, err := descriptor(t.Release)
-	if err != nil || digest(encode(t.Release)) != t.Plan.Release {
-		return false
-	}
-	if len(t.Files) != len(expected) {
-		return false
-	}
-	for _, v := range t.Files {
-		mode, ok := expected[v.Path]
-		if !ok || mode != v.Mode || v.Bytes < 1 || v.Bytes > 512<<20 || !digestPattern.MatchString(v.SHA256) {
-			return false
-		}
-		if v.Path == SelfPath && v.SHA256 != t.Plan.Self.SHA256 {
-			return false
-		}
-		sourcePins := map[string]string{}
-		for _, input := range planInputs(t.Plan) {
-			sourcePins[Root+"/"+input.name] = input.a.SHA256
-		}
-		if pin, ok := sourcePins[v.Path]; ok && v.SHA256 != pin {
-			return false
-		}
-		for role, a := range art {
-			if v.Path == rolePath(role) || (role == "gateway" && v.Path == childRoot+"/gateway") {
-				if v.SHA256 != a.SHA256 || v.Bytes != a.Bytes {
-					return false
-				}
-			}
-		}
-		delete(expected, v.Path)
-	}
-	return len(expected) == 0
-}
 func (f *filesystem) readTransaction(name string) (transaction, error) {
 	var t transaction
 	raw, e := f.read(Root+"/"+name+".json", 65536, 0600)
 	if e != nil {
 		return t, e
 	}
-	if strictjson.Decode(raw, &t) != nil || !validFileList(t) || !bytes.Equal(raw, encode(t)) {
-		return t, ErrInventory
-	}
-	return t, nil
+	return decodeTransactionBytes(raw)
 }
 func (f *filesystem) verifyTransaction(ctx context.Context, t transaction) error {
 	return f.verifyTargets(ctx, t, true)
@@ -160,7 +97,10 @@ func (f *filesystem) verifyTargets(ctx context.Context, t transaction, committed
 	if effectiveRevision > 1 {
 		override = &effective
 	}
-	return f.verifyTargetsAgainst(ctx, t, committed, override)
+	// The same private value already passed policy above; no caller callback
+	// receives it during effectivePolicy. Keep the SECOND fresh root inventory
+	// and every file/metadata check, not a cross-call validation/authority cache.
+	return f.verifyTargetsAfterPolicy(ctx, t, committed, override)
 }
 
 // Only callers with a decoded base-bound atomic policy envelope may override
@@ -170,19 +110,21 @@ func (f *filesystem) verifyTargetsAgainst(ctx context.Context, t transaction, co
 	if !validFileList(t) {
 		return ErrInventory
 	}
+	return f.verifyTargetsAfterPolicy(ctx, t, committed, override)
+}
+
+// Only the two guarded entry points above call this existing verifier tail.
+// Input transaction values must remain private/immutable for the call. This
+// helper does not skip any filesystem observation, envelope or override guard.
+func (f *filesystem) verifyTargetsAfterPolicy(ctx context.Context, t transaction, committed bool, override *File) error {
 	if e := f.rootInventory(t.Plan.Version, committed); e != nil {
 		return e
 	}
 	if override != nil && (t.Plan.Version != 2 || override.Path != gateway.ManagedPolicyPath || override.Mode != 0600 || override.Bytes <= 0 || override.Bytes > gateway.MaxSnapshotBytes || !digestPattern.MatchString(override.SHA256)) {
 		return ErrPolicy
 	}
-	for _, v := range t.Files {
-		if override != nil && v.Path == gateway.ManagedPolicyPath {
-			v = *override
-		}
-		if e := f.verify(ctx, v); e != nil {
-			return e
-		}
+	if e := f.verifyFileSequence(ctx, t.Files, override); e != nil {
+		return e
 	}
 	if e := f.verifyGenerated(t); e != nil {
 		return e

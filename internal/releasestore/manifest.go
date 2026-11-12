@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/123123213weqw/Xandbox/internal/fixedhex"
+	"github.com/123123213weqw/Xandbox/internal/pathchars"
 	"github.com/123123213weqw/Xandbox/internal/strictjson"
 )
 
@@ -25,11 +27,10 @@ var ErrConflict = errors.New("release compare-and-swap conflict")
 var ErrInventory = errors.New("unrecognized release inventory")
 var ErrCapacity = errors.New("retained release capacity reached")
 var ErrPlatform = errors.New("root Linux release publisher required")
-var digestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-var revisionPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
-var requestPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
+var digestPattern = fixedhex.Pattern(64)
+var revisionPattern = fixedhex.Pattern(40)
+var requestPattern = fixedhex.Pattern(32)
 var toolchainPattern = regexp.MustCompile(`^go1\.[0-9]{2}\.[0-9]{1,3}$`)
-var pathPattern = regexp.MustCompile(`^/[A-Za-z0-9_./-]+$`)
 
 // The release is a deployment artifact bundle, not a caller-selected file tree.
 // Configuration/credentials and mutable node state are deliberately separate.
@@ -43,7 +44,7 @@ func maximum(role string) int64 {
 	return 128 << 20
 }
 func canonical(path string) bool {
-	return pathPattern.MatchString(path) && filepath.Clean(path) == path && path != "/"
+	return pathchars.Absolute(path) && filepath.Clean(path) == path && path != "/"
 }
 
 type File struct {

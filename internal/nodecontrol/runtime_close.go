@@ -22,6 +22,7 @@ type runtimeCloser struct {
 	done                      chan struct{}
 	work                      sandbox.AcceptedWorkStatus
 	coreProof                 *sandbox.ClosureProof
+	resultsProof              *sandbox.ResultBoundClosureProof
 	sessionProof              *session.ClosureProof
 }
 
@@ -123,6 +124,9 @@ func (c *Controller) RuntimeClose(ctx context.Context, req RuntimeCloseRequest) 
 		return RuntimeCloseReply{}, ErrClosed
 	}
 	if c.runtime == nil {
+		return RuntimeCloseReply{}, ErrRuntimeCloseUnsupported
+	}
+	if c.runtime.core.UsesResultRetention() {
 		return RuntimeCloseReply{}, ErrRuntimeCloseUnsupported
 	}
 	if c.maintenance == nil || c.maintenance.Request != req.Maintenance {

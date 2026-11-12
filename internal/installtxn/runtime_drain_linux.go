@@ -10,20 +10,11 @@ import (
 	"sort"
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
 
 const runtimeDrainRoot = "/etc/xandbox-runtime-drain"
 
-type runtimeDrainIntent struct {
-	Version     int                            `json:"version"`
-	Base        string                         `json:"base_commit_sha256"`
-	Request     string                         `json:"request_id"`
-	Process     nodecontrol.ProcessIdentity    `json:"process"`
-	Before      nodecontrol.State              `json:"before"`
-	Maintenance *nodecontrol.MaintenanceRecord `json:"maintenance,omitempty"`
-}
 type runtimeDrainReceipt struct {
 	Version int               `json:"version"`
 	Input   string            `json:"intent_sha256"`
@@ -99,7 +90,7 @@ func (f *filesystem) runtimeDrainReadIntent() (runtimeDrainIntent, error) {
 	if e != nil {
 		return p, e
 	}
-	if strictjson.Decode(b, &p) != nil || !validRuntimeDrain(p) || !bytes.Equal(b, encode(p)) {
+	if !canonicalRuntimeIntentValue(b, &p) || !validRuntimeDrain(p) {
 		return p, ErrInventory
 	}
 	return p, nil

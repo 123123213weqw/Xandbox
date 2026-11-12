@@ -224,8 +224,10 @@ func TestMaintenanceRuntimeClosePendingCleanupAndDestroyedSaveNeverBecomeIdlePro
 	for _, kind := range []string{"cleanup", "destroyed-save", "work-drift"} {
 		t.Run(kind, func(t *testing.T) {
 			entered, release := make(chan struct{}), make(chan struct{})
-			var once sync.Once
+			journalEntered, journalRelease := make(chan struct{}), make(chan struct{})
+			var once, journalOnce sync.Once
 			defer once.Do(func() { close(release) })
+			defer journalOnce.Do(func() { close(journalRelease) })
 			var d *runtimeCleanupHold
 			var ld func(sandbox.Store) sandbox.Store
 			var dd func(sandbox.Driver) sandbox.Driver
@@ -239,12 +241,25 @@ func TestMaintenanceRuntimeClosePendingCleanupAndDestroyedSaveNeverBecomeIdlePro
 					return &runtimeLedgerHold{Store: inner, entered: entered, release: release}
 				}
 			}
-			x := runtimeCloseModel(t, ld, nil, dd, time.Second, time.Second)
+			x := runtimeCloseModel(t, ld, func(inner session.Store) session.Store {
+				return &runtimeSessionHold{Store: inner, entered: journalEntered, release: journalRelease}
+			}, dd, time.Second, time.Second)
 			x.quiesce(t)
 			if _, e := x.c.RuntimeClose(context.Background(), x.request("begin")); e != nil {
 				t.Fatal(e)
 			}
+			<-journalEntered
 			<-entered
+			// A held Destroyed save or cleanup can start during session revocation.
+			// Force and check that earlier phase before releasing only the journal;
+			// neither a zero Stats count nor entry into IO publishes closing-core.
+			if r, e := x.c.RuntimeClose(context.Background(), x.request("status")); e != nil || r.Phase != "closing-sessions" || !r.valid() || !r.Work.Complete() {
+				t.Fatal("held session journal lost accepted close")
+			}
+			journalOnce.Do(func() { close(journalRelease) })
+			if r := x.await(t, "closing-core"); !r.valid() || !r.Work.Complete() {
+				t.Fatal("held lifecycle IO did not retain closing-core")
+			}
 			// The ordinary observation can LIE idle; the closure path never uses it.
 			h := controlHandler(x.c, func() sandbox.Stats { return sandbox.Stats{Active: 0} })
 			data, _ := json.Marshal(x.request("status"))
@@ -325,23 +340,41 @@ func TestMaintenanceRuntimeCloseSessionFailureStillTriesCoreAndRetainsWriterWait
 
 func TestMaintenanceRuntimeCloseCallerCancellationCannotUndoAcceptedClose(t *testing.T) {
 	entered, release := make(chan struct{}), make(chan struct{})
-	var once sync.Once
+	journalEntered, journalRelease := make(chan struct{}), make(chan struct{})
+	var once, journalOnce sync.Once
 	defer once.Do(func() { close(release) })
-	x := runtimeCloseModel(t, nil, nil, func(inner sandbox.Driver) sandbox.Driver {
+	defer journalOnce.Do(func() { close(journalRelease) })
+	x := runtimeCloseModel(t, nil, func(inner session.Store) session.Store {
+		return &runtimeSessionHold{Store: inner, entered: journalEntered, release: journalRelease}
+	}, func(inner sandbox.Driver) sandbox.Driver {
 		return &runtimeCleanupHold{Driver: inner, entered: entered, release: release}
 	}, time.Second, time.Second)
 	x.quiesce(t)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if _, e := x.c.RuntimeClose(ctx, x.request("begin")); e != nil {
 		t.Fatal(e)
 	}
 	cancel()
+	<-journalEntered
 	<-entered
-	if r, e := x.c.RuntimeClose(context.Background(), x.request("status")); e != nil || r.Phase != "closing-core" || !r.Work.Complete() {
-		t.Fatal(r, e)
+	// Session revocation can enqueue Core cleanup BEFORE the coordinator leaves
+	// closing-sessions. Force that ordering; cleanup entry alone is not a phase
+	// publication barrier, and caller cancellation must not undo either stage.
+	if r, e := x.c.RuntimeClose(context.Background(), x.request("status")); e != nil || r.Phase != "closing-sessions" || !r.valid() || !r.Work.Complete() {
+		t.Fatal("accepted close did not retain the held session stage")
+	}
+	journalOnce.Do(func() { close(journalRelease) })
+	// Retain the original exact closing-core requirement under the EXISTING
+	// bounded phase wait, while real cleanup remains held and no proof is ready.
+	r := x.await(t, "closing-core")
+	if !r.valid() || !r.Work.Complete() {
+		t.Fatal("accepted close did not advance to the held Core stage")
 	}
 	once.Do(func() { close(release) })
-	x.await(t, "closed")
+	if r = x.await(t, "closed"); !r.valid() {
+		t.Fatal("accepted close lacks terminal proofs")
+	}
 }
 
 func TestMaintenanceRuntimeCloseBindingOwnerAndStrictHTTPRefuseWithoutEffects(t *testing.T) {

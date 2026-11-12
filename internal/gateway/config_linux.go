@@ -151,7 +151,7 @@ func (c Config) snapshot(epoch uint64, authority *access.Authenticator) (Snapsho
 		if e != nil {
 			return Snapshot{}, e
 		}
-		base, e := ValidateManagedBase(c, configRaw, baseRaw)
+		base, e := ValidateManagedBaseReference(c, configRaw, baseRaw)
 		if e != nil {
 			return Snapshot{}, e
 		}

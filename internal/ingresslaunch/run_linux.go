@@ -30,7 +30,21 @@ func FailureStage(e error) string {
 	return "platform"
 }
 func (m Manifest) checkBinding(n launch.Manifest, c gateway.Config, b firecracker.Config) error {
-	if m.CheckComposition(n) != nil || n.CheckServiceBackend(b) != nil || c.StateDir != m.PolicyStateDir || c.TenantSocket != filepath.Join(n.StateDir, "api.sock") || c.BackendAuthFile != n.InputDir+"/auth.json" || b.IO == nil || b.IO.Device != m.Device {
+	if n.CheckServiceBackend(b) != nil {
+		return errPolicy
+	}
+	return m.checkBindingBody(n, c, b)
+}
+
+func (m Manifest) checkContractBinding(policy launch.Contract, c gateway.Config, b firecracker.Config) error {
+	if policy.CheckServiceBackend(b) != nil {
+		return errPolicy
+	}
+	return m.checkBindingBody(policy.Node(), c, b)
+}
+
+func (m Manifest) checkBindingBody(n launch.Manifest, c gateway.Config, b firecracker.Config) error {
+	if m.CheckComposition(n) != nil || c.StateDir != m.PolicyStateDir || c.TenantSocket != filepath.Join(n.StateDir, "api.sock") || c.BackendAuthFile != n.InputDir+"/auth.json" || b.IO == nil || b.IO.Device != m.Device {
 		return errPolicy
 	}
 	if inside(b.RuntimeRoot, m.PolicyStateDir) || inside(m.PolicyStateDir, b.RuntimeRoot) {
@@ -69,10 +83,11 @@ func Run(path string) (ret error) {
 	if e != nil {
 		return e
 	}
-	n, e := launch.Decode(data)
+	policy, e := launch.DecodeContract(data)
 	if e != nil {
 		return e
 	}
+	n := policy.Node()
 	data, e = launch.PinnedServiceFile(m.Config, gateway.MaxSnapshotBytes)
 	if e != nil {
 		return e
@@ -89,7 +104,7 @@ func Run(path string) (ret error) {
 	if e = strictjson.Decode(data, &backend); e != nil {
 		return e
 	}
-	if e = m.checkBinding(n, c, backend); e != nil {
+	if e = m.checkContractBinding(policy, c, backend); e != nil {
 		return e
 	}
 	if e = firecracker.ValidateAdmissionConfig(n.Backend.Path, n.Admission()); e != nil {

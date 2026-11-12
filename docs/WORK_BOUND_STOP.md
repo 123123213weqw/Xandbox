@@ -7,7 +7,8 @@ KVM/quota/rollback/long-load acceptance is implied by the shadow software tests.
 ## Explicit order and authority
 
 `runtimeScope.finishAndStop` composes actual work admission/terminal paths, the
-original physical Stop protocol and the original BSD state lease. It retains
+bound runtime closure, original physical Stop protocol and original BSD state
+lease. See [durable runtime close](DURABLE_RUNTIME_CLOSE.md) for the v4 composition. It retains
 ONE original installer operation OFD lease throughout; file flocks cover file
 reads/persistence only, NEVER process/manager/operator RPC. Each stage revalidates
 its original scope, installed/protected source, complete recorded input and
@@ -25,13 +26,15 @@ stopped boolean, arbitrary PID/root, backend constructor or forced adoption.
    owner and terminal work. Persist/sync a complete canonical terminal receipt,
    then a separate SHA-256 root anchor. The receipt is the known-success
    observation of this ONE frozen cohort, not per-job history or saved outputs.
-4. Publish an explicit **v3 physical Stop intent** bound to that exact completion
+4. Journal and run the bound runtime-close protocol; require its exact known
+   receipt plus independent anchor. Publish **v4 physical Stop** bound to close
+   AND the exact work completion
    digest and the EARLIER recorded Stop/state/process plan. Only then may the
    existing fixed manager Stop jobs run, ingress before main. Original v1/v2
    bytes and independent physical-only semantics remain unchanged.
 5. Repeat the original kernel/manager exit and whole-domain absence proofs,
    acquire/retain the ORIGINAL daemon BSD state lease, and rejoin source, WAL,
-   completion/anchor, v3 Stop intent/receipt and current state identity. Return
+   work/close completions/anchors, v4 Stop intent/receipt and current state identity. Return
    only an opaque current-scope work/Stop/state proof. Scope close releases state
    before operation ownership. No ownership is created/rebound/broken or adopted.
 
@@ -44,7 +47,9 @@ or let ordinary Stop turn an unfinished/killed job into successful work.
 The live work API itself remains volatile. This separate coordinator records a
 positive result ONLY after observing the original source-pinned live gate and
 its real terminal paths. After complete receipt AND independent anchor exist,
-that known outcome can survive coordinator or original-daemon process death.
+that known WORK outcome can survive coordinator or original-daemon process
+death. It alone no longer initiates Stop: the v4 path ALSO requires known
+anchored runtime closure before original-daemon death.
 A fresh scope syncs/joins the exact existing records and earlier identities,
 requires live originals to confirm the SAME frozen terminal status, or requires
 the original numeric PIDs to be absent. A replacement incarnation is never

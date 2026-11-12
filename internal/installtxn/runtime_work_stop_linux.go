@@ -10,7 +10,6 @@ import (
 
 	"github.com/123123213weqw/Xandbox/internal/nodecontrol"
 	"github.com/123123213weqw/Xandbox/internal/sandbox"
-	"github.com/123123213weqw/Xandbox/internal/strictjson"
 	"golang.org/x/sys/unix"
 )
 
@@ -21,18 +20,6 @@ const runtimeWorkStopAnchorScratch = "/etc/.xandbox-runtime-work.identity.next"
 // The original state/ingress identities are captured while the original daemon
 // is alive, BEFORE the work fence or any Stop effect. No new Before/identity is
 // inferred from a dead/replacement process or from current pathnames on retry.
-type runtimeWorkStopIntent struct {
-	Version int                `json:"version"`
-	Policy  string             `json:"policy"`
-	Drain   runtimeDrainIntent `json:"drain"`
-	Stop    runtimeStopIntent  `json:"original_stop_plan"`
-}
-
-type runtimeWorkCompletion struct {
-	Version int                        `json:"version"`
-	Input   string                     `json:"intent_sha256"`
-	Work    sandbox.AcceptedWorkStatus `json:"terminal_work"`
-}
 
 func (p runtimeWorkStopIntent) valid() bool {
 	return p.Version == 1 && p.Policy == "finish-only-v1" && validRuntimeMaintenance(p.Drain) && validRuntimeDrain(p.Drain) && p.Stop.Version == 2 && validRuntimeStop(p.Stop) && p.Stop.Base == p.Drain.Base && p.Stop.Request == p.Drain.Request && p.Stop.Drain == digest(encode(p.Drain)) && p.Stop.Main == p.Drain.Process
@@ -65,7 +52,7 @@ func (f *filesystem) readWorkStopRecord(name string, value any) (bool, error) {
 	if e != nil {
 		return false, e
 	}
-	if strictjson.Decode(b, value) != nil || !bytes.Equal(b, encode(value)) {
+	if !decodeCanonicalRuntime(b, value) {
 		return false, ErrInventory
 	}
 	return true, nil
@@ -277,7 +264,7 @@ func (s *runtimeScope) workStopPeers(ctx context.Context, t transaction, p runti
 					if c == nil || c.Identity() != p.Stop.Main {
 						return ErrConflict
 					}
-					if e := runtimeStateOwnedBy(*p.Stop.State, p.Stop.Main); e != nil {
+					if e := s.fs.runtimeStateOwnedBy(ctx, *p.Stop.State, p.Stop.Main); e != nil {
 						return e
 					}
 					if terminal == nil {
@@ -435,19 +422,24 @@ func (s *runtimeScope) workStopInput(ctx context.Context, base, operation string
 type runtimeStoppedWorkProof struct {
 	scope                    *runtimeScope
 	intent, completion, stop string
+	closure                  string
 	state                    runtimeStateIdentity
 }
 
 func (s *runtimeScope) finishAndStop(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager) (*runtimeStoppedWorkProof, error) {
 	return s.finishAndStopWithProofs(ctx, base, operation, c, m, runtimeStopProofs{process: runtimeProcessProof, empty: m.fs.unitExecutionEmpty})
 }
-func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (*runtimeStoppedWorkProof, error) {
+
+// finishKnownAcceptedWork preserves the ORIGINAL finish-only write-ahead,
+// process/state/owner and accepted-work checks, without choosing a close mode or
+// requesting physical Stop. Only typed closure adapters may consume this result.
+func (s *runtimeScope) finishKnownAcceptedWork(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (runtimeWorkStopIntent, runtimeWorkCompletion, error) {
 	if _, ok := ctx.Deadline(); !ok || !digestPattern.MatchString(base) || !requestPattern.MatchString(operation) || proof.process == nil || proof.empty == nil {
-		return nil, ErrPolicy
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, ErrPolicy
 	}
 	p, e := s.workStopInput(ctx, base, operation, c, m, proof)
 	if e != nil {
-		return nil, e
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 	}
 	var r runtimeWorkCompletion
 	var anchored bool
@@ -471,21 +463,21 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 		})
 	})
 	if e != nil {
-		return nil, e
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 	}
 	if !anchored {
 		// No accepted-work outcome is inferred from a stopped/replacement node.
 		// Reprove the SAME live gate before completing any unanchored record.
 		live, e := s.quiesceAcceptedWorkWithProof(ctx, base, operation, c, m, proof.process)
 		if e != nil {
-			return nil, e
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 		}
 		if live.scope != s || live.intent != digest(encode(p.Drain)) || live.process != p.Stop.Main || live.record != *p.Drain.Maintenance || !live.terminal.Complete() {
-			return nil, ErrConflict
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, ErrConflict
 		}
 		want := runtimeWorkCompletion{Version: 1, Input: digest(encode(p)), Work: live.terminal}
 		if r.Version != 0 && !bytes.Equal(encode(r), encode(want)) {
-			return nil, ErrConflict
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, ErrConflict
 		}
 		r = want
 		e = s.run(ctx, func(f *filesystem) error {
@@ -510,11 +502,59 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 			})
 		})
 		if e != nil {
-			return nil, e
+			return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
 		}
 	}
-	// A complete, independently anchored known-success record can survive
-	// coordinator/daemon death. Unknown/no-anchor outcomes still cannot.
+	// Promote/resync complete known work scratches BEFORE the close intent
+	// consumes their exact final link. This never invents an unknown outcome.
+	e = s.run(ctx, func(f *filesystem) error {
+		var tx transaction
+		if e := f.runtimeDrainLocked(ctx, func() error { var e error; tx, _, e = f.runtimeStopBase(ctx, base, operation); return e }); e != nil {
+			return e
+		}
+		if e := s.workStopPeers(ctx, tx, p, &r.Work, c, m, proof, true); e != nil {
+			return e
+		}
+		return f.runtimeDrainLocked(ctx, func() error {
+			if _, _, e := f.runtimeStopBase(ctx, base, operation); e != nil {
+				return e
+			}
+			if e := f.workStopInventory(&p, &r); e != nil {
+				return e
+			}
+			if e := f.runtimeRecord(runtimeWorkStopRoot+"/intent.json", nil, encode(p), "runtime-work-stop-intent"); e != nil {
+				return e
+			}
+			if e := f.runtimeRecord(runtimeWorkStopRoot+"/complete.json", nil, encode(r), "runtime-work-stop-complete"); e != nil {
+				return e
+			}
+			if e := f.runtimeRecord(runtimeWorkStopAnchor, nil, []byte(digest(encode(r))+"\n"), "runtime-work-stop-anchor"); e != nil {
+				return e
+			}
+			return f.workStopLink(p.stopped(r))
+		})
+	})
+	if e != nil {
+		return runtimeWorkStopIntent{}, runtimeWorkCompletion{}, e
+	}
+	return p, r, nil
+}
+
+func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operation string, c *nodecontrol.PinnedClient, m systemManager, proof runtimeStopProofs) (*runtimeStoppedWorkProof, error) {
+	p, r, e := s.finishKnownAcceptedWork(ctx, base, operation, c, m, proof)
+	if e != nil {
+		return nil, e
+	}
+	// Work completion alone does not authorize killing the runtime. The actual
+	// bound Broker/Core closure must be recorded and independently anchored FIRST.
+	closed, e := s.closeBoundRuntime(ctx, p, r, c, m, proof)
+	if e != nil {
+		return nil, e
+	}
+	stop := p.stopped(r)
+	stop.Version, stop.Close = 4, digest(encode(closed))
+	// Known, independently anchored work AND closure survive coordinator/daemon
+	// death. Unknown/no-anchor closure cannot be inferred from a dead process.
 	e = s.run(ctx, func(f *filesystem) error {
 		var tx transaction
 		if e := f.runtimeDrainLocked(ctx, func() error { var e error; tx, _, e = f.runtimeStopBase(ctx, base, operation); return e }); e != nil {
@@ -536,8 +576,7 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 			if e := f.runtimeRecord(runtimeWorkStopAnchor, nil, []byte(digest(encode(r))+"\n"), "runtime-work-stop-anchor"); e != nil {
 				return e
 			}
-			stop := p.stopped(r)
-			if e := f.workStopLink(stop); e != nil {
+			if e := f.closeStopLink(stop); e != nil {
 				return e
 			}
 			if e := f.stopInventory(&stop); e != nil {
@@ -568,8 +607,7 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 			if !bytes.Equal(encode(drain), encode(p.Drain)) {
 				return ErrConflict
 			}
-			stop := p.stopped(r)
-			if e := f.workStopLink(stop); e != nil {
+			if e := f.closeStopLink(stop); e != nil {
 				return e
 			}
 			if e := f.exact(runtimeStopRoot+"/intent.json", encode(stop), 0600); e != nil {
@@ -584,7 +622,7 @@ func (s *runtimeScope) finishAndStopWithProofs(ctx context.Context, base, operat
 			if e := s.state.verify(f); e != nil {
 				return e
 			}
-			result = &runtimeStoppedWorkProof{scope: s, intent: digest(encode(p)), completion: digest(encode(r)), stop: digest(encode(stop)), state: s.state.id}
+			result = &runtimeStoppedWorkProof{scope: s, intent: digest(encode(p)), completion: digest(encode(r)), closure: digest(encode(closed)), stop: digest(encode(stop)), state: s.state.id}
 			return nil
 		})
 	})

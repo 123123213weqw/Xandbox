@@ -52,10 +52,13 @@ func (f *filesystem) startupReadLock(ctx context.Context) (func(), error) {
 // a rolled-back genesis vector with a missing fence. Absence is not recovery.
 func (f *filesystem) startupFilesLocked(ctx context.Context) (transaction, error) {
 	var zero transaction
+	if e := f.runtimeNamespaceVeto(ctx); e != nil {
+		return zero, e
+	}
 	if e := ctx.Err(); e != nil {
 		return zero, e
 	}
-	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot, runtimeWorkStopRoot, runtimeWorkStopAnchor, runtimeWorkStopAnchorScratch} {
+	for _, root := range []string{runtimeFilesRoot, runtimeDrainRoot, runtimeStopRoot, runtimeWorkStopRoot, runtimeWorkStopAnchor, runtimeWorkStopAnchorScratch, runtimeCloseRoot, runtimeCloseAnchor, runtimeCloseAnchorScratch, runtimeResultsCloseRoot, runtimeResultsCloseAnchor, runtimeResultsCloseAnchorScratch, runtimeResultsStopRoot} {
 		if yes, e := f.exists(root); e != nil {
 			return zero, e
 		} else if yes {

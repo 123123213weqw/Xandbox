@@ -15,6 +15,7 @@ import (
 	"github.com/123123213weqw/Xandbox/internal/firecracker"
 	"github.com/123123213weqw/Xandbox/internal/ingresslaunch"
 	"github.com/123123213weqw/Xandbox/internal/launch"
+	"github.com/123123213weqw/Xandbox/internal/pathchars"
 	"github.com/123123213weqw/Xandbox/internal/policycontrol"
 	"github.com/123123213weqw/Xandbox/internal/releasestore"
 	"github.com/123123213weqw/Xandbox/internal/serviceready"
@@ -45,7 +46,6 @@ var ErrConflict = errors.New("installation request conflict")
 var ErrPlatform = errors.New("root Linux systemd initial installer required")
 var digestPattern = lowerHexPattern(64)
 var requestPattern = lowerHexPattern(32)
-var pathPattern = regexp.MustCompile(`^/[A-Za-z0-9_./-]+$`)
 var devicePattern = regexp.MustCompile(`^/dev/(vd[a-z]|sd[a-z]|nvme[0-9]+n[0-9]+)$`)
 var roles = []string{"daemon", "firecracker", "gateway", "ingress", "initrd", "jailer", "kernel", "launcher", "node", "ready", "template", "warden", "workspace"}
 
@@ -143,7 +143,7 @@ func encode(v any) []byte {
 }
 func digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func canonical(p string) bool {
-	return pathPattern.MatchString(p) && filepath.Clean(p) == p && p != "/"
+	return pathchars.Absolute(p) && filepath.Clean(p) == p && p != "/"
 }
 func inside(p, dir string) bool { return p == dir || strings.HasPrefix(p, dir+"/") }
 func Decode(raw []byte) (Plan, error) {
@@ -181,15 +181,38 @@ func validatePlan(p Plan) error {
 	}
 	// Reuse the existing strict budget/serialization rules, not a looser unit template.
 	n := nodeManifest(p, map[string]Artifact{"daemon": {SHA256: strings.Repeat("0", 64)}})
-	if _, e := launch.Decode(encode(n)); e != nil {
+	// CheckComposition below repeats the SAME node semantic policy. Retain its
+	// stricter LF-inclusive wire ceiling here; bare JSON size is not equivalent.
+	line, fits := nodeManifestLine(n)
+	if !fits {
 		return ErrPolicy
 	}
-	g := ingressManifest(p, n, "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
+	g := ingressManifestWithNodeSHA(p, digest(line), "1:1", map[string]Artifact{"gateway": {SHA256: strings.Repeat("0", 64)}})
 	if g.CheckComposition(n) != nil {
 		return ErrPolicy
 	}
 	return nil
 }
+
+// Only a serialized byte budget, NEVER semantic validity or host authority.
+// Retain the exact predicate independently of the line-producing helper below.
+// Neither is semantic validity; validatePlan still runs CheckComposition.
+func nodeLineFitsManifest(n launch.Manifest) bool {
+	data, e := json.Marshal(n)
+	return e == nil && len(data) < launch.MaxManifest // len(data)+one LF <= ceiling
+}
+
+// Produce only the exact JSON+LF bytes already needed by this private Plan
+// flow. Node is a closed immutable value; no callback, IO or mutation occurs
+// before its digest is consumed. This is not validation or source authority.
+func nodeManifestLine(n launch.Manifest) ([]byte, bool) {
+	data, e := json.Marshal(n)
+	if e != nil || len(data) >= launch.MaxManifest {
+		return nil, false
+	}
+	return append(data, '\n'), true
+}
+
 func rolePath(role string) string {
 	switch role {
 	case "launcher":
@@ -213,14 +236,26 @@ func nodeManifest(p Plan, art map[string]Artifact) launch.Manifest {
 	return launch.Manifest{Version: 1, UnitRoot: unitRoot, InputDir: inputDir, StateDir: stateDir, Daemon: firecracker.Asset{Path: rolePath("daemon"), SHA256: art["daemon"].SHA256}, Backend: firecracker.Asset{Path: Root + "/backend.json", SHA256: p.Backend.SHA256}, Auth: firecracker.Asset{Path: Root + "/auth.json", SHA256: p.Auth.SHA256}, Frontend: p.Frontend, Parent: p.Parent}
 }
 func ingressManifest(p Plan, n launch.Manifest, device string, art map[string]Artifact) ingresslaunch.Manifest {
-	return ingresslaunch.Manifest{Version: 1, UnitRoot: "/sys/fs/cgroup/system.slice/" + IngressUnit, PolicyStateDir: policyDir, Gateway: firecracker.Asset{Path: rolePath("gateway"), SHA256: art["gateway"].SHA256}, Config: firecracker.Asset{Path: Root + "/gateway.json", SHA256: p.Gateway.SHA256}, NodeLaunch: firecracker.Asset{Path: launchPath, SHA256: digest(encode(n))}, Device: device, Ingress: p.Ingress, Reserve: p.Reserve, Capacity: p.Capacity}
+	return ingressManifestWithNodeSHA(p, digest(encode(n)), device, art)
+}
+
+// Pure construction ONLY. CheckComposition validates semantic composition but
+// does NOT bind NodeLaunch.SHA256 to n. All three private production callers compute
+// this digest themselves from the SAME exact JSON+LF node bytes; no user digest,
+// cached validation, raw decoder bypass or effectful authority enters here.
+func ingressManifestWithNodeSHA(p Plan, nodeSHA, device string, art map[string]Artifact) ingresslaunch.Manifest {
+	return ingresslaunch.Manifest{Version: 1, UnitRoot: "/sys/fs/cgroup/system.slice/" + IngressUnit, PolicyStateDir: policyDir, Gateway: firecracker.Asset{Path: rolePath("gateway"), SHA256: art["gateway"].SHA256}, Config: firecracker.Asset{Path: Root + "/gateway.json", SHA256: p.Gateway.SHA256}, NodeLaunch: firecracker.Asset{Path: launchPath, SHA256: nodeSHA}, Device: device, Ingress: p.Ingress, Reserve: p.Reserve, Capacity: p.Capacity}
 }
 
 // render uses the production generators unchanged. Only this installer's main
 // candidate adds a fixed read-only commit gate BEFORE the original launcher.
 func render(p Plan, device string, art map[string]Artifact) (map[string][]byte, error) {
 	n := nodeManifest(p, art)
-	g := ingressManifest(p, n, device, art)
+	// Reuse this private immutable node's exact JSON+LF for its pin and output.
+	// All generator/composition checks below still run; no IO or callback sees
+	// these bytes before the final artifact map is returned. Not a source cache.
+	nodeLine := encode(n)
+	g := ingressManifestWithNodeSHA(p, digest(nodeLine), device, art)
 	r := serviceready.Manifest{Version: 1, NodeLaunch: g.NodeLaunch, Helper: firecracker.Asset{Path: serviceready.HelperPath, SHA256: art["ready"].SHA256}, Device: device}
 	main, e := r.DaemonUnit(n, readyPath, p.DevicePath)
 	if e != nil {
@@ -243,7 +278,7 @@ func render(p Plan, device string, art map[string]Artifact) (map[string][]byte, 
 		ingress = strings.Replace(ingress, line, "ReadWritePaths="+policyDir+" "+policycontrol.OperatorDirectory+"\n", 1)
 		ingress = strings.Replace(ingress, "Type=exec\n", "Type=exec\nRuntimeDirectory=xandbox-ingress-control\nRuntimeDirectoryMode=0700\nRuntimeDirectoryPreserve=no\n", 1)
 	}
-	return map[string][]byte{launchPath: encode(n), ingressPath: encode(g), readyPath: encode(r), UnitDir + "/" + MainUnit: []byte(main), UnitDir + "/" + IngressUnit: []byte(ingress)}, nil
+	return map[string][]byte{launchPath: nodeLine, ingressPath: encode(g), readyPath: encode(r), UnitDir + "/" + MainUnit: []byte(main), UnitDir + "/" + IngressUnit: []byte(ingress)}, nil
 }
 
 func descriptor(r Release) (map[string]Artifact, error) {
@@ -251,7 +286,7 @@ func descriptor(r Release) (map[string]Artifact, error) {
 	for _, v := range r.Files {
 		m.Files = append(m.Files, releasestore.File{Role: v.Role, Source: "/descriptor/" + v.Role, SHA256: v.SHA256, Bytes: v.Bytes})
 	}
-	normalized, e := releasestore.Decode(encode(m))
+	normalized, e := releasestore.ValidateLineValue(m)
 	if e != nil || len(normalized.Files) != len(roles) {
 		return nil, ErrPolicy
 	}

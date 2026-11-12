@@ -302,137 +302,7 @@ func (s *runtimeScope) inspectStoppedBackendWithProofs(ctx context.Context, base
 		return out, ErrPolicy
 	}
 	e := s.run(ctx, func(f *filesystem) error {
-		if s.state == nil {
-			return ErrConflict
-		}
-		p, e := s.stoppedStateProof(ctx, base, request, m, proof.empty)
-		if e != nil {
-			return e
-		}
-		if p.State == nil || s.state.id != *p.State {
-			return ErrConflict
-		}
-		raw, e := f.read(Root+"/backend.json", 16384, 0600)
-		if e != nil {
-			return e
-		}
-		cfg, e := firecracker.DecodeInspectionConfig(raw)
-		if e != nil {
-			return e
-		}
-		if cfg.Snapshot != nil || cfg.Version != 3 || cfg.RuntimeRoot != runtimeDir || cfg.CgroupRoot != unitRoot+"/node/instances" || cfg.Node == nil || cfg.Quota == nil || cfg.IO == nil {
-			return ErrInventory
-		}
-		drain, e := f.runtimeDrainReadIntent()
-		if e != nil {
-			return e
-		}
-		var generations map[sandbox.Ref]coreGeneration
-		out.Core, generations, e = readCoreAuthorityForDrain(ctx, s.state.root, drain)
-		if e != nil {
-			return e
-		}
-		state := &filesystem{root: s.state.root}
-		owners, e := readBackendOwners(ctx, state, cfg, generations)
-		if e != nil {
-			return e
-		}
-		out.Owners = len(owners)
-		if e = f.point("runtime-backend-after-registry"); e != nil {
-			return e
-		}
-		keys := map[string]bool{}
-		for _, o := range owners {
-			keys[o.Ref.ID+o.Ref.Generation] = true
-		}
-		out.Jails, e = inspectJailNamespaces(ctx, f, cfg, keys)
-		if e != nil {
-			return e
-		}
-		if e = f.point("runtime-backend-after-jails"); e != nil {
-			return e
-		}
-		out.InstanceGroups, out.NodeEnvelopePresent, e = inspectBackendGroups(ctx, f, keys, proof.cgroup)
-		if e != nil {
-			return e
-		}
-		if e = f.point("runtime-backend-after-groups"); e != nil {
-			return e
-		}
-		runtimeRoot, e := f.directory(runtimeDir)
-		if e != nil {
-			return e
-		}
-		defer runtimeRoot.Close()
-		var before, stateStat, after unix.Stat_t
-		if e = unix.Fstat(int(runtimeRoot.Fd()), &before); e != nil {
-			return e
-		}
-		if e = unix.Fstat(int(s.state.root.Fd()), &stateStat); e != nil {
-			return e
-		}
-		if before.Dev != stateStat.Dev {
-			return ErrInventory
-		}
-		out.Projects, e = proof.projects(ctx, cfg, runtimeRoot, owners)
-		if e != nil {
-			return e
-		}
-		if out.Projects.Reserved != cfg.UIDCount || out.Projects.Owned != len(owners) || out.Projects.Empty < 0 || out.Projects.Empty > cfg.UIDCount || out.Projects.AllReleased != (out.Projects.Empty == cfg.UIDCount && len(owners) == 0) {
-			return ErrInventory
-		}
-		if e = f.point("runtime-backend-after-quota"); e != nil {
-			return e
-		}
-		linked, e := f.directory(runtimeDir)
-		if e != nil {
-			return e
-		}
-		defer linked.Close()
-		if e = unix.Fstat(int(linked.Fd()), &after); e != nil {
-			return e
-		}
-		if !sameCoreStat(before, after) {
-			return ErrInventory
-		}
-		// Recheck complete metadata and namespace membership, not a cached report.
-		again, e := readBackendOwners(ctx, state, cfg, generations)
-		if e != nil {
-			return e
-		}
-		if !sameInspectionOwners(owners, again) {
-			return ErrConflict
-		}
-		j, e := inspectJailNamespaces(ctx, f, cfg, keys)
-		if e != nil {
-			return e
-		}
-		g, n, e := inspectBackendGroups(ctx, f, keys, proof.cgroup)
-		if e != nil {
-			return e
-		}
-		if j != out.Jails || g != out.InstanceGroups || n != out.NodeEnvelopePresent {
-			return ErrConflict
-		}
-		if _, e = readCoreAdmissionSet(ctx, state, drainedRuntimeState(drain), drain.Maintenance); e != nil {
-			return e
-		}
-		coreAfter, _, e := readCoreAuthorityForDrain(ctx, s.state.root, drain)
-		if e != nil {
-			return e
-		}
-		if coreAfter != out.Core {
-			return ErrConflict
-		}
-		if _, e = s.stoppedStateProof(ctx, base, request, m, proof.empty); e != nil {
-			return e
-		}
-		out.Core.CoreAuthorityParsed = true
-		out.BackendInventoryParsed = true
-		out.BackendResourcesAbsent = out.Owners == 0 && out.Jails == 0 && out.InstanceGroups == 0 && !out.NodeEnvelopePresent && out.Projects.AllReleased && out.Core.LedgerNonterminal == 0 && out.Core.SessionNonterminal == 0
-		// NEVER promote this observation to successful work, complete all-authority
-		// reclaim, durable media proof, activation or permission to select files.
-		return nil
+		return s.inspectStoppedBackendLocked(ctx, base, request, m, proof, f, &out)
 	})
 	if e != nil {
 		return runtimeBackendInventory{}, e
@@ -450,4 +320,139 @@ func sameInspectionOwners(a, b []firecracker.InspectionOwnership) bool {
 		}
 	}
 	return true
+}
+
+// Caller holds s.mu through s.run; no lease reacquisition or manager callback under a file flock.
+func (s *runtimeScope) inspectStoppedBackendLocked(ctx context.Context, base, request string, m systemManager, proof backendInspectionProofs, f *filesystem, out *runtimeBackendInventory) error {
+	if s.state == nil {
+		return ErrConflict
+	}
+	p, e := s.stoppedStateProof(ctx, base, request, m, proof.empty)
+	if e != nil {
+		return e
+	}
+	if p.State == nil || s.state.id != *p.State {
+		return ErrConflict
+	}
+	raw, e := f.read(Root+"/backend.json", 16384, 0600)
+	if e != nil {
+		return e
+	}
+	cfg, e := firecracker.DecodeInspectionConfig(raw)
+	if e != nil {
+		return e
+	}
+	if cfg.Snapshot != nil || cfg.Version != 3 || cfg.RuntimeRoot != runtimeDir || cfg.CgroupRoot != unitRoot+"/node/instances" || cfg.Node == nil || cfg.Quota == nil || cfg.IO == nil {
+		return ErrInventory
+	}
+	drain, e := f.runtimeDrainReadIntent()
+	if e != nil {
+		return e
+	}
+	var generations map[sandbox.Ref]coreGeneration
+	out.Core, generations, e = readCoreAuthorityForDrain(ctx, s.state.root, drain)
+	if e != nil {
+		return e
+	}
+	state := &filesystem{root: s.state.root}
+	owners, e := readBackendOwners(ctx, state, cfg, generations)
+	if e != nil {
+		return e
+	}
+	out.Owners = len(owners)
+	if e = f.point("runtime-backend-after-registry"); e != nil {
+		return e
+	}
+	keys := map[string]bool{}
+	for _, o := range owners {
+		keys[o.Ref.ID+o.Ref.Generation] = true
+	}
+	out.Jails, e = inspectJailNamespaces(ctx, f, cfg, keys)
+	if e != nil {
+		return e
+	}
+	if e = f.point("runtime-backend-after-jails"); e != nil {
+		return e
+	}
+	out.InstanceGroups, out.NodeEnvelopePresent, e = inspectBackendGroups(ctx, f, keys, proof.cgroup)
+	if e != nil {
+		return e
+	}
+	if e = f.point("runtime-backend-after-groups"); e != nil {
+		return e
+	}
+	runtimeRoot, e := f.directory(runtimeDir)
+	if e != nil {
+		return e
+	}
+	defer runtimeRoot.Close()
+	var before, stateStat, after unix.Stat_t
+	if e = unix.Fstat(int(runtimeRoot.Fd()), &before); e != nil {
+		return e
+	}
+	if e = unix.Fstat(int(s.state.root.Fd()), &stateStat); e != nil {
+		return e
+	}
+	if before.Dev != stateStat.Dev {
+		return ErrInventory
+	}
+	out.Projects, e = proof.projects(ctx, cfg, runtimeRoot, owners)
+	if e != nil {
+		return e
+	}
+	if out.Projects.Reserved != cfg.UIDCount || out.Projects.Owned != len(owners) || out.Projects.Empty < 0 || out.Projects.Empty > cfg.UIDCount || out.Projects.AllReleased != (out.Projects.Empty == cfg.UIDCount && len(owners) == 0) {
+		return ErrInventory
+	}
+	if e = f.point("runtime-backend-after-quota"); e != nil {
+		return e
+	}
+	linked, e := f.directory(runtimeDir)
+	if e != nil {
+		return e
+	}
+	defer linked.Close()
+	if e = unix.Fstat(int(linked.Fd()), &after); e != nil {
+		return e
+	}
+	if !sameCoreStat(before, after) {
+		return ErrInventory
+	}
+	// Recheck complete metadata and namespace membership, not a cached report.
+	again, e := readBackendOwners(ctx, state, cfg, generations)
+	if e != nil {
+		return e
+	}
+	if !sameInspectionOwners(owners, again) {
+		return ErrConflict
+	}
+	j, e := inspectJailNamespaces(ctx, f, cfg, keys)
+	if e != nil {
+		return e
+	}
+	g, n, e := inspectBackendGroups(ctx, f, keys, proof.cgroup)
+	if e != nil {
+		return e
+	}
+	if j != out.Jails || g != out.InstanceGroups || n != out.NodeEnvelopePresent {
+		return ErrConflict
+	}
+	if _, e = readCoreAdmissionSet(ctx, state, drainedRuntimeState(drain), drain.Maintenance); e != nil {
+		return e
+	}
+	coreAfter, _, e := readCoreAuthorityForDrain(ctx, s.state.root, drain)
+	if e != nil {
+		return e
+	}
+	if coreAfter != out.Core {
+		return ErrConflict
+	}
+	if _, e = s.stoppedStateProof(ctx, base, request, m, proof.empty); e != nil {
+		return e
+	}
+	out.Core.CoreAuthorityParsed = true
+	out.BackendInventoryParsed = true
+	out.BackendResourcesAbsent = out.Owners == 0 && out.Jails == 0 && out.InstanceGroups == 0 && !out.NodeEnvelopePresent && out.Projects.AllReleased && out.Core.LedgerNonterminal == 0 && out.Core.SessionNonterminal == 0
+	// NEVER promote this observation to successful work, complete all-authority
+	// reclaim, durable media proof, activation or permission to select files.
+	return nil
 }

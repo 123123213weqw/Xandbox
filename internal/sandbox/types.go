@@ -67,7 +67,8 @@ type CreateRequest struct {
 	Limits Limits `json:"limits"`
 }
 
-// Record is the durable lifecycle ledger. Execution results are not durable.
+// Record is the durable lifecycle ledger, never an output journal. Execution
+// results remain volatile unless the separate bounded ResultStore is enabled.
 type Record struct {
 	Ref
 	Backend         string    `json:"backend"`
@@ -101,11 +102,13 @@ type Output struct {
 type Job struct {
 	ID string `json:"id"`
 	Ref
-	Status     string    `json:"status"`
-	StartedAt  time.Time `json:"started_at"`
-	FinishedAt time.Time `json:"finished_at,omitempty"`
-	Output     Output    `json:"output"`
-	Error      string    `json:"error,omitempty"`
+	Status          string    `json:"status"`
+	StartedAt       time.Time `json:"started_at"`
+	FinishedAt      time.Time `json:"finished_at,omitempty"`
+	Output          Output    `json:"output"`
+	Error           string    `json:"error,omitempty"`
+	ResultRetained  bool      `json:"result_retained,omitempty"`
+	ResultIntegrity string    `json:"result_integrity,omitempty"`
 }
 
 // Preparation contains trusted runtime policy. DeadlineNS is in the host clock

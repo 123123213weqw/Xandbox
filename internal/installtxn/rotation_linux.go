@@ -322,7 +322,7 @@ func Reconfigure(ctx context.Context, path string, expected uint64, request stri
 
 func reconfigureOperation(ctx context.Context, f *filesystem, p RotationPlan, expected uint64, request string, manager serviceManager) (Result, error) {
 	var zero Result
-	operationDone, e := f.operationLock(ctx, false)
+	operationDone, e := f.ordinaryOperationLock(ctx, false)
 	if e != nil {
 		return zero, e
 	}

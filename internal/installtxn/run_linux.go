@@ -51,7 +51,7 @@ func Apply(ctx context.Context, path string, expected uint64, request string) (R
 	if e = f.self(ctx, plan); e != nil {
 		return zero, e
 	}
-	if e = f.mkdir(Root, 0700); e != nil {
+	if e = f.initialInstallRoot(ctx); e != nil {
 		return zero, e
 	}
 	manager := systemManager{f, f.managerCommand}
@@ -77,7 +77,7 @@ func Apply(ctx context.Context, path string, expected uint64, request string) (R
 
 func installOperation(ctx context.Context, f *filesystem, plan Plan, request string, manager serviceManager, load func(context.Context, Plan, bool) (*prepared, func(), error)) (Result, error) {
 	var zero Result
-	operationDone, e := f.initialOperationLock(ctx)
+	operationDone, e := f.ordinaryInitialOperationLock(ctx)
 	if e != nil {
 		return zero, e
 	}
@@ -208,7 +208,7 @@ func reconcileOperationAdvance(ctx context.Context, f *filesystem, request strin
 	return reconcileOperationMaintenance(ctx, f, request, manager, advance, gateway.ConfirmManagedPolicyState)
 }
 func reconcileOperationMaintenance(ctx context.Context, f *filesystem, request string, manager serviceManager, advance, confirm policyAdvance) (Result, error) {
-	operationDone, e := f.operationLock(ctx, false)
+	operationDone, e := f.ordinaryOperationLock(ctx, false)
 	if e != nil {
 		return Result{}, e
 	}
@@ -275,6 +275,9 @@ func (f *filesystem) status(ctx context.Context, manager serviceManager) (Result
 		return zero, e
 	}
 	defer unlock()
+	if e = f.runtimeNamespaceVeto(ctx); e != nil {
+		return zero, e
+	}
 	t, e := f.readTransaction("commit")
 	if errors.Is(e, unix.ENOENT) {
 		var pending transaction

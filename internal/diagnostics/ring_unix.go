@@ -268,7 +268,7 @@ func Start(dir string) (*Logger, error) {
 	}
 	return newLogger(r), nil
 }
-func readHead(f *os.File, scope [32]byte) (header, error) {
+func readHead(f io.ReaderAt, scope [32]byte) (header, error) {
 	var b [2 * HeaderBytes]byte
 	if n, e := f.ReadAt(b[:], 0); e != nil || n != len(b) {
 		return header{}, ErrWrite
@@ -283,7 +283,7 @@ func readHead(f *os.File, scope [32]byte) (header, error) {
 	}
 	return c, nil
 }
-func readRecords(f *os.File, h header) ([]Record, error) {
+func readRecords(f io.ReaderAt, h header) ([]Record, error) {
 	start := uint64(1)
 	if h.seq > RetainedRecords {
 		start = h.seq - RetainedRecords + 1

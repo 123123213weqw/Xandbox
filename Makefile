@@ -2,6 +2,10 @@
 
 BIN_DIR ?= bin
 
+# Compatibility CI may explicitly use local; production builds must pin the patched SDK.
+GOTOOLCHAIN ?= go1.27.4
+export GOTOOLCHAIN
+
 test:
 	go test -race ./...
 
@@ -32,6 +36,7 @@ smoke: build
 	python3 scripts/smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl"
 	python3 scripts/auth_smoke.py --daemon "$(BIN_DIR)/sandboxd" --cli "$(BIN_DIR)/sandboxctl" --keygen "$(BIN_DIR)/xandbox-keygen" --node "$(BIN_DIR)/xandbox-node"
 	python3 scripts/metadata_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"
+	python3 scripts/results_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"
 	python3 scripts/session_smoke.py --daemon "$(BIN_DIR)/sandboxd"
 	python3 scripts/metrics_smoke.py --daemon "$(BIN_DIR)/sandboxd"
 	python3 scripts/node_control_smoke.py --daemon "$(BIN_DIR)/sandboxd" --node "$(BIN_DIR)/xandbox-node"

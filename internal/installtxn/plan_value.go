@@ -1,7 +1,8 @@
 package installtxn
 
 // Internal transaction values are already typed; raw transaction readers still
-// decode strict JSON before calling this.
+// prove bounded canonical JSON (with the original strict rejection path) before
+// calling this.
 // Recheck the SAME semantic policy and serialized ceiling without parsing our
 // own JSON a second time. No raw bytes, cache, relaxed decoder or file proof is
 // accepted here. Current Plan strings are closed ASCII paths/digests/device IDs;

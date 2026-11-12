@@ -31,7 +31,7 @@ func parseObservation(raw []byte) (observation, error) {
 	if len(raw) > 16384 {
 		return o, ErrInventory
 	}
-	for _, line := range strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(raw), "\n"), "\n") {
 		a, b, ok := strings.Cut(line, "=")
 		if !ok || values[a] != "" || strings.ContainsAny(b, "\r\x00") {
 			return o, ErrInventory

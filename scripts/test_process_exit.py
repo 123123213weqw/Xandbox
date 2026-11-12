@@ -91,4 +91,170 @@ class CurrentCycleObservationTests(unittest.TestCase):
             self.assertEqual(clean.call_args.kwargs,{'previous_sequence':78})
 
 
+class MetadataStopEvidenceTests(unittest.TestCase):
+    marker = 'SYNTHETIC_PRIVATE_ERROR_AND_PATH_SENTINEL'
+
+    def process(self, status=0, signal_error=None, wait_error=None):
+        calls = []
+        def signal(name):
+            calls.append(name)
+            if signal_error is not None:
+                raise signal_error
+        def wait(timeout):
+            calls.append(('wait', timeout))
+            if wait_error is not None:
+                raise wait_error
+            return status
+        return SimpleNamespace(terminate=lambda: signal('terminate'), kill=lambda: signal('kill'), wait=wait), calls
+
+    def failed(self, process, *, phase='imported_2048_stop', crash=False, summary=None, directory='/owned-imported'):
+        import metadata_smoke as metadata
+        if summary is None:
+            summary = {'view_exit_status': 0, 'diagnostic_view': 'closed',
+                       'closed_records': [{'kind': 'collector_closed', 'reason': 'other'}]}
+        with patch.object(metadata, 'failure_summary', return_value=summary) as collect:
+            with self.assertRaises(AssertionError) as raised:
+                metadata.stop_metadata_process(process, '/unexecuted-node', directory, phase, crash=crash)
+        self.assertTrue(raised.exception.__suppress_context__)
+        self.assertNotIn(self.marker, str(raised.exception))
+        return json.loads(str(raised.exception)), collect
+
+    def test_all_nine_success_policies_keep_exact_signal_wait15_and_no_diagnostic_io(self):
+        import metadata_smoke as metadata
+        self.assertEqual(len(metadata.STOP_PHASES), 9)
+        for phase, crash in metadata.STOP_PHASES.items():
+            for status in ((-9, 1) if crash else (0,)):
+                process, calls = self.process(status)
+                with patch.object(metadata, 'failure_summary') as collect:
+                    metadata.stop_metadata_process(process, '/unexecuted', '/owned', phase, crash=crash)
+                    collect.assert_not_called()
+                self.assertEqual(calls, ['kill' if crash else 'terminate', ('wait', 15)])
+
+    def test_unexpected_status_never_passes_even_with_earlier_collector_closed_tail(self):
+        for phase, crash, status in [('imported_2048_stop', False, 1), ('tenant_capacity_stop', False, -15),
+                                     ('partial_migration_kill', True, 0)]:
+            process, calls = self.process(status)
+            result, collect = self.failed(process, phase=phase, crash=crash)
+            self.assertEqual(result['exit_status'], status)
+            self.assertEqual(result['phase'], phase)
+            self.assertEqual(result['failure'], 'unexpected_exit_status')
+            self.assertEqual(result['wait_limit_seconds'], 15)
+            self.assertTrue(result['persisted_tail_is_not_current_process_proof'])
+            collect.assert_called_once_with(status, '/unexecuted-node', '/owned-imported')
+            self.assertEqual(calls[-1], ('wait', 15))
+
+    def test_each_failure_collects_only_explicit_actual_directory(self):
+        import metadata_smoke as metadata
+        for phase, directory in [('imported_2048_stop', Path('/owned/interrupted')),
+                                 ('historical_recovery_stop', Path('/owned/historical')),
+                                 ('tenant_capacity_stop', Path('/owned/state'))]:
+            process, _ = self.process(1)
+            result, collect = self.failed(process, phase=phase, directory=directory)
+            collect.assert_called_once_with(1, '/unexecuted-node', directory)
+            self.assertNotIn(str(directory), json.dumps(result))
+            self.assertEqual(result['diagnostic_view'], 'closed')
+
+    def test_projection_drops_extra_private_fields_and_uses_only_closed_enums(self):
+        row = {'kind': 'process_failed', 'reason': 'deadline', 'path': self.marker, 'sequence': 99}
+        summary = {'view_exit_status': 0, 'diagnostic_view': 'closed', 'closed_records': [row],
+                   'exit_status': self.marker, 'raw': self.marker, 'time_ns': 123}
+        result, _ = self.failed(self.process(1)[0], summary=summary)
+        self.assertEqual(result['closed_records'], [{'kind': 'process_failed', 'reason': 'deadline'}])
+        self.assertEqual(result['exit_status'], 1)
+        for key in ('path', 'sequence', 'raw', 'time_ns'):
+            self.assertNotIn(key, result)
+
+    def test_malformed_unknown_or_overlong_tail_cannot_export_a_partial_prefix(self):
+        good = {'kind': 'collector_closed', 'reason': 'other'}
+        bads = [None, [], {'diagnostic_view': self.marker},
+                {'view_exit_status': self.marker, 'diagnostic_view': 'closed', 'closed_records': [good]},
+                {'view_exit_status': 0, 'diagnostic_view': 'closed', 'closed_records': [good]*7},
+                {'view_exit_status': 0, 'diagnostic_view': 'closed', 'closed_records': [good, None]},
+                {'view_exit_status': 0, 'diagnostic_view': 'closed', 'closed_records': [good, {'kind': self.marker, 'reason': 'other'}]},
+                {'view_exit_status': 0, 'diagnostic_view': 'closed', 'closed_records': [good, {'kind': 'unknown', 'reason': self.marker}]}]
+        for summary in bads:
+            # None is a malformed collector result here, not failed()'s default.
+            import metadata_smoke as metadata
+            with patch.object(metadata, 'failure_summary', return_value=summary):
+                with self.assertRaises(AssertionError) as raised:
+                    metadata.stop_metadata_process(self.process(1)[0], '/unexecuted', '/owned', 'imported_2048_stop')
+            result = json.loads(str(raised.exception))
+            self.assertEqual(result['closed_records'], [])
+            self.assertEqual(result['diagnostic_view'], 'unavailable')
+            self.assertNotIn(self.marker, str(raised.exception))
+
+    def test_collector_exception_is_not_relayed_or_converted_to_success(self):
+        import metadata_smoke as metadata
+        for exception in (OSError(self.marker), ValueError(self.marker), RuntimeError(self.marker)):
+            with patch.object(metadata, 'failure_summary', side_effect=exception):
+                with self.assertRaises(AssertionError) as raised:
+                    metadata.stop_metadata_process(self.process(1)[0], '/unexecuted', '/owned', 'imported_2048_stop')
+            result = json.loads(str(raised.exception))
+            self.assertEqual(result['exit_status'], 1)
+            self.assertEqual(result['diagnostic_view'], 'unavailable')
+            self.assertNotIn(self.marker, str(raised.exception))
+
+    def test_signal_errors_fail_before_wait_and_do_not_collect_live_process(self):
+        process, calls = self.process(signal_error=OSError(self.marker))
+        result, collect = self.failed(process)
+        self.assertEqual(result['failure'], 'signal_failed')
+        self.assertEqual(calls, ['terminate'])
+        collect.assert_not_called()
+        self.assertIsNone(result['exit_status'])
+
+    def test_wait_timeout_error_and_invalid_status_fail_without_extra_diagnostic_wait(self):
+        variants = [(None, subprocess.TimeoutExpired(self.marker, 15), 'wait_timeout'),
+                    (None, OSError(self.marker), 'wait_failed')]
+        variants += [(status, None, 'invalid_exit_status') for status in (True, self.marker, None, -129, 256)]
+        for status, exception, expected in variants:
+            process, calls = self.process(status, wait_error=exception)
+            result, collect = self.failed(process)
+            self.assertEqual(result['failure'], expected)
+            self.assertIsNone(result['exit_status'])
+            self.assertEqual(result['diagnostic_view'], 'not_requested')
+            self.assertEqual(calls, ['terminate', ('wait', 15)])
+            collect.assert_not_called()
+
+    def test_invalid_policy_and_optimized_python_refuse_before_process_work(self):
+        import metadata_smoke as metadata
+        for phase, crash in [(self.marker, False), ([], False), ('imported_2048_stop', True),
+                             ('partial_migration_kill', False), ('imported_2048_stop', 0)]:
+            process, calls = self.process()
+            result, collect = self.failed(process, phase=phase, crash=crash)
+            self.assertEqual(result['failure'], 'invalid_policy')
+            self.assertEqual(result['phase'], 'unavailable')
+            self.assertEqual(calls, [])
+            collect.assert_not_called()
+        process, calls = self.process()
+        with patch.object(metadata.sys, 'flags', SimpleNamespace(optimize=1)):
+            result, collect = self.failed(process)
+            self.assertEqual(result['failure'], 'optimized_python')
+            self.assertEqual(calls, [])
+            collect.assert_not_called()
+            with patch.object(metadata.argparse, 'ArgumentParser') as parser:
+                with self.assertRaises(AssertionError): metadata.main()
+                parser.assert_not_called()
+
+    def test_main_all_nine_stops_have_fixed_phase_actual_root_and_original_fixtures(self):
+        import ast
+        import inspect
+        import metadata_smoke as metadata
+        tree = ast.parse(inspect.getsource(metadata.main))
+        calls = sorted((n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                        and isinstance(n.func, ast.Name) and n.func.id == 'stopped'), key=lambda n: n.lineno)
+        observed = []
+        for call in calls:
+            fields = {k.arg: k.value for k in call.keywords}
+            observed.append((ast.literal_eval(fields['phase']), fields['directory'].id,
+                             ast.literal_eval(fields['crash']) if 'crash' in fields else False))
+        self.assertEqual(observed, [(p, d, c) for (p, c), d in zip(metadata.STOP_PHASES.items(),
+                         ['state']*5 + ['interrupted']*2 + ['historical']*2)])
+        source = inspect.getsource(metadata.main)
+        for gate in ('count = 2048', "seconds=30", '0 < upgraded < count',
+                     "resumed = migrate(interrupted)", "['upgraded'] == count - upgraded",
+                     "'NODE_DRAINING'", "'METADATA_CAPACITY'", "['control']['admission_open']"):
+            self.assertIn(gate, source)
+        self.assertIn('process.kill(); process.wait(timeout=15)', source)
+
+
 if __name__=='__main__':unittest.main()
