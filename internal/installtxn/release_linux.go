@@ -168,6 +168,12 @@ func staticArtifact(in *os.File, size int64, role string) error {
 	return staticNative(in, size, role == "firecracker" || role == "jailer")
 }
 func staticNative(in *os.File, size int64, allowPIE bool) error {
+	return staticNativeReader(in, size, allowPIE)
+}
+
+// Share the existing complete static policy with bounded original-FD readers.
+// Reader ownership and offsets remain with the caller; NewFile uses ReaderAt.
+func staticNativeReader(in io.ReaderAt, size int64, allowPIE bool) error {
 	if size < 64 || size > 64<<20 {
 		return ErrPolicy
 	}
