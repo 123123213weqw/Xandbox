@@ -22,7 +22,7 @@ const resultModule = "github.com/123123213weqw/Xandbox"
 // permission to migrate/start an existing installation. The current executing
 // pinned installer supplies the reference; a candidate cannot choose it.
 func resultBuildMatches(info, self *debug.BuildInfo, release Release, command string) bool {
-	if info == nil || self == nil || release.Toolchain != "go1.27.4" || info.GoVersion != release.Toolchain || info.Path != resultModule+"/cmd/"+command || info.Main.Path != resultModule || info.Main.Version != "(devel)" || info.Main.Sum != "" || info.Main.Replace != nil {
+	if info == nil || self == nil || release.Toolchain != "go1.27.4" || info.GoVersion != release.Toolchain || info.Path != resultModule+"/cmd/"+command || info.Main.Path != resultModule || info.Main.Version == "" || self.Main.Version == "" || info.Main.Version != self.Main.Version || info.Main.Sum != "" || info.Main.Replace != nil {
 		return false
 	}
 	settings := map[string]string{}
