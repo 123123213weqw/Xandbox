@@ -19,12 +19,33 @@ const fileSequenceScratchBytes = 32 * 1024
 // pool. Only the serial file loop below owns it. Each file gets a NEW hash and
 // an unchanged full size+1 read. It never survives into the next proof stage,
 // filesystem callback, operation, service invocation or daemon.
-type fileSequenceScratch struct{ buffer []byte }
+type fileSequenceScratch struct {
+	buffer   []byte
+	reserved int
+}
+
+// Pure sizing of the caller's PRIVATE immutable vector, after the original
+// file-list/root/override guards. This is not a filesystem observation, digest
+// cache, validation result or authority to adopt another file. Preserve the
+// exact managed-policy substitution used by the original serial loop.
+func newFileSequenceScratch(files []File, override *File) fileSequenceScratch {
+	var scratch fileSequenceScratch
+	for _, v := range files {
+		if override != nil && v.Path == gateway.ManagedPolicyPath {
+			v = *override
+		}
+		if n := hashScratchSize(v.Bytes); n > scratch.reserved {
+			scratch.reserved = n
+		}
+	}
+	return scratch
+}
 
 func (s *fileSequenceScratch) release() {
 	// Best-effort in-process cleanup, not physical media/forensic erasure.
 	clear(s.buffer)
 	s.buffer = nil
+	s.reserved = 0
 }
 
 func (s *fileSequenceScratch) hash(ctx context.Context, in *os.File, size int64) (string, error) {
@@ -33,8 +54,17 @@ func (s *fileSequenceScratch) hash(ctx context.Context, in *os.File, size int64)
 	if _, e := in.Seek(0, 0); e != nil {
 		return "", e
 	}
-	if s.buffer == nil {
-		s.buffer = make([]byte, fileSequenceScratchBytes)
+	need := hashScratchSize(size)
+	if len(s.buffer) < need {
+		capacity := max(s.reserved, need)
+		if capacity > fileSequenceScratchBytes {
+			capacity = fileSequenceScratchBytes
+		}
+		// Production reserves the complete vector's maximum, so it allocates
+		// ONCE. A zero-valued scratch used independently can grow, but never
+		// trust a stale reservation to bound the actual read or keep old bytes.
+		clear(s.buffer)
+		s.buffer = make([]byte, capacity)
 	}
 	h := sha256.New()
 	n, e := io.CopyBuffer(h, contextReader{ctx, io.LimitReader(in, size+1)}, s.buffer[:hashScratchSize(size)])
@@ -72,7 +102,7 @@ func (f *filesystem) verifyFileWithScratch(ctx context.Context, v File, scratch 
 // Release/zero its one bounded allocation on success AND every early error,
 // before generated-file/inventory proofs or another stage can begin.
 func (f *filesystem) verifyFileSequence(ctx context.Context, files []File, override *File) error {
-	var scratch fileSequenceScratch
+	scratch := newFileSequenceScratch(files, override)
 	defer scratch.release()
 	for _, v := range files {
 		if override != nil && v.Path == gateway.ManagedPolicyPath {

@@ -2,7 +2,13 @@
 
 The existing `verifyTargetsAfterPolicy` file loop uses one private, lazily
 allocated **32-KiB maximum** storage buffer per invocation, not one scratch
-allocation per target. It is zeroed and released on success and every early
+allocation per target. Its capacity is the **maximum original active slice
+required by this private immutable file vector**, including the exact managed
+policy override. An all-small vector no longer reserves a fixed 32 KiB. This
+pure sizing step observes no filesystem state or caller callback and does not
+validate a different transaction. Allocation still follows the first successful
+seek, never precedes a fresh open or changes its error precedence.
+It is zeroed and released on success and every early
 error, before generated-file/inventory proofs or any later stage begins.
 This is best-effort in-process cleanup, not forensic or physical media erasure.
 
@@ -20,8 +26,12 @@ The sole production caller remains behind the original file-list/root inventory
 and managed-policy override guards. Original target order, first-error return,
 override scope, generated-byte reconstruction and subsequent closed inventories
 remain unchanged. No new validator, wire format, installer capability, authority
-or execution path is introduced. A first small target can still reserve the
-full 32 KiB; this does not promise lower memory in every individual error case.
+or execution path is introduced. A first small/error target can still reserve
+the full 32 KiB if a later target requires it; this does not promise lower memory
+in every individual error case. Even an independently used scratch with stale
+sizing must perform the actual full read: it grows if needed, clears old storage
+and never exceeds the original 32-KiB read ceiling. Production's complete-vector
+maximum avoids that growth. Release also discards the private size reservation.
 
 New Linux software controls compare the old serial verifier and pinned original
 hash on actual owned files, error/cancel/overflow cases, retained-storage taint
