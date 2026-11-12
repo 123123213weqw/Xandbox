@@ -180,6 +180,16 @@ func observeMaterializePrefix(t *testing.T, tc materializePrefixCase, source, or
 		if e = os.WriteFile(root+v.file.Path, prefix, mode); e != nil {
 			t.Fatal(e)
 		}
+		// CREATE mode is filtered by the caller's umask (CI uses 077).
+		// Pin the declared fixture mode BEFORE either original/candidate call;
+		// never weaken the exact-mode production check or positive assertion.
+		if e = os.Chmod(root+v.file.Path, mode); e != nil {
+			t.Fatal(e)
+		}
+		var sealed unix.Stat_t
+		if e = unix.Lstat(root+v.file.Path, &sealed); e != nil || sealed.Mode&unix.S_IFMT != unix.S_IFREG || sealed.Mode&0777 != uint32(mode) || sealed.Uid != uint32(os.Geteuid()) || sealed.Nlink != 1 {
+			t.Fatal("owned fixture mode/identity not pinned", e)
+		}
 	}
 	input := data[:tc.size]
 	if tc.shortInput {
