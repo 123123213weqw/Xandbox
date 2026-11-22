@@ -102,6 +102,14 @@ Do not restore an old ledger/policy backup: that could forget a later generation
 revocation or idempotency tombstone. `reconcile` repairs activation of the
 **same committed installation**, not selection of an older version.
 
+The new [read-only update inventory](UPDATE_INSPECTION.md) adds
+`inspect-update`: it binds the exact installed commit/current managed policy,
+candidate publication and retained **installed** release; verifies all their
+immutable bytes under the original locks; and refuses drift/pending work.
+It does not execute the candidate, inspect mutable authority as a consistent
+snapshot, prove compatibility/drain/reclaim or authorize activation. This is
+one prerequisite for the executor below, not an implementation of rollback.
+
 Before any future runtime upgrade/rollback executor is enabled it must have:
 
 - independently verified current/candidate/previous artifacts and a complete,

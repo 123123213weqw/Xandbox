@@ -11,6 +11,9 @@ func Reconfigure(context.Context, string, uint64, string) (Result, error) {
 func Reconcile(context.Context, string) (Result, error) { return Result{}, ErrPlatform }
 func Status(context.Context) (Result, error)            { return Result{}, ErrPlatform }
 func Verify(context.Context) error                      { return ErrPlatform }
+func InspectUpdate(context.Context, string) (UpdateInspectionResult, error) {
+	return UpdateInspectionResult{}, ErrPlatform
+}
 
 func RecoverPolicy(context.Context, string, uint64, string, string) (Result, error) {
 	return Result{}, ErrPlatform

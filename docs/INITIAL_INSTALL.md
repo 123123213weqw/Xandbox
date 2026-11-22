@@ -151,6 +151,10 @@ cross-ledger/session/owner/catalog/policy backup, trusted key distribution,
 catalog installation, reliable audit/retention, saturation and production SLO
 acceptance remain unfinished. No M1–M4 completion box is changed.
 
+The separate [read-only update inventory](UPDATE_INSPECTION.md) now checks the
+installed commit/current policy and both retained release bundles. It does not
+change these initial-install rules or enable any upgrade/rollback operation.
+
 ## Earlier native qualification (frozen pre-PIE correction)
 
 [Machine-readable evidence](validation/initial-install-native-v1.json) binds

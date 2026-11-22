@@ -42,6 +42,9 @@ jobs:
         run: go vet ./...
       - name: Verify dependency checksums
         run: go mod verify
+      - name: Verify read-only update inventory in CGO-free builds
+        if: runner.os == 'Linux'
+        run: GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 go test -count=3 -run 'UpdateInspection' ./internal/installtxn ./cmd/xandbox-install
       - name: Race and failure tests under private umask
         run: |
           umask 077
